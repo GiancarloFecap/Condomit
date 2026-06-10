@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CondoSmart - Escolha seu Perfil</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/tipo-usuario.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+</head>
+<body>
+    <div class="type-selection-page">
+        <div class="container">
+            <button class="btn-back" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </button>
+            <img src="../assets/logo-full.png" alt="CondoSmart Logo" class="type-logo">
+            <h1>Bem-vindo ao Condomit</h1>
+            <p class="subtitle">Selecione seu perfil para acessar a plataforma</p>
+            
+            <div class="type-grid">
+                <div class="type-card" data-type="morador" onclick="selectType('morador')">
+                    <div class="type-icon morador-icon">
+                        <i class="fas fa-home"></i>
+                    </div>
+                    <h3>Morador</h3>
+                    <p>Serviços, reservas e avisos da sua unidade</p>
+                </div>
+                
+                <div class="type-card" data-type="sindico" onclick="selectType('sindico')">
+                    <div class="type-icon sindico-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Síndico</h3>
+                    <p>Gestão administrativa e financeira completa</p>
+                </div>
+                
+                <div class="type-card" data-type="porteiro" onclick="selectType('porteiro')">
+                    <div class="type-icon porteiro-icon">
+                        <i class="fas fa-user-clock"></i>
+                    </div>
+                    <h3>Porteiro</h3>
+                    <p>Controle operacional e segurança do edifício</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/tipo-usuario.js"></script>
+</body>
+</html>

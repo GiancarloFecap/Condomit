@@ -1,0 +1,65 @@
+:root {
+    --bg: #f3f4f6;
+    --text: #111827;
+    --sidebar: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%);
+    --button-bg: #1e40af;
+    --button-color: #ffffff;
+    --topbar-bg: white;
+    --topbar-text: #111827;
+    --topbar-secondary: #6b7280;
+}
+
+html[data-theme="dark"] {
+    --bg: #0f172a;
+    --text: #e2e8f0;
+    --topbar-bg: #1f2937;
+    --topbar-text: #f3f4f6;
+    --topbar-secondary: #9ca3af;
+    --sidebar: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+    --button-bg: #2563eb;
+    --button-color: #ffffff;
+}
+
+html[data-theme="dark"] .user-info-small .name {
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] .top-bar {
+    background: var(--topbar-bg);
+}
+
+html[data-theme="dark"] .top-bar-left h1 {
+    color: var(--topbar-text);
+}
+
+html[data-theme="dark"] .top-bar-left p {
+    color: var(--topbar-secondary);
+}
+
+html[data-font="small"] {
+    font-size: 14px;
+}
+
+html[data-font="medium"] {
+    font-size: 16px;
+}
+
+html[data-font="large"] {
+    font-size: 18px;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+}
+
+.sidebar {
+    background: var(--sidebar);
+}
+
+button,
+input,
+select,
+textarea {
+    color: inherit;
+}

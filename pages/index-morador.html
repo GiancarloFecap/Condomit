@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Painel do Morador</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/index-morador.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <a href="index-morador.html" class="nav-item active">
+                        <i class="fas fa-home"></i>
+                        <span>Início</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Avisos e Comunicações</div>
+                    <a href="#" class="nav-item" data-section="mural">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Mural de Avisos</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="sugestoes">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Canal de Sugestões</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="notificacoes">
+                        <i class="fas fa-bell"></i>
+                        <span>Notificações</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="correio">
+                        <i class="fas fa-envelope"></i>
+                        <span>Correio</span>
+                    </a>
+                    <div class="nav-section-title">Comunicação e Relacionamento</div>
+                    <a href="#" class="nav-item" data-section="chat-sindico">
+                        <i class="fas fa-comments"></i>
+                        <span>Chat com Síndico</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="chat-portaria">
+                        <i class="fas fa-door-open"></i>
+                        <span>Chat com Portaria</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="achados-perdidos">
+                        <i class="fas fa-search"></i>
+                        <span>Achados e Perdidos</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="marketplace">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Market Place</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Assembleias</div>
+                    <a href="#" class="nav-item" data-section="assembleias">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Assembleias</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="chamadas">
+                        <i class="fas fa-video"></i>
+                        <span>Chamadas</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="avisos-assembleia">
+                        <i class="fas fa-comment-dots"></i>
+                        <span>Avisos de Assembleia</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Reservas e Manutenção</div>
+                    <a href="#" class="nav-item" data-section="reservas">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Reserva de Locais</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="manutencao">
+                        <i class="fas fa-tools"></i>
+                        <span>Manutenção Preventiva</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">IA e Automação</div>
+                    <a href="#" class="nav-item" data-section="ia-duvidas">
+                        <i class="fas fa-robot"></i>
+                        <span>IA - Dúvidas do Condomínio</span>
+                    </a>
+                    <a href="#" class="nav-item" data-section="comunicados">
+                        <i class="fas fa-bell"></i>
+                        <span>IA - Comunicados Automáticos</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Configurações</div>
+                    <a href="configuracoes.html" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button class="btn-support">
+                    <i class="fas fa-headset"></i>
+                    <span>Central de Suporte</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Olá, <span id="firstName">Morador</span>!</h1>
+                    <p id="welcomeDescription">Bem-vindo(a) ao painel. Acompanhe avisos, reservas e informações do condomínio.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type">Morador</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="dashboard-grid">
+                <!-- AVISOS E COMUNICADOS -->
+                <div class="dashboard-section">
+                    <h3 class="section-title">Avisos e comunicações</h3>
+                    <div class="cards-container three-cols">
+                        <div class="card card-item">
+                            <h4>Mural de avisos</h4>
+                            <p>Confira os últimos avisos do seu condomínio.</p>
+                            <button class="card-btn" onclick="navigateTo('mural')">Ver mural</button>
+                        </div>
+                        <div class="card card-item">
+                            <h4>Canal de Sugestão</h4>
+                            <p>Envie suas sugestões e melhorias.</p>
+                            <button class="card-btn" onclick="navigateTo('sugestoes')">Enviar sugestão</button>
+                        </div>
+                        <div class="card card-item">
+                            <h4>Notificações</h4>
+                            <p>Fique por dentro das novidades.</p>
+                            <button class="card-btn" onclick="navigateTo('notificacoes')">Ver notificações</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COMUNICAÇÃO E RELACIONAMENTO -->
+                <div class="dashboard-section">
+                    <h3 class="section-title">Comunicação e relacionamento</h3>
+                    <div class="cards-container three-cols">
+                        <div class="card card-item">
+                            <h4>Chats</h4>
+                            <p>Converse com o síndico ou portaria.</p>
+                            <button class="card-btn" onclick="navigateTo('chat-sindico')">Abrir chat</button>
+                        </div>
+                        <div class="card card-item">
+                            <h4>Achados e Perdidos</h4>
+                            <p>Perdeu algo? Procure aqui.</p>
+                            <button class="card-btn" onclick="navigateTo('achados-perdidos')">Acessar</button>
+                        </div>
+                        <div class="card card-item">
+                            <h4>MarketPlace</h4>
+                            <p>Anuncie ou compre itens dos vizinhos.</p>
+                            <button class="card-btn" onclick="navigateTo('marketplace')">Acessar MarketPlace</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASSEMBLEIA E RESERVAS -->
+                <div class="dashboard-section">
+                    <div class="cards-container mixed-layout">
+                        <div class="card card-item wide-card">
+                            <h3 class="section-title-inline">Assembleia</h3>
+                            <h4>Próxima Assembleia</h4>
+                            <p>Assembleia Geral Ordinária - 20/06 às 19:00</p>
+                            <div class="btn-group">
+                                <button class="card-btn btn-outline" onclick="navigateTo('assembleias')">Ver detalhes</button>
+                                <button class="card-btn" onclick="window.location.href='assembleia.html'">Entrar</button>
+                            </div>
+                        </div>
+                        <div class="card card-item wide-card">
+                            <h3 class="section-title-inline">Reservas de locais</h3>
+                            <h4>Reserva de locais</h4>
+                            <p>Agende o salão de festas, churrasqueira ou outros espaços.</p>
+                            <button class="card-btn" onclick="navigateTo('reservas')">Fazer reserva</button>
+                        </div>
+                        <div class="card card-item">
+                            <h3 class="section-title-inline">Manutenção</h3>
+                            <h4>Solicitações de manutenção</h4>
+                            <p>Sem solicitações pendentes.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IA E SERVIÇOS -->
+                <div class="dashboard-section">
+                    <h3 class="section-title">IA e serviços</h3>
+                    <div class="cards-container two-cols">
+                        <div class="card card-item">
+                            <h4>IA - Dúvidas do condo</h4>
+                            <p>Tire suas dúvidas sobre o regimento interno.</p>
+                            <button class="card-btn" onclick="navigateTo('ia-duvidas')">Perguntar agora</button>
+                        </div>
+                        <div class="card card-item">
+                            <h4>Comunicados Automáticos</h4>
+                            <p>Gerencie seus avisos automáticos por IA.</p>
+                            <button class="card-btn" onclick="navigateTo('comunicados')">Gerenciar Preferências</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/index-morador.js"></script>
+</body>
+</html>

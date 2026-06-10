@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Assembleias - Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/entrar.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-container">
+            <button class="btn-back" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </button>
+            <div class="login-header">
+                <img src="../assets/logo-full.png" alt="CondoSmart Logo" class="login-logo">
+                <h1>Entrar no CondoSmart</h1>
+                <p>Bem-vindo de volta!</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email" placeholder="Digite seu e-mail" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <div class="password-input">
+                        <input type="password" id="password" placeholder="Digite sua senha" required>
+                        <button type="button" id="togglePassword" class="toggle-password">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <a href="#" class="forgot-password">Esqueceu sua senha?</a>
+                <button type="submit" class="btn btn-primary btn-large">
+                    Entrar
+                </button>
+            </form>
+            <div class="signup-link">
+                Não tem uma conta? <a href="tipo-usuario.html">Cadastre-se aqui</a>
+            </div>
+            <div class="terms-link">
+                <a href="#">Termos de uso</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/entrar.js"></script>
+</body>
+</html>

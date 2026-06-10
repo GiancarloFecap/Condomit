@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - CondoSmart</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/checkout.css">
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+</head>
+<body>
+    <div class="checkout-wrapper">
+        <header class="checkout-header">
+            <div class="container">
+                <div class="header-top">
+                    <img src="../assets/logo-full.png" alt="CondoSmart Logo" class="logo">
+                    <a href="#" class="back-link" id="btn-logout-checkout"><i class="fas fa-arrow-left"></i> Voltar para Login</a>
+                </div>
+                <div class="header-content">
+                    <h1>Finalize sua Assinatura</h1>
+                    <p>Escolha o plano ideal para transformar a gestão do seu condomínio</p>
+                </div>
+            </div>
+        </header>
+
+        <main class="checkout-container">
+            <div class="checkout-grid">
+                <!-- Coluna da Esquerda: Seleção de Planos -->
+                <section class="plans-column">
+                    <h2 class="column-title">Selecione seu Plano</h2>
+                    
+                    <div class="plans-list">
+                        <!-- Plano Essencial -->
+                        <div class="plan-card-option" data-plan="essencial" data-price="79.00">
+                            <div class="plan-card-header">
+                                <div class="plan-icon"><i class="fas fa-leaf"></i></div>
+                                <div class="plan-meta">
+                                    <h3>Plano Essencial</h3>
+                                    <p>Gestão básica e eficiente</p>
+                                </div>
+                                <div class="plan-card-price">
+                                    <span class="currency">R$</span>
+                                    <span class="amount">79</span>
+                                    <span class="period">/mês</span>
+                                </div>
+                            </div>
+                            <ul class="plan-mini-features">
+                                <li><i class="fas fa-check"></i> Mural de avisos</li>
+                                <li><i class="fas fa-check"></i> Reservas simples</li>
+                            </ul>
+                        </div>
+
+                        <!-- Plano Pro -->
+                        <div class="plan-card-option selected" data-plan="pro" data-price="149.00">
+                            <div class="featured-badge">MAIS RECOMENDADO</div>
+                            <div class="plan-card-header">
+                                <div class="plan-icon"><i class="fas fa-rocket"></i></div>
+                                <div class="plan-meta">
+                                    <h3>Plano Pro</h3>
+                                    <p>Controle financeiro e operacional</p>
+                                </div>
+                                <div class="plan-card-price">
+                                    <span class="currency">R$</span>
+                                    <span class="amount">149</span>
+                                    <span class="period">/mês</span>
+                                </div>
+                            </div>
+                            <ul class="plan-mini-features">
+                                <li><i class="fas fa-check"></i> Tudo do Essencial</li>
+                                <li><i class="fas fa-check"></i> Módulo Financeiro</li>
+                                <li><i class="fas fa-check"></i> Controle de Acesso</li>
+                            </ul>
+                        </div>
+
+                        <!-- Plano Premium -->
+                        <div class="plan-card-option" data-plan="premium" data-price="499.00">
+                            <div class="plan-card-header">
+                                <div class="plan-icon"><i class="fas fa-crown"></i></div>
+                                <div class="plan-meta">
+                                    <h3>Plano Premium</h3>
+                                    <p>Automação e suporte exclusivo</p>
+                                </div>
+                                <div class="plan-card-price">
+                                    <span class="currency">R$</span>
+                                    <span class="amount">499</span>
+                                    <span class="period">/mês</span>
+                                </div>
+                            </div>
+                            <ul class="plan-mini-features">
+                                <li><i class="fas fa-check"></i> Tudo do Pro</li>
+                                <li><i class="fas fa-check"></i> APIs e White-label</li>
+                                <li><i class="fas fa-check"></i> Suporte Prioritário</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Coluna da Direita: Resumo e Pagamento -->
+                <section class="payment-column">
+                    <div class="sticky-sidebar">
+                        <div class="summary-card">
+                            <h2 class="summary-title">Resumo do Pedido</h2>
+                            
+                            <div class="summary-details">
+                                <div class="summary-line">
+                                    <span class="label">Plano Selecionado</span>
+                                    <span class="value" id="summary-plan-name">Plano Pro</span>
+                                </div>
+                                <div class="summary-line">
+                                    <span class="label">Ciclo de Cobrança</span>
+                                    <span class="value">Mensal</span>
+                                </div>
+                                <div class="summary-divider"></div>
+                                <div class="summary-total">
+                                    <span>Total a Pagar</span>
+                                    <span class="total-amount" id="summary-total-price">R$ 149,00</span>
+                                </div>
+                            </div>
+
+                            <div class="payment-section">
+                                <p class="payment-hint">Finalize seu pagamento de forma segura via Mercado Pago</p>
+                                <div id="payment-brick_container"></div>
+                            </div>
+
+                            <div class="security-badges">
+                                <span><i class="fas fa-lock"></i> Pagamento Seguro</span>
+                                <span><i class="fas fa-shield-alt"></i> Proteção de Dados</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/checkout.js"></script>
+</body>
+</html>

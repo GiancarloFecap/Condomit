@@ -1,0 +1,111 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+    background-color: #f8fafc;
+    color: #1f2937;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+}
+
+.register-page {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+}
+
+.page-label {
+    position: absolute;
+    top: -30px;
+    left: 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.register-container {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 50px 40px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.register-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.register-logo {
+    height: 120px;
+    width: auto;
+    margin-bottom: 15px;
+}
+
+.register-header h1 {
+    font-size: 1.8rem;
+    color: #1f2937;
+}
+
+.register-form {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 1rem;
+}
+
+.form-group input {
+    padding: 14px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+    border-color: #1e40af;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
+.btn-submit {
+    margin-top: 15px;
+    padding: 14px 30px;
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(30, 64, 175, 0.3);
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(30, 64, 175, 0.4);
+}
+
+@media (max-width: 576px) {
+    .register-container {
+        padding: 40px 25px;
+    }
+}

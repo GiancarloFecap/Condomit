@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CondoSmart - Registrar Condomínio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/condominio_register.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+</head>
+<body>
+    <div class="register-page">
+        <div class="register-container">
+            <div class="register-header">
+                <img src="../assets/logo-full.png" alt="CondoSmart Logo" class="register-logo">
+                <h1>Registre Seu Condomínio</h1>
+            </div>
+            <form id="condoForm" class="register-form">
+                <div class="form-group">
+                    <label for="totalApartments">Total de Apartamentos*</label>
+                    <input type="number" id="totalApartments" placeholder="Número" required>
+                </div>
+                <div class="form-group">
+                    <label for="totalBlocks">Total de Blocos*</label>
+                    <input type="number" id="totalBlocks" placeholder="Número" required min="1">
+                </div>
+                <div class="form-group" id="blockNamesContainer">
+                    <label>Nomes dos Blocos*</label>
+                    <div id="blockNamesInputs"></div>
+                </div>
+                <div class="form-group">
+                    <label for="cep">CEP*</label>
+                    <input type="text" id="cep" placeholder="00000-000" required>
+                </div>
+                <div class="form-group">
+                    <label for="condoName">Nome do Condomínio*</label>
+                    <input type="text" id="condoName" placeholder="Digite aqui" required>
+                </div>
+                <button type="submit" class="btn-submit">
+                    Registrar
+                </button>
+            </form>
+        </div>
+        <p class="page-label">Página 5</p>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/condominio_register.js"></script>
+</body>
+</html>

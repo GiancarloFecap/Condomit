@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CondoSmart - Configurações</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/configuracoes.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="CondoSmart Icon" class="sidebar-logo">
+                <h2 class="condo-name"></h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <a href="#" id="inicio-link" class="nav-item">
+                        <i class="fas fa-home"></i>
+                        <span>Início</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Comunicado e Engajamento</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Mural de Avisos</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Canal de Sugestões</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-flag"></i>
+                        <span>Indicações</span>
+                    </a>
+                    <div class="nav-section-title">Comunicação e Relacionamento</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-comments"></i>
+                        <span>Chat com Moradores</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-door-open"></i>
+                        <span>Chat com Porteiro</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-search"></i>
+                        <span>Achados e Perdidos</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Market Place</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <a href="assembleia.html" class="nav-item">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Assembleia</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-video"></i>
+                        <span>Chamadas</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-comment-dots"></i>
+                        <span>Avisos de Assembleia</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Gestão de Moradores</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-users-cog"></i>
+                        <span>Gestão de Moradores</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Reserva e Manutenção</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Reserva de Locais</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-tools"></i>
+                        <span>Manutenção Preventiva</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">IA e Automação</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-robot"></i>
+                        <span>IA - Dúvidas do Condomínio</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-bell"></i>
+                        <span>IA - Comunicados Automáticos</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Configurações</div>
+                    <a href="configuracoes.html" class="nav-item active">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button class="btn-support">
+                    <i class="fas fa-headset"></i>
+                    <span>Central de Suporte</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Configurações</h1>
+                    <p>Personalize e gerencie as configurações do sistema</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="user-name-top">Usuário</div>
+                            <div class="type" id="user-type-top">Síndico</div>
+                        </div>
+                        <div class="avatar" id="user-avatar-top">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Configurations Content -->
+            <div class="config-content">
+                <div class="config-grid">
+                    <!-- Perfil do usuário -->
+                    <div class="config-card profile-card">
+                        <h3>Perfil do usuário</h3>
+                        <div class="profile-preview">
+                            <div class="profile-avatar" id="profile-avatar-card"></div>
+                            <div class="profile-info">
+                                <div class="profile-name" id="profile-name-card">-</div>
+                                <div class="profile-type" id="profile-type-card">-</div>
+                                <div class="profile-email" id="profile-email-card">-</div>
+                            </div>
+                        </div>
+                        <div class="profile-details">
+                            <div class="detail-item"><i class="fas fa-user"></i><span id="detail-full-name">-</span></div>
+                            <div class="detail-item"><i class="fas fa-building"></i><span id="detail-unit">-</span></div>
+                            <div class="detail-item"><i class="fas fa-id-badge"></i><span id="detail-user-type">-</span></div>
+                            <div class="detail-item"><i class="fas fa-envelope"></i><span id="detail-email">-</span></div>
+                            <div class="detail-item"><i class="fas fa-phone"></i><span id="detail-phone">-</span></div>
+                        </div>
+                        <div class="profile-card-actions">
+                            <button class="btn-edit-profile" onclick="openConfigSection('editar-perfil')">Editar</button>
+                            <button class="btn-logout" onclick="logout()">Sair da Conta</button>
+                        </div>
+                    </div>
+
+                    <!-- Conta e Perfil -->
+                    <div class="config-card">
+                        <h3>Conta e Perfil</h3>
+                        <div class="form-group" onclick="openConfigSection('dados-pessoais')">
+                            <i class="fas fa-user-cog"></i>
+                            <span>Dados pessoais</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('minha-unidade')">
+                            <i class="fas fa-home"></i>
+                            <span>Minha unidade</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('meus-condominos')">
+                            <i class="fas fa-users"></i>
+                            <span>Meus condôminos</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('foto-de-perfil')">
+                            <i class="fas fa-camera"></i>
+                            <span>Foto de perfil</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+
+                    <!-- Segurança -->
+                    <div class="config-card">
+                        <h3>Segurança e acesso</h3>
+                        <div class="form-group" onclick="openConfigSection('alterar-senha')">
+                            <i class="fas fa-key"></i>
+                            <span>Alterar senha</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('autenticacao-2fa')">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Autenticação de dois fatores</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('controle-acesso')">
+                            <i class="fas fa-lock"></i>
+                            <span>Controle de acesso</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+
+                    <!-- Notificações -->
+                    <div class="config-card">
+                        <h3>Notificações</h3>
+                        <div class="form-group" onclick="openConfigSection('comunicados-sindico')">
+                            <i class="fas fa-bell"></i>
+                            <span>Comunicados do síndico</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('avisos-gerais')">
+                            <i class="fas fa-bell-on"></i>
+                            <span>Avisos gerais do condomínio</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('reserva-areas')">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Reserva de áreas comuns</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('encomendas')">
+                            <i class="fas fa-box"></i>
+                            <span>Encomendas e correspondências</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+
+                    <!-- Reserva e áreas comuns -->
+                    <div class="config-card">
+                        <h3>Reserva e áreas comuns</h3>
+                        <div class="form-group" onclick="openConfigSection('minhas-reservas')">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Minhas reservas</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('lembretes-reserva')">
+                            <i class="fas fa-bell"></i>
+                            <span>Lembretes da reserva</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('confirmacao-cancelamento')">
+                            <i class="fas fa-times-circle"></i>
+                            <span>Confirmação/lembrete cancelamento</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('reserva-area-comum')">
+                            <i class="fas fa-door-closed"></i>
+                            <span>Reserva da área comum</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+
+                    <!-- Privacidade -->
+                    <div class="config-card">
+                        <h3>Privacidade</h3>
+                        <div class="form-group" onclick="openConfigSection('politica-privacidade')">
+                            <i class="fas fa-lock"></i>
+                            <span>Política de privacidade</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('termos-uso')">
+                            <i class="fas fa-file-contract"></i>
+                            <span>Termos de uso</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('consentimentos')">
+                            <i class="fas fa-check-square"></i>
+                            <span>Gerenciar consentimentos</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+
+                    <!-- Condomínio -->
+                    <div class="config-card">
+                        <h3>Condomínio</h3>
+                        <div class="form-group" onclick="openConfigSection('info-condominio')">
+                            <i class="fas fa-building"></i>
+                            <span>Informações do condomínio</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('contato-uteis')">
+                            <i class="fas fa-phone-alt"></i>
+                            <span>Contato úteis</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('prestadores-servicos')">
+                            <i class="fas fa-tools"></i>
+                            <span>Prestadores de serviços</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+
+                    <!-- Aparência e acessibilidade -->
+                    <div class="config-card">
+                        <h3>Aparência e acessibilidade</h3>
+                        <div class="theme-selector">
+                            <label>Tema</label>
+                            <div class="theme-buttons">
+                                <button class="theme-btn" id="theme-light" type="button" onclick="setTheme('light')">Claro</button>
+                                <button class="theme-btn" id="theme-dark" type="button" onclick="setTheme('dark')">Escuro</button>
+                            </div>
+                        </div>
+                        <div class="font-size-selector">
+                            <label>Tamanho da fonte</label>
+                            <div class="font-buttons">
+                                <button class="font-btn" id="font-small" type="button" onclick="setFontSize('small')">A-</button>
+                                <button class="font-btn" id="font-medium" type="button" onclick="setFontSize('medium')">médio</button>
+                                <button class="font-btn" id="font-large" type="button" onclick="setFontSize('large')">A+</button>
+                            </div>
+                        </div>
+                        <div class="language-selector">
+                            <label>Idioma</label>
+                            <select id="language-select" onchange="setLanguage(this.value)">
+                                <option value="pt">Português</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Sobre -->
+                    <div class="config-card">
+                        <h3>Sobre</h3>
+                        <div class="form-group" onclick="openConfigSection('sobre-empresa')">
+                            <i class="fas fa-building"></i>
+                            <span>Sobre a empresa</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('versao-app')">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Versão do app: 1.0.0</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <div class="form-group" onclick="openConfigSection('novas-atualizacoes')">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Verifique novas atualizações</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-footer">
+                    <div>© 2026 condomínio tal.</div>
+                    <div>Todos os direitos reservados</div>
+                </div>
+                <input type="file" id="profile-photo-input" accept="image/*" style="display:none" onchange="updateProfilePhoto(event)">
+            </div>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/configuracoes.js"></script>
+</body>
+</html>

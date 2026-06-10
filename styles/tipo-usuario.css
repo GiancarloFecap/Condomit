@@ -1,0 +1,142 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+    background-color: #f8fafc;
+    color: #1f2937;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+}
+
+.btn-back {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #1e3a8a;
+    border: none;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-back:hover {
+    background: white;
+    transform: translateX(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.type-selection-page {
+    width: 100%;
+    max-width: 1100px;
+}
+
+.container {
+    text-align: center;
+}
+
+.type-logo {
+    height: 100px;
+    width: auto;
+    margin: 0 auto 25px;
+}
+
+h1 {
+    font-size: 2.8rem;
+    margin-bottom: 15px;
+    color: #1f2937;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: #6b7280;
+    margin-bottom: 50px;
+}
+
+.type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 35px;
+}
+
+.type-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 25px;
+    padding: 40px 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.type-card:hover {
+    border-color: #1e40af;
+    box-shadow: 0 10px 30px rgba(30, 64, 175, 0.15);
+    transform: translateY(-5px);
+}
+
+.type-icon {
+    width: 90px;
+    height: 90px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 25px;
+    transition: all 0.3s ease;
+}
+
+.type-icon i {
+    font-size: 2.5rem;
+}
+
+.morador-icon {
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    color: #3730a3;
+}
+
+.sindico-icon {
+    background: linear-gradient(135deg, #f3e8ff 0%, #ddd6fe 100%);
+    color: #7c3aed;
+}
+
+.porteiro-icon {
+    background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+    color: #c2410c;
+}
+
+.type-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+    color: #1f2937;
+}
+
+.type-card p {
+    color: #6b7280;
+    font-size: 1.05rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 992px) {
+    .type-grid {
+        grid-template-columns: 1fr;
+    }
+
+    h1 {
+        font-size: 2.2rem;
+    }
+}

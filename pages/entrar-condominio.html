@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrar no Condomínio - CondoSmart</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/entrar-condominio.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+</head>
+<body>
+    <!-- Loading Global -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Processando...</p>
+    </div>
+
+    <!-- Alert de Mensagens -->
+    <div id="alertContainer" class="alert-container"></div>
+
+    <div class="condominio-page">
+        <div class="condominio-container">
+            <!-- Botão Voltar -->
+            <button class="btn-back" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </button>
+
+            <!-- Cabeçalho -->
+            <div class="condominio-header">
+                <img src="../assets/logo-full.png" alt="CondoSmart Logo" class="condominio-logo">
+                <h1>Entrar no condomínio</h1>
+                <p>Complete seus dados para se vincular ao seu condomínio</p>
+            </div>
+
+            <!-- Formulário -->
+            <form id="condominiumForm" class="condominio-form">
+                <!-- Campo Apartamento -->
+                <div class="form-group">
+                    <label for="apartment">Apartamento</label>
+                    <input 
+                        type="number" 
+                        id="apartment" 
+                        placeholder="Ex: 201" 
+                        required
+                        min="1"
+                    >
+                    <span class="error-message" id="apartmentError"></span>
+                </div>
+
+                <!-- Campo Bloco -->
+                <div class="form-group">
+                    <label for="block">Bloco</label>
+                    <input 
+                        type="text" 
+                        id="block" 
+                        placeholder="Ex: A" 
+                        required
+                        maxlength="10"
+                    >
+                    <span class="error-message" id="blockError"></span>
+                </div>
+
+                <!-- Campo ID do Condomínio (CEP) -->
+                <div class="form-group">
+                    <label for="condominiumId">ID do condomínio</label>
+                    <input 
+                        type="text" 
+                        id="condominiumId" 
+                        placeholder="Ex: 01234567-8" 
+                        required
+                    >
+                    <span class="error-message" id="condominiumIdError"></span>
+                </div>
+
+                <!-- Campo Senha do Condomínio -->
+                <div class="form-group">
+                    <label for="condominiumPassword">Senha do condomínio</label>
+                    <div class="password-input">
+                        <input 
+                            type="password" 
+                            id="condominiumPassword" 
+                            placeholder="Digite a senha do condomínio" 
+                            required
+                        >
+                        <button type="button" id="togglePassword" class="toggle-password">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <span class="error-message" id="passwordError"></span>
+                </div>
+
+                <!-- Botão Enviar -->
+                <button type="submit" class="btn btn-primary btn-large" id="submitBtn">
+                    Entrar no condomínio
+                </button>
+            </form>
+
+            <!-- Rodapé -->
+            <div class="condominio-footer">
+                <p>Não encontrou seu condomínio? <a href="#">Entre em contato conosco</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/entrar-condominio.js"></script>
+</body>
+</html>
