@@ -122,6 +122,40 @@ async function updateUserByEmail(email, updates) {
     }
 }
 
+// Function to show loading overlay
+function showLoadingOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'checkout-loading-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.6);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+        flex-direction: column;
+    `;
+    overlay.innerHTML = `
+        <div style="text-align:center; color:white;">
+            <i class="fas fa-spinner fa-spin fa-5x"></i>
+            <p style="margin-top:20px; font-size:20px;">Aguardando pagamento...</p>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+// Function to hide loading overlay
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('checkout-loading-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
 async function initCheckoutButton() {
     const container = document.getElementById('payment-brick_container');
     container.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;"><i class="fas fa-spinner fa-spin"></i> Carregando pagamento...</div>';
@@ -150,24 +184,43 @@ async function initCheckoutButton() {
             </div>
         `;
         
+        // Store selected plan in sessionStorage
+        sessionStorage.setItem('selectedPlan', selectedPlan);
+        
         const btn = document.getElementById('checkout-btn');
         btn.addEventListener('click', async () => {
             try {
-                // Abrir Mercado Pago sandbox
-                window.open(currentInitPoint, '_blank');
+                // Show loading overlay first
+                showLoadingOverlay();
                 
-                // Simular confirmação de pagamento (no ambiente real, use webhooks)
-                const updates = { plan: selectedPlan };
-                await updateUserByEmail(currentUser.email, updates);
+                // Open Mercado Pago in a popup
+                const mpPopup = window.open(currentInitPoint, 'MercadoPago', 'width=800,height=800');
                 
-                currentUser.plan = selectedPlan;
-                sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
-                
-                // Aguardar um pouco para o usuário ver o Mercado Pago, depois redirecionar
-                setTimeout(() => {
-                    alert('Confira o pagamento no Mercado Pago e clique em OK para continuar!');
-                    window.location.href = 'condominio_register.html';
-                }, 1000);
+                // Check if popup is closed every 500ms
+                const checkPopup = setInterval(async () => {
+                    if (mpPopup.closed) {
+                        clearInterval(checkPopup);
+                        
+                        try {
+                            // Update user's plan in DB
+                            await updateUserByEmail(currentUser.email, { plan: selectedPlan });
+                            
+                            // Update currentUser object and sessionStorage
+                            currentUser.plan = selectedPlan;
+                            sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
+                            
+                            // Hide overlay
+                            hideLoadingOverlay();
+                            
+                            // Redirect to condominio_register.html
+                            window.location.href = 'condominio_register.html';
+                        } catch (error) {
+                            console.error('[Checkout] Error after payment:', error);
+                            hideLoadingOverlay();
+                            alert('Erro ao finalizar o pagamento. Tente novamente.');
+                        }
+                    }
+                }, 500);
             } catch (error) {
                 console.error('Erro ao processar pagamento:', error);
                 alert('Erro ao processar pagamento. Tente novamente.');

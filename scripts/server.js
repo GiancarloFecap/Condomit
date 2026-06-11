@@ -225,7 +225,8 @@ async function createMercadoPagoPreference(req, res) {
 
       console.log('[MercadoPago] Creating preference for:', payerEmail);
       const result = await preference.create({ body: preferenceData });
-      console.log('[MercadoPago] Preference created:', result.id, 'init_point:', result.init_point);
+      console.log('[MercadoPago] Full preference response:', JSON.stringify(result, null, 2));
+      console.log('[MercadoPago] Preference created:', result.id, 'init_point:', result.init_point, 'back_urls:', result.back_urls);
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ preferenceId: result.id, initPoint: result.init_point }));
