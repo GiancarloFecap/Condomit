@@ -71,6 +71,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const normalizedType = getNormalizedUserType(user);
             user.type = normalizedType;
+            // Ensure user_type is mapped to type for consistency
+            if (user.user_type && !user.type) {
+                user.type = getNormalizedUserType(user);
+            }
             sessionStorage.setItem('condominiumUser', JSON.stringify(user));
 
             redirectByUserType(user);

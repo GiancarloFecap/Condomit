@@ -212,7 +212,7 @@ async function createMercadoPagoPreference(req, res) {
       const preferenceData = {
         items: [
           {
-            title: `Plano ${planName} - CondoSmart`,
+            title: `Plano ${planName} - Condomit`,
             unit_price: parseFloat(amount),
             quantity: 1,
             currency_id: 'BRL'

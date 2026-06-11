@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             await createCondominium(condominiumData);
-            const updatedUser = await updateUserByEmail(currentUser.email, {
+            const userUpdates = {
                 condominium: {
                     name: condoName,
                     totalApartments: totalApartments,
@@ -107,12 +107,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     blockNames: blockNames,
                     cep: cep
                 }
-            });
+            };
+            await updateUserByEmail(currentUser.email, userUpdates);
 
-            if (updatedUser) {
-                updatedUser.type = updatedUser.user_type;
-                sessionStorage.setItem('condominiumUser', JSON.stringify(updatedUser));
-            }
+            // Merge the new updates into the existing currentUser to preserve all fields (like plan!)
+            const updatedUser = { ...currentUser, ...userUpdates };
+            sessionStorage.setItem('condominiumUser', JSON.stringify(updatedUser));
 
             alert('Condomínio registrado com sucesso!');
             window.location.href = 'index.html';
