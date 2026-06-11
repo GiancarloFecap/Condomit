@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Checkout</title>
+</head>
+<body>
+    <h1>Setting up test user...</h1>
+    <script>
+        sessionStorage.setItem('condominiumUser', JSON.stringify({
+            email: 'teste@teste.com',
+            type: 'sindico'
+        }));
+        window.location.href = 'pages/checkout.html';
+    </script>
+</body>
+</html>
