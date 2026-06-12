@@ -1,3 +1,4 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -47,64 +48,99 @@ function getMimeType(filename) {
 }
 
 const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url, true);
-  let pathname = decodeURIComponent(parsedUrl.pathname);
+    const parsedUrl = url.parse(req.url, true);
+    let pathname = decodeURIComponent(parsedUrl.pathname);
 
-  if (pathname === '/' || pathname === '/pages') {
-    pathname = '/pages/inicio.html';
-  }
-
-  if (pathname === '/api/register' && req.method === 'POST') {
-    return proxySupabaseRequest(req, res, '/users', 'POST');
-  }
-
-  if (pathname === '/api/condominiums' && req.method === 'POST') {
-    return proxySupabaseRequest(req, res, '/condominiums', 'POST');
-  }
-
-  if (pathname === '/api/users' && req.method === 'GET') {
-    const email = parsedUrl.query.email;
-    if (!email) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Parâmetro email é obrigatório' }));
-      return;
+    if (pathname === '/' || pathname === '/pages') {
+        pathname = '/pages/inicio.html';
     }
-    return proxySupabaseRequest(req, res, `/users?select=*&email=eq.${encodeURIComponent(email)}`, 'GET');
-  }
 
-  if (pathname === '/api/users' && req.method === 'PATCH') {
-    const email = parsedUrl.query.email;
-    if (!email) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Parâmetro email é obrigatório' }));
-      return;
+    if (pathname === '/api/register' && req.method === 'POST') {
+        return proxySupabaseRequest(req, res, '/users', 'POST');
     }
-    return proxySupabaseRequest(req, res, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
-  }
 
-  if (pathname === '/api/condominiums' && req.method === 'GET') {
-    const query = { ...parsedUrl.query };
-    delete query.select;
-    const queryString = new URLSearchParams(query).toString();
-    const pathSuffix = queryString ? `/condominiums?select=*&${queryString}` : '/condominiums?select=*';
-    return proxySupabaseRequest(req, res, pathSuffix, 'GET');
-  }
+    if (pathname === '/api/condominiums' && req.method === 'POST') {
+        return proxySupabaseRequest(req, res, '/condominiums', 'POST');
+    }
 
-  if (pathname === '/api/user_condominiums' && req.method === 'GET') {
-    const query = { ...parsedUrl.query };
-    delete query.select;
-    const queryString = new URLSearchParams(query).toString();
-    const pathSuffix = queryString ? `/user_condominiums?select=*&${queryString}` : '/user_condominiums?select=*';
-    return proxySupabaseRequest(req, res, pathSuffix, 'GET');
-  }
+    if (pathname === '/api/users' && req.method === 'GET') {
+        const email = parsedUrl.query.email;
+        if (!email) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Parâmetro email é obrigatório' }));
+            return;
+        }
+        return proxySupabaseRequest(req, res, `/users?select=*&email=eq.${encodeURIComponent(email)}`, 'GET');
+    }
 
-  if (pathname === '/api/user_condominiums' && req.method === 'POST') {
-    return proxySupabaseRequest(req, res, '/user_condominiums', 'POST');
-  }
+    if (pathname === '/api/users' && req.method === 'PATCH') {
+        const email = parsedUrl.query.email;
+        if (!email) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Parâmetro email é obrigatório' }));
+            return;
+        }
+        return proxySupabaseRequest(req, res, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
+    }
 
-  if (pathname === '/api/mercadopago/preference' && req.method === 'POST') {
-    return createMercadoPagoPreference(req, res);
-  }
+    if (pathname === '/api/condominiums' && req.method === 'GET') {
+        const query = { ...parsedUrl.query };
+        delete query.select;
+        const queryString = new URLSearchParams(query).toString();
+        const pathSuffix = queryString ? `/condominiums?select=*&${queryString}` : '/condominiums?select=*';
+        return proxySupabaseRequest(req, res, pathSuffix, 'GET');
+    }
+
+    if (pathname === '/api/user_condominiums' && req.method === 'GET') {
+        const query = { ...parsedUrl.query };
+        delete query.select;
+        const queryString = new URLSearchParams(query).toString();
+        const pathSuffix = queryString ? `/user_condominiums?select=*&${queryString}` : '/user_condominiums?select=*';
+        return proxySupabaseRequest(req, res, pathSuffix, 'GET');
+    }
+
+    if (pathname === '/api/user_condominiums' && req.method === 'POST') {
+        return proxySupabaseRequest(req, res, '/user_condominiums', 'POST');
+    }
+
+    if (pathname === '/api/mercadopago/preference' && req.method === 'POST') {
+        return createMercadoPagoPreference(req, res);
+    }
+
+    // ENDPOINT: GET /api/plano - Fetch all plans
+    if (pathname === '/api/plano' && req.method === 'GET') {
+        return proxySupabaseRequest(req, res, '/plano?select=*', 'GET');
+    }
+
+    // ENDPOINT: GET /api/pagamento - Fetch payments (by email or cep)
+    if (pathname === '/api/pagamento' && req.method === 'GET') {
+        const email = parsedUrl.query.email;
+        const cep = parsedUrl.query.cep;
+        let pathSuffix = '/pagamento?select=*';
+        if (email) {
+            pathSuffix += `&email=eq.${encodeURIComponent(email)}`;
+        }
+        if (cep) {
+            pathSuffix += `&cep=eq.${encodeURIComponent(cep)}`;
+        }
+        return proxySupabaseRequest(req, res, pathSuffix, 'GET');
+    }
+
+    // ENDPOINT: POST /api/pagamento - Create new payment
+    if (pathname === '/api/pagamento' && req.method === 'POST') {
+        return proxySupabaseRequest(req, res, '/pagamento', 'POST');
+    }
+
+    // ENDPOINT: PATCH /api/pagamento - Update payment status (by id)
+    if (pathname === '/api/pagamento' && req.method === 'PATCH') {
+        const id = parsedUrl.query.id;
+        if (!id) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Parâmetro id é obrigatório' }));
+            return;
+        }
+        return proxySupabaseRequest(req, res, `/pagamento?id=eq.${encodeURIComponent(id)}`, 'PATCH');
+    }
 
   let filePath = path.join(root, pathname);
 
