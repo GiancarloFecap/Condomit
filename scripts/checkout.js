@@ -1,7 +1,9 @@
+
 let currentUser = null;
-let selectedPlan = 'pro';
+let selectedPlan = null; // will hold the full plano object from DB
 let selectedPrice = 149.00;
 let currentInitPoint = null;
+let plans = [];
 
 document.addEventListener('DOMContentLoaded', async function() {
     // 1. Verificar autenticação
@@ -19,13 +21,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
     }
 
-    // Se já tiver plano, vai para o próximo passo
-    if (currentUser.plan) {
-        window.location.href = currentUser.condominium ? 'index.html' : 'condominio_register.html';
+    // Check if user already has an approved payment
+    try {
+        const approvedPayment = await fetchApprovedPayment(currentUser.email);
+        if (approvedPayment) {
+            window.location.href = 'index.html';
+            return;
+        }
+    } catch (error) {
+        console.error('[Checkout] Error checking payment status:', error);
+    }
+
+    // Fetch plans from DB
+    try {
+        plans = await fetchPlans();
+        renderPlans();
+    } catch (error) {
+        console.error('[Checkout] Error fetching plans:', error);
+        alert('Erro ao carregar planos. Tente novamente.');
         return;
     }
 
-    initPlanSelection();
     await initCheckoutButton();
 
     // Configurar o link de voltar com logout
@@ -39,32 +55,100 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-function initPlanSelection() {
-    const planOptions = document.querySelectorAll('.plan-card-option');
+async function fetchPlans() {
+    const response = await fetch('/api/plano');
+    if (!response.ok) throw new Error('Failed to fetch plans');
+    return await response.json();
+}
+
+async function fetchApprovedPayment(email) {
+    const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
+    if (!response.ok) return null;
+    const payments = await response.json();
+    return payments.find(p => p.status_pagamento === 'aprovado');
+}
+
+async function createPayment(paymentData) {
+    const response = await fetch('/api/pagamento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentData)
+    });
+    if (!response.ok) throw new Error('Failed to create payment');
+    return await response.json();
+}
+
+function renderPlans() {
+    const container = document.getElementById('plans-list-container');
+    container.innerHTML = '';
+
+    plans.forEach((plan, index) => {
+        const planCard = document.createElement('div');
+        planCard.className = `plan-card-option ${index === 1 ? 'selected' : ''}`;
+        planCard.dataset.planId = plan.id;
+        planCard.dataset.planName = plan.nome;
+        planCard.dataset.price = plan.valor_minimo;
+        planCard.dataset.valorPorUnidade = plan.valor_por_unidade;
+        planCard.dataset.valorMinimo = plan.valor_minimo;
+
+        let icon = 'fa-leaf';
+        let features = [];
+        if (plan.nome.includes('Pro')) {
+            icon = 'fa-rocket';
+            features = ['Tudo do Essencial', 'Módulo Financeiro', 'Controle de Acesso'];
+        } else if (plan.nome.includes('Premium')) {
+            icon = 'fa-crown';
+            features = ['Tudo do Pro', 'APIs e White-label', 'Suporte Prioritário'];
+        } else {
+            features = ['Mural de avisos', 'Reservas simples'];
+        }
+
+        planCard.innerHTML = `
+            ${index === 1 ? '<div class="featured-badge">MAIS RECOMENDADO</div>' : ''}
+            <div class="plan-card-header">
+                <div class="plan-icon"><i class="fas ${icon}"></i></div>
+                <div class="plan-meta">
+                    <h3>${plan.nome}</h3>
+                    <p>${plan.descricao || ''}</p>
+                </div>
+                <div class="plan-card-price">
+                    <span class="currency">R$</span>
+                    <span class="amount">${Number(plan.valor_minimo).toFixed(0)}</span>
+                    <span class="period">/mês</span>
+                </div>
+            </div>
+            <ul class="plan-mini-features">
+                ${features.map(f => `<li><i class="fas fa-check"></i> ${f}</li>`).join('')}
+            </ul>
+        `;
+
+        planCard.addEventListener('click', async () => selectPlan(planCard, plan));
+        container.appendChild(planCard);
+    });
+
+    // Set default selected plan
+    if (plans.length >= 2) {
+        selectedPlan = plans[1];
+        selectedPrice = selectedPlan.valor_minimo;
+        updateSummary();
+    }
+}
+
+function selectPlan(card, plan) {
+    document.querySelectorAll('.plan-card-option').forEach(opt => opt.classList.remove('selected'));
+    card.classList.add('selected');
+    selectedPlan = plan;
+    selectedPrice = plan.valor_minimo;
+    updateSummary();
+    initCheckoutButton();
+}
+
+function updateSummary() {
     const summaryPlanName = document.getElementById('summary-plan-name');
     const summaryTotalPrice = document.getElementById('summary-total-price');
-
-    planOptions.forEach(option => {
-        option.addEventListener('click', async () => {
-            if (option.classList.contains('selected')) return;
-
-            // Remover seleção anterior
-            planOptions.forEach(opt => opt.classList.remove('selected'));
-            
-            // Adicionar nova seleção
-            option.classList.add('selected');
-            
-            selectedPlan = option.dataset.plan;
-            selectedPrice = parseFloat(option.dataset.price);
-
-            // Atualizar resumo
-            summaryPlanName.textContent = `Plano ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}`;
-            summaryTotalPrice.textContent = `R$ ${selectedPrice.toFixed(2).replace('.', ',')}`;
-
-            // Atualizar botão de pagamento
-            await initCheckoutButton();
-        });
-    });
+    if (!selectedPlan) return;
+    summaryPlanName.textContent = selectedPlan.nome;
+    summaryTotalPrice.textContent = `R$ ${Number(selectedPrice).toFixed(2).replace('.', ',')}`;
 }
 
 async function createPreference() {
@@ -75,7 +159,7 @@ async function createPreference() {
     
     console.log('[Checkout] Criando preferência com:', {
         amount: selectedPrice,
-        planName: selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1),
+        planName: selectedPlan.nome,
         payerEmail: currentUser.email
     });
     try {
@@ -86,7 +170,7 @@ async function createPreference() {
             },
             body: JSON.stringify({
                 amount: selectedPrice,
-                planName: selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1),
+                planName: selectedPlan.nome,
                 payerEmail: currentUser.email
             })
         });
@@ -101,23 +185,6 @@ async function createPreference() {
         return data;
     } catch (error) {
         console.error('[Checkout] Erro detalhado ao criar preferência:', error);
-        throw error;
-    }
-}
-
-async function updateUserByEmail(email, updates) {
-    try {
-        const response = await fetch(`/api/users?email=${encodeURIComponent(email)}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updates)
-        });
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Erro ao atualizar usuário:', error);
         throw error;
     }
 }
@@ -185,7 +252,7 @@ async function initCheckoutButton() {
         `;
         
         // Store selected plan in sessionStorage
-        sessionStorage.setItem('selectedPlan', selectedPlan);
+        sessionStorage.setItem('selectedPlan', selectedPlan.nome);
         
         const btn = document.getElementById('checkout-btn');
         btn.addEventListener('click', async () => {
@@ -202,18 +269,34 @@ async function initCheckoutButton() {
                         clearInterval(checkPopup);
                         
                         try {
-                            // Update user's plan in DB
-                            await updateUserByEmail(currentUser.email, { plan: selectedPlan });
+                            // Create payment record in DB with status 'aprovado'
+                            const pagamentoData = {
+                                email: currentUser.email,
+                                cep: currentUser.condominium?.cep || '',
+                                plano_id: selectedPlan.id,
+                                total_apartamentos: currentUser.condominium?.totalApartments || 0,
+                                valor_por_unidade: selectedPlan.valor_por_unidade,
+                                valor_minimo: selectedPlan.valor_minimo,
+                                valor_pago: selectedPrice,
+                                status_pagamento: 'aprovado',
+                                codigo_transacao: `TXN-${Date.now()}`,
+                                data_pagamento: new Date().toISOString()
+                            };
+                            
+                            await createPayment(pagamentoData);
+                            
+                            // Update user's plan in DB for compatibility
+                            await updateUserByEmail(currentUser.email, { plan: selectedPlan.nome });
                             
                             // Update currentUser object and sessionStorage
-                            currentUser.plan = selectedPlan;
+                            currentUser.plan = selectedPlan.nome;
                             sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
                             
                             // Hide overlay
                             hideLoadingOverlay();
                             
-                            // Redirect to condominio_register.html
-                            window.location.href = 'condominio_register.html';
+                            // Redirect to index
+                            window.location.href = 'index.html';
                         } catch (error) {
                             console.error('[Checkout] Error after payment:', error);
                             hideLoadingOverlay();
@@ -231,5 +314,22 @@ async function initCheckoutButton() {
     } catch (error) {
         console.error('[Checkout] initCheckoutButton ERROR:', error);
         container.innerHTML = `<div style="text-align:center;padding:20px;color:#ef4444;"><i class="fas fa-exclamation-circle"></i> Erro ao carregar pagamento. Tente novamente.<br><small style="color:#9ca3af;">${error.message}</small></div>`;
+    }
+}
+
+async function updateUserByEmail(email, updates) {
+    try {
+        const response = await fetch(`/api/users?email=${encodeURIComponent(email)}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updates)
+        });
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Erro ao atualizar usuário:', error);
+        throw error;
     }
 }
