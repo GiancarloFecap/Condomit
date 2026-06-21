@@ -1,3 +1,4 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -47,64 +48,117 @@ function getMimeType(filename) {
 }
 
 const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url, true);
-  let pathname = decodeURIComponent(parsedUrl.pathname);
+    const parsedUrl = url.parse(req.url, true);
+    let pathname = decodeURIComponent(parsedUrl.pathname);
 
-  if (pathname === '/' || pathname === '/pages') {
-    pathname = '/pages/inicio.html';
-  }
-
-  if (pathname === '/api/register' && req.method === 'POST') {
-    return proxySupabaseRequest(req, res, '/users', 'POST');
-  }
-
-  if (pathname === '/api/condominiums' && req.method === 'POST') {
-    return proxySupabaseRequest(req, res, '/condominiums', 'POST');
-  }
-
-  if (pathname === '/api/users' && req.method === 'GET') {
-    const email = parsedUrl.query.email;
-    if (!email) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Parâmetro email é obrigatório' }));
-      return;
+    if (pathname === '/' || pathname === '/pages') {
+        pathname = '/pages/inicio.html';
     }
-    return proxySupabaseRequest(req, res, `/users?select=*&email=eq.${encodeURIComponent(email)}`, 'GET');
-  }
 
-  if (pathname === '/api/users' && req.method === 'PATCH') {
-    const email = parsedUrl.query.email;
-    if (!email) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Parâmetro email é obrigatório' }));
-      return;
+    if (pathname === '/api/register' && req.method === 'POST') {
+        return proxySupabaseRequest(req, res, '/users', 'POST');
     }
-    return proxySupabaseRequest(req, res, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
-  }
 
-  if (pathname === '/api/condominiums' && req.method === 'GET') {
-    const query = { ...parsedUrl.query };
-    delete query.select;
-    const queryString = new URLSearchParams(query).toString();
-    const pathSuffix = queryString ? `/condominiums?select=*&${queryString}` : '/condominiums?select=*';
-    return proxySupabaseRequest(req, res, pathSuffix, 'GET');
-  }
+    if (pathname === '/api/condominiums' && req.method === 'POST') {
+        return proxySupabaseRequest(req, res, '/condominiums', 'POST');
+    }
 
-  if (pathname === '/api/user_condominiums' && req.method === 'GET') {
-    const query = { ...parsedUrl.query };
-    delete query.select;
-    const queryString = new URLSearchParams(query).toString();
-    const pathSuffix = queryString ? `/user_condominiums?select=*&${queryString}` : '/user_condominiums?select=*';
-    return proxySupabaseRequest(req, res, pathSuffix, 'GET');
-  }
+    if (pathname === '/api/users' && req.method === 'GET') {
+        const email = parsedUrl.query.email;
+        if (!email) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Parâmetro email é obrigatório' }));
+            return;
+        }
+        return proxySupabaseRequest(req, res, `/users?select=*&email=eq.${encodeURIComponent(email)}`, 'GET');
+    }
 
-  if (pathname === '/api/user_condominiums' && req.method === 'POST') {
-    return proxySupabaseRequest(req, res, '/user_condominiums', 'POST');
-  }
+    if (pathname === '/api/users' && req.method === 'PATCH') {
+        const email = parsedUrl.query.email;
+        if (!email) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Parâmetro email é obrigatório' }));
+            return;
+        }
+        return proxySupabaseRequest(req, res, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
+    }
 
-  if (pathname === '/api/mercadopago/preference' && req.method === 'POST') {
-    return createMercadoPagoPreference(req, res);
-  }
+    if (pathname === '/api/condominiums' && req.method === 'GET') {
+        const query = { ...parsedUrl.query };
+        delete query.select;
+        const queryString = new URLSearchParams(query).toString();
+        const pathSuffix = queryString ? `/condominiums?select=*&${queryString}` : '/condominiums?select=*';
+        return proxySupabaseRequest(req, res, pathSuffix, 'GET');
+    }
+
+    if (pathname === '/api/user_condominiums' && req.method === 'GET') {
+        const query = { ...parsedUrl.query };
+        delete query.select;
+        const queryString = new URLSearchParams(query).toString();
+        const pathSuffix = queryString ? `/user_condominiums?select=*&${queryString}` : '/user_condominiums?select=*';
+        return proxySupabaseRequest(req, res, pathSuffix, 'GET');
+    }
+
+    if (pathname === '/api/user_condominiums' && req.method === 'POST') {
+        return proxySupabaseRequest(req, res, '/user_condominiums', 'POST');
+    }
+
+    if (pathname === '/api/mercadopago/preference' && req.method === 'POST') {
+        return createMercadoPagoPreference(req, res);
+    }
+
+    // ENDPOINT: GET /api/plano - Fetch all plans
+    if (pathname === '/api/plano' && req.method === 'GET') {
+        return proxySupabaseRequest(req, res, '/plano?select=*', 'GET');
+    }
+
+    // ENDPOINT: GET /api/pagamento - Fetch payments (by email or cep)
+    if (pathname === '/api/pagamento' && req.method === 'GET') {
+        const email = parsedUrl.query.email;
+        const cep = parsedUrl.query.cep;
+        let pathSuffix = '/pagamento?select=*';
+        if (email) {
+            pathSuffix += `&email=eq.${encodeURIComponent(email)}`;
+        }
+        if (cep) {
+            pathSuffix += `&cep=eq.${encodeURIComponent(cep)}`;
+        }
+        return proxySupabaseRequest(req, res, pathSuffix, 'GET');
+    }
+
+    // ENDPOINT: POST /api/pagamento - Create new payment
+    if (pathname === '/api/pagamento' && req.method === 'POST') {
+        return proxySupabaseRequest(req, res, '/pagamento', 'POST');
+    }
+
+    // ENDPOINT: GET /api/reserva - Fetch all reservations or by local/date
+    if (pathname === '/api/reserva' && req.method === 'GET') {
+        const nome_local = parsedUrl.query.nome_local;
+        const data_reserva = parsedUrl.query.data_reserva;
+        let pathSuffix = '/reserva?select=*';
+        if (nome_local) {
+            pathSuffix += `&nome_local=eq.${encodeURIComponent(nome_local)}`;
+        }
+        if (data_reserva) {
+            pathSuffix += `&data_reserva=eq.${encodeURIComponent(data_reserva)}`;
+        }
+        return proxySupabaseRequest(req, res, pathSuffix, 'GET');
+    }
+
+    // ENDPOINT: POST /api/reserva - Create new reservation
+    if (pathname === '/api/reserva' && req.method === 'POST') {
+        return proxySupabaseRequest(req, res, '/reserva', 'POST');
+    }
+
+    // ENDPOINT: POST /api/forgot-password - Request password reset
+    if (pathname === '/api/forgot-password' && req.method === 'POST') {
+        return handleForgotPassword(req, res);
+    }
+
+    // ENDPOINT: POST /api/reset-password - Reset password
+    if (pathname === '/api/reset-password' && req.method === 'POST') {
+        return handleResetPassword(req, res);
+    }
 
   let filePath = path.join(root, pathname);
 
@@ -245,6 +299,119 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('REJEIÇÃO NÃO TRATADA:', reason);
 });
+
+// Armazena tokens de reset temporários (em produção, use Redis)
+const resetTokens = new Map();
+
+function generateResetToken() {
+  return Math.random().toString(36).substr(2, 10) + Date.now().toString(36);
+}
+
+function handleForgotPassword(req, res) {
+  let body = '';
+  req.on('data', chunk => body += chunk);
+  req.on('end', async () => {
+    try {
+      const { email } = JSON.parse(body);
+      if (!email) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'E-mail é obrigatório' }));
+        return;
+      }
+
+      // Verifica se o usuário existe
+      const userResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email&email=eq.${encodeURIComponent(email)}`, {
+        headers: {
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        }
+      });
+
+      const users = await userResponse.json();
+      if (!users || users.length === 0) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'Se o e-mail existir, um link de reset foi enviado' }));
+        return;
+      }
+
+      // Gera token
+      const token = generateResetToken();
+      resetTokens.set(token, { email, expires: Date.now() + 3600000 }); // 1 hora
+
+      // Em produção, você enviaria um e-mail aqui
+      // Para demonstração, vamos armazenar o token no sessionStorage ou apenas simular
+      console.log(`[Reset Password] Token para ${email}: ${token}`);
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ 
+        message: 'Se o e-mail existir, um link de reset foi enviado',
+        // Em ambiente de teste, podemos devolver o token diretamente para o cliente
+        token: process.env.NODE_ENV === 'development' ? token : undefined,
+        redirectUrl: `/pages/redefinir-senha.html?token=${token}`
+      }));
+    } catch (error) {
+      console.error('[Forgot Password Error]', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Erro interno do servidor' }));
+    }
+  });
+}
+
+function handleResetPassword(req, res) {
+  let body = '';
+  req.on('data', chunk => body += chunk);
+  req.on('end', async () => {
+    try {
+      const { token, password } = JSON.parse(body);
+      if (!token || !password) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Token e senha são obrigatórios' }));
+        return;
+      }
+
+      // Verifica o token
+      const resetData = resetTokens.get(token);
+      if (!resetData) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Token inválido ou expirado' }));
+        return;
+      }
+
+      if (Date.now() > resetData.expires) {
+        resetTokens.delete(token);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Token expirado' }));
+        return;
+      }
+
+      // Atualiza a senha no banco
+      const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(resetData.email)}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify({ password })
+      });
+
+      if (!updateResponse.ok) {
+        throw new Error('Falha ao atualizar senha');
+      }
+
+      // Remove o token
+      resetTokens.delete(token);
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ message: 'Senha redefinida com sucesso' }));
+    } catch (error) {
+      console.error('[Reset Password Error]', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Erro interno do servidor' }));
+    }
+  });
+}
 
 server.listen(port, () => {
   console.log(`Servidor HTTP rodando em http://localhost:${port}`);

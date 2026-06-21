@@ -7,6 +7,12 @@
     --topbar-bg: white;
     --topbar-text: #111827;
     --topbar-secondary: #6b7280;
+    --primary-color: #1e40af;
+    --primary-color-light: #dbeafe;
+    --border-color: #e5e7eb;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
 }
 
 html[data-theme="dark"] {
@@ -18,6 +24,12 @@ html[data-theme="dark"] {
     --sidebar: linear-gradient(180deg, #111827 0%, #0f172a 100%);
     --button-bg: #2563eb;
     --button-color: #ffffff;
+    --primary-color: #2563eb;
+    --primary-color-light: #1e3a8a;
+    --border-color: #374151;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --text-tertiary: #6b7280;
 }
 
 html[data-theme="dark"] .user-info-small .name {

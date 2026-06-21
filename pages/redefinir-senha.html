@@ -3,46 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal de Assembleias - Cadastro</title>
+    <title>Condomit - Redefinir senha</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/cadastro.css">
-    <link rel="stylesheet" href="../styles/theme.css">
-    <link rel="stylesheet" href="../styles/cadastro-password-strength.css">
+    <link rel="stylesheet" href="../styles/entrar.css">
+    <link rel="stylesheet" href="../styles/redefinir-senha.css">
 </head>
 <body>
-    <div class="signup-page">
-        <div class="signup-container">
-            <button class="btn-back" onclick="window.history.back()">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </button>
-            <div class="signup-header">
-                <img src="../assets/logo-full.png" alt="Condomit Logo" class="signup-logo">
-                <h1>Crie sua conta</h1>
-                <p>É necessário preencher corretamente e criar um termo depois</p>
+    <div class="login-page">
+        <div class="login-container">
+            <div class="login-header">
+                <img src="../assets/logo-full.png" alt="Condomit Logo" class="login-logo">
+                <h1>Redefinir senha</h1>
+                <p>Crie uma nova senha para sua conta.<br>Sua nova senha deve ser diferente das anteriores.</p>
             </div>
-            <form id="signupForm" class="signup-form">
-                <div class="form-group">
-                    <label for="name">Nome completo</label>
-                    <input type="text" id="name" placeholder="Digite seu nome completo" required>
-                </div>
-                <div class="form-group">
-                    <label for="email">E-mail</label>
-                    <input type="email" id="email" placeholder="Digite seu e-mail" required>
-                </div>
-                <div class="form-group">
-                    <label for="phone">Telefone</label>
-                    <input type="tel" id="phone" placeholder="(00) 00000-0000" required>
-                </div>
-                <div class="form-group">
-                    <label for="cpf">CPF</label>
-                    <input type="text" id="cpf" placeholder="000.000.000-00" required>
-                </div>
 
+            <div id="successMessage" class="success-message">
+                <i class="fas fa-check-circle"></i>
+                <h2>Senha redefinida com sucesso.</h2>
+                <p>Redirecionando para o login...</p>
+            </div>
+
+            <form id="redefineForm" class="login-form">
                 <div class="form-group">
-                    <label for="password">Senha</label>
+                    <label for="newPassword">Nova senha</label>
                     <div class="password-input">
-                        <input type="password" id="password" placeholder="Digite sua senha" required>
-                        <button type="button" id="togglePassword" class="toggle-password">
+                        <input type="password" id="newPassword" placeholder="Digite sua nova senha" required>
+                        <button type="button" id="toggleNewPassword" class="toggle-password">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
@@ -76,34 +62,40 @@
                         </ul>
                     </div>
                 </div>
+
                 <div class="form-group">
-                    <label for="confirmPassword">Confirmar senha</label>
+                    <label for="confirmPassword">Confirmar nova senha</label>
                     <div class="password-input">
-                        <input type="password" id="confirmPassword" placeholder="Confirme sua senha" required>
+                        <input type="password" id="confirmPassword" placeholder="Digite novamente sua nova senha" required>
                         <button type="button" id="toggleConfirmPassword" class="toggle-password">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="userType">Tipo de usuário</label>
-                    <select id="userType" required>
-                        <option value="morador">Morador</option>
-                        <option value="sindico">Síndico</option>
-                        <option value="porteiro">Porteiro</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary btn-large">
-                    <i class="fas fa-user-plus"></i> Cadastrar
+
+                <div id="errorMessage" class="error-message"></div>
+                <button type="submit" id="submitBtn" class="btn btn-primary btn-large">
+                    Redefinir senha
                 </button>
             </form>
-            <div class="login-link">
-                Já tem uma conta? <a href="entrar.html">Entre aqui</a>
+
+            <a href="entrar.html" class="signup-link">
+                <i class="fas fa-arrow-left"></i> Voltar para o login
+            </a>
+
+            <div class="important-box">
+                <div class="icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div class="content">
+                    <h3>Importante</h3>
+                    <p>Após redefinir sua senha, você será redirecionado para a tela de login para acessar sua conta.</p>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="../scripts/supabase-client.js"></script>
-    <script src="../scripts/cadastro.js"></script>
+    <script src="../scripts/redefinir-senha.js"></script>
 </body>
 </html>

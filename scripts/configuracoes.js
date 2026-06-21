@@ -1,3 +1,15 @@
+async function fetchApprovedPayment(email) {
+    try {
+        const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
+        if (!response.ok) return null;
+        const payments = await response.json();
+        return payments.find(p => p.status_pagamento === 'aprovado');
+    } catch (error) {
+        console.error('Error checking payment:', error);
+        return null;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
     const currentUser = JSON.parse(sessionStorage.getItem('condominiumUser'));
     if (!currentUser) {
@@ -5,10 +17,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
     }
 
-    // Se for síndico, verificar se tem plano
-    if (currentUser.type === 'sindico' && !currentUser.plan) {
-        window.location.href = 'checkout.html';
-        return;
+    // Se for síndico, verificar se tem plano ou pagamento aprovado
+    if (currentUser.type === 'sindico') {
+        const approvedPayment = await fetchApprovedPayment(currentUser.email);
+        if (!approvedPayment && !currentUser.plan) {
+            window.location.href = 'checkout.html';
+            return;
+        }
+        // Atualizar o usuário com o plano se houver pagamento aprovado
+        if (approvedPayment && !currentUser.plan) {
+            currentUser.plan = approvedPayment.plano_id;
+            sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
+        }
     }
 
     // Se for morador e não tem o nome do condomínio no sessionStorage, busca via API
@@ -265,24 +285,4 @@ function initPreferences() {
     }
 }
 
-function updateProfilePhoto(event) {
-    const file = event.target.files[0];
-    if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const imageData = e.target.result;
-        const currentUser = JSON.parse(sessionStorage.getItem('condominiumUser'));
-        if (!currentUser) return;
-
-        currentUser.profilePhoto = imageData;
-        sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
-        updateUIWithUserData(currentUser);
-        
-        // Sincroniza o avatar em todas as páginas
-        if (typeof syncAllAvatars === 'function') {
-            syncAllAvatars(currentUser);
-        }
-    };
-    reader.readAsDataURL(file);
-}

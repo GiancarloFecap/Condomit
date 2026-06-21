@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - AI Condomit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/ai-condomit.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+            
+            <nav class="sidebar-nav" id="sidebarSindico">
+                <div class="nav-section">
+                    <a href="index.html" class="nav-item">
+                        <i class="fas fa-home"></i>
+                        <span>Início</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Comunicado e Engajamento</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Mural de Avisos</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Canal de Sugestões</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-flag"></i>
+                        <span>Indicações</span>
+                    </a>
+                    <div class="nav-section-title">Comunicação e Relacionamento</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-comments"></i>
+                        <span>Chat com Moradores</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-door-open"></i>
+                        <span>Chat com Porteiro</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-search"></i>
+                        <span>Achados e Perdidos</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Market Place</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <a href="assembleia.html" class="nav-item">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Assembleia</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-video"></i>
+                        <span>Chamadas</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-comment-dots"></i>
+                        <span>Avisos de Assembleia</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Gestão de Moradores</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-users-cog"></i>
+                        <span>Gestão de Moradores</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Reserva e Manutenção</div>
+                    <a href="reservas.html" class="nav-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Reserva de Locais</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-tools"></i>
+                        <span>Manutenção Preventiva</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">IA e Automação</div>
+                    <a href="ai-condomit.html" class="nav-item active">
+                        <i class="fas fa-robot"></i>
+                        <span>IA - Dúvidas do Condomínio</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-bell"></i>
+                        <span>IA - Comunicados Automáticos</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Configurações</div>
+                    <a href="configuracoes.html" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+            </nav>
+
+            <nav class="sidebar-nav" id="sidebarMorador" style="display: none;">
+                <div class="nav-section">
+                    <a href="index-morador.html" class="nav-item">
+                        <i class="fas fa-home"></i>
+                        <span>Início</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Avisos e Comunicações</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Mural de Avisos</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Canal de Sugestões</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-bell"></i>
+                        <span>Notificações</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-envelope"></i>
+                        <span>Correio</span>
+                    </a>
+                    <div class="nav-section-title">Comunicação e Relacionamento</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-comments"></i>
+                        <span>Chat com Síndico</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-door-open"></i>
+                        <span>Chat com Portaria</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-search"></i>
+                        <span>Achados e Perdidos</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Market Place</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Assembleias</div>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Assembleias</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-video"></i>
+                        <span>Chamadas</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-comment-dots"></i>
+                        <span>Avisos de Assembleia</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Reservas e Manutenção</div>
+                    <a href="reservas.html" class="nav-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Reserva de Locais</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-tools"></i>
+                        <span>Manutenção Preventiva</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">IA e Automação</div>
+                    <a href="ai-condomit.html" class="nav-item active">
+                        <i class="fas fa-robot"></i>
+                        <span>IA - Dúvidas do Condomínio</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-bell"></i>
+                        <span>IA - Comunicados Automáticos</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Configurações</div>
+                    <a href="configuracoes.html" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button class="btn-support">
+                    <i class="fas fa-headset"></i>
+                    <span>Central de Suporte</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>AI Condomit</h1>
+                    <p>Seu assistente inteligente para dúvidas sobre o condomínio.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type">Morador</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- AI Chat Content -->
+            <div class="ai-chat-container">
+                <!-- Container para mensagens e boas-vindas -->
+                <div class="chat-content-wrapper">
+                    <!-- Welcome Card -->
+                    <div class="welcome-card" id="welcomeCard">
+                        <h2 class="welcome-title">Olá, <span id="firstName">Morador</span>! 👋</h2>
+                        <p class="welcome-subtitle">Como posso te ajudar hoje?</p>
+                        <p class="welcome-description">Pergunte sobre regras, áreas comuns, documentos, boletos, reservas, visitantes e comunicados do condomínio.</p>
+                        
+                        <!-- Suggested Questions -->
+                        <div class="suggestions-container">
+                            <button class="suggestion-btn" data-question="Quais são as regras para uso do salão de festas?">
+                                <i class="fas fa-question-circle"></i>
+                                Quais são as regras para uso do salão de festas?
+                            </button>
+                            <button class="suggestion-btn" data-question="Como faço para reservar a churrasqueira?">
+                                <i class="fas fa-calendar-check"></i>
+                                Como faço para reservar a churrasqueira?
+                            </button>
+                            <button class="suggestion-btn" data-question="Onde vejo meus boletos?">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                                Onde vejo meus boletos?
+                            </button>
+                            <button class="suggestion-btn" data-question="Como funciona o cadastro de visitantes?">
+                                <i class="fas fa-user-plus"></i>
+                                Como funciona o cadastro de visitantes?
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chat Messages -->
+                    <div class="chat-messages" id="chatMessages"></div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="chat-input-container">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="chatInput" 
+                            placeholder="Digite sua pergunta..." 
+                            rows="1"
+                            maxlength="500"
+                        ></textarea>
+                        <div class="input-actions">
+                            <span class="char-count" id="charCount">0/500</span>
+                            <button id="sendBtn" class="send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="disclaimer">A AI Condomit pode cometer erros. Sempre confira as informações importantes.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/ai-condomit.js"></script>
+</body>
+</html>

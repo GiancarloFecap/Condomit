@@ -1,0 +1,103 @@
+.success-message {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    display: none;
+    margin-bottom: 1rem;
+}
+.success-message i {
+    color: #22c55e;
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+.success-message h2 {
+    color: #111827;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+.success-message p {
+    color: #6b7280;
+    font-size: 1rem;
+}
+.error-message {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 1rem;
+    color: #dc2626;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    display: none;
+}
+.password-strength {
+    margin-top: 0.5rem;
+}
+.strength-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.strength-bar-item {
+    height: 6px;
+    flex: 1;
+    background: #e5e7eb;
+    border-radius: 3px;
+}
+.strength-text {
+    font-weight: 600;
+}
+.requirements-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0;
+}
+.requirements-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+.requirements-list .valid {
+    color: #22c55e;
+}
+.requirements-list .invalid {
+    color: #dc2626;
+}
+.important-box {
+    margin-top: 1.5rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 1.25rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+.important-box .icon {
+    width: 40px;
+    height: 40px;
+    background: #1e40af;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.important-box .icon i {
+    color: white;
+    font-size: 1.2rem;
+}
+.important-box .content h3 {
+    color: #1e40af;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+.important-box .content p {
+    color: #1e40af;
+    font-size: 0.9rem;
+    margin: 0;
+}

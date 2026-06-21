@@ -1,4 +1,16 @@
-document.addEventListener('DOMContentLoaded', function() {
+async function fetchApprovedPayment(email) {
+    try {
+        const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
+        if (!response.ok) return null;
+        const payments = await response.json();
+        return payments.find(p => p.status_pagamento === 'aprovado');
+    } catch (error) {
+        console.error('Error checking payment:', error);
+        return null;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
     // Check if user is logged in
     const currentUser = JSON.parse(sessionStorage.getItem('condominiumUser'));
     
@@ -9,9 +21,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Check if user is sindico and has condo registered
     if (currentUser.type === 'sindico') {
-        if (!currentUser.plan) {
+        const approvedPayment = await fetchApprovedPayment(currentUser.email);
+        if (!approvedPayment && !currentUser.plan) {
             window.location.href = 'checkout.html';
             return;
+        }
+        // Atualizar o usuário com o plano se houver pagamento aprovado
+        if (approvedPayment && !currentUser.plan) {
+            currentUser.plan = approvedPayment.plano_id;
+            sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
         }
         if (!currentUser.condominium) {
             window.location.href = 'condominio_register.html';

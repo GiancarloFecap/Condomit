@@ -1,4 +1,4 @@
-# 🚀 INICIAR APLICAÇÃO - CondoSmart
+# INICIAR APLICAÇÃO - Condomit
 
 ## Abertura Rápida
 

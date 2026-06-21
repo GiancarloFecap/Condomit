@@ -1,0 +1,303 @@
+.reservas-content {
+    padding: 2rem;
+}
+.reservas-header {
+    margin-bottom: 2rem;
+}
+.reservas-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+.reservas-header p {
+    color: var(--text-secondary);
+    margin: 0;
+}
+.locais-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+.local-card {
+    display: flex;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    align-items: center;
+}
+.local-card img {
+    width: 180px;
+    height: 130px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+.local-info {
+    flex: 1;
+}
+.local-info h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+}
+.local-info .capacidade {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+.local-info p {
+    color: var(--text-secondary);
+    margin: 0 0 0.75rem 0;
+}
+.btn-ver-uso {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.btn-ver-uso:hover {
+    background: var(--primary-color-light);
+}
+.section-card {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+.section-card h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+.calendar-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: center;
+}
+.calendar-nav {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.calendar {
+    flex: 1;
+    text-align: center;
+}
+.calendar-month {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    max-width: 400px;
+    margin: 0 auto;
+}
+.calendar-day {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.85rem;
+    position: relative;
+}
+.calendar-day.weekday {
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: default;
+}
+.calendar-day.disabled,
+.calendar-day.unavailable {
+    color: var(--text-tertiary);
+    cursor: default;
+    background: #f3f4f6;
+}
+.calendar-day.available::after {
+    content: '';
+    display: block;
+    width: 4px;
+    height: 4px;
+    background: #22c55e;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 2px;
+}
+.calendar-day.unavailable::after {
+    content: '';
+    display: block;
+    width: 4px;
+    height: 4px;
+    background: #ef4444;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 2px;
+}
+.calendar-day.selected {
+    background: #bfdbfe;
+    color: #1e40af;
+    font-weight: 600;
+}
+.calendar-legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    justify-content: center;
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.legend-dot.available { background: #22c55e; }
+.legend-dot.unavailable { background: #ef4444; }
+.horarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
+}
+.horario-btn {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    text-align: left;
+}
+.horario-btn.available {
+    border-color: #22c55e;
+    color: #22c55e;
+}
+.horario-btn.unavailable {
+    background: #f3f4f6;
+    color: var(--text-tertiary);
+    cursor: default;
+}
+.horario-btn.selected {
+    background: var(--primary-color-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+.horario-btn span {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.horario-btn small {
+    font-size: 0.75rem;
+}
+.resumo-container {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+.resumo-info {
+    flex: 1;
+    min-width: 200px;
+}
+.resumo-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    color: var(--text-secondary);
+}
+.resumo-item i {
+    color: var(--text-tertiary);
+    width: 20px;
+}
+.resumo-aviso {
+    flex: 1;
+    min-width: 200px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    padding: 1rem;
+}
+.resumo-aviso .aviso-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: #1e40af;
+    margin-bottom: 0.5rem;
+}
+.resumo-aviso p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #1e40af;
+}
+.reservas-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+.btn-cancelar {
+    padding: 0.75rem 2rem;
+    border: 1px solid var(--border-color);
+    color: var(--primary-color);
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+.btn-solicitar {
+    padding: 0.75rem 2rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    opacity: 1;
+}
+.btn-solicitar:disabled {
+    background: #d1d5db !important;
+    color: #6b7280 !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+}
+.btn-solicitar:not(:disabled):hover {
+    filter: brightness(0.9);
+}
+
+.sindico-section {
+    display: none;
+    margin: 2rem;
+}
+
+.todas-reservas-section {
+    display: none;
+    margin: 2rem;
+}
+
+.todas-reservas-section .btn-cancelar {
+    margin-bottom: 1rem;
+}

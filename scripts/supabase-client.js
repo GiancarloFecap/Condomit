@@ -1,5 +1,6 @@
 const SUPABASE_URL = 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTUwNjQsImV4cCI6MjA5NTk5MTA2NH0.WTk0rZaTsPvs30uEWDfylc-z6L3G8IUb_J73oYtjuWU';
+
 const SUPABASE_REST_URL = `${SUPABASE_URL}/rest/v1`;
 
 const SUPABASE_HEADERS = {
@@ -277,8 +278,20 @@ function updateFontButtons(size) {
   }
 }
 
+async function fetchApprovedPayment(email) {
+  try {
+    const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
+    if (!response.ok) return null;
+    const payments = await response.json();
+    return payments.find(p => p.status_pagamento === 'aprovado');
+  } catch (error) {
+    console.error('Error checking payment:', error);
+    return null;
+  }
+}
+
 // Função para redirecionar o usuário para sua página inicial correta
-function redirectToHome() {
+async function redirectToHome() {
   const loggedInUser = sessionStorage.getItem('condominiumUser');
   if (!loggedInUser) {
     window.location.href = 'entrar.html';
@@ -289,12 +302,22 @@ function redirectToHome() {
   if (user.type === 'morador') {
     window.location.href = 'index-morador.html';
   } else if (user.type === 'sindico') {
-    // Verificar se o síndico tem plano antes de ir para home
-    if (!user.plan) {
+    // Verificar se o síndico tem pagamento aprovado
+    const approvedPayment = await fetchApprovedPayment(user.email);
+    
+    if (approvedPayment) {
+      // Atualizar o usuário com o plano do pagamento aprovado
+      if (approvedPayment.plano_id && !user.plan) {
+        // Podemos buscar o nome do plano se necessário, ou usar um padrão
+        user.plan = approvedPayment.plano_id;
+        sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+      }
+      window.location.href = 'index.html';
+    } else if (!user.plan) {
       window.location.href = 'checkout.html';
-      return;
+    } else {
+      window.location.href = 'index.html';
     }
-    window.location.href = 'index.html';
   } else {
     // Caso padrão ou outros tipos (ex: porteiro)
     window.location.href = 'index.html';

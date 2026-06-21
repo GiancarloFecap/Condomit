@@ -1,24 +1,43 @@
 document.addEventListener('DOMContentLoaded', function() {
+    async function fetchApprovedPayment(email) {
+        try {
+            const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
+            if (!response.ok) return null;
+            const payments = await response.json();
+            return payments.find(p => p.status_pagamento === 'aprovado');
+        } catch (error) {
+            console.error('Error checking payment:', error);
+            return null;
+        }
+    }
+
     function getNormalizedUserType(user) {
         return String(user.user_type || user.type || '').trim().toLowerCase();
     }
 
-    function redirectByUserType(user) {
+    async function redirectByUserType(user) {
         const type = getNormalizedUserType(user);
         user.type = type;
         sessionStorage.setItem('condominiumUser', JSON.stringify(user));
 
         if (type === 'sindico') {
-            // Se o síndico não tem plano, redireciona para checkout
-            if (!user.plan) {
-                window.location.href = 'checkout.html';
-                return;
-            }
-
-            if (user.condominium) {
-                window.location.href = 'index.html';
+            // Check for approved payment
+            const approvedPayment = await fetchApprovedPayment(user.email);
+            
+            if (approvedPayment) {
+                // Has approved payment
+                if (user.condominium) {
+                    window.location.href = 'index.html';
+                } else {
+                    window.location.href = 'condominio_register.html';
+                }
             } else {
-                window.location.href = 'condominio_register.html';
+                // No approved payment
+                if (user.condominium) {
+                    window.location.href = 'checkout.html';
+                } else {
+                    window.location.href = 'condominio_register.html';
+                }
             }
         } else if (type === 'morador') {
             if (user.condominium) {

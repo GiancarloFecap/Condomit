@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Esqueci minha senha</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/entrar.css">
+    <link rel="stylesheet" href="../styles/esqueci-senha.css">
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-container">
+            <div class="login-header">
+                <img src="../assets/logo-full.png" alt="Condomit Logo" class="login-logo">
+            </div>
+            <div class="reset-icon">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h1>Esqueci minha senha</h1>
+            <p class="subtitle">Digite seu e-mail cadastrado para receber um link de redefinição de senha.</p>
+
+            <div id="successMessage" class="success-message">
+                <i class="fas fa-check-circle"></i>
+                <h2>Enviamos um link de redefinição para seu e-mail.</h2>
+                <p>Verifique sua caixa de entrada (e a caixa de spam, se necessário).</p>
+            </div>
+
+            <form id="resetForm" class="reset-form">
+                <div class="form-group">
+                    <label for="email">E-mail</label>
+                    <div class="email-input-group">
+                        <input type="email" id="email" placeholder="Digite seu e-mail" required>
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                </div>
+                <div id="errorMessage" class="error-message">Digite um e-mail válido.</div>
+                <button type="submit" id="submitBtn" class="btn btn-primary btn-large">
+                    Enviar link de redefinição
+                </button>
+            </form>
+
+            <a href="entrar.html" class="back-link">
+                <i class="fas fa-arrow-left"></i> Voltar para o login
+            </a>
+
+            <div class="help-section">
+                <p>Ainda precisa de ajuda?</p>
+                <a href="#">Fale com o administrador do condomínio</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/esqueci-senha.js"></script>
+</body>
+</html>
