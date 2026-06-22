@@ -132,6 +132,7 @@ const server = http.createServer((req, res) => {
         return proxySupabaseRequest(req, res, '/pagamento', 'POST');
     }
 
+
     // ENDPOINT: GET /api/reserva - Fetch all reservations or by local/date
     if (pathname === '/api/reserva' && req.method === 'GET') {
         const nome_local = parsedUrl.query.nome_local;
@@ -159,6 +160,17 @@ const server = http.createServer((req, res) => {
     // ENDPOINT: POST /api/reset-password - Reset password
     if (pathname === '/api/reset-password' && req.method === 'POST') {
         return handleResetPassword(req, res);
+    }
+    // ENDPOINT: PATCH /api/pagamento - Update payment status (by id)
+    if (pathname === '/api/pagamento' && req.method === 'PATCH') {
+        const id = parsedUrl.query.id;
+        if (!id) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Parâmetro id é obrigatório' }));
+            return;
+        }
+        return proxySupabaseRequest(req, res, `/pagamento?id=eq.${encodeURIComponent(id)}`, 'PATCH');
+
     }
 
   let filePath = path.join(root, pathname);

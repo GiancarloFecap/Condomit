@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
+
+    // Check if user is logged in and is a sindico
+
     let currentUser = JSON.parse(sessionStorage.getItem('condominiumUser'));
     if (!currentUser) {
         window.location.href = 'entrar.html';
@@ -8,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = 'assembleia.html';
         return;
     }
+    
+    // If sindico already has a condo, check for plan/payment
     if (currentUser.condominium) {
         window.location.href = 'index.html';
         return;
@@ -250,6 +255,9 @@ document.addEventListener('DOMContentLoaded', function() {
             sessionStorage.setItem('condominiumUser', JSON.stringify(updatedUser));
 
             alert('Condomínio registrado com sucesso!');
+
+            // Now redirect to checkout (if no plan/payment)
+
             window.location.href = 'checkout.html';
         } catch (error) {
             console.error('Erro ao registrar condomínio:', error);
