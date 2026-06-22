@@ -14,31 +14,203 @@
             <div class="register-header">
                 <img src="../assets/logo-full.png" alt="Condomit Logo" class="register-logo">
                 <h1>Registre Seu Condomínio</h1>
+                <p class="subtitle">Informe os dados do seu condomínio para começar a usar o Condomit.</p>
             </div>
+            
             <form id="condoForm" class="register-form">
-                <div class="form-group">
-                    <label for="totalApartments">Total de Apartamentos*</label>
-                    <input type="number" id="totalApartments" placeholder="Número" required>
+                <!-- Seção 1: Informações Gerais -->
+                <div class="section">
+                    <div class="section-header">
+                        <span class="section-number">1</span>
+                        <h2>Informações gerais</h2>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="condoName">Nome do condomínio*</label>
+                            <input type="text" id="condoName" placeholder="Digite o nome do condomínio" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cep">CEP*</label>
+                            <input type="text" id="cep" placeholder="00000-000" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="address">Endereço*</label>
+                            <input type="text" id="address" placeholder="Rua, Avenida, etc." required>
+                        </div>
+                        <div class="form-group">
+                            <label for="number">Número*</label>
+                            <input type="text" id="number" placeholder="Ex.: 123" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="complement">Complemento</label>
+                            <input type="text" id="complement" placeholder="Ex.: Bloco A, Torre 1">
+                        </div>
+                        <div class="form-group">
+                            <label for="neighborhood">Bairro*</label>
+                            <input type="text" id="neighborhood" placeholder="Ex.: Centro" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="city">Cidade*</label>
+                            <input type="text" id="city" placeholder="Digite a cidade" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="state">Estado*</label>
+                            <select id="state" required>
+                                <option value="">Selecione</option>
+                                <option value="AC">Acre</option>
+                                <option value="AL">Alagoas</option>
+                                <option value="AP">Amapá</option>
+                                <option value="AM">Amazonas</option>
+                                <option value="BA">Bahia</option>
+                                <option value="CE">Ceará</option>
+                                <option value="DF">Distrito Federal</option>
+                                <option value="ES">Espírito Santo</option>
+                                <option value="GO">Goiás</option>
+                                <option value="MA">Maranhão</option>
+                                <option value="MT">Mato Grosso</option>
+                                <option value="MS">Mato Grosso do Sul</option>
+                                <option value="MG">Minas Gerais</option>
+                                <option value="PA">Pará</option>
+                                <option value="PB">Paraíba</option>
+                                <option value="PR">Paraná</option>
+                                <option value="PE">Pernambuco</option>
+                                <option value="PI">Piauí</option>
+                                <option value="RJ">Rio de Janeiro</option>
+                                <option value="RN">Rio Grande do Norte</option>
+                                <option value="RS">Rio Grande do Sul</option>
+                                <option value="RO">Rondônia</option>
+                                <option value="RR">Roraima</option>
+                                <option value="SC">Santa Catarina</option>
+                                <option value="SP">São Paulo</option>
+                                <option value="SE">Sergipe</option>
+                                <option value="TO">Tocantins</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="totalBlocks">Total de Blocos*</label>
-                    <input type="number" id="totalBlocks" placeholder="Número" required min="1">
+
+                <!-- Seção 2: Estrutura do condomínio -->
+                <div class="section">
+                    <div class="section-header">
+                        <span class="section-number">2</span>
+                        <h2>Estrutura do condomínio</h2>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="totalBlocks">Total de blocos*</label>
+                            <input type="number" id="totalBlocks" placeholder="Ex.: 3" required min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="totalApartments">Total de apartamentos*</label>
+                            <input type="number" id="totalApartments" placeholder="Ex.: 120" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Quais são os blocos do condomínio?</label>
+                        <p class="helper-text">Informe o nome ou identificação de cada bloco.</p>
+                        <div id="blockNamesInputs"></div>
+                        <button type="button" id="addBlockBtn" class="btn-add">
+                            <i class="fas fa-plus"></i> Adicionar bloco
+                        </button>
+                    </div>
                 </div>
-                <div class="form-group" id="blockNamesContainer">
-                    <label>Nomes dos Blocos*</label>
-                    <div id="blockNamesInputs"></div>
+
+                <!-- Seção 3: Espaços públicos para reserva -->
+                <div class="section">
+                    <div class="section-header right">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="section-number">3</span>
+                            <h2>Espaços públicos para reserva</h2>
+                        </div>
+                        <button type="button" id="addSpaceBtn" class="btn-add">
+                            <i class="fas fa-plus"></i> Adicionar espaço
+                        </button>
+                    </div>
+                    
+                    <table id="spacesTable" class="spaces-table">
+                        <thead>
+                            <tr>
+                                <th>Nome do espaço</th>
+                                <th>Capacidade (pessoas)</th>
+                                <th>Descrição (opcional)</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spacesBody">
+                        </tbody>
+                    </table>
                 </div>
-                <div class="form-group">
-                    <label for="cep">CEP*</label>
-                    <input type="text" id="cep" placeholder="00000-000" required>
+
+                <!-- Seção 4: Informações adicionais -->
+                <div class="section">
+                    <div class="section-header">
+                        <span class="section-number">4</span>
+                        <h2>Informações adicionais</h2>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cnpj">CNPJ do condomínio (opcional)</label>
+                            <input type="text" id="cnpj" placeholder="00.000.000/0000-00">
+                        </div>
+                        <div class="form-group">
+                            <label for="inscricao">Inscrição municipal (opcional)</label>
+                            <input type="text" id="inscricao" placeholder="Ex.: 12345678">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="emailCondo">E-mail do condomínio</label>
+                            <input type="email" id="emailCondo" placeholder="exemplo@condominio.com.br">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Telefone do condomínio</label>
+                            <input type="text" id="phone" placeholder="(11) 99999-9999">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Regulamento interno (opcional)</label>
+                            <div class="file-upload">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Clique para enviar ou arraste o arquivo</p>
+                                <p class="file-info">PDF até 10MB</p>
+                                <input type="file" id="regulamento" accept=".pdf">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Logo do condomínio (opcional)</label>
+                            <div class="file-upload">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Clique para enviar ou arraste a imagem</p>
+                                <p class="file-info">PNG ou JPG até 2MB</p>
+                                <input type="file" id="logoCondo" accept=".png,.jpg,.jpeg">
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="condoName">Nome do Condomínio*</label>
-                    <input type="text" id="condoName" placeholder="Digite aqui" required>
+
+                <!-- Botões -->
+                <div class="buttons-row">
+                    <button type="button" class="btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn-submit">
+                        Registrar Condomínio
+                    </button>
                 </div>
-                <button type="submit" class="btn-submit">
-                    Registrar
-                </button>
             </form>
         </div>
     </div>

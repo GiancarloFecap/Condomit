@@ -1,8 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Get user type from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const userType = urlParams.get('type') || 'morador';
-    
     const signupForm = document.getElementById('signupForm');
     const togglePassword = document.getElementById('togglePassword');
     const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
@@ -10,15 +6,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmPasswordInput = document.getElementById('confirmPassword');
     const phoneInput = document.getElementById('phone');
     const cpfInput = document.getElementById('cpf');
-    const userTypeSelect = document.getElementById('userType');
     const strengthLabel = document.getElementById('strengthLabel');
     const strengthText = document.getElementById('strengthText');
     const strengthBarItems = [
         document.getElementById('bar1'),
         document.getElementById('bar2'),
         document.getElementById('bar3'),
-        document.getElementById('bar4'),
-        document.getElementById('bar5')
+        document.getElementById('bar4')
     ];
 
     // Password requirements
@@ -28,11 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
         number: { el: document.getElementById('req-number'), check: (p) => /\d/.test(p) },
         special: { el: document.getElementById('req-special'), check: (p) => /[!@#$%&*]/.test(p) }
     };
-
-    // Pre-select user type
-    if (userType) {
-        userTypeSelect.value = userType;
-    }
 
     // Toggle password visibility
     togglePassword.addEventListener('click', function() {
@@ -57,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (value.length > 2) {
             value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
         } else if (value.length > 0) {
-            value = `(${value}`;
+            value = `(${value})`;
         }
         
         e.target.value = value;
@@ -90,11 +79,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 i.classList.remove('fa-times-circle');
                 i.classList.add('fa-check-circle');
                 span.style.color = '#22c55e';
+                i.style.color = '#22c55e';
                 validCount++;
             } else {
                 i.classList.remove('fa-check-circle');
                 i.classList.add('fa-times-circle');
-                span.style.color = '#dc2626';
+                span.style.color = '#94a3b8';
+                i.style.color = '#94a3b8';
             }
         });
 
@@ -111,27 +102,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     bar.style.background = '#22c55e';
                 }
             } else {
-                bar.style.background = '#d1d5db';
+                bar.style.background = '#e2e8f0';
             }
         });
 
         let strengthLabelText = 'Fraca';
         strengthText.className = 'strength-text';
         strengthText.querySelector('span').style.color = '#dc2626';
+        strengthText.style.color = '#dc2626';
         if (validCount === 2) {
             strengthLabelText = 'Razoável';
             strengthText.querySelector('span').style.color = '#f97316';
+            strengthText.style.color = '#f97316';
         } else if (validCount === 3) {
             strengthLabelText = 'Bom';
             strengthText.querySelector('span').style.color = '#eab308';
+            strengthText.style.color = '#eab308';
         } else if (validCount >= 4) {
             strengthLabelText = 'Forte';
             strengthText.querySelector('span').style.color = '#22c55e';
+            strengthText.style.color = '#22c55e';
         }
         strengthLabel.textContent = strengthLabelText;
 
         return validCount >= 4;
     }
+
+    // Initialize password requirements state
+    updatePasswordStrength('');
 
     passwordInput.addEventListener('input', () => {
         updatePasswordStrength(passwordInput.value);
@@ -147,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const cpf = document.getElementById('cpf').value.trim();
         const password = document.getElementById('password').value.trim();
         const confirmPassword = document.getElementById('confirmPassword').value.trim();
-        const type = document.getElementById('userType').value;
+        const type = 'sindico';
 
         // Validate password requirements
         const isPasswordValid = updatePasswordStrength(password);
@@ -189,13 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
             sessionStorage.setItem('condominiumUser', JSON.stringify(sessionUser));
             alert('Cadastro realizado com sucesso!');
 
-            if (type === 'sindico') {
-                window.location.href = 'condominio_register.html';
-            } else if (type === 'morador') {
-                window.location.href = 'entrar-condominio.html';
-            } else {
-                window.location.href = 'assembleia.html';
-            }
+            window.location.href = 'condominio_register.html';
         } catch (error) {
             console.error('Erro ao cadastrar usuário:', error);
             alert(`Não foi possível concluir o cadastro: ${error.message || error}`);

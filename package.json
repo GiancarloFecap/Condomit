@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "mercadopago": "^3.1.0"
+    "mercadopago": "^3.1.0",
+    "nodemailer": "^9.0.1"
   }
 }

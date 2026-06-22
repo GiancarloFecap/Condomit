@@ -1,4 +1,4 @@
 function selectType(type) {
-    // Redirect to cadastro page with user type
-    window.location.href = `cadastro.html?type=${type}`;
+    // Redirect to specific cadastro page for each user type
+    window.location.href = `cadastro-${type}.html`;
 }

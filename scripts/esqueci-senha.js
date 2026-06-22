@@ -39,13 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || 'Ocorreu um erro');
             }
 
-            // Em desenvolvimento, redirecionamos diretamente com o token
-            if (data.token) {
-                window.location.href = data.redirectUrl;
-            } else {
-                successMessage.style.display = 'block';
-                resetForm.style.display = 'none';
-            }
+            successMessage.style.display = 'block';
+            resetForm.style.display = 'none';
         } catch (error) {
             console.error('Error sending reset email:', error);
             errorMessage.textContent = 'Ocorreu um erro ao enviar o e-mail. Tente novamente.';

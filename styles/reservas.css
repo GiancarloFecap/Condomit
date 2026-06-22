@@ -28,6 +28,19 @@
     border: 1px solid var(--border-color);
     border-radius: 12px;
     align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.local-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.local-card.selected {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    background: rgba(37, 99, 235, 0.02);
 }
 .local-card img {
     width: 180px;
