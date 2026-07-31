@@ -32,3 +32,11 @@ Status: OPEN
 
 ## Raiz confirmada
 - O ambiente atual ainda não resolve `/esqueceu-senha`; por isso a requisição falha antes de qualquer lógica de recuperação.
+
+## Evidência adicional pós-fix
+- A leitura remota de `https://condomit.netlify.app/scripts/esqueci-senha.js` mostrou que a produção ainda está servindo a versão antiga do script, sem o fallback para `/api/forgot-password`.
+- Por isso os logs `post-fix` não apareceram: o navegador executou JavaScript antigo, não o arquivo local já corrigido.
+
+## Conclusão atual
+- A correção local existe, mas a produção não está com o script atualizado.
+- É necessário publicar a nova versão para que o fallback e a rota nova entrem em vigor no ambiente `condomit.netlify.app`.
