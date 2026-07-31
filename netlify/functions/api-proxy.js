@@ -264,8 +264,11 @@ async function handleForgotPassword(event, body) {
     // #endregion
     console.log(`E-mail de reset enviado para ${normalizedEmail}`);
   } catch (emailError) {
+    // #region debug-point C:netlify-email-error
+    fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"post-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handleForgotPassword:sendResetEmail:catch",msg:"[DEBUG] Envio de email falhou no Netlify proxy",data:{normalizedEmail,message:emailError?.message||String(emailError)},ts:Date.now()})}).catch(()=>{});
+    // #endregion
     console.error('[Email Error] Falha ao enviar e-mail:', emailError);
-    console.log(`Link de redefinição (para usar diretamente): ${resetLink}`);
+    return { statusCode: 502, body: JSON.stringify({ error: 'Nao foi possivel enviar o email de recuperacao.' }) };
   }
   return { statusCode: 200, body: JSON.stringify({ message: 'Se o e-mail existir, um link de reset foi enviado' }) };
 }

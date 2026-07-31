@@ -604,8 +604,13 @@ function handleForgotPassword(req, res) {
         // #endregion
         console.log(`📧 E-mail de reset enviado para ${normalizedEmail}`);
       } catch (emailError) {
+        // #region debug-point B:server-email-error
+        fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"post-fix",hypothesisId:"B",location:"scripts/server.js:handleForgotPassword:sendResetEmail:catch",msg:"[DEBUG] Envio de email falhou no servidor local",data:{normalizedEmail,message:emailError?.message||String(emailError)},ts:Date.now()})}).catch(()=>{});
+        // #endregion
         console.error('[Email Error] Falha ao enviar e-mail:', emailError);
-        console.log(`🔗 Link de redefinição (para usar diretamente): ${resetLink}`);
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Nao foi possivel enviar o email de recuperacao.' }));
+        return;
       }
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
