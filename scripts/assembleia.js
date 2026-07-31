@@ -50,6 +50,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     const dateInput = document.getElementById('assembly-date');
     if (dateInput) dateInput.setAttribute('min', today);
     
+    if (typeof syncAllAvatars === 'function' && currentUser) {
+        syncAllAvatars(currentUser);
+    }
+
     // Message input enter key
     const messageInput = document.getElementById('message-input');
     if (messageInput) {
@@ -179,19 +183,11 @@ async function scheduleAssembly(event) {
     event.preventDefault();
     
     const title = document.getElementById('assembly-title-input').value.trim();
-    const descriptionEl = document.getElementById('assembly-description-input');
     const date = document.getElementById('assembly-date').value;
     const startTime = document.getElementById('assembly-time').value;
-    const endTimeEl = document.getElementById('assembly-end-time');
-    const endTime = endTimeEl ? endTimeEl.value : null;
-    const info = document.getElementById('schedule-info');
     
     if (!title || !date || !startTime) {
-        alert('Preencha todos os campos obrigatórios da assembleia.');
-        return;
-    }
-    if (endTime && startTime >= endTime) {
-        alert('O horário de término deve ser posterior ao horário de início.');
+        alert('Preencha todos os campos da assembleia.');
         return;
     }
     const cep = extractUserCep(currentUser);
@@ -207,10 +203,10 @@ async function scheduleAssembly(event) {
     const newAssembly = {
         cep: cep,
         title: title,
-        description: (descriptionEl && descriptionEl.value) ? descriptionEl.value.trim() : null,
+        description: null,
         date: date,
         start_time: startTime,
-        end_time: endTime || startTime,
+        end_time: startTime,
         created_by: currentUser.email
     };
 
@@ -225,28 +221,9 @@ async function scheduleAssembly(event) {
         });
         renderScheduledAssemblies();
         event.target.reset();
-        if (info) {
-            info.style.display = 'block';
-            info.style.background = '#ecfdf5';
-            info.style.color = '#065f46';
-            info.innerHTML = '<i class="fas fa-check-circle" style="margin-right:6px;"></i>Assembleia agendada e salva no condomínio com sucesso!';
-        }
-        setTimeout(() => {
-            if (info) {
-                info.style.background = '#eff6ff';
-                info.style.color = '#1e40af';
-                info.innerHTML = `<i class="fas fa-map-marker-alt" style="margin-right:6px;"></i>Próximas assembleias serão associadas ao condomínio <strong>CEP ${cep}</strong>.`;
-            }
-        }, 2200);
         alert('Assembleia agendada com sucesso!');
     } catch (error) {
         console.error('Erro ao agendar assembleia:', error);
-        if (info) {
-            info.style.display = 'block';
-            info.style.background = '#fef2f2';
-            info.style.color = '#b91c1c';
-            info.innerHTML = `<i class="fas fa-exclamation-circle" style="margin-right:6px;"></i>${error && error.message ? error.message : 'Não foi possível agendar a assembleia. Verifique as permissões no banco de dados (RLS).'}`;
-        }
         alert('Não foi possível agendar a assembleia. Tente novamente.');
     }
 }
@@ -268,12 +245,13 @@ function renderScheduledAssemblies() {
         const isOwn = assembly.created_by && currentUser && currentUser.email && assembly.created_by === currentUser.email;
         const canDelete = isSindico || isOwn;
 
-        const descriptionHTML = assembly.description ? `<p style="margin-top:6px;color:#4b5563;"><i class="fas fa-align-left"></i> ${escapeHtml(assembly.description)}</p>` : '';
         const createdByHTML = assembly.created_by ? `<p><i class="fas fa-user-tie"></i> <strong>Criado por:</strong> ${escapeHtml(assembly.created_by)}</p>` : '';
-        const endTimeText = assembly.end_time && assembly.end_time !== assembly.start_time ? ` às ${assembly.start_time || '--:--'} até ${assembly.end_time}` : ` às ${assembly.start_time || assembly.time || '--:--'}`;
+        const timeText = assembly.end_time && assembly.end_time !== assembly.start_time
+            ? ` às ${assembly.start_time || '--:--'} até ${assembly.end_time}`
+            : ` às ${assembly.start_time || assembly.time || '--:--'}`;
 
         const deleteBtn = canDelete ? `
-            <button class="btn btn-secondary" style="margin-left:8px;background:#fee2e2;color:#b91c1c;border-color:#fecaca;" onclick="confirmDeleteAssembly(${JSON.stringify(assembly.id).replace(/"/g, '&quot;')})" title="Excluir assembleia">
+            <button class="btn btn-secondary" style="margin-left:8px;background:#fee2e2;color:#b91c1c;border-color:#fecaca;" onclick="confirmDeleteAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')" title="Excluir assembleia">
                 <i class="fas fa-trash-alt"></i> Excluir
             </button>` : '';
 
@@ -281,12 +259,11 @@ function renderScheduledAssemblies() {
             <div class="assembly-item" data-assembly-id="${escapeHtml(String(assembly.id))}">
                 <div class="assembly-info">
                     <h3>${escapeHtml(assembly.title)}</h3>
-                    <p><i class="far fa-calendar-alt"></i> <strong>Data:</strong> ${formatDate(assembly.date)}${endTimeText}</p>
+                    <p><i class="far fa-calendar-alt"></i> <strong>Data:</strong> ${formatDate(assembly.date)}${timeText}</p>
                     ${createdByHTML}
-                    ${descriptionHTML}
                 </div>
                 <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-                    <button class="btn btn-primary" onclick="joinAssembly(${JSON.stringify(String(assembly.id)).replace(/"/g, '&quot;')})">
+                    <button class="btn btn-primary" onclick="joinAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')">
                         <i class="fas fa-video"></i> Entrar na Chamada
                     </button>
                     ${deleteBtn}
@@ -353,16 +330,50 @@ function formatDate(dateStr) {
 }
 
 function joinAssembly(assemblyId) {
-    const assembly = scheduledAssemblies.find(a => a.id === assemblyId);
-    if (assembly) {
-        document.getElementById('assembly-title').textContent = assembly.title;
-        document.getElementById('assembly-room').classList.add('active');
+    const assembly = scheduledAssemblies.find(a => String(a.id) === String(assemblyId));
+    const titleEl = document.getElementById('assembly-title');
+    const roomEl = document.getElementById('assembly-room');
+    if (!assembly) {
+        console.error('Assembleia não encontrada para id=', assemblyId, ' | disponiveis=', scheduledAssemblies.map(a => a.id));
+        if (assemblyId && titleEl && roomEl) {
+            titleEl.textContent = 'Assembleia';
+        } else {
+            alert('Assembleia não encontrada. Atualize a página e tente novamente.');
+            return;
+        }
+    } else if (titleEl) {
+        titleEl.textContent = assembly.title || 'Assembleia';
+    }
+    if (roomEl) {
+        roomEl.classList.add('active');
         document.body.style.overflow = 'hidden';
+    }
         
-        micOn = true;
-        cameraOn = false;
-        updateControlsUI();
-        renderParticipants();
+    micOn = true;
+    cameraOn = false;
+    updateControlsUI();
+    renderParticipants();
+
+    // Liga o microfone (assim como antes o join abria a camera; agora mantem só mic ligado)
+    try {
+        if (!localStream || !localStream.getAudioTracks().length) {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                .then(audioStream => {
+                    if (localStream && localStream.getVideoTracks().length) {
+                        localStream.getVideoTracks().forEach(t => audioStream.addTrack(t));
+                        localStream = audioStream;
+                    } else {
+                        localStream = audioStream;
+                    }
+                    const videoElement = document.getElementById('local-video');
+                    if (videoElement && cameraOn && localStream.getVideoTracks().length) {
+                        videoElement.srcObject = localStream;
+                    }
+                })
+                .catch(err => console.warn('Não foi possível acessar o microfone:', err));
+        }
+    } catch (e) {
+        console.warn('getUserMedia indisponível:', e);
     }
 }
 

@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     async function fetchApprovedPayment(email) {
         try {
             const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const type = getNormalizedUserType(user);
         user.type = type;
         sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+        if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
 
         if (type === 'sindico') {
             // Check for approved payment
@@ -54,6 +55,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const loggedInUser = sessionStorage.getItem('condominiumUser');
     if (loggedInUser) {
         const user = JSON.parse(loggedInUser);
+        // Se nao tem profilePhoto no cache mas tem e-mail, busca do banco ANTES de redirecionar
+        if (user && user.email && !user.profilePhoto && typeof refreshCurrentUserFromDb === 'function') {
+            try {
+                const refreshed = await refreshCurrentUserFromDb();
+                if (refreshed) {
+                    Object.assign(user, refreshed);
+                    sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+                    if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
+                }
+            } catch (_) {}
+        }
         redirectByUserType(user);
         return;
     }
@@ -82,11 +94,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const user = await fetchUserByEmail(email);
-            if (!user || user.password !== password) {
+            const rawUser = await fetchUserByEmail(email);
+            if (!rawUser || rawUser.password !== password) {
                 alert('E-mail ou senha incorretos.');
                 return;
             }
+
+            // Garante que campos opcionais do banco (profilePhoto, phone, etc.) sejam sempre copiados
+            const user = {
+                ...rawUser,
+                password: password
+            };
+            if (rawUser.profilePhoto && !user.profilePhoto) user.profilePhoto = rawUser.profilePhoto;
+            if (rawUser.phone && !user.phone) user.phone = rawUser.phone;
+            if (rawUser.name && !user.name) user.name = rawUser.name;
 
             const normalizedType = getNormalizedUserType(user);
             user.type = normalizedType;
@@ -95,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 user.type = getNormalizedUserType(user);
             }
             sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+            if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
 
             redirectByUserType(user);
         } catch (error) {
