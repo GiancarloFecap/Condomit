@@ -65,12 +65,28 @@ body {
 /* Font Size styles */
 html {
     font-size: 16px;
-    transition: font-size 0.2s;
+    transition: none !important;
 }
 
 html[data-font="small"] { font-size: 14px; }
 html[data-font="medium"] { font-size: 16px; }
 html[data-font="large"] { font-size: 18px; }
+
+html *, html *::before, html *::after {
+    transition-property: background-color, color, border-color, box-shadow, opacity, transform;
+}
+
+html[data-font] * {
+    transition-duration: 0s !important;
+}
+
+html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
+.profile-preview, .profile-info, .config-grid, .config-content,
+.detail-item, .profile-card-actions, .form-group,
+.theme-selector, .font-size-selector, .language-selector {
+    transition: none !important;
+    animation: none !important;
+}
 
 .config-content {
     padding: 30px 40px;

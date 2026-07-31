@@ -19,7 +19,7 @@ const assemblyData = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Check if user is logged in
     const storedUser = sessionStorage.getItem('condominiumUser');
     if (!storedUser) {
@@ -28,6 +28,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     currentUser = JSON.parse(storedUser);
+
+    if (typeof refreshCurrentUserFromDb === 'function') {
+        currentUser = await refreshCurrentUserFromDb();
+    }
 
     // Se for síndico, verificar se tem plano
     if (currentUser.type === 'sindico' && !currentUser.plan) {
@@ -38,43 +42,88 @@ document.addEventListener('DOMContentLoaded', function() {
     updateUserProfile();
     
     // Initialize chat as closed
-    document.getElementById('chat-sidebar').classList.add('closed');
+    const chatSidebar = document.getElementById('chat-sidebar');
+    if (chatSidebar) chatSidebar.classList.add('closed');
     
     // Set min date to today on date input
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('assembly-date').setAttribute('min', today);
+    const dateInput = document.getElementById('assembly-date');
+    if (dateInput) dateInput.setAttribute('min', today);
     
     // Message input enter key
-    document.getElementById('message-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
-    });
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    }
     
     // Image upload
-    document.getElementById('image-upload').addEventListener('change', function(e) {
-        if (e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                selectedImageData = event.target.result;
-                const previewWrapper = document.getElementById('image-preview-wrapper');
-                const previewImg = document.getElementById('image-preview');
-                previewImg.src = selectedImageData;
-                previewWrapper.classList.add('active');
-            };
-            reader.readAsDataURL(file);
-        }
-    });
+    const imageUpload = document.getElementById('image-upload');
+    if (imageUpload) {
+        imageUpload.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    selectedImageData = event.target.result;
+                    const previewWrapper = document.getElementById('image-preview-wrapper');
+                    const previewImg = document.getElementById('image-preview');
+                    if (previewImg) previewImg.src = selectedImageData;
+                    if (previewWrapper) previewWrapper.classList.add('active');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    renderScheduleAssemblyInfo();
 
     // Render initial assemblies from Supabase
     loadScheduledAssemblies();
     renderPastAssemblies();
 });
 
+function extractUserCep(user) {
+    if (!user) return null;
+    if (user.condominium) {
+        if (typeof user.condominium === 'string') {
+            try {
+                const c = JSON.parse(user.condominium);
+                return c?.cep || c?.condominium_id || null;
+            } catch (_) {}
+        } else if (typeof user.condominium === 'object') {
+            return user.condominium.cep || user.condominium.condominium_id || null;
+        }
+    }
+    return user.cep || user.condominium_cep || null;
+}
+
+function renderScheduleAssemblyInfo() {
+    const info = document.getElementById('schedule-info');
+    if (!info) return;
+    const cep = extractUserCep(currentUser);
+    if (cep) {
+        info.innerHTML = `<i class="fas fa-map-marker-alt" style="margin-right:6px;"></i>Essa assembleia será associada ao condomínio <strong>CEP ${cep}</strong>.`;
+        info.style.display = 'block';
+    } else {
+        info.innerHTML = `<i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>Não foi possível identificar o CEP do condomínio deste usuário.`;
+        info.style.display = 'block';
+        info.style.background = '#fff7ed';
+        info.style.color = '#92400e';
+    }
+}
+
 async function loadScheduledAssemblies() {
     try {
-        scheduledAssemblies = await getScheduledAssemblies();
+        const cep = extractUserCep(currentUser);
+        if (cep && typeof getScheduledAssembliesByCep === 'function') {
+            scheduledAssemblies = await getScheduledAssembliesByCep(cep);
+        } else {
+            scheduledAssemblies = await getScheduledAssemblies();
+        }
         renderScheduledAssemblies();
     } catch (error) {
         console.error('Erro ao carregar assembleias:', error);
@@ -130,28 +179,74 @@ async function scheduleAssembly(event) {
     event.preventDefault();
     
     const title = document.getElementById('assembly-title-input').value.trim();
+    const descriptionEl = document.getElementById('assembly-description-input');
     const date = document.getElementById('assembly-date').value;
-    const time = document.getElementById('assembly-time').value;
+    const startTime = document.getElementById('assembly-time').value;
+    const endTimeEl = document.getElementById('assembly-end-time');
+    const endTime = endTimeEl ? endTimeEl.value : null;
+    const info = document.getElementById('schedule-info');
     
-    if (!title || !date || !time) {
-        alert('Preencha todos os campos da assembleia.');
+    if (!title || !date || !startTime) {
+        alert('Preencha todos os campos obrigatórios da assembleia.');
+        return;
+    }
+    if (endTime && startTime >= endTime) {
+        alert('O horário de término deve ser posterior ao horário de início.');
+        return;
+    }
+    const cep = extractUserCep(currentUser);
+    if (!cep) {
+        alert('Não foi possível identificar o CEP do condomínio do usuário. Verifique seu perfil ou contate o síndico.');
+        return;
+    }
+    if (!currentUser || !currentUser.email) {
+        alert('Usuário não autenticado. Faça login novamente.');
         return;
     }
 
     const newAssembly = {
+        cep: cep,
         title: title,
+        description: (descriptionEl && descriptionEl.value) ? descriptionEl.value.trim() : null,
         date: date,
-        start_time: time
+        start_time: startTime,
+        end_time: endTime || startTime,
+        created_by: currentUser.email
     };
 
     try {
         const savedAssembly = await scheduleAssemblyDb(newAssembly);
         scheduledAssemblies.push(savedAssembly);
+        scheduledAssemblies.sort((a, b) => {
+            if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+            const as = a.start_time || '';
+            const bs = b.start_time || '';
+            return as < bs ? -1 : (as > bs ? 1 : 0);
+        });
         renderScheduledAssemblies();
         event.target.reset();
+        if (info) {
+            info.style.display = 'block';
+            info.style.background = '#ecfdf5';
+            info.style.color = '#065f46';
+            info.innerHTML = '<i class="fas fa-check-circle" style="margin-right:6px;"></i>Assembleia agendada e salva no condomínio com sucesso!';
+        }
+        setTimeout(() => {
+            if (info) {
+                info.style.background = '#eff6ff';
+                info.style.color = '#1e40af';
+                info.innerHTML = `<i class="fas fa-map-marker-alt" style="margin-right:6px;"></i>Próximas assembleias serão associadas ao condomínio <strong>CEP ${cep}</strong>.`;
+            }
+        }, 2200);
         alert('Assembleia agendada com sucesso!');
     } catch (error) {
         console.error('Erro ao agendar assembleia:', error);
+        if (info) {
+            info.style.display = 'block';
+            info.style.background = '#fef2f2';
+            info.style.color = '#b91c1c';
+            info.innerHTML = `<i class="fas fa-exclamation-circle" style="margin-right:6px;"></i>${error && error.message ? error.message : 'Não foi possível agendar a assembleia. Verifique as permissões no banco de dados (RLS).'}`;
+        }
         alert('Não foi possível agendar a assembleia. Tente novamente.');
     }
 }
@@ -162,25 +257,68 @@ function renderScheduledAssemblies() {
     listContainer.innerHTML = '';
     
     if (scheduledAssemblies.length === 0) {
-        listContainer.innerHTML = '<p>Nenhuma assembleia agendada.</p>';
+        const cep = extractUserCep(currentUser);
+        listContainer.innerHTML = `<p>Nenhuma assembleia agendada para o condomínio ${cep ? 'CEP ' + cep : 'atual'}.</p>`;
         return;
     }
     
+    const isSindico = currentUser && currentUser.type === 'sindico';
+    
     scheduledAssemblies.forEach(assembly => {
+        const isOwn = assembly.created_by && currentUser && currentUser.email && assembly.created_by === currentUser.email;
+        const canDelete = isSindico || isOwn;
+
+        const descriptionHTML = assembly.description ? `<p style="margin-top:6px;color:#4b5563;"><i class="fas fa-align-left"></i> ${escapeHtml(assembly.description)}</p>` : '';
+        const createdByHTML = assembly.created_by ? `<p><i class="fas fa-user-tie"></i> <strong>Criado por:</strong> ${escapeHtml(assembly.created_by)}</p>` : '';
+        const endTimeText = assembly.end_time && assembly.end_time !== assembly.start_time ? ` às ${assembly.start_time || '--:--'} até ${assembly.end_time}` : ` às ${assembly.start_time || assembly.time || '--:--'}`;
+
+        const deleteBtn = canDelete ? `
+            <button class="btn btn-secondary" style="margin-left:8px;background:#fee2e2;color:#b91c1c;border-color:#fecaca;" onclick="confirmDeleteAssembly(${JSON.stringify(assembly.id).replace(/"/g, '&quot;')})" title="Excluir assembleia">
+                <i class="fas fa-trash-alt"></i> Excluir
+            </button>` : '';
+
         const itemHTML = `
-            <div class="assembly-item">
+            <div class="assembly-item" data-assembly-id="${escapeHtml(String(assembly.id))}">
                 <div class="assembly-info">
-                    <h3>${assembly.title}</h3>
-                    <p><i class="far fa-calendar-alt"></i> <strong>Data:</strong> ${formatDate(assembly.date)} às ${assembly.start_time || assembly.time}</p>
-                    <p><i class="fas fa-user-tie"></i> <strong>Organizado por:</strong> ${currentUser ? currentUser.name : 'Usuário'}</p>
+                    <h3>${escapeHtml(assembly.title)}</h3>
+                    <p><i class="far fa-calendar-alt"></i> <strong>Data:</strong> ${formatDate(assembly.date)}${endTimeText}</p>
+                    ${createdByHTML}
+                    ${descriptionHTML}
                 </div>
-                <button class="btn btn-primary" onclick="joinAssembly('${assembly.id}')">
-                    <i class="fas fa-video"></i> Entrar na Chamada
-                </button>
+                <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <button class="btn btn-primary" onclick="joinAssembly(${JSON.stringify(String(assembly.id)).replace(/"/g, '&quot;')})">
+                        <i class="fas fa-video"></i> Entrar na Chamada
+                    </button>
+                    ${deleteBtn}
+                </div>
             </div>
         `;
         listContainer.innerHTML += itemHTML;
     });
+}
+
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+async function confirmDeleteAssembly(id) {
+    if (!id) return;
+    if (!confirm('Tem certeza que deseja excluir esta assembleia agendada?')) return;
+    try {
+        const deleted = await deleteScheduledAssemblyById(id);
+        scheduledAssemblies = scheduledAssemblies.filter(a => String(a.id) !== String(id));
+        renderScheduledAssemblies();
+        if (!deleted) console.warn('Nenhum registro foi deletado para o id ' + id);
+    } catch (error) {
+        console.error('Erro ao excluir assembleia:', error);
+        alert('Não foi possível excluir a assembleia. Tente novamente.');
+    }
 }
 
 function renderPastAssemblies() {

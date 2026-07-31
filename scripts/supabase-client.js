@@ -161,15 +161,67 @@ async function fetchResidentsByCondoCep(cep) {
 async function scheduleAssemblyDb(assembly) {
   const data = await supabaseFetch('/scheduled_assemblies', {
     method: 'POST',
-    headers: { Prefer: 'return=representation' },
+    headers: { Prefer: 'return=representation,resolution=merge-duplicates' },
     body: JSON.stringify(assembly)
   });
   return Array.isArray(data) ? data[0] : data;
 }
 
 async function getScheduledAssemblies() {
-  return await supabaseFetch('/scheduled_assemblies?select=*');
+  return await supabaseFetch('/scheduled_assemblies?select=*&order=date.asc,start_time.asc');
 }
+
+async function getScheduledAssembliesByCep(userCep) {
+  if (!userCep) return [];
+  try {
+    const encodedCep = encodeURIComponent(userCep);
+    const data = await supabaseFetch(`/scheduled_assemblies?select=*&cep=eq.${encodedCep}&order=date.asc,start_time.asc`);
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Erro ao buscar assembleias agendadas:', error);
+    return [];
+  }
+}
+
+async function deleteScheduledAssemblyById(id) {
+  if (!id) return null;
+  try {
+    const data = await supabaseFetch(`/scheduled_assemblies?id=eq.${encodeURIComponent(String(id))}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=representation' }
+    });
+    return Array.isArray(data) ? data[0] : data;
+  } catch (error) {
+    console.error('Erro ao excluir assembleia:', error);
+    throw error;
+  }
+}
+
+async function refreshCurrentUserFromDb() {
+  const cached = sessionStorage.getItem('condominiumUser');
+  if (!cached) return null;
+  const user = JSON.parse(cached);
+  if (!user?.email) return user;
+  try {
+    const fresh = await fetchUserByEmail(user.email);
+    if (fresh) {
+      const merged = { ...user, ...fresh };
+      if (user.password) merged.password = user.password;
+      if (fresh.condominium && typeof fresh.condominium === 'object' && user.condominium) {
+        merged.condominium = { ...user.condominium, ...fresh.condominium };
+      } else if (fresh.condominium) {
+        merged.condominium = typeof fresh.condominium === 'string' ? JSON.parse(fresh.condominium) : fresh.condominium;
+      }
+      sessionStorage.setItem('condominiumUser', JSON.stringify(merged));
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Não foi possível atualizar dados do usuário do banco:', err);
+  }
+  return user;
+}
+
+window.refreshCurrentUserFromDb = refreshCurrentUserFromDb;
 
 async function saveSuggestion(suggestion) {
   try {
@@ -384,13 +436,29 @@ async function redirectToHome() {
   }
 }
 
-// Inicializa tema ao carregar qualquer página
-document.addEventListener('DOMContentLoaded', function() {
+// Inicializa tema ao carregar qualquer página + refresh dos dados do usuário (persistência)
+document.addEventListener('DOMContentLoaded', async function() {
   const savedTheme = localStorage.getItem('app-theme') || 'light';
   const savedFontSize = localStorage.getItem('app-font-size') || 'medium';
   
   applyTheme(savedTheme);
   applyFontSize(savedFontSize);
+
+  // Garante que foto de perfil, nome e telefone persistam após logout / refresh
+  try {
+    const stored = sessionStorage.getItem('condominiumUser');
+    if (stored) {
+      const user = JSON.parse(stored);
+      if (user && user.email && typeof refreshCurrentUserFromDb === 'function') {
+        const refreshed = await refreshCurrentUserFromDb();
+        if (refreshed && typeof syncAllAvatars === 'function') {
+          syncAllAvatars(refreshed);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Falha ao atualizar perfil durante inicialização:', err);
+  }
 
   // Adiciona evento de clique global para links de "Início"
    document.addEventListener('click', function(e) {
