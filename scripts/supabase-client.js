@@ -197,20 +197,39 @@ async function deleteScheduledAssemblyById(id) {
   }
 }
 
+function getNormalizedUserType(user) {
+  if (!user) return 'morador';
+  const t = (user.type || user.user_type || 'morador').toString().trim().toLowerCase();
+  if (t.startsWith('sind') || t === 'síndico' || t === 'sindico') return 'sindico';
+  if (t.startsWith('mora') || t === 'morador') return 'morador';
+  if (t.startsWith('porteir') || t === 'porteiro') return 'porteiro';
+  return t || 'morador';
+}
+
 async function refreshCurrentUserFromDb() {
   const cached = sessionStorage.getItem('condominiumUser');
   if (!cached) return null;
   const user = JSON.parse(cached);
   if (!user?.email) return user;
+  const existingType = getNormalizedUserType(user);
   try {
     const fresh = await fetchUserByEmail(user.email);
     if (fresh) {
       const merged = { ...user, ...fresh };
       if (user.password) merged.password = user.password;
+      if (!merged.type) merged.type = getNormalizedUserType(fresh);
+      if (!merged.type) merged.type = existingType;
+      if (!['sindico','morador','porteiro'].includes(merged.type)) {
+        merged.type = getNormalizedUserType(merged) || existingType;
+      }
       if (fresh.condominium && typeof fresh.condominium === 'object' && user.condominium) {
         merged.condominium = { ...user.condominium, ...fresh.condominium };
       } else if (fresh.condominium) {
-        merged.condominium = typeof fresh.condominium === 'string' ? JSON.parse(fresh.condominium) : fresh.condominium;
+        try {
+          merged.condominium = typeof fresh.condominium === 'string' ? JSON.parse(fresh.condominium) : fresh.condominium;
+        } catch (_) {
+          merged.condominium = user.condominium || fresh.condominium;
+        }
       }
       sessionStorage.setItem('condominiumUser', JSON.stringify(merged));
       return merged;
@@ -218,10 +237,12 @@ async function refreshCurrentUserFromDb() {
   } catch (err) {
     console.warn('Não foi possível atualizar dados do usuário do banco:', err);
   }
+  if (!user.type) user.type = existingType;
   return user;
 }
 
 window.refreshCurrentUserFromDb = refreshCurrentUserFromDb;
+window.getNormalizedUserType = getNormalizedUserType;
 
 async function saveSuggestion(suggestion) {
   try {
@@ -275,8 +296,11 @@ function formatDate(dateStr) {
 function syncAllAvatars(currentUser) {
   if (!currentUser) return;
 
-  const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  const profilePhoto = currentUser.profilePhoto;
+  const nameStr = currentUser.name || '';
+  const initials = nameStr.trim()
+    ? nameStr.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'US';
+  const profilePhoto = currentUser.profilePhoto || null;
 
   // Sincroniza avatar no topo (em .user-profile-small .avatar)
   const topSmallAvatar = document.querySelector('.user-profile-small .avatar');
