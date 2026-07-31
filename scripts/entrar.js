@@ -60,21 +60,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const loggedInUser = sessionStorage.getItem('condominiumUser');
     if (loggedInUser) {
         user = JSON.parse(loggedInUser);
-    } else {
-        try {
-            const raw = localStorage.getItem('condominiumPersistentUser');
-            if (raw) {
-                const persist = JSON.parse(raw);
-                if (persist && persist.email && typeof fetchUserByEmail === 'function') {
-                    const fresh = await fetchUserByEmail(persist.email).catch(() => null);
-                    if (fresh) {
-                        user = { ...fresh, password: fresh.password || null };
-                        try { sessionStorage.setItem('condominiumUser', JSON.stringify(user)); } catch(_) {}
-                        if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
-                    }
-                }
-            }
-        } catch (_) {}
     }
     if (user) {
         // Se nao tem profilePhoto no cache mas tem e-mail, busca do banco ANTES de redirecionar

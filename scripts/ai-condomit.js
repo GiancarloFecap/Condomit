@@ -277,5 +277,6 @@ function generateAIResponse(question) {
 
 function logout() {
     sessionStorage.removeItem('condominiumUser');
+    try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
     window.location.href = '../inicio.html';
 }

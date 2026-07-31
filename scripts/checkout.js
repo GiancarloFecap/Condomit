@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         logoutBtn.addEventListener('click', function(e) {
             e.preventDefault();
             sessionStorage.removeItem('condominiumUser');
+            try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
             window.location.href = 'entrar.html';
         });
     }

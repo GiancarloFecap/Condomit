@@ -216,6 +216,7 @@ function updateUIWithUserData(currentUser) {
 function logout() {
     if (confirm('Tem certeza que deseja sair da conta?')) {
         sessionStorage.removeItem('condominiumUser');
+        try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
         window.location.href = '../inicio.html';
     }
 }
