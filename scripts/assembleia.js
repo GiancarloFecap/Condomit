@@ -567,3 +567,8 @@ function sendComment() {
         commentInput.value = '';
     }
 }
+
+function logout() {
+    sessionStorage.removeItem('condominiumUser');
+    window.location.href = '../inicio.html';
+}

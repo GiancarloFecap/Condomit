@@ -274,3 +274,8 @@ function generateAIResponse(question) {
     // Resposta padrão
     return 'Olá! Sou a AI Condomit. Posso ajudar com dúvidas sobre regras do condomínio, reservas de áreas comuns, boletos, visitantes, assembleias e muito mais. Faça uma pergunta específica para eu poder ajudar melhor!';
 }
+
+function logout() {
+    sessionStorage.removeItem('condominiumUser');
+    window.location.href = '../inicio.html';
+}

@@ -154,6 +154,49 @@ async function getScheduledAssemblies() {
   return await supabaseFetch('/scheduled_assemblies?select=*');
 }
 
+async function saveSuggestion(suggestion) {
+  try {
+    const data = await supabaseFetch('/suggestions', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(suggestion)
+    });
+    console.log('Sugestão salva com sucesso:', data);
+    return Array.isArray(data) ? data[0] : data;
+  } catch (error) {
+    console.error('Erro ao salvar sugestão:', error);
+    throw error;
+  }
+}
+
+async function updateSuggestionStatus(title, newStatus) {
+  try {
+    const encodedTitle = encodeURIComponent(title);
+    const data = await supabaseFetch(`/suggestions?title=eq.${encodedTitle}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    console.log('Status atualizado com sucesso:', data);
+    return Array.isArray(data) ? data[0] : data;
+  } catch (error) {
+    console.error('Erro ao atualizar status da sugestão:', error);
+    throw error;
+  }
+}
+
+async function getSuggestionsByCep(userCep) {
+  if (!userCep) return [];
+  try {
+    const encodedCep = encodeURIComponent(userCep);
+    const data = await supabaseFetch(`/suggestions?select=*&cep=eq.${encodedCep}&order=suggestion_date.desc,suggestion_time.desc`);
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Erro ao buscar sugestões:', error);
+    return [];
+  }
+}
+
 function formatDate(dateStr) {
   const [year, month, day] = dateStr.split('-');
   return `${day}/${month}/${year}`;

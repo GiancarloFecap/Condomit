@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Condomit - Painel do Síndico</title>
+    <title>Condomit - Canal de Sugestões</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css">
     <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/sugestoes.css">
 </head>
 <body>
     <div class="dashboard-sindico">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
-                <h2 class="condo-name">
+                <h2 class="condo-name"></h2>
             </div>
             
             <nav class="sidebar-nav">
                 <div class="nav-section">
-                    <a href="index.html" class="nav-item active">
+                    <a href="index.html" class="nav-item">
                         <i class="fas fa-home"></i>
                         <span>Início</span>
                     </a>
@@ -31,7 +31,7 @@
                         <i class="fas fa-bullhorn"></i>
                         <span>Mural de Avisos</span>
                     </a>
-                    <a href="sugestoes.html" class="nav-item">
+                    <a href="sugestoes.html" class="nav-item active">
                         <i class="fas fa-lightbulb"></i>
                         <span>Canal de Sugestões</span>
                     </a>
@@ -126,13 +126,11 @@
             </div>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Top Bar -->
             <header class="top-bar">
                 <div class="top-bar-left">
-                    <h1>Olá, Síndico João! :)</h1>
-                    <p>Bem-vindo ao painel de gestão do condomínio</p>
+                    <h1>Canal de Sugestões</h1>
+                    <p>Veja e gerencie as sugestões enviadas pelos moradores.</p>
                 </div>
                 <div class="top-bar-right">
                     <div class="top-icons">
@@ -143,152 +141,130 @@
                     </div>
                     <div class="user-profile-small">
                         <div class="user-info-small">
-                            <div class="name">João Silva</div>
-                            <div class="type">Síndico</div>
+                            <div class="name" id="user-name-top">Usuário</div>
+                            <div class="type" id="user-type-top">Síndico</div>
                         </div>
-                        <div class="avatar">JS</div>
+                        <div class="avatar" id="user-avatar-top">US</div>
                     </div>
                 </div>
             </header>
 
-            <!-- Dashboard Content -->
-            <div class="dashboard-grid">
-                <!-- Status Cards -->
-                <div class="card status-card">
-                    <h3>Status do Condomínio</h3>
-                    <div class="status-list">
-                        <div class="status-item">
-                            <i class="fas fa-building"></i>
-                            <span>Nome do Condomínio</span>
-                        </div>
-                        <div class="status-item">
-                            <i class="fas fa-home"></i>
-                            <span>Total de Apartamentos</span>
-                        </div>
-                        <div class="status-item">
-                            <i class="fas fa-users"></i>
-                            <span>Moradores Ativos</span>
-                        </div>
-                        <div class="status-item">
-                            <i class="fas fa-calendar-day"></i>
-                            <span>Próxima Assembleia</span>
-                        </div>
-                        <div class="status-item">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <span>Avisos Pendentes</span>
-                        </div>
+            <div class="sugestoes-content">
+                <div class="filters-bar">
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" id="searchInput" placeholder="Buscar sugestões...">
                     </div>
+                    <select class="filter-select" id="categoriaFilter">
+                        <option value="">Todas as categorias</option>
+                        <option value="areas-comuns">Áreas Comuns</option>
+                        <option value="seguranca">Segurança</option>
+                        <option value="lazer">Lazer</option>
+                        <option value="estacionamento">Estacionamento</option>
+                        <option value="manutencao">Manutenção</option>
+                        <option value="sustentabilidade">Sustentabilidade</option>
+                    </select>
+                    <select class="filter-select" id="statusFilter">
+                        <option value="">Todos os status</option>
+                        <option value="pendente">Pendente</option>
+                        <option value="em análise">Em análise</option>
+                        <option value="em andamento">Em andamento</option>
+                        <option value="concluída">Concluída</option>
+                        <option value="recusado">Recusado</option>
+                    </select>
+                    <button class="btn-nova-sugestao" id="btnNovaSugestao">
+                        <i class="fas fa-plus"></i> Nova Sugestão
+                    </button>
                 </div>
 
-                <!-- Quick Actions -->
-                <div class="card quick-actions-card">
-                    <h3>Acesso rápido</h3>
-                    <div class="quick-actions-grid">
-                        <button class="quick-action-btn">
-                            <i class="fas fa-bullhorn"></i>
-                            Enviar Aviso
-                        </button>
-                        <button class="quick-action-btn">
-                            <i class="fas fa-calendar-plus"></i>
-                            Agendar Reunião
-                        </button>
-                        <button class="quick-action-btn">
-                            <i class="fas fa-file-contract"></i>
-                            Gerar Boleto
-                        </button>
-                        <button class="quick-action-btn">
-                            <i class="fas fa-comments"></i>
-                            Chat
-                        </button>
-                    </div>
+                <div class="sugestoes-table-container">
+                    <table class="sugestoes-table">
+                        <thead>
+                            <tr>
+                                <th>SUGESTÃO</th>
+                                <th>CATEGORIA</th>
+                                <th>STATUS</th>
+                                <th>DATA</th>
+                                <th>MORADOR</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="sugestoesTableBody">
+                        </tbody>
+                    </table>
                 </div>
 
-                <!-- Residents List -->
-                <div class="card residents-card">
-                    <h3>Lista de Condomínio</h3>
-                    <div class="residents-table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Apartamento</th>
-                                    <th>Bloco</th>
-                                    <th>Proprietário</th>
-                                </tr>
-                            </thead>
-                            <tbody id="residentsTableBody">
-                                <tr>
-                                    <td colspan="3">Carregando moradores...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Maintenance -->
-                <div class="card maintenance-card">
-                    <h3>Manutenção</h3>
-                    <div class="maintenance-list">
-                        <div class="maintenance-item">
-                            <i class="fas fa-wrench"></i>
-                            <span>Reparo Elevador - Bloco A</span>
-                        </div>
-                        <div class="maintenance-item">
-                            <i class="fas fa-paint-roller"></i>
-                            <span>Pintura Hall Principal</span>
-                        </div>
-                        <div class="maintenance-item">
-                            <i class="fas fa-lightbulb"></i>
-                            <span>Troca Lâmpadas Área Comum</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Summary -->
-                <div class="card summary-card">
-                    <h3>Resumo do Mês</h3>
-                    <div class="summary-stats">
-                        <div class="stat">
-                            <div class="stat-label">Despesas</div>
-                            <div class="stat-value">R$ 15.000</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">Receitas</div>
-                            <div class="stat-value">R$ 20.000</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Communication -->
-                <div class="card communication-card">
-                    <h3>Comunicação</h3>
-                    <div class="communication-actions">
-                        <button class="comm-btn">
-                            <i class="fab fa-whatsapp"></i>
-                            WhatsApp
+                <div class="pagination-container">
+                    <div class="pagination-info" id="paginationInfo">Nenhuma sugestão encontrada</div>
+                    <div class="pagination-controls">
+                        <button class="pagination-btn" disabled>
+                            <i class="fas fa-chevron-left"></i> Anterior
                         </button>
-                        <button class="comm-btn">
-                            <i class="fas fa-envelope"></i>
-                            E-mail
+                        <button class="pagination-btn active">1</button>
+                        <button class="pagination-btn" disabled>
+                            Próxima <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Footer Actions -->
-            <div class="bottom-actions">
-                <button class="btn-primary-large">
-                    <i class="fas fa-file-alt"></i>
-                    Ver Relatório Completo
-                </button>
-                <button class="btn-secondary-large">
-                    <i class="fas fa-hand-pointer"></i>
-                    Ir para Painel Morador/Comunidade Digital
-                </button>
             </div>
         </main>
     </div>
 
+    <div class="modal-overlay" id="modalNovaSugestao">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nova Sugestão</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sugestaoTitulo">Título da sugestão</label>
+                    <input type="text" id="sugestaoTitulo" class="form-input" placeholder="Digite o título da sua sugestão">
+                </div>
+                <div class="form-group">
+                    <label for="sugestaoCategoria">Categoria</label>
+                    <select id="sugestaoCategoria" class="form-input">
+                        <option value="">Selecione uma categoria</option>
+                        <option value="areas-comuns">Áreas Comuns</option>
+                        <option value="seguranca">Segurança</option>
+                        <option value="lazer">Lazer</option>
+                        <option value="estacionamento">Estacionamento</option>
+                        <option value="manutencao">Manutenção</option>
+                        <option value="sustentabilidade">Sustentabilidade</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="sugestaoDescricao">Descrição</label>
+                    <textarea id="sugestaoDescricao" class="form-input form-textarea" placeholder="Descreva detalhadamente a sua sugestão..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancelar-modal" id="btnCancelarSugestao">Cancelar</button>
+                <button class="btn-enviar-sugestao" id="btnEnviarSugestao">Enviar Sugestão</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay modal-detalhes-overlay" id="modalDetalhes">
+        <div class="modal-detalhes-content">
+            <div class="modal-detalhes-header">
+                <h3>Detalhes da Sugestão</h3>
+                <button class="modal-close" id="modalDetalhesClose">&times;</button>
+            </div>
+            <div class="modal-detalhes-body" id="modalDetalhesBody">
+            </div>
+            <div class="modal-detalhes-footer">
+                <button class="like-btn" id="likeBtn">
+                    <i class="far fa-thumbs-up"></i>
+                    <span>Curtir</span>
+                    <span class="like-count" id="likeCount">0</span>
+                </button>
+                <button class="btn-cancelar-modal" id="btnFecharDetalhes">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="../scripts/supabase-client.js"></script>
-    <script src="../scripts/index.js"></script>
+    <script src="../scripts/sugestoes.js"></script>
 </body>
 </html>

@@ -161,3 +161,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     await checkAuthAndBind();
 });
+function logout() {
+    sessionStorage.removeItem('condominiumUser');
+    window.location.href = '../inicio.html';
+}

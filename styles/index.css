@@ -86,7 +86,7 @@ body {
 }
 
 .nav-item.active {
-    background: rgba(255, 255, 255, 0.2);
+    background: #0ea5a4;
     color: white;
     font-weight: 600;
 }
@@ -99,6 +99,9 @@ body {
 .sidebar-footer {
     padding-top: 15px;
     margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
@@ -122,6 +125,29 @@ body {
 .btn-support:hover {
     background: rgba(255, 255, 255, 0.25);
     border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+}
+
+.btn-logout-sidebar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 12px;
+    border-radius: 25px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.btn-logout-sidebar:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: rgba(252, 165, 165, 0.6);
     transform: translateY(-1px);
 }
 
