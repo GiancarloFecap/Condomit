@@ -330,11 +330,33 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('REJEIÇÃO NÃO TRATADA:', reason);
 });
 
-// Armazena tokens de reset temporários (em produção, use Redis)
-const resetTokens = new Map();
+const RESET_TOKEN_SECRET = process.env.RESET_TOKEN_SECRET || SUPABASE_SERVICE_ROLE_KEY;
 
-function generateResetToken() {
-  return crypto.randomBytes(32).toString('hex');
+function generateResetToken(email) {
+  const payload = Buffer.from(JSON.stringify({
+    email,
+    expires: Date.now() + 3600000,
+    nonce: crypto.randomBytes(16).toString('hex')
+  })).toString('base64url');
+  const signature = crypto.createHmac('sha256', RESET_TOKEN_SECRET).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function verifyResetToken(token) {
+  const [payload, signature] = String(token || '').split('.');
+  if (!payload || !signature) return null;
+
+  const expectedSignature = crypto.createHmac('sha256', RESET_TOKEN_SECRET).update(payload).digest('base64url');
+  if (signature.length !== expectedSignature.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+    return null;
+  }
+
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return data.email && Date.now() <= data.expires ? data : null;
+  } catch (error) {
+    return null;
+  }
 }
 
 function hasBrevoConfig() {
@@ -590,8 +612,7 @@ function handleForgotPassword(req, res) {
         return;
       }
 
-      const token = generateResetToken();
-      resetTokens.set(token, { email: normalizedEmail, expires: Date.now() + 3600000 });
+      const token = generateResetToken(normalizedEmail);
       const resetLink = buildResetLink(req, token, resetPageUrl);
       const usuario = users?.[0] || keycloakUser || { nome: normalizedEmail.split('@')[0] };
       
@@ -640,17 +661,10 @@ function handleResetPassword(req, res) {
         return;
       }
 
-      const resetData = resetTokens.get(token);
+      const resetData = verifyResetToken(token);
       if (!resetData) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Token inválido ou expirado' }));
-        return;
-      }
-
-      if (Date.now() > resetData.expires) {
-        resetTokens.delete(token);
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Token expirado' }));
         return;
       }
 
@@ -672,8 +686,6 @@ function handleResetPassword(req, res) {
       if (updatedSupabaseUsers === 0 && !keycloakSync.synced) {
         throw new Error('Nenhuma conta compatível foi encontrada para redefinir a senha');
       }
-
-      resetTokens.delete(token);
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'Senha redefinida com sucesso' }));
