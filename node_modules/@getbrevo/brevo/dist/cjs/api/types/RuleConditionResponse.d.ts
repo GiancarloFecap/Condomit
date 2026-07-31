@@ -1,0 +1,13 @@
+import type * as Brevo from "../index.js";
+export interface RuleConditionResponse {
+    /** Metric to indicate AND between rules */
+    and?: Brevo.RuleConditionResponse[] | undefined;
+    /** Condition of the rule */
+    lhs?: Brevo.ValueResponse | undefined;
+    /** Selected operator for the rule */
+    op?: string | undefined;
+    /** Metric to indicate OR between rules */
+    or?: Brevo.RuleConditionResponse[] | undefined;
+    /** Action of the rule */
+    rhs?: Brevo.ValueResponse | undefined;
+}

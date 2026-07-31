@@ -1,0 +1,32 @@
+export interface GetTransacSmsReportResponse {
+    reports?: GetTransacSmsReportResponse.Reports.Item[] | undefined;
+}
+export declare namespace GetTransacSmsReportResponse {
+    type Reports = Reports.Item[];
+    namespace Reports {
+        interface Item {
+            /** Number of accepted SMS for the date */
+            accepted?: number | undefined;
+            /** Number of blocked contact for the date */
+            blocked?: number | undefined;
+            /** Date for which statistics are retrieved */
+            date?: string | undefined;
+            /** Number of delivered SMS for the date */
+            delivered?: number | undefined;
+            /** Number of hardbounces for the date */
+            hardBounces?: number | undefined;
+            /** Number of rejected SMS for the date */
+            rejected?: number | undefined;
+            /** Number of answered SMS for the date */
+            replied?: number | undefined;
+            /** Number of requests for the date */
+            requests?: number | undefined;
+            /** Number of skipped SMS for the date */
+            skipped?: number | undefined;
+            /** Number of softbounces for the date */
+            softBounces?: number | undefined;
+            /** Number of unsubscription for the date */
+            unsubscribed?: number | undefined;
+        }
+    }
+}

@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const resetPageUrl = `${window.location.origin}/pages/redefinir-senha.html`;
 
-            const response = await fetch('/api/forgot-password', {
+            const response = await fetch('/esqueceu-senha', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

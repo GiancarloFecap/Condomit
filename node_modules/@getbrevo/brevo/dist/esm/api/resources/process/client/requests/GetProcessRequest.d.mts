@@ -1,0 +1,10 @@
+/**
+ * @example
+ *     {
+ *         processId: 1000000
+ *     }
+ */
+export interface GetProcessRequest {
+    /** Id of the process */
+    processId: number;
+}

@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const root = process.cwd();
@@ -15,13 +15,7 @@ const SUPABASE_URL = env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.
 const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTUwNjQsImV4cCI6MjA5NTk5MTA2NH0.WTk0rZaTsPvs30uEWDfylc-z6L3G8IUb_J73oYtjuWU';
 const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
 const APP_BASE_URL = env.APP_BASE_URL || 'https://condomit.netlify.app';
-const SMTP_HOST = env.SMTP_HOST || '';
-const SMTP_PORT = env.SMTP_PORT ? Number(env.SMTP_PORT) : 587;
-const SMTP_SECURE = String(env.SMTP_SECURE || '').toLowerCase() === 'true';
-const SMTP_SERVICE = env.SMTP_SERVICE || '';
-const SMTP_USER = env.SMTP_USER || '';
-const SMTP_PASS = env.SMTP_PASS || '';
-const SMTP_FROM = env.SMTP_FROM || SMTP_USER || '"Condomit" <no-reply@condomit.com.br>';
+const BREVO_API_KEY = env.BREVO_API_KEY || process.env.BREVO_API_KEY || '';
 const KEYCLOAK_BASE_URL = (env.KEYCLOAK_BASE_URL || env.KEYCLOAK_URL || '').replace(/\/$/, '');
 const KEYCLOAK_REALM = env.KEYCLOAK_REALM || '';
 const KEYCLOAK_ADMIN_REALM = env.KEYCLOAK_ADMIN_REALM || 'master';
@@ -32,6 +26,10 @@ const KEYCLOAK_ADMIN_PASSWORD = env.KEYCLOAK_ADMIN_PASSWORD || '';
 
 const mpClient = new MercadoPagoConfig({ accessToken: MERCADO_PAGO_ACCESS_TOKEN });
 const preference = new Preference(mpClient);
+const brevoClient = BREVO_API_KEY ? new BrevoClient({
+  apiKey: BREVO_API_KEY,
+  ...(BrevoEnvironment?.Production ? { environment: BrevoEnvironment.Production } : {})
+}) : null;
 
 function loadEnv(filePath) {
   const env = {};
@@ -168,8 +166,8 @@ const server = http.createServer((req, res) => {
         return proxySupabaseRequest(req, res, '/reserva', 'POST');
     }
 
-    // ENDPOINT: POST /api/forgot-password - Request password reset
-    if (pathname === '/api/forgot-password' && req.method === 'POST') {
+    // ENDPOINT: POST /api/forgot-password or /esqueceu-senha - Request password reset
+    if ((pathname === '/api/forgot-password' || pathname === '/esqueceu-senha') && req.method === 'POST') {
         return handleForgotPassword(req, res);
     }
 
@@ -336,8 +334,8 @@ function generateResetToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-function hasRealEmailConfig() {
-  return Boolean((SMTP_SERVICE || SMTP_HOST) && SMTP_USER && SMTP_PASS);
+function hasBrevoConfig() {
+  return Boolean(BREVO_API_KEY && brevoClient);
 }
 
 function hasKeycloakConfig() {
@@ -373,47 +371,16 @@ function buildResetLink(req, token, providedResetPageUrl) {
   return resetUrl.toString();
 }
 
-function createMailTransport() {
-  if (hasRealEmailConfig()) {
-    if (SMTP_SERVICE) {
-      return nodemailer.createTransport({
-        service: SMTP_SERVICE,
-        auth: {
-          user: SMTP_USER,
-          pass: SMTP_PASS
-        }
-      });
-    }
-
-    return nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
+function getDisplayName(usuario, fallbackEmail) {
+  const nome = usuario?.nome || usuario?.firstName || usuario?.username;
+  if (nome && String(nome).trim()) {
+    return String(nome).trim();
   }
 
-  return nodemailer.createTransport({
-    host: 'smtp.ethereal.email',
-    port: 587,
-    secure: false,
-    auth: {
-      user: 'laila58@ethereal.email',
-      pass: 'z6qZ5U1h8QdDf3G2jK5L'
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
+  return String(fallbackEmail || '').split('@')[0] || 'morador';
 }
 
-async function sendResetEmail(toEmail, resetLink) {
+async function sendResetEmail(toEmail, usuario, resetLink) {
   console.log('========================================');
   console.log('📧 INICIANDO ENVIO DO E-MAIL DE RESET');
   console.log('========================================');
@@ -421,38 +388,35 @@ async function sendResetEmail(toEmail, resetLink) {
   console.log('Link de reset:', resetLink);
   console.log('');
 
-  const transporter = createMailTransport();
+  if (!hasBrevoConfig()) {
+    throw new Error('BREVO_API_KEY nao configurada');
+  }
 
-  const info = await transporter.sendMail({
-    from: SMTP_FROM,
-    to: toEmail,
-    subject: 'Redefinição de senha - Condomit',
-    text: `Olá!\n\nVocê solicitou a redefinição de senha no Condomit.\nClique no link abaixo para redefinir sua senha:\n${resetLink}\n\nSe você não solicitou isso, ignore este e-mail.\n\nAtenciosamente,\nEquipe Condomit`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Redefinição de senha - Condomit</h2>
-        <p>Olá!</p>
-        <p>Você solicitou a redefinição de senha no Condomit.</p>
-        <p>Clique no botão abaixo para redefinir sua senha:</p>
-        <a href="${resetLink}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Redefinir senha</a>
-        <p>Ou copie e cole esse link no navegador: ${resetLink}</p>
-        <p>Se você não solicitou isso, ignore este e-mail.</p>
-        <p>Atenciosamente,<br>Equipe Condomit</p>
+  const nomeUsuario = getDisplayName(usuario, toEmail);
+
+  const info = await brevoClient.transactionalEmails.sendTransacEmail({
+    sender: { name: 'Condomit', email: 'contato.condomit@gmail.com' },
+    to: [{ email: toEmail }],
+    subject: 'Recuperacao de senha - Condomit',
+    htmlContent: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
+        <h2 style="color: #32C26D;">Recuperacao de senha</h2>
+        <p>Ola, <strong>${nomeUsuario}</strong>!</p>
+        <p>Clique no botao abaixo para criar uma nova senha:</p>
+        <a href="${resetLink}" style="display:inline-block;background:linear-gradient(135deg,#79D836,#32C26D);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">
+          Redefinir minha senha
+        </a>
+        <p style="color:#5A5A5A;font-size:14px;">Este link e valido por <strong>1 hora</strong>.</p>
+        <hr style="border:none;border-top:1px solid #C2C2C2;margin:24px 0;">
+        <p style="color:#C2C2C2;font-size:12px;">Condomit - O app do seu condominio</p>
       </div>
-    `,
+    `
   });
 
   console.log('');
   console.log('✅ E-MAIL REGISTRADO COM SUCESSO!');
   console.log('----------------------------------------');
-
-  if (hasRealEmailConfig()) {
-    console.log('📨 E-mail enviado usando a configuração SMTP/serviço informada.');
-  } else {
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    console.log('⚠️  SMTP real não configurado. Usando Ethereal para teste.');
-    console.log('🔗 Preview do e-mail:', previewUrl);
-  }
+  console.log('📨 E-mail enviado usando Brevo.');
 
   console.log('🔗 Link de reset:');
   console.log(resetLink);
@@ -462,7 +426,7 @@ async function sendResetEmail(toEmail, resetLink) {
 }
 
 async function fetchSupabaseUsersByEmail(email) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email&email=eq.${encodeURIComponent(email)}`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email,nome&email=eq.${encodeURIComponent(email)}`, {
     headers: {
       apikey: SUPABASE_SERVICE_ROLE_KEY,
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
@@ -615,11 +579,12 @@ function handleForgotPassword(req, res) {
       const token = generateResetToken();
       resetTokens.set(token, { email: normalizedEmail, expires: Date.now() + 3600000 });
       const resetLink = buildResetLink(req, token, resetPageUrl);
+      const usuario = users?.[0] || keycloakUser || { nome: normalizedEmail.split('@')[0] };
       
       console.log(`🔗 Link de redefinição para ${normalizedEmail}: ${resetLink}`);
       
       try {
-        await sendResetEmail(normalizedEmail, resetLink);
+        await sendResetEmail(normalizedEmail, usuario, resetLink);
         console.log(`📧 E-mail de reset enviado para ${normalizedEmail}`);
       } catch (emailError) {
         console.error('[Email Error] Falha ao enviar e-mail:', emailError);

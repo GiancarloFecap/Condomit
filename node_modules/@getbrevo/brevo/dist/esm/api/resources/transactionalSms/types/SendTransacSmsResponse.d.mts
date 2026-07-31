@@ -1,0 +1,10 @@
+export interface SendTransacSmsResponse {
+    messageId: number;
+    reference: string;
+    /** Remaining SMS credits of the user */
+    remainingCredits?: number | undefined;
+    /** Count of SMS's to send multiple text messages */
+    smsCount?: number | undefined;
+    /** SMS credits used per text message */
+    usedCredits?: number | undefined;
+}

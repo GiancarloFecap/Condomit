@@ -1,0 +1,19 @@
+import type * as Brevo from "../index.mjs";
+export interface NodeResponse {
+    /** array[object] */
+    args?: Brevo.NodeResponse[] | undefined;
+    /** Array values for rule definition */
+    array?: Brevo.NodeResponse[] | undefined;
+    /** Boolean values for rule definition */
+    boolean?: boolean | undefined;
+    /** Description for rule definition */
+    description?: string | undefined;
+    /** Float values for rule definition */
+    float?: number | undefined;
+    /** int64 */
+    int?: number | undefined;
+    /** Operator selected for rule definition */
+    op?: string | undefined;
+    /** Boolean values for rule definition */
+    string?: string | undefined;
+}

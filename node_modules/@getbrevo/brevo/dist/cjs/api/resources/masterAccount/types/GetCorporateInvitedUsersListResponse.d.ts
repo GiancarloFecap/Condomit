@@ -1,0 +1,71 @@
+export interface GetCorporateInvitedUsersListResponse {
+    /** Get invited users list */
+    users?: GetCorporateInvitedUsersListResponse.Users.Item[] | undefined;
+}
+export declare namespace GetCorporateInvitedUsersListResponse {
+    type Users = Users.Item[];
+    namespace Users {
+        interface Item {
+            /** Email address of the user. */
+            email: string;
+            /**
+             * Feature accessiblity given to the user. (Required only
+             * if status is active)
+             */
+            feature_access: Item.FeatureAccess;
+            /** Admin user groups list */
+            groups: Item.Groups;
+            /** Flag for indicating is user owner of the organization. */
+            is_owner: string;
+            /** Status of the invited user. */
+            status: string;
+        }
+        namespace Item {
+            /**
+             * Feature accessiblity given to the user. (Required only
+             * if status is active)
+             */
+            interface FeatureAccess {
+                /** Analytics dashboard accessibility */
+                analytics?: string[] | undefined;
+                /** Api keys accessiblity. */
+                api_keys?: string[] | undefined;
+                /**
+                 * Apps management accessiblity | Not available in
+                 * ENTv2
+                 */
+                apps_management?: string[] | undefined;
+                /**
+                 * Authorization to create sub-organization in the
+                 * admin account. If the user creating the
+                 * sub-organization, belongs to a group, the user must
+                 * choose a group at the sub-organization creation.
+                 */
+                create_sub_organizations?: string[] | undefined;
+                /**
+                 * Authorization to manage and access sub-organizations
+                 * in the admin account.
+                 */
+                manage_sub_organizations?: string[] | undefined;
+                /** My plan accessiblity. */
+                my_plan?: string[] | undefined;
+                /**
+                 * Group creation, modification or deletion
+                 * accessibility
+                 */
+                sub_organization_groups?: string[] | undefined;
+                /** User management accessiblity. */
+                user_management?: string[] | undefined;
+            }
+            /**
+             * Admin user groups list
+             */
+            interface Groups {
+                /** group id */
+                id?: string | undefined;
+                /** group name */
+                name?: string | undefined;
+            }
+        }
+    }
+}

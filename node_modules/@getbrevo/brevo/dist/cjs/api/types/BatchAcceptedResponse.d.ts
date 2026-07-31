@@ -1,0 +1,9 @@
+/**
+ * Response returned when all events in the batch are accepted for async processing
+ */
+export interface BatchAcceptedResponse {
+    /** Confirmation message indicating the batch was accepted */
+    message: string;
+    /** Number of events queued for processing */
+    count: number;
+}

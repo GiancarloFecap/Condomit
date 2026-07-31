@@ -1,0 +1,107 @@
+export interface GetCorporateMasterAccountResponse {
+    /** Billing details of the master account organization */
+    billingInfo?: GetCorporateMasterAccountResponse.BillingInfo | undefined;
+    /** Company name of master account organization */
+    companyName?: string | undefined;
+    /** Currency code of the master account organization */
+    currencyCode?: string | undefined;
+    /** Email id of master account */
+    email?: string | undefined;
+    /** Unique identifier of the master account organization */
+    id?: number | undefined;
+    /** Plan details */
+    planInfo?: GetCorporateMasterAccountResponse.PlanInfo | undefined;
+    /** Timezone of the master account organization */
+    timezone?: string | undefined;
+}
+export declare namespace GetCorporateMasterAccountResponse {
+    /**
+     * Billing details of the master account organization
+     */
+    interface BillingInfo {
+        /** Billing address of master account */
+        address?: BillingInfo.Address | undefined;
+        /** Company name of master account */
+        companyName?: string | undefined;
+        /** Billing email id of master account */
+        email?: string | undefined;
+        /** Billing name of master account holder */
+        name?: BillingInfo.Name | undefined;
+    }
+    namespace BillingInfo {
+        /**
+         * Billing address of master account
+         */
+        interface Address {
+            /** Country code */
+            countryCode?: string | undefined;
+            /** Locality */
+            locality?: string | undefined;
+            /** Postal code */
+            postalCode?: string | undefined;
+            /** State code */
+            stateCode?: string | undefined;
+            /** Street address */
+            streetAddress?: string | undefined;
+        }
+        /**
+         * Billing name of master account holder
+         */
+        interface Name {
+            /** Last name for billing */
+            familyName?: string | undefined;
+            /** First name for billing */
+            givenName?: string | undefined;
+        }
+    }
+    /**
+     * Plan details
+     */
+    interface PlanInfo {
+        /** Plan currency */
+        currencyCode?: string | undefined;
+        /** List of provided features in the plan */
+        features?: PlanInfo.Features.Item[] | undefined;
+        /** Timestamp of next billing date */
+        nextBillingAt?: number | undefined;
+        /** Plan period type */
+        planPeriod?: PlanInfo.PlanPeriod | undefined;
+        /** Plan amount */
+        price?: number | undefined;
+        /** Number of sub-accounts */
+        subAccounts?: number | undefined;
+    }
+    namespace PlanInfo {
+        type Features = Features.Item[];
+        namespace Features {
+            interface Item {
+                /** Name of the feature */
+                name?: string | undefined;
+                /** Quantity provided in the plan */
+                quantity?: number | undefined;
+                /**
+                 * Quantity with overages provided in the plan (only
+                 * applicable on ENTv2)
+                 */
+                quantityWithOverages?: number | undefined;
+                /** Quantity remaining in the plan */
+                remaining?: number | undefined;
+                /** Unit value of the feature */
+                unitValue?: string | undefined;
+                /** Quantity consumed by master */
+                used?: number | undefined;
+                /**
+                 * Quantity consumed by sub-organizations over the
+                 * admin plan limit (only applicable on ENTv2)
+                 */
+                usedOverages?: number | undefined;
+            }
+        }
+        /** Plan period type */
+        const PlanPeriod: {
+            readonly Month: "month";
+            readonly Year: "year";
+        };
+        type PlanPeriod = (typeof PlanPeriod)[keyof typeof PlanPeriod];
+    }
+}

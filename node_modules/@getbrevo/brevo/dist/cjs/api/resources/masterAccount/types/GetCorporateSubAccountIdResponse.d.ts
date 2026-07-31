@@ -1,0 +1,156 @@
+export interface GetCorporateSubAccountIdResponse {
+    /** Sub-account company name */
+    companyName?: string | undefined;
+    /** Email id of the sub-account organization */
+    email?: string | undefined;
+    /** List of groups associated with the sub-account */
+    groups?: GetCorporateSubAccountIdResponse.Groups.Item[] | undefined;
+    /** Name of the sub-account user */
+    name?: string | undefined;
+    /** Sub-account plan details */
+    planInfo?: GetCorporateSubAccountIdResponse.PlanInfo | undefined;
+}
+export declare namespace GetCorporateSubAccountIdResponse {
+    type Groups = Groups.Item[];
+    namespace Groups {
+        interface Item {
+            /** Group id */
+            id?: string | undefined;
+            /** Name of the group */
+            name?: string | undefined;
+        }
+    }
+    /**
+     * Sub-account plan details
+     */
+    interface PlanInfo {
+        /** Credits quota and remaining credits on the sub-account */
+        credits?: PlanInfo.Credits | undefined;
+        /** Features available on the sub-account */
+        features?: PlanInfo.Features | undefined;
+        /** type of the plan */
+        planType?: string | undefined;
+    }
+    namespace PlanInfo {
+        /**
+         * Credits quota and remaining credits on the sub-account
+         */
+        interface Credits {
+            /** Email credits remaining on the sub-account */
+            emails?: Credits.Emails | undefined;
+            /** externalFeeds credits remaining on the sub-account */
+            externalFeeds?: Credits.ExternalFeeds | undefined;
+            /** SMS credits remaining on the sub-account */
+            sms?: Credits.Sms | undefined;
+            /** Whatsapp credits remaining on the sub-account */
+            whatsapp?: Credits.Whatsapp | undefined;
+            /** Push credits remaining on the sub-account */
+            wpSubscribers?: Credits.WpSubscribers | undefined;
+        }
+        namespace Credits {
+            /**
+             * Email credits remaining on the sub-account
+             */
+            interface Emails {
+                /** Quantity of email messaging limits provided */
+                quantity?: number | undefined;
+                /** Available email messaging limits for use */
+                remaining?: number | undefined;
+            }
+            /**
+             * externalFeeds credits remaining on the sub-account
+             */
+            interface ExternalFeeds {
+                /**
+                 * Quantity of externalFeeds messaging limits
+                 * provided
+                 */
+                quantity?: number | undefined;
+                /** Available externalFeeds messaging limits for use */
+                remaining?: number | undefined;
+            }
+            /**
+             * SMS credits remaining on the sub-account
+             */
+            interface Sms {
+                /** Quantity of SMS messaging limits provided */
+                quantity?: number | undefined;
+                /** Available SMS messaging limits for use */
+                remaining?: number | undefined;
+            }
+            /**
+             * Whatsapp credits remaining on the sub-account
+             */
+            interface Whatsapp {
+                /** Quantity of whatsapp messaging limits provided */
+                quantity?: number | undefined;
+                /** Available whatsapp messaging limits for use */
+                remaining?: number | undefined;
+            }
+            /**
+             * Push credits remaining on the sub-account
+             */
+            interface WpSubscribers {
+                /** Quantity of Push sending limits provided */
+                quantity?: number | undefined;
+                /** Available Push sending limits for use */
+                remaining?: number | undefined;
+            }
+        }
+        /**
+         * Features available on the sub-account
+         */
+        interface Features {
+            /** Inbox details / Not applicable on ENTv2 */
+            inbox?: Features.Inbox | undefined;
+            /** Landing page details / Not applicable on ENTv2 */
+            landingPage?: Features.LandingPage | undefined;
+            /**
+             * Sales and service users to use phone, sales and
+             * conversations
+             */
+            salesUsers?: Features.SalesUsers | undefined;
+            /** Marketing users to manage the marketing channels */
+            users?: Features.Users | undefined;
+        }
+        namespace Features {
+            /**
+             * Inbox details / Not applicable on ENTv2
+             */
+            interface Inbox {
+                /** Quantity of inbox provided */
+                quantity?: number | undefined;
+                /** Available inboxes for use */
+                remaining?: number | undefined;
+            }
+            /**
+             * Landing page details / Not applicable on ENTv2
+             */
+            interface LandingPage {
+                /** Quantity of landing pages provided */
+                quantity?: number | undefined;
+                /** Available landing pages for use */
+                remaining?: number | undefined;
+            }
+            /**
+             * Sales and service users to use phone, sales and
+             * conversations
+             */
+            interface SalesUsers {
+                /** Quantity of sales users provided */
+                quantity?: number | undefined;
+                /** Available sales users for use */
+                remaining?: number | undefined;
+            }
+            /**
+             * Marketing users to manage the marketing channels
+             */
+            interface Users {
+                /** Quantity of marketing users provided */
+                quantity?: number | undefined;
+                /** Available marketing users for use */
+                remaining?: number | undefined;
+            }
+        }
+    }
+}

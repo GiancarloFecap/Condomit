@@ -1,0 +1,20 @@
+/**
+ * @example
+ *     {
+ *         name: "mycompany.com"
+ *     }
+ *
+ * @example
+ *     {
+ *         name: "newsletter.mycompany.com"
+ *     }
+ *
+ * @example
+ *     {
+ *         name: "test.example.com"
+ *     }
+ */
+export interface CreateDomainRequest {
+    /** Domain name to be added */
+    name: string;
+}
