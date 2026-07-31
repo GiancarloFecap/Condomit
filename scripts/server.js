@@ -168,6 +168,9 @@ const server = http.createServer((req, res) => {
 
     // ENDPOINT: POST /api/forgot-password or /esqueceu-senha - Request password reset
     if ((pathname === '/api/forgot-password' || pathname === '/esqueceu-senha') && req.method === 'POST') {
+        // #region debug-point B:server-route-match
+        fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"B",location:"scripts/server.js:route:/esqueceu-senha",msg:"[DEBUG] Rota de recuperacao atingida no servidor local",data:{pathname,method:req.method},ts:Date.now()})}).catch(()=>{});
+        // #endregion
         return handleForgotPassword(req, res);
     }
 
@@ -557,6 +560,9 @@ function handleForgotPassword(req, res) {
   req.on('end', async () => {
     try {
       const { email, resetPageUrl } = JSON.parse(body || '{}');
+      // #region debug-point D:server-handler-start
+      fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"D",location:"scripts/server.js:handleForgotPassword:start",msg:"[DEBUG] Handler de recuperacao iniciou",data:{email,resetPageUrl},ts:Date.now()})}).catch(()=>{});
+      // #endregion
       if (!email) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'E-mail é obrigatório' }));
@@ -565,6 +571,9 @@ function handleForgotPassword(req, res) {
 
       const normalizedEmail = String(email).trim().toLowerCase();
       const users = await fetchSupabaseUsersByEmail(normalizedEmail);
+      // #region debug-point D:server-users-result
+      fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"D",location:"scripts/server.js:handleForgotPassword:users",msg:"[DEBUG] Consulta de usuario concluida no servidor local",data:{normalizedEmail,userCount:Array.isArray(users)?users.length:null},ts:Date.now()})}).catch(()=>{});
+      // #endregion
       let keycloakUser = null;
 
       if (hasKeycloakConfig()) {
@@ -590,6 +599,9 @@ function handleForgotPassword(req, res) {
       
       try {
         await sendResetEmail(normalizedEmail, usuario, resetLink);
+        // #region debug-point B:server-email-sent
+        fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"B",location:"scripts/server.js:handleForgotPassword:sendResetEmail",msg:"[DEBUG] Envio de email concluido no servidor local",data:{normalizedEmail},ts:Date.now()})}).catch(()=>{});
+        // #endregion
         console.log(`📧 E-mail de reset enviado para ${normalizedEmail}`);
       } catch (emailError) {
         console.error('[Email Error] Falha ao enviar e-mail:', emailError);
@@ -601,6 +613,9 @@ function handleForgotPassword(req, res) {
         message: 'Se o e-mail existir, um link de reset foi enviado'
       }));
     } catch (error) {
+      // #region debug-point D:server-handler-error
+      fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"D",location:"scripts/server.js:handleForgotPassword:catch",msg:"[DEBUG] Handler de recuperacao falhou no servidor local",data:{message:error?.message||String(error),stack:error?.stack||null},ts:Date.now()})}).catch(()=>{});
+      // #endregion
       console.error('[Forgot Password Error]', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Erro interno do servidor' }));

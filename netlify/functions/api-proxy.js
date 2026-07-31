@@ -231,11 +231,17 @@ async function createMercadoPagoPreference(data) {
 
 async function handleForgotPassword(event, body) {
   const { email, resetPageUrl } = body || {};
+  // #region debug-point C:netlify-handler-start
+  fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handleForgotPassword:start",msg:"[DEBUG] Handler de recuperacao iniciou no Netlify proxy",data:{path:event.path||event.rawPath||null,email,resetPageUrl},ts:Date.now()})}).catch(()=>{});
+  // #endregion
   if (!email) {
     return { statusCode: 400, body: JSON.stringify({ error: 'E-mail é obrigatório' }) };
   }
   const normalizedEmail = String(email).trim().toLowerCase();
   const users = await fetchSupabaseUsersByEmail(normalizedEmail);
+  // #region debug-point C:netlify-users-result
+  fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handleForgotPassword:users",msg:"[DEBUG] Consulta de usuario concluida no Netlify proxy",data:{normalizedEmail,userCount:Array.isArray(users)?users.length:null},ts:Date.now()})}).catch(()=>{});
+  // #endregion
   let keycloakUser = null;
   if (hasKeycloakConfig()) {
     try {
@@ -253,6 +259,9 @@ async function handleForgotPassword(event, body) {
   const usuario = users?.[0] || keycloakUser || { name: normalizedEmail.split('@')[0] };
   try {
     await sendResetEmail(normalizedEmail, usuario, resetLink);
+    // #region debug-point C:netlify-email-sent
+    fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handleForgotPassword:sendResetEmail",msg:"[DEBUG] Envio de email concluido no Netlify proxy",data:{normalizedEmail},ts:Date.now()})}).catch(()=>{});
+    // #endregion
     console.log(`E-mail de reset enviado para ${normalizedEmail}`);
   } catch (emailError) {
     console.error('[Email Error] Falha ao enviar e-mail:', emailError);
@@ -386,6 +395,11 @@ exports.handler = async (event, context) => {
 
   try {
     console.log('[api-proxy] method=', rawMethod, 'pathname=', pathname, 'query=', JSON.stringify(query));
+    if (pathname === '/esqueceu-senha' || pathname === '/forgot-password') {
+      // #region debug-point C:netlify-route-match
+      fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handler:route-match",msg:"[DEBUG] Rota de recuperacao atingida no Netlify proxy",data:{pathname,rawMethod,query,hasBody:Boolean(body)},ts:Date.now()})}).catch(()=>{});
+      // #endregion
+    }
     if (pathname === '/register' && rawMethod === 'POST') {
       const result = await proxySupabaseRequest(body, '/users', 'POST');
       return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
@@ -500,6 +514,9 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: 'Endpoint não encontrado', debug: { pathname, rawPath: event.path, rawPath2: event.rawPath, method: rawMethod, query } })
     };
   } catch (error) {
+    // #region debug-point C:netlify-handler-error
+    fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handler:catch",msg:"[DEBUG] Handler principal do Netlify proxy falhou",data:{message:error?.message||String(error),stack:error?.stack||null},ts:Date.now()})}).catch(()=>{});
+    // #endregion
     console.error('Handler error:', error);
     return {
       statusCode: 500,
