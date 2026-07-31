@@ -395,43 +395,23 @@ nav {
     justify-content: space-between;
     align-items: center;
     color: white;
-    padding: 0.75rem 1rem;
-    background: rgba(0,0,0,0.35);
-    border-radius: 10px;
+    padding: 1rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
     margin-bottom: 1rem;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.06);
 }
 
 .video-header h2 {
-    margin: 0;
-    font-size: 1.15rem;
-    font-weight: 600;
-    letter-spacing: 0.2px;
-}
-
-.participants-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.75rem;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 999px;
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 1.2rem;
+    font-weight: 500;
 }
 
 .video-grid {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    grid-auto-rows: minmax(220px, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1rem;
     margin-bottom: 1rem;
-    align-items: stretch;
-    justify-items: stretch;
 }
 
 .control-btn.leave-btn {
@@ -443,26 +423,20 @@ nav {
 }
 
 .video-box {
-    background: linear-gradient(160deg, #1f2937 0%, #111827 100%);
-    border-radius: 12px;
+    background: #1f2937;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 220px;
+    min-height: 250px;
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.06);
-    box-shadow: 0 10px 25px -15px rgba(0,0,0,0.6);
-}
-
-.video-box.self {
-    border-color: rgba(14,165,164,0.35);
 }
 
 .video-box video {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     position: absolute;
     top: 0;
     left: 0;
@@ -488,27 +462,21 @@ nav {
 .video-placeholder {
     text-align: center;
     color: white;
-    z-index: 2;
-    padding: 0.75rem;
-    max-width: 100%;
-    box-sizing: border-box;
-    position: relative;
+    z-index: 1;
 }
 
 .user-avatar {
-    width: 88px;
-    height: 88px;
+    width: 90px;
+    height: 90px;
     border-radius: 50%;
     background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 2rem;
-    font-weight: 700;
-    margin: 0 auto 0.75rem;
+    font-weight: bold;
+    margin: 0 auto 1rem;
     overflow: hidden;
-    border: 2px solid rgba(255,255,255,0.1);
-    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.5);
 }
 
 .user-avatar img {
@@ -518,33 +486,10 @@ nav {
     border-radius: 50%;
 }
 
-.mic-on-indicator {
-    position: absolute;
-    bottom: 10px;
-    right: 12px;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: rgba(16, 185, 129, 0.9);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    z-index: 10;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-
-.mic-on-indicator::before {
-    content: '\f130';
-    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'Font Awesome 6 Brands', sans-serif;
-    font-weight: 900;
-}
-
 .mic-off-icon {
     position: absolute;
-    bottom: 10px;
-    right: 12px;
+    bottom: 8px;
+    right: 8px;
     width: 28px;
     height: 28px;
     border-radius: 50%;
@@ -553,42 +498,19 @@ nav {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     z-index: 10;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.camera-off-indicator {
-    position: absolute;
-    bottom: 10px;
-    left: 12px;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: rgba(220, 38, 38, 0.95);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    z-index: 10;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.camera-off-indicator::before {
-    content: '\f4e2';
-    font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', 'Font Awesome 6 Brands', sans-serif;
-    font-weight: 900;
 }
 
 .user-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.35rem 0.85rem;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    margin-top: 0.5rem;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
     font-weight: 600;
     color: white;
 }

@@ -9,17 +9,10 @@ let participants = [];
 
 let assemblyChannel = null;
 const ASSEMBLY_PARTICIPANT_TTL_MS = 45000;
-const PARTICIPANT_HEARTBEAT_MS = 6000;
-const PARTICIPANT_POLL_MS = 1500;
-const CHAT_POLL_MS = 900;
+const PARTICIPANT_HEARTBEAT_MS = 12000;
 let participantHeartbeatTimer = null;
 let participantCleanupTimer = null;
-let participantPollTimer = null;
-let chatPollTimer = null;
 let myPeerId = null;
-let lastSeenParticipantsTs = 0;
-let lastSeenChatLength = -1;
-let lastKnownChatIdKey = null;
 
 function channelKeyFor(assemblyId) {
     return 'condomit-assembly-' + String(assemblyId);
@@ -34,9 +27,8 @@ function storageParticipantsKey(assemblyId) {
 }
 
 function getInitials(name) {
-    const s = (name || '').trim();
-    if (!s) return 'US';
-    return s.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    if (!name) return 'US';
+    return String(name).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
 function getMyPeerId() {
@@ -56,25 +48,22 @@ function getMyPeerId() {
 }
 
 function persistParticipantList(assemblyId, list) {
-    const key = storageParticipantsKey(assemblyId);
-    const wrapped = { ts: Date.now(), value: list || [] };
-    try { localStorage.setItem(key, JSON.stringify(wrapped)); } catch(_) {}
+    try { localStorage.setItem(storageParticipantsKey(assemblyId), JSON.stringify(list)); } catch(_) {}
 }
 
 function loadPersistedParticipants(assemblyId) {
     try {
         const raw = localStorage.getItem(storageParticipantsKey(assemblyId));
         if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        const arr = parsed && Array.isArray(parsed.value) ? parsed.value : (Array.isArray(parsed) ? parsed : []);
-        return arr;
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
     } catch(_) { return []; }
 }
 
 function serializeParticipantFromUser(user, opts = {}) {
     if (!user) return null;
     const name = user.name || 'Usuário';
-    const type = getNormalizedUserType ? (window.getNormalizedUserType ? window.getNormalizedUserType(user) : user.type || 'morador') : (user.type || 'morador');
+    const type = user.type || (user.user_type === 'sindico' ? 'sindico' : 'morador') || 'morador';
     return {
         peerId: opts.peerId || getMyPeerId(),
         email: user.email || null,
@@ -88,61 +77,6 @@ function serializeParticipantFromUser(user, opts = {}) {
     };
 }
 
-function mergeAndNormalizeParticipants(incoming) {
-    if (!Array.isArray(incoming)) return;
-    const now = Date.now();
-    const byId = new Map();
-    participants.forEach(p => { if (p?.peerId) byId.set(p.peerId, p); });
-    incoming.forEach(p => {
-        if (!p || !p.peerId) return;
-        const existing = byId.get(p.peerId);
-        if (!existing || ((p.lastSeen || 0) >= (existing.lastSeen || 0))) {
-            byId.set(p.peerId, { ...existing, ...p, lastSeen: p.lastSeen || existing?.lastSeen || now });
-        }
-    });
-    const filtered = Array.from(byId.values()).filter(p => now - (p.lastSeen || 0) < ASSEMBLY_PARTICIPANT_TTL_MS);
-    participants = filtered;
-}
-
-function refreshParticipantsFromStorage(assemblyId) {
-    if (!assemblyId) return;
-    const stored = loadPersistedParticipants(assemblyId);
-    const beforeCount = participants.length;
-    mergeAndNormalizeParticipants(stored);
-    if (participants.length !== beforeCount) {
-        renderParticipants();
-    } else {
-        renderParticipants(true); // force UI refresh
-    }
-}
-
-function refreshChatFromStorage(assemblyId) {
-    if (!assemblyId) return;
-    const key = chatKeyFor(assemblyId);
-    try {
-        const raw = localStorage.getItem(key);
-        if (!raw) return;
-        const wrapped = JSON.parse(raw);
-        const arr = wrapped && Array.isArray(wrapped.value) ? wrapped.value : (Array.isArray(wrapped) ? wrapped : []);
-        if (!Array.isArray(arr) || arr.length === lastSeenChatLength) return;
-        const messagesDiv = document.getElementById('chat-messages');
-        if (!messagesDiv) return;
-        arr.forEach(msg => appendIncomingChatMessage(msg, { silent: true, history: true }));
-        lastSeenChatLength = arr.length;
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    } catch(_) {}
-}
-
-function onAssemblyStorageChanged(e) {
-    if (!currentAssemblyId) return;
-    if (!e || !e.key) return;
-    if (e.key === storageParticipantsKey(currentAssemblyId)) {
-        refreshParticipantsFromStorage(currentAssemblyId);
-    } else if (e.key === chatKeyFor(currentAssemblyId)) {
-        refreshChatFromStorage(currentAssemblyId);
-    }
-}
-
 function openAssemblyChannel(assemblyId) {
     closeAssemblyChannel();
     const key = channelKeyFor(assemblyId);
@@ -153,17 +87,15 @@ function openAssemblyChannel(assemblyId) {
     } catch (_) {
         assemblyChannel = null;
     }
-    if (typeof window.addEventListener === 'function') {
-        window.addEventListener('storage', onAssemblyStorageChanged);
-    }
     // Carrega participantes persistidos de outras abas
     const persisted = loadPersistedParticipants(assemblyId);
     if (persisted && persisted.length) {
-        mergeAndNormalizeParticipants(persisted);
+        const now = Date.now();
+        participants = persisted.filter(p => now - (p.lastSeen || 0) < ASSEMBLY_PARTICIPANT_TTL_MS);
     }
     // Carrega chat histórico
     loadPersistedChatHistory(assemblyId);
-    // Temporizador de limpeza + polling cross-dispositivo (localStorage)
+    // Temporizador de limpeza
     participantCleanupTimer = setInterval(() => {
         const before = participants.length;
         const now = Date.now();
@@ -173,16 +105,9 @@ function openAssemblyChannel(assemblyId) {
             renderParticipants();
         }
     }, 5000);
-    participantPollTimer = setInterval(() => refreshParticipantsFromStorage(assemblyId), PARTICIPANT_POLL_MS);
-    chatPollTimer = setInterval(() => refreshChatFromStorage(assemblyId), CHAT_POLL_MS);
-    lastSeenChatIdKey = chatKeyFor(assemblyId);
-    lastSeenChatLength = countChatMessagesInDom();
 }
 
 function closeAssemblyChannel() {
-    if (typeof window.removeEventListener === 'function') {
-        window.removeEventListener('storage', onAssemblyStorageChanged);
-    }
     if (assemblyChannel) {
         try { assemblyChannel.close(); } catch(_) {}
         assemblyChannel = null;
@@ -194,14 +119,6 @@ function closeAssemblyChannel() {
     if (participantCleanupTimer) {
         clearInterval(participantCleanupTimer);
         participantCleanupTimer = null;
-    }
-    if (participantPollTimer) {
-        clearInterval(participantPollTimer);
-        participantPollTimer = null;
-    }
-    if (chatPollTimer) {
-        clearInterval(chatPollTimer);
-        chatPollTimer = null;
     }
 }
 
@@ -219,12 +136,12 @@ function sendParticipantPresence(opts = {}) {
         micOn: typeof opts.micOn === 'boolean' ? opts.micOn : micOn,
         cameraOn: typeof opts.cameraOn === 'boolean' ? opts.cameraOn : cameraOn
     });
+    // Atualiza lista local
     const idx = participants.findIndex(x => x.peerId === p.peerId);
     if (idx >= 0) participants[idx] = p;
     else participants.push(p);
     persistParticipantList(currentAssemblyId, participants);
-    broadcastToAssembly('participant-presence', { ...p, announce: !!opts.announce });
-    renderParticipants(true);
+    broadcastToAssembly('participant-presence', p);
 }
 
 function startParticipantHeartbeat() {
@@ -243,13 +160,13 @@ function handleAssemblyMessage(assemblyId, msg) {
             if (!data || !data.peerId) return;
             if (assemblyId !== currentAssemblyId) return;
             const p = { ...data, lastSeen: msg.ts || Date.now() };
-            delete p.announce;
             const idx = participants.findIndex(x => x.peerId === p.peerId);
-            if (idx >= 0) participants[idx] = { ...participants[idx], ...p, lastSeen: p.lastSeen };
+            if (idx >= 0) participants[idx] = p;
             else participants.push(p);
             persistParticipantList(assemblyId, participants);
             renderParticipants();
-            if (data?.announce && p.peerId !== getMyPeerId()) {
+            // Se for nova entrada, respondo com minha presença para o novo peer me ver
+            if (msg.data?.announce && p.peerId !== getMyPeerId()) {
                 setTimeout(() => sendParticipantPresence(), 200);
             }
             break;
@@ -275,22 +192,13 @@ function handleAssemblyMessage(assemblyId, msg) {
     }
 }
 
-function countChatMessagesInDom() {
-    const div = document.getElementById('chat-messages');
-    if (!div) return -1;
-    return div.querySelectorAll('.message').length;
-}
-
 function loadPersistedChatHistory(assemblyId) {
     try {
-        const key = chatKeyFor(assemblyId);
-        const raw = localStorage.getItem(key);
+        const raw = localStorage.getItem(chatKeyFor(assemblyId));
         if (!raw) return;
-        const parsed = JSON.parse(raw);
-        const arr = parsed && Array.isArray(parsed.value) ? parsed.value : (Array.isArray(parsed) ? parsed : []);
+        const arr = JSON.parse(raw);
         if (!Array.isArray(arr)) return;
         arr.forEach(m => appendIncomingChatMessage(m, { silent: true, history: true }));
-        lastSeenChatLength = arr.length;
     } catch(_) {}
 }
 
@@ -298,12 +206,14 @@ function appendIncomingChatMessage(msg, opts = {}) {
     if (!msg) return;
     const sender = msg.sender || msg.name || 'Usuário';
     const isMe = msg.peerId && msg.peerId === getMyPeerId();
-    const userType = msg.userType || (msg.email && currentUser && msg.email === currentUser.email ? (currentUser.type || 'morador') : 'morador');
+    const userType = msg.userType || 'morador';
     const text = msg.text || '';
     const imageData = msg.imageData || null;
     const time = msg.time || getCurrentTime();
+    const ts = msg.ts || Date.now();
     const messagesDiv = document.getElementById('chat-messages');
     if (!messagesDiv) return;
+    // Evitar duplicatas
     if (msg.id) {
         const already = messagesDiv.querySelector(`[data-msg-id="${String(msg.id).replace(/"/g,'')}"]`);
         if (already) return;
@@ -311,7 +221,7 @@ function appendIncomingChatMessage(msg, opts = {}) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message ' + (isMe ? 'sent' : 'received');
     if (msg.id) messageDiv.dataset.msgId = String(msg.id);
-    const typeLabel = userType === 'sindico' ? 'Síndico' : (userType === 'porteiro' ? 'Porteiro' : 'Morador');
+    const typeLabel = userType === 'sindico' ? 'Síndico' : 'Morador';
     let contentHTML = `
         <div class="message-header">
             <strong>${escapeHtml(sender)}</strong>
@@ -336,18 +246,11 @@ function persistChatMessage(assemblyId, msg) {
         const key = chatKeyFor(assemblyId);
         const raw = localStorage.getItem(key);
         let arr = [];
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            arr = parsed && Array.isArray(parsed.value) ? parsed.value : (Array.isArray(parsed) ? parsed : []);
-        }
+        if (raw) { try { arr = JSON.parse(raw); } catch(_) { arr = []; } }
         if (!Array.isArray(arr)) arr = [];
-        const byId = new Map(arr.map(m => [m.id, m]));
-        if (msg.id && byId.has(msg.id)) return;
         arr.push(msg);
         if (arr.length > 400) arr = arr.slice(-400);
-        const wrapped = { ts: Date.now(), value: arr };
-        localStorage.setItem(key, JSON.stringify(wrapped));
-        lastSeenChatLength = arr.length;
+        localStorage.setItem(key, JSON.stringify(arr));
     } catch(_) {}
 }
 
@@ -813,141 +716,101 @@ function leaveAssembly() {
     renderParticipants();
 }
 
-function renderParticipants(_force) {
+function renderParticipants() {
     const grid = document.getElementById('video-grid');
-    if (!grid) return;
     grid.innerHTML = '';
-
-    // Atualiza contador no topo da sala
-    const counterEl = document.getElementById('participant-count');
-    const others = participants.filter(p => p.peerId && p.peerId !== getMyPeerId());
-    const totalCount = 1 + others.length;
-    if (counterEl) counterEl.textContent = String(totalCount);
-
-    // 1) Card do usuário atual (1º, com label "Você")
-    const me = serializeParticipantFromUser(currentUser, {
-        peerId: getMyPeerId(),
-        micOn: !!micOn,
-        cameraOn: !!cameraOn
-    }) || { peerId: getMyPeerId(), name: 'Você', initials: 'US', type: 'morador', profilePhoto: null, micOn: !!micOn, cameraOn: !!cameraOn };
-    const myBox = createParticipantCard({ ...me, _label: 'Você', _self: true });
-    grid.appendChild(myBox);
-
-    // 2) Outros participantes (filtra meu próprio peerId para não duplicar)
-    others.forEach(p => {
-        const card = createParticipantCard({ ...p, _self: false });
-        grid.appendChild(card);
-    });
-
-    // 3) Anexa o <video> local (se câmera ligada) no card do usuário
-    attachLocalVideoToSelfCard();
-}
-
-function createParticipantCard(p) {
-    const box = document.createElement('div');
-    box.className = 'video-box' + (p._self ? ' self' : '');
-    if (p.peerId) box.dataset.peerId = String(p.peerId);
-
+    
+    // Adiciona o usuário atual primeiro (box principal)
+    const userBox = document.createElement('div');
+    userBox.className = 'video-box';
+    
     const placeholder = document.createElement('div');
     placeholder.className = 'video-placeholder';
-
+    
     const avatar = document.createElement('div');
     avatar.className = 'user-avatar';
     avatar.style.position = 'relative';
-    avatar.style.overflow = 'hidden';
-
-    if (p.profilePhoto) {
-        avatar.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = p.profilePhoto;
-        img.alt = 'Avatar';
-        img.onerror = function() {
-            try { img.remove(); } catch(_) {}
-            avatar.textContent = p.initials || 'US';
-            avatar.style.background = '';
-        };
-        avatar.appendChild(img);
-        avatar.style.background = 'transparent';
+    
+    if (currentUser && currentUser.profilePhoto) {
+        avatar.innerHTML = `<img src="${currentUser.profilePhoto}" alt="Avatar" />`;
+        avatar.style.overflow = 'hidden';
+        avatar.style.background = 'none';
     } else {
-        avatar.innerHTML = '';
-        avatar.textContent = p.initials || (p.name ? getInitials(p.name) : 'US');
+        const initials = currentUser ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'US';
+        avatar.textContent = initials;
     }
+    
     placeholder.appendChild(avatar);
-
+    
     const nameP = document.createElement('p');
-    const displayName = p._self && p._label ? p._label : (p.name || 'Usuário');
-    nameP.textContent = displayName;
+    nameP.textContent = currentUser ? currentUser.name : 'Você';
     nameP.style.margin = '0.5rem 0 0.25rem 0';
     nameP.style.fontWeight = '600';
     nameP.style.fontSize = '0.95rem';
     placeholder.appendChild(nameP);
-
+    
+    // Adiciona tipo de usuário com ênfase em síndico
     const typeP = document.createElement('p');
-    const userType = p.type === 'sindico' ? 'Síndico' : (p.type === 'porteiro' ? 'Porteiro' : 'Morador');
+    const userType = currentUser ? (currentUser.type === 'sindico' ? 'Síndico' : 'Morador') : 'Morador';
     typeP.textContent = userType;
     typeP.style.margin = '0';
     typeP.style.fontSize = '0.85rem';
-    typeP.style.fontWeight = p.type === 'sindico' ? '700' : '500';
-    typeP.style.color = p.type === 'sindico' ? '#dc2626' : '#6b7280';
+    typeP.style.fontWeight = currentUser?.type === 'sindico' ? '700' : '500';
+    typeP.style.color = currentUser?.type === 'sindico' ? '#dc2626' : '#6b7280';
     placeholder.appendChild(typeP);
-
-    // Microfone (liga/desliga — ícones e badge)
-    if (typeof p.micOn === 'boolean' && !p.micOn) {
-        const micOff = document.createElement('div');
-        micOff.className = 'mic-off-icon';
-        micOff.innerHTML = '<i class="fas fa-microphone-slash"></i>';
-        micOff.title = 'Microfone desligado';
-        placeholder.appendChild(micOff);
-    } else {
-        const micOnIndicator = document.createElement('div');
-        micOnIndicator.className = 'mic-on-indicator';
-        micOnIndicator.title = 'Microfone ligado';
-        placeholder.appendChild(micOnIndicator);
+    
+    // Adiciona ícone de mic desligado se necessário
+    if (!micOn) {
+        const micOffIcon = document.createElement('div');
+        micOffIcon.className = 'mic-off-icon';
+        micOffIcon.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+        placeholder.appendChild(micOffIcon);
     }
-
-    // Câmera (apenas mostra câmera desligada se for participante remoto e a câmera estiver off)
-    if (typeof p.cameraOn === 'boolean' && !p.cameraOn) {
-        const camOff = document.createElement('div');
-        camOff.className = 'camera-off-indicator';
-        camOff.title = 'Câmera desligada';
-        placeholder.appendChild(camOff);
-    }
-
-    box.appendChild(placeholder);
-    return box;
-}
-
-function attachLocalVideoToSelfCard() {
-    const selfBox = document.querySelector('#video-grid .video-box.self');
-    if (!selfBox) return;
-    let localVideo = selfBox.querySelector('video.self-video');
-    if (!localVideo) {
-        localVideo = document.createElement('video');
-        localVideo.className = 'self-video';
-        localVideo.autoplay = true;
-        localVideo.playsInline = true;
-        localVideo.muted = true;
-        localVideo.style.position = 'absolute';
-        localVideo.style.top = '0';
-        localVideo.style.left = '0';
-        localVideo.style.width = '100%';
-        localVideo.style.height = '100%';
-        localVideo.style.objectFit = 'cover';
-        localVideo.style.background = '#000';
-        localVideo.style.zIndex = '1';
-        selfBox.insertBefore(localVideo, selfBox.firstChild);
-    }
-    if (cameraOn && localStream && localStream.getVideoTracks().length) {
-        try {
-            if (localVideo.srcObject !== localStream) localVideo.srcObject = localStream;
-            localVideo.style.display = 'block';
-            const placeholder = selfBox.querySelector('.video-placeholder');
-            if (placeholder) placeholder.style.position = 'relative';
-        } catch(_) {}
-    } else {
-        try { if (localVideo.srcObject) localVideo.srcObject = null; } catch(_) {}
-        localVideo.style.display = 'none';
-    }
+    
+    userBox.appendChild(placeholder);
+    grid.appendChild(userBox);
+    
+    participants.forEach(p => {
+        const box = document.createElement('div');
+        box.className = 'video-box';
+        
+        const placeholder = document.createElement('div');
+        placeholder.className = 'video-placeholder';
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'user-avatar';
+        avatar.style.position = 'relative';
+        
+        if (p.profilePhoto) {
+            avatar.innerHTML = `<img src="${p.profilePhoto}" alt="Avatar" />`;
+            avatar.style.overflow = 'hidden';
+            avatar.style.background = 'none';
+        } else {
+            avatar.textContent = p.initials;
+        }
+        
+        placeholder.appendChild(avatar);
+        
+        const nameP = document.createElement('p');
+        nameP.textContent = p.name;
+        nameP.style.margin = '0.5rem 0 0.25rem 0';
+        nameP.style.fontWeight = '600';
+        nameP.style.fontSize = '0.95rem';
+        placeholder.appendChild(nameP);
+        
+        // Adiciona tipo de usuário com ênfase em síndico
+        const typeP = document.createElement('p');
+        const userType = p.type === 'sindico' ? 'Síndico' : 'Morador';
+        typeP.textContent = userType;
+        typeP.style.margin = '0';
+        typeP.style.fontSize = '0.85rem';
+        typeP.style.fontWeight = p.type === 'sindico' ? '700' : '500';
+        typeP.style.color = p.type === 'sindico' ? '#dc2626' : '#6b7280';
+        placeholder.appendChild(typeP);
+        
+        box.appendChild(placeholder);
+        grid.appendChild(box);
+    });
 }
 
 function updateControlsUI() {
@@ -966,8 +829,28 @@ function updateControlsUI() {
         camBtn.classList.add('off');
     }
     
-    // Re-renderiza o grid para atualizar ícones de mic/câmera no card do usuário
-    renderParticipants(true);
+    // Sincroniza ícone de mic desligado no avatar do usuário
+    updateAvatarMicIcon();
+}
+
+function updateAvatarMicIcon() {
+    const videoBox = document.querySelector('.video-box');
+    if (!videoBox) return;
+    
+    const placeholder = videoBox.querySelector('.video-placeholder');
+    if (!placeholder) return;
+    
+    // Remove ícone anterior se existir
+    const oldIcon = placeholder.querySelector('.mic-off-icon');
+    if (oldIcon) oldIcon.remove();
+    
+    // Adiciona ícone de mic desligado se necessário
+    if (!micOn) {
+        const micOffIcon = document.createElement('div');
+        micOffIcon.className = 'mic-off-icon';
+        micOffIcon.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+        placeholder.appendChild(micOffIcon);
+    }
 }
 
 function toggleMic() {
@@ -1019,16 +902,31 @@ async function toggleCamera() {
     if (cameraOn) {
         // Ativa câmera
         try {
-            const micTrack = localStream && localStream.getAudioTracks().length ? localStream.getAudioTracks()[0] : null;
-            const newStream = await navigator.mediaDevices.getUserMedia({
+            localStream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user' },
                 audio: false
             });
-            if (micTrack) newStream.addTrack(micTrack);
-            localStream = newStream;
+            
+            // Procura ou cria elemento de vídeo
+            let videoElement = document.getElementById('local-video');
+            if (!videoElement) {
+                videoElement = document.createElement('video');
+                videoElement.id = 'local-video';
+                videoElement.autoplay = true;
+                videoElement.playsinline = true;
+                videoElement.muted = true;
+                videoElement.style.width = '100%';
+                videoElement.style.height = '100%';
+                videoElement.style.objectFit = 'cover';
+                const videoBox = document.querySelector('.video-box');
+                if (videoBox) {
+                    videoBox.innerHTML = '';
+                    videoBox.appendChild(videoElement);
+                }
+            }
+            
+            videoElement.srcObject = localStream;
             sendParticipantPresence({ cameraOn: true });
-            attachLocalVideoToSelfCard();
-            renderParticipants(true);
         } catch (error) {
             console.error('Erro ao acessar câmera:', error);
             alert('Não foi possível acessar a câmera. Verifique as permissões.');
@@ -1036,14 +934,12 @@ async function toggleCamera() {
             sendParticipantPresence({ cameraOn: false });
         }
     } else {
-        // Desativa câmera: remove apenas track de vídeo, preserva áudio
+        // Desativa câmera
         if (localStream) {
-            localStream.getVideoTracks().forEach(track => track.stop());
-            if (localStream.removeTrack) {
-                localStream.getVideoTracks().forEach(t => { try { localStream.removeTrack(t); } catch(_) {} });
-            }
-            if (!localStream.getAudioTracks().length) localStream = null;
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
         }
+        renderParticipants();
         sendParticipantPresence({ cameraOn: false });
     }
     

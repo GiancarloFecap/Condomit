@@ -296,11 +296,8 @@ function formatDate(dateStr) {
 function syncAllAvatars(currentUser) {
   if (!currentUser) return;
 
-  const nameStr = currentUser.name || '';
-  const initials = nameStr.trim()
-    ? nameStr.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : 'US';
-  const profilePhoto = currentUser.profilePhoto || null;
+  const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const profilePhoto = currentUser.profilePhoto;
 
   // Sincroniza avatar no topo (em .user-profile-small .avatar)
   const topSmallAvatar = document.querySelector('.user-profile-small .avatar');
