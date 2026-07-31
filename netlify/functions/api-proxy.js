@@ -105,23 +105,31 @@ function createMailTransport() {
   });
 }
 
-async function sendResetEmail(toEmail, resetLink) {
+function getDisplayName(usuario, fallbackEmail) {
+  const nome = usuario?.nome || usuario?.name || usuario?.firstName || usuario?.username;
+  if (nome && String(nome).trim()) {
+    return String(nome).trim();
+  }
+  return String(fallbackEmail || '').split('@')[0] || 'morador';
+}
+
+async function sendResetEmail(toEmail, usuario, resetLink) {
+  const nomeUsuario = getDisplayName(usuario, toEmail);
   const transporter = createMailTransport();
   const info = await transporter.sendMail({
     from: SMTP_FROM,
     to: toEmail,
-    subject: 'Redefinição de senha - Condomit',
-    text: `Olá!\n\nVocê solicitou a redefinição de senha no Condomit.\nClique no link abaixo para redefinir sua senha:\n${resetLink}\n\nSe você não solicitou isso, ignore este e-mail.\n\nAtenciosamente,\nEquipe Condomit`,
+    subject: 'Recuperação de senha - Condomit',
+    text: `Olá, ${nomeUsuario}!\n\nVocê solicitou a recuperação de senha no Condomit.\nClique no link abaixo para criar uma nova senha:\n${resetLink}\n\nEste link é válido por 1 hora.\n\nSe você não solicitou isso, ignore este e-mail.\n\nAtenciosamente,\nEquipe Condomit`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Redefinição de senha - Condomit</h2>
-        <p>Olá!</p>
-        <p>Você solicitou a redefinição de senha no Condomit.</p>
-        <p>Clique no botão abaixo para redefinir sua senha:</p>
-        <a href="${resetLink}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Redefinir senha</a>
-        <p>Ou copie e cole esse link no navegador: ${resetLink}</p>
-        <p>Se você não solicitou isso, ignore este e-mail.</p>
-        <p>Atenciosamente,<br>Equipe Condomit</p>
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
+        <h2 style="color: #32C26D;">Recuperação de senha</h2>
+        <p>Olá, <strong>${nomeUsuario}</strong>!</p>
+        <p>Clique no botão abaixo para criar uma nova senha:</p>
+        <a href="${resetLink}" style="display:inline-block;background:linear-gradient(135deg,#79D836,#32C26D);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">Redefinir minha senha</a>
+        <p style="color:#5A5A5A;font-size:14px;">Este link é válido por <strong>1 hora</strong>.</p>
+        <hr style="border:none;border-top:1px solid #C2C2C2;margin:24px 0;">
+        <p style="color:#C2C2C2;font-size:12px;">Condomit - O app do seu condomínio</p>
       </div>
     `,
   });
@@ -155,7 +163,7 @@ async function proxySupabaseRequest(body, pathSuffix, method) {
 }
 
 async function fetchSupabaseUsersByEmail(email) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email&email=eq.${encodeURIComponent(email)}`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email,name&email=eq.${encodeURIComponent(email)}`, {
     headers: {
       apikey: SUPABASE_SERVICE_ROLE_KEY,
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
@@ -275,8 +283,9 @@ async function handleForgotPassword(event, body) {
   const token = generateResetToken();
   resetTokens.set(token, { email: normalizedEmail, expires: Date.now() + 3600000 });
   const resetLink = buildResetLink(event, token, resetPageUrl);
+  const usuario = users?.[0] || keycloakUser || { name: normalizedEmail.split('@')[0] };
   try {
-    await sendResetEmail(normalizedEmail, resetLink);
+    await sendResetEmail(normalizedEmail, usuario, resetLink);
     console.log(`E-mail de reset enviado para ${normalizedEmail}`);
   } catch (emailError) {
     console.error('[Email Error] Falha ao enviar e-mail:', emailError);

@@ -372,7 +372,7 @@ function buildResetLink(req, token, providedResetPageUrl) {
 }
 
 function getDisplayName(usuario, fallbackEmail) {
-  const nome = usuario?.nome || usuario?.firstName || usuario?.username;
+  const nome = usuario?.nome || usuario?.name || usuario?.firstName || usuario?.username;
   if (nome && String(nome).trim()) {
     return String(nome).trim();
   }
@@ -426,7 +426,7 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
 }
 
 async function fetchSupabaseUsersByEmail(email) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email,nome&email=eq.${encodeURIComponent(email)}`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email,name&email=eq.${encodeURIComponent(email)}`, {
     headers: {
       apikey: SUPABASE_SERVICE_ROLE_KEY,
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
