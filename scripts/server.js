@@ -14,7 +14,7 @@ const env = loadEnv(path.join(root, '.env'));
 const SUPABASE_URL = env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTUwNjQsImV4cCI6MjA5NTk5MTA2NH0.WTk0rZaTsPvs30uEWDfylc-z6L3G8IUb_J73oYtjuWU';
 const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
-const APP_BASE_URL = env.APP_BASE_URL || '';
+const APP_BASE_URL = env.APP_BASE_URL || 'https://condomit.netlify.app';
 const SMTP_HOST = env.SMTP_HOST || '';
 const SMTP_PORT = env.SMTP_PORT ? Number(env.SMTP_PORT) : 587;
 const SMTP_SECURE = String(env.SMTP_SECURE || '').toLowerCase() === 'true';

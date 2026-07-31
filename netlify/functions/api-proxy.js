@@ -1,0 +1,534 @@
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const { MercadoPagoConfig, Preference } = require('mercadopago');
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDQxNTA2NCwiZXhwIjoyMDk1OTkxMDY0fQ.wi0H-LHiBiMm3_WPXw1lslRnhAw3atf_BGUZCp2PdNA';
+const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
+const APP_BASE_URL = process.env.APP_BASE_URL || 'https://condomit.netlify.app';
+const SMTP_HOST = process.env.SMTP_HOST || '';
+const SMTP_PORT = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
+const SMTP_SECURE = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
+const SMTP_SERVICE = process.env.SMTP_SERVICE || '';
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || '"Condomit" <no-reply@condomit.com.br>';
+const KEYCLOAK_BASE_URL = (process.env.KEYCLOAK_BASE_URL || process.env.KEYCLOAK_URL || '').replace(/\/$/, '');
+const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM || '';
+const KEYCLOAK_ADMIN_REALM = process.env.KEYCLOAK_ADMIN_REALM || 'master';
+const KEYCLOAK_CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID || '';
+const KEYCLOAK_CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET || '';
+const KEYCLOAK_ADMIN_USERNAME = process.env.KEYCLOAK_ADMIN_USERNAME || '';
+const KEYCLOAK_ADMIN_PASSWORD = process.env.KEYCLOAK_ADMIN_PASSWORD || '';
+
+const mpClient = new MercadoPagoConfig({ accessToken: MERCADO_PAGO_ACCESS_TOKEN });
+const preference = new Preference(mpClient);
+
+const resetTokens = new Map();
+
+function generateResetToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function hasRealEmailConfig() {
+  return Boolean((SMTP_SERVICE || SMTP_HOST) && SMTP_USER && SMTP_PASS);
+}
+
+function hasKeycloakConfig() {
+  return Boolean(
+    KEYCLOAK_BASE_URL &&
+    KEYCLOAK_REALM &&
+    KEYCLOAK_CLIENT_ID &&
+    (KEYCLOAK_CLIENT_SECRET || (KEYCLOAK_ADMIN_USERNAME && KEYCLOAK_ADMIN_PASSWORD))
+  );
+}
+
+function getRequestOrigin(event) {
+  const headers = event.headers || {};
+  const forwardedProto = headers['x-forwarded-proto'];
+  const forwardedHost = headers['x-forwarded-host'];
+  const protocol = forwardedProto || 'https';
+  const host = forwardedHost || headers.host || 'condomit.netlify.app';
+  return `${protocol}://${host}`;
+}
+
+function getResetPageUrl(event, providedResetPageUrl) {
+  const fallbackBase = APP_BASE_URL || getRequestOrigin(event);
+  try {
+    return new URL(providedResetPageUrl || '/pages/redefinir-senha.html', fallbackBase).toString();
+  } catch (error) {
+    return new URL('/pages/redefinir-senha.html', fallbackBase).toString();
+  }
+}
+
+function buildResetLink(event, token, providedResetPageUrl) {
+  const resetUrl = new URL(getResetPageUrl(event, providedResetPageUrl));
+  resetUrl.searchParams.set('token', token);
+  return resetUrl.toString();
+}
+
+function createMailTransport() {
+  if (hasRealEmailConfig()) {
+    if (SMTP_SERVICE) {
+      return nodemailer.createTransport({
+        service: SMTP_SERVICE,
+        auth: {
+          user: SMTP_USER,
+          pass: SMTP_PASS
+        }
+      });
+    }
+    return nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+  }
+  return nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: {
+      user: 'laila58@ethereal.email',
+      pass: 'z6qZ5U1h8QdDf3G2jK5L'
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+}
+
+async function sendResetEmail(toEmail, resetLink) {
+  const transporter = createMailTransport();
+  const info = await transporter.sendMail({
+    from: SMTP_FROM,
+    to: toEmail,
+    subject: 'Redefinição de senha - Condomit',
+    text: `Olá!\n\nVocê solicitou a redefinição de senha no Condomit.\nClique no link abaixo para redefinir sua senha:\n${resetLink}\n\nSe você não solicitou isso, ignore este e-mail.\n\nAtenciosamente,\nEquipe Condomit`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Redefinição de senha - Condomit</h2>
+        <p>Olá!</p>
+        <p>Você solicitou a redefinição de senha no Condomit.</p>
+        <p>Clique no botão abaixo para redefinir sua senha:</p>
+        <a href="${resetLink}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Redefinir senha</a>
+        <p>Ou copie e cole esse link no navegador: ${resetLink}</p>
+        <p>Se você não solicitou isso, ignore este e-mail.</p>
+        <p>Atenciosamente,<br>Equipe Condomit</p>
+      </div>
+    `,
+  });
+  if (!hasRealEmailConfig()) {
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    console.log('Preview do e-mail:', previewUrl);
+  }
+  console.log('Link de reset:', resetLink);
+  return info;
+}
+
+async function proxySupabaseRequest(body, pathSuffix, method) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1${pathSuffix}`, {
+    method,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const text = await response.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (parseError) {
+    data = text;
+  }
+  return { status: response.status, data };
+}
+
+async function fetchSupabaseUsersByEmail(email) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email&email=eq.${encodeURIComponent(email)}`, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+  if (!response.ok) throw new Error('Falha ao consultar usuários no Supabase');
+  const users = await response.json();
+  return Array.isArray(users) ? users : [];
+}
+
+async function updateSupabasePassword(email, password) {
+  const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: JSON.stringify({ password })
+  });
+  if (!updateResponse.ok) throw new Error('Falha ao atualizar senha no Supabase');
+  const updatedUsers = await updateResponse.json().catch(() => []);
+  return Array.isArray(updatedUsers) ? updatedUsers.length : 0;
+}
+
+async function getKeycloakAdminToken() {
+  if (!hasKeycloakConfig()) return null;
+  const params = new URLSearchParams();
+  params.set('client_id', KEYCLOAK_CLIENT_ID);
+  if (KEYCLOAK_CLIENT_SECRET) {
+    params.set('grant_type', 'client_credentials');
+    params.set('client_secret', KEYCLOAK_CLIENT_SECRET);
+  } else {
+    params.set('grant_type', 'password');
+    params.set('username', KEYCLOAK_ADMIN_USERNAME);
+    params.set('password', KEYCLOAK_ADMIN_PASSWORD);
+  }
+  const response = await fetch(`${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_ADMIN_REALM}/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString()
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.access_token) {
+    throw new Error(payload.error_description || payload.error || 'Falha ao autenticar no Keycloak');
+  }
+  return payload.access_token;
+}
+
+async function findKeycloakUserByEmail(email) {
+  if (!hasKeycloakConfig()) return null;
+  const accessToken = await getKeycloakAdminToken();
+  const response = await fetch(`${KEYCLOAK_BASE_URL}/admin/realms/${KEYCLOAK_REALM}/users?email=${encodeURIComponent(email)}&exact=true`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  const users = await response.json().catch(() => []);
+  if (!response.ok) throw new Error('Falha ao consultar usuário no Keycloak');
+  return Array.isArray(users) && users.length ? users[0] : null;
+}
+
+async function updateKeycloakPassword(email, password) {
+  if (!hasKeycloakConfig()) return { synced: false, reason: 'disabled' };
+  const user = await findKeycloakUserByEmail(email);
+  if (!user?.id) return { synced: false, reason: 'not-found' };
+  const accessToken = await getKeycloakAdminToken();
+  const response = await fetch(`${KEYCLOAK_BASE_URL}/admin/realms/${KEYCLOAK_REALM}/users/${user.id}/reset-password`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ type: 'password', temporary: false, value: password })
+  });
+  if (!response.ok) {
+    const payload = await response.text();
+    throw new Error(payload || 'Falha ao atualizar senha no Keycloak');
+  }
+  return { synced: true };
+}
+
+async function createMercadoPagoPreference(data) {
+  const { amount, planName, payerEmail } = data;
+  const preferenceData = {
+    items: [
+      {
+        title: `Plano ${planName} - Condomit`,
+        unit_price: parseFloat(amount),
+        quantity: 1,
+        currency_id: 'BRL'
+      }
+    ],
+    payer: { email: payerEmail }
+  };
+  const result = await preference.create({ body: preferenceData });
+  return { preferenceId: result.id, initPoint: result.init_point };
+}
+
+async function handleForgotPassword(event, body) {
+  const { email, resetPageUrl } = body || {};
+  if (!email) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'E-mail é obrigatório' }) };
+  }
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const users = await fetchSupabaseUsersByEmail(normalizedEmail);
+  let keycloakUser = null;
+  if (hasKeycloakConfig()) {
+    try {
+      keycloakUser = await findKeycloakUserByEmail(normalizedEmail);
+    } catch (keycloakError) {
+      console.error('[Keycloak Forgot Password Error]', keycloakError.message);
+    }
+  }
+  if ((!users || users.length === 0) && !keycloakUser) {
+    return { statusCode: 200, body: JSON.stringify({ message: 'Se o e-mail existir, um link de reset foi enviado' }) };
+  }
+  const token = generateResetToken();
+  resetTokens.set(token, { email: normalizedEmail, expires: Date.now() + 3600000 });
+  const resetLink = buildResetLink(event, token, resetPageUrl);
+  try {
+    await sendResetEmail(normalizedEmail, resetLink);
+    console.log(`E-mail de reset enviado para ${normalizedEmail}`);
+  } catch (emailError) {
+    console.error('[Email Error] Falha ao enviar e-mail:', emailError);
+    console.log(`Link de redefinição (para usar diretamente): ${resetLink}`);
+  }
+  return { statusCode: 200, body: JSON.stringify({ message: 'Se o e-mail existir, um link de reset foi enviado' }) };
+}
+
+async function handleResetPassword(body) {
+  const { token, password } = body || {};
+  if (!token || !password) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Token e senha são obrigatórios' }) };
+  }
+  const resetData = resetTokens.get(token);
+  if (!resetData) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Token inválido ou expirado' }) };
+  }
+  if (Date.now() > resetData.expires) {
+    resetTokens.delete(token);
+    return { statusCode: 400, body: JSON.stringify({ error: 'Token expirado' }) };
+  }
+  const updatedSupabaseUsers = await updateSupabasePassword(resetData.email, password);
+  if (updatedSupabaseUsers === 0) {
+    console.warn(`[Reset Password] Nenhum usuário Supabase atualizado para ${resetData.email}`);
+  }
+  let keycloakSync = { synced: false, reason: 'disabled' };
+  if (hasKeycloakConfig()) {
+    keycloakSync = await updateKeycloakPassword(resetData.email, password);
+    if (keycloakSync.synced) {
+      console.log(`Senha sincronizada no Keycloak para ${resetData.email}`);
+    }
+  }
+  if (updatedSupabaseUsers === 0 && !keycloakSync.synced) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'Nenhuma conta compatível foi encontrada para redefinir a senha' }) };
+  }
+  resetTokens.delete(token);
+  return { statusCode: 200, body: JSON.stringify({ message: 'Senha redefinida com sucesso' }) };
+}
+
+function parsePath(event) {
+  const inputs = [
+    event.path,
+    event.rawPath,
+    event.url,
+    event.requestContext && event.requestContext.http && event.requestContext.http.path
+  ].filter(Boolean);
+  const rawPath = inputs[0] || '';
+
+  const candidates = [rawPath];
+  const fullUrl = event.rawUrl || (event.headers && (event.headers['x-forwarded-proto'] && event.headers.host ? `${event.headers['x-forwarded-proto']}://${event.headers.host}${rawPath}` : null));
+  if (fullUrl) {
+    try { candidates.push(new URL(fullUrl).pathname); } catch (_) {}
+  }
+
+  for (const p of candidates) {
+    const apiPrefix = '/api/';
+    if (p.startsWith(apiPrefix)) {
+      return '/' + p.slice(apiPrefix.length);
+    }
+    const apiProxyPrefix = '/.netlify/functions/api-proxy/';
+    if (p.startsWith(apiProxyPrefix)) {
+      return '/' + p.slice(apiProxyPrefix.length);
+    }
+    const apiProxyIndex = p.indexOf('/.netlify/functions/api-proxy');
+    if (apiProxyIndex !== -1) {
+      const rest = p.slice(apiProxyIndex + '/.netlify/functions/api-proxy'.length);
+      return rest.startsWith('/') ? rest : '/' + rest;
+    }
+    if (p.startsWith('/users') || p.startsWith('/register') || p.startsWith('/condominiums') || p.startsWith('/pagamento') || p.startsWith('/reserva') || p.startsWith('/plano') || p.startsWith('/forgot') || p.startsWith('/reset') || p.startsWith('/mercadopago') || p.startsWith('/user_condominiums')) {
+      return p;
+    }
+  }
+
+  return '/_unknown_' + rawPath;
+}
+
+function parseQuery(event) {
+  if (event.queryStringParameters && typeof event.queryStringParameters === 'object' && Object.keys(event.queryStringParameters).length > 0) {
+    return { ...event.queryStringParameters };
+  }
+  if (event.multiValueQueryStringParameters && typeof event.multiValueQueryStringParameters === 'object') {
+    const flat = {};
+    for (const k of Object.keys(event.multiValueQueryStringParameters)) {
+      const v = event.multiValueQueryStringParameters[k];
+      flat[k] = Array.isArray(v) ? v[0] : v;
+    }
+    if (Object.keys(flat).length > 0) return flat;
+  }
+  const candidates = [event.rawUrl, event.url];
+  if (event.headers && event.headers.host && (event.headers['x-forwarded-proto'] || event.headers.referer)) {
+    const proto = event.headers['x-forwarded-proto'] || 'https';
+    candidates.push(`${proto}://${event.headers.host}${event.path || ''}`);
+  }
+  for (const u of candidates) {
+    if (!u) continue;
+    try {
+      const url = new URL(u);
+      const params = {};
+      url.searchParams.forEach((value, key) => { params[key] = value; });
+      if (Object.keys(params).length > 0) return params;
+    } catch (_) {}
+  }
+  return {};
+}
+
+exports.handler = async (event, context) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
+    'Access-Control-Max-Age': '86400'
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers };
+  }
+
+  const rawMethod = (event.httpMethod || 'GET').toUpperCase();
+  const pathname = parsePath(event);
+  const query = parseQuery(event);
+  let body = null;
+  if (event.body) {
+    try {
+      const rawBody = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf-8') : event.body;
+      body = rawBody ? JSON.parse(rawBody) : null;
+    } catch (e) {
+      body = null;
+    }
+  }
+
+  try {
+    console.log('[api-proxy] method=', rawMethod, 'pathname=', pathname, 'query=', JSON.stringify(query));
+    if (pathname === '/register' && rawMethod === 'POST') {
+      const result = await proxySupabaseRequest(body, '/users', 'POST');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/condominiums' && rawMethod === 'POST') {
+      const result = await proxySupabaseRequest(body, '/condominiums', 'POST');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/users' && rawMethod === 'GET') {
+      const email = query.email;
+      if (!email) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro email é obrigatório' }) };
+      }
+      const result = await proxySupabaseRequest(null, `/users?select=*&email=eq.${encodeURIComponent(email)}`, 'GET');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/users' && rawMethod === 'PATCH') {
+      const email = query.email;
+      if (!email) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro email é obrigatório' }) };
+      }
+      const result = await proxySupabaseRequest(body, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/condominiums' && rawMethod === 'GET') {
+      const queryCopy = { ...query };
+      delete queryCopy.select;
+      const queryString = new URLSearchParams(queryCopy).toString();
+      const pathSuffix = queryString ? `/condominiums?select=*&${queryString}` : '/condominiums?select=*';
+      const result = await proxySupabaseRequest(null, pathSuffix, 'GET');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/user_condominiums' && rawMethod === 'GET') {
+      const queryCopy = { ...query };
+      delete queryCopy.select;
+      const queryString = new URLSearchParams(queryCopy).toString();
+      const pathSuffix = queryString ? `/user_condominiums?select=*&${queryString}` : '/user_condominiums?select=*';
+      const result = await proxySupabaseRequest(null, pathSuffix, 'GET');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/user_condominiums' && rawMethod === 'POST') {
+      const result = await proxySupabaseRequest(body, '/user_condominiums', 'POST');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/mercadopago/preference' && rawMethod === 'POST') {
+      const mpResult = await createMercadoPagoPreference(body || {});
+      return { statusCode: 200, headers, body: JSON.stringify(mpResult) };
+    }
+
+    if (pathname === '/plano' && rawMethod === 'GET') {
+      const result = await proxySupabaseRequest(null, '/plano?select=*', 'GET');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/pagamento' && rawMethod === 'GET') {
+      const email = query.email;
+      const cep = query.cep;
+      let pathSuffix = '/pagamento?select=*';
+      if (email) pathSuffix += `&email=eq.${encodeURIComponent(email)}`;
+      if (cep) pathSuffix += `&cep=eq.${encodeURIComponent(cep)}`;
+      const result = await proxySupabaseRequest(null, pathSuffix, 'GET');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/pagamento' && rawMethod === 'POST') {
+      const result = await proxySupabaseRequest(body, '/pagamento', 'POST');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/pagamento' && rawMethod === 'PATCH') {
+      const id = query.id;
+      if (!id) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro id é obrigatório' }) };
+      }
+      const result = await proxySupabaseRequest(body, `/pagamento?id=eq.${encodeURIComponent(id)}`, 'PATCH');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/reserva' && rawMethod === 'GET') {
+      const nome_local = query.nome_local;
+      const data_reserva = query.data_reserva;
+      let pathSuffix = '/reserva?select=*';
+      if (nome_local) pathSuffix += `&nome_local=eq.${encodeURIComponent(nome_local)}`;
+      if (data_reserva) pathSuffix += `&data_reserva=eq.${encodeURIComponent(data_reserva)}`;
+      const result = await proxySupabaseRequest(null, pathSuffix, 'GET');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/reserva' && rawMethod === 'POST') {
+      const result = await proxySupabaseRequest(body, '/reserva', 'POST');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/forgot-password' && rawMethod === 'POST') {
+      return await handleForgotPassword(event, body);
+    }
+
+    if (pathname === '/reset-password' && rawMethod === 'POST') {
+      return await handleResetPassword(body);
+    }
+
+    return {
+      statusCode: 404,
+      headers,
+      body: JSON.stringify({ error: 'Endpoint não encontrado', debug: { pathname, rawPath: event.path, rawPath2: event.rawPath, method: rawMethod, query } })
+    };
+  } catch (error) {
+    console.error('Handler error:', error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: error.message || 'Erro interno do servidor' })
+    };
+  }
+};

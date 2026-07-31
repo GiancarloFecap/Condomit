@@ -36,13 +36,26 @@ async function supabaseFetch(path, options = {}) {
 }
 
 async function fetchUserByEmail(email) {
-  const response = await fetch(`/api/users?email=${encodeURIComponent(email)}`);
-  if (!response.ok) {
-    const data = await response.json().catch(() => null);
-    throw new Error(data?.error || 'Erro ao buscar usuário');
+  try {
+    const response = await fetch(`/api/users?email=${encodeURIComponent(email)}`);
+    const contentType = response.headers && response.headers.get ? response.headers.get('content-type') : '';
+    if (!response.ok || (contentType && !contentType.includes('application/json'))) {
+      const text = await response.text().catch(() => '');
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (_) {}
+      if (data && (typeof data === 'object') && (Array.isArray(data) || data.email || data.error === undefined)) {
+        return Array.isArray(data) && data.length ? data[0] : (data && !Array.isArray(data) && data.email ? data : null);
+      }
+      throw new Error(data?.error || `Erro ao buscar usuário (HTTP ${response.status})`);
+    }
+    const data = await response.json();
+    return Array.isArray(data) && data.length ? data[0] : null;
+  } catch (error) {
+    if (error && error.name === 'SyntaxError') {
+      throw new Error('Erro ao buscar usuário: resposta inesperada do servidor');
+    }
+    throw error;
   }
-  const data = await response.json();
-  return Array.isArray(data) && data.length ? data[0] : null;
 }
 
 async function createUser(user) {
@@ -59,7 +72,10 @@ async function createUser(user) {
   try {
     data = text ? JSON.parse(text) : null;
   } catch (error) {
-    data = text;
+    if (response.ok) {
+      throw new Error('Erro ao cadastrar usuário: resposta inesperada do servidor');
+    }
+    data = { error: `Erro ${response.status} ao cadastrar` };
   }
 
   if (!response.ok) {
@@ -83,7 +99,8 @@ async function updateUserByEmail(email, updates) {
   try {
     data = text ? JSON.parse(text) : null;
   } catch (error) {
-    data = text;
+    if (response.ok) return null;
+    data = { error: `Erro ${response.status} ao atualizar` };
   }
 
   if (!response.ok) {

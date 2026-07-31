@@ -1,1 +1,8 @@
-/ /inicio.html 200
+/api/*                              /.netlify/functions/api-proxy   200!
+/pages/redefinir-senha.html         /pages/redefinir-senha.html     200
+/pages/*                            /pages/:splat                   200
+/scripts/*                          /scripts/:splat                 200
+/styles/*                           /styles/:splat                  200
+/assets/*                           /assets/:splat                  200
+/netlify/*                          /netlify/:splat                 200
+/*                                  /inicio.html                    200
