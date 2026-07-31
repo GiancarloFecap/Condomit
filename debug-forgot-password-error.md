@@ -18,3 +18,17 @@ Status: OPEN
 - Confirmar a hipótese suportada pelos logs.
 - Aplicar correção mínima.
 - Verificar novamente com evidência pós-correção.
+
+## Evidências
+- `.dbg/trae-debug-log-forgot-password-error.ndjson:2-4` mostra que o frontend iniciou a requisição e recebeu `status: 404` em `https://condomit.netlify.app/esqueceu-senha`.
+- Não houve logs dos pontos `B`, `C` ou `D`, então a chamada não chegou nem ao servidor local nem ao proxy do Netlify.
+
+## Status das hipóteses
+- H1. Confirmada. A rota `/esqueceu-senha` respondeu `404` no ambiente atual.
+- H2. Rejeitada nesta reprodução. Não há evidência de falha do Brevo porque o backend nem foi atingido.
+- H3. Inconclusiva. O proxy não foi chamado nesta reprodução.
+- H4. Rejeitada nesta reprodução. A consulta de usuário não chegou a executar.
+- H5. Confirmada parcialmente. O frontend recebeu uma resposta vazia após `404` e exibiu a mensagem genérica.
+
+## Raiz confirmada
+- O ambiente atual ainda não resolve `/esqueceu-senha`; por isso a requisição falha antes de qualquer lógica de recuperação.
