@@ -3,6 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
+const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
@@ -13,6 +14,21 @@ const env = loadEnv(path.join(root, '.env'));
 const SUPABASE_URL = env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTUwNjQsImV4cCI6MjA5NTk5MTA2NH0.WTk0rZaTsPvs30uEWDfylc-z6L3G8IUb_J73oYtjuWU';
 const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
+const APP_BASE_URL = env.APP_BASE_URL || '';
+const SMTP_HOST = env.SMTP_HOST || '';
+const SMTP_PORT = env.SMTP_PORT ? Number(env.SMTP_PORT) : 587;
+const SMTP_SECURE = String(env.SMTP_SECURE || '').toLowerCase() === 'true';
+const SMTP_SERVICE = env.SMTP_SERVICE || '';
+const SMTP_USER = env.SMTP_USER || '';
+const SMTP_PASS = env.SMTP_PASS || '';
+const SMTP_FROM = env.SMTP_FROM || SMTP_USER || '"Condomit" <no-reply@condomit.com.br>';
+const KEYCLOAK_BASE_URL = (env.KEYCLOAK_BASE_URL || env.KEYCLOAK_URL || '').replace(/\/$/, '');
+const KEYCLOAK_REALM = env.KEYCLOAK_REALM || '';
+const KEYCLOAK_ADMIN_REALM = env.KEYCLOAK_ADMIN_REALM || 'master';
+const KEYCLOAK_CLIENT_ID = env.KEYCLOAK_CLIENT_ID || '';
+const KEYCLOAK_CLIENT_SECRET = env.KEYCLOAK_CLIENT_SECRET || '';
+const KEYCLOAK_ADMIN_USERNAME = env.KEYCLOAK_ADMIN_USERNAME || '';
+const KEYCLOAK_ADMIN_PASSWORD = env.KEYCLOAK_ADMIN_PASSWORD || '';
 
 const mpClient = new MercadoPagoConfig({ accessToken: MERCADO_PAGO_ACCESS_TOKEN });
 const preference = new Preference(mpClient);
@@ -53,7 +69,7 @@ const server = http.createServer((req, res) => {
     let pathname = decodeURIComponent(parsedUrl.pathname);
 
     if (pathname === '/' || pathname === '/pages') {
-        pathname = '/pages/inicio.html';
+        pathname = '/inicio.html';
     }
 
     if (pathname === '/api/register' && req.method === 'POST') {
@@ -317,7 +333,84 @@ process.on('unhandledRejection', (reason, promise) => {
 const resetTokens = new Map();
 
 function generateResetToken() {
-  return Math.random().toString(36).substr(2, 10) + Date.now().toString(36);
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function hasRealEmailConfig() {
+  return Boolean((SMTP_SERVICE || SMTP_HOST) && SMTP_USER && SMTP_PASS);
+}
+
+function hasKeycloakConfig() {
+  return Boolean(
+    KEYCLOAK_BASE_URL &&
+    KEYCLOAK_REALM &&
+    KEYCLOAK_CLIENT_ID &&
+    (KEYCLOAK_CLIENT_SECRET || (KEYCLOAK_ADMIN_USERNAME && KEYCLOAK_ADMIN_PASSWORD))
+  );
+}
+
+function getRequestOrigin(req) {
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const forwardedHost = req.headers['x-forwarded-host'];
+  const protocol = forwardedProto || 'http';
+  const host = forwardedHost || req.headers.host || `localhost:${port}`;
+  return `${protocol}://${host}`;
+}
+
+function getResetPageUrl(req, providedResetPageUrl) {
+  const fallbackBase = APP_BASE_URL || getRequestOrigin(req);
+
+  try {
+    return new URL(providedResetPageUrl || '/pages/redefinir-senha.html', fallbackBase).toString();
+  } catch (error) {
+    return new URL('/pages/redefinir-senha.html', fallbackBase).toString();
+  }
+}
+
+function buildResetLink(req, token, providedResetPageUrl) {
+  const resetUrl = new URL(getResetPageUrl(req, providedResetPageUrl));
+  resetUrl.searchParams.set('token', token);
+  return resetUrl.toString();
+}
+
+function createMailTransport() {
+  if (hasRealEmailConfig()) {
+    if (SMTP_SERVICE) {
+      return nodemailer.createTransport({
+        service: SMTP_SERVICE,
+        auth: {
+          user: SMTP_USER,
+          pass: SMTP_PASS
+        }
+      });
+    }
+
+    return nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_SECURE,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+  }
+
+  return nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: {
+      user: 'laila58@ethereal.email',
+      pass: 'z6qZ5U1h8QdDf3G2jK5L'
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
 }
 
 async function sendResetEmail(toEmail, resetLink) {
@@ -328,22 +421,10 @@ async function sendResetEmail(toEmail, resetLink) {
   console.log('Link de reset:', resetLink);
   console.log('');
 
-  // Configura transporter com rejectUnauthorized: false para evitar erros de certificado
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.ethereal.email',
-    port: 587,
-    secure: false,
-    auth: {
-      user: 'laila58@ethereal.email', // Usamos uma conta Ethereal fixa para testes
-      pass: 'z6qZ5U1h8QdDf3G2jK5L',
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
+  const transporter = createMailTransport();
 
   const info = await transporter.sendMail({
-    from: '"Condomit" <no-reply@condomit.com.br>',
+    from: SMTP_FROM,
     to: toEmail,
     subject: 'Redefinição de senha - Condomit',
     text: `Olá!\n\nVocê solicitou a redefinição de senha no Condomit.\nClique no link abaixo para redefinir sua senha:\n${resetLink}\n\nSe você não solicitou isso, ignore este e-mail.\n\nAtenciosamente,\nEquipe Condomit`,
@@ -361,21 +442,144 @@ async function sendResetEmail(toEmail, resetLink) {
     `,
   });
 
-  const previewUrl = nodemailer.getTestMessageUrl(info);
   console.log('');
   console.log('✅ E-MAIL REGISTRADO COM SUCESSO!');
   console.log('----------------------------------------');
-  console.log('⚠️  IMPORTANTE: Ethereal é um serviço de teste');
-  console.log('   O e-mail NÃO chegará em sua caixa postal real!');
-  console.log('');
-  console.log('🔗 Para ver o e-mail, acesse o link abaixo:');
-  console.log(previewUrl);
-  console.log('');
-  console.log('🔗 Ou use diretamente o link de reset:');
+
+  if (hasRealEmailConfig()) {
+    console.log('📨 E-mail enviado usando a configuração SMTP/serviço informada.');
+  } else {
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    console.log('⚠️  SMTP real não configurado. Usando Ethereal para teste.');
+    console.log('🔗 Preview do e-mail:', previewUrl);
+  }
+
+  console.log('🔗 Link de reset:');
   console.log(resetLink);
   console.log('========================================');
   
   return info;
+}
+
+async function fetchSupabaseUsersByEmail(email) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email&email=eq.${encodeURIComponent(email)}`, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Falha ao consultar usuários no Supabase');
+  }
+
+  const users = await response.json();
+  return Array.isArray(users) ? users : [];
+}
+
+async function updateSupabasePassword(email, password) {
+  const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: JSON.stringify({ password })
+  });
+
+  if (!updateResponse.ok) {
+    throw new Error('Falha ao atualizar senha no Supabase');
+  }
+
+  const updatedUsers = await updateResponse.json().catch(() => []);
+  return Array.isArray(updatedUsers) ? updatedUsers.length : 0;
+}
+
+async function getKeycloakAdminToken() {
+  if (!hasKeycloakConfig()) {
+    return null;
+  }
+
+  const params = new URLSearchParams();
+  params.set('client_id', KEYCLOAK_CLIENT_ID);
+
+  if (KEYCLOAK_CLIENT_SECRET) {
+    params.set('grant_type', 'client_credentials');
+    params.set('client_secret', KEYCLOAK_CLIENT_SECRET);
+  } else {
+    params.set('grant_type', 'password');
+    params.set('username', KEYCLOAK_ADMIN_USERNAME);
+    params.set('password', KEYCLOAK_ADMIN_PASSWORD);
+  }
+
+  const response = await fetch(`${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_ADMIN_REALM}/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: params.toString()
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.access_token) {
+    throw new Error(payload.error_description || payload.error || 'Falha ao autenticar no Keycloak');
+  }
+
+  return payload.access_token;
+}
+
+async function findKeycloakUserByEmail(email) {
+  if (!hasKeycloakConfig()) {
+    return null;
+  }
+
+  const accessToken = await getKeycloakAdminToken();
+  const response = await fetch(`${KEYCLOAK_BASE_URL}/admin/realms/${KEYCLOAK_REALM}/users?email=${encodeURIComponent(email)}&exact=true`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+
+  const users = await response.json().catch(() => []);
+  if (!response.ok) {
+    throw new Error('Falha ao consultar usuário no Keycloak');
+  }
+
+  return Array.isArray(users) && users.length ? users[0] : null;
+}
+
+async function updateKeycloakPassword(email, password) {
+  if (!hasKeycloakConfig()) {
+    return { synced: false, reason: 'disabled' };
+  }
+
+  const user = await findKeycloakUserByEmail(email);
+  if (!user?.id) {
+    return { synced: false, reason: 'not-found' };
+  }
+
+  const accessToken = await getKeycloakAdminToken();
+  const response = await fetch(`${KEYCLOAK_BASE_URL}/admin/realms/${KEYCLOAK_REALM}/users/${user.id}/reset-password`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      type: 'password',
+      temporary: false,
+      value: password
+    })
+  });
+
+  if (!response.ok) {
+    const payload = await response.text();
+    throw new Error(payload || 'Falha ao atualizar senha no Keycloak');
+  }
+
+  return { synced: true };
 }
 
 function handleForgotPassword(req, res) {
@@ -383,43 +587,41 @@ function handleForgotPassword(req, res) {
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
     try {
-      const { email } = JSON.parse(body);
+      const { email, resetPageUrl } = JSON.parse(body || '{}');
       if (!email) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'E-mail é obrigatório' }));
         return;
       }
 
-      // Verifica se o usuário existe
-      const userResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email&email=eq.${encodeURIComponent(email)}`, {
-        headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-        }
-      });
+      const normalizedEmail = String(email).trim().toLowerCase();
+      const users = await fetchSupabaseUsersByEmail(normalizedEmail);
+      let keycloakUser = null;
 
-      const users = await userResponse.json();
-      if (!users || users.length === 0) {
+      if (hasKeycloakConfig()) {
+        try {
+          keycloakUser = await findKeycloakUserByEmail(normalizedEmail);
+        } catch (keycloakError) {
+          console.error('[Keycloak Forgot Password Error]', keycloakError.message);
+        }
+      }
+
+      if ((!users || users.length === 0) && !keycloakUser) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ message: 'Se o e-mail existir, um link de reset foi enviado' }));
         return;
       }
 
-      // Gera token
       const token = generateResetToken();
-      resetTokens.set(token, { email, expires: Date.now() + 3600000 }); // 1 hora
-
-      const resetLink = `http://localhost:${port}/pages/redefinir-senha.html?token=${token}`;
+      resetTokens.set(token, { email: normalizedEmail, expires: Date.now() + 3600000 });
+      const resetLink = buildResetLink(req, token, resetPageUrl);
       
-      // Log do link no console para facilitar o teste
-      console.log(`🔗 Link de redefinição para ${email}: ${resetLink}`);
+      console.log(`🔗 Link de redefinição para ${normalizedEmail}: ${resetLink}`);
       
       try {
-        // Tenta enviar o e-mail
-        await sendResetEmail(email, resetLink);
-        console.log(`📧 E-mail de reset enviado para ${email}`);
+        await sendResetEmail(normalizedEmail, resetLink);
+        console.log(`📧 E-mail de reset enviado para ${normalizedEmail}`);
       } catch (emailError) {
-        // Se o envio do e-mail falhar, ainda retorna sucesso e loga o erro
         console.error('[Email Error] Falha ao enviar e-mail:', emailError);
         console.log(`🔗 Link de redefinição (para usar diretamente): ${resetLink}`);
       }
@@ -441,14 +643,13 @@ function handleResetPassword(req, res) {
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
     try {
-      const { token, password } = JSON.parse(body);
+      const { token, password } = JSON.parse(body || '{}');
       if (!token || !password) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Token e senha são obrigatórios' }));
         return;
       }
 
-      // Verifica o token
       const resetData = resetTokens.get(token);
       if (!resetData) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -463,23 +664,25 @@ function handleResetPassword(req, res) {
         return;
       }
 
-      // Atualiza a senha no banco
-      const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(resetData.email)}`, {
-        method: 'PATCH',
-        headers: {
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=representation'
-        },
-        body: JSON.stringify({ password })
-      });
-
-      if (!updateResponse.ok) {
-        throw new Error('Falha ao atualizar senha');
+      const updatedSupabaseUsers = await updateSupabasePassword(resetData.email, password);
+      if (updatedSupabaseUsers === 0) {
+        console.warn(`[Reset Password] Nenhum usuário Supabase atualizado para ${resetData.email}`);
       }
 
-      // Remove o token
+      let keycloakSync = { synced: false, reason: 'disabled' };
+      if (hasKeycloakConfig()) {
+        keycloakSync = await updateKeycloakPassword(resetData.email, password);
+        if (keycloakSync.synced) {
+          console.log(`🔐 Senha sincronizada no Keycloak para ${resetData.email}`);
+        } else {
+          console.log(`ℹ️ Keycloak não sincronizado para ${resetData.email}: ${keycloakSync.reason}`);
+        }
+      }
+
+      if (updatedSupabaseUsers === 0 && !keycloakSync.synced) {
+        throw new Error('Nenhuma conta compatível foi encontrada para redefinir a senha');
+      }
+
       resetTokens.delete(token);
 
       res.writeHead(200, { 'Content-Type': 'application/json' });

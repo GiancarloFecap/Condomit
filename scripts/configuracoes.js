@@ -154,7 +154,7 @@ function updateUIWithUserData(currentUser) {
 function logout() {
     if (confirm('Tem certeza que deseja sair da conta?')) {
         sessionStorage.removeItem('condominiumUser');
-        window.location.href = 'inicio.html';
+        window.location.href = '../inicio.html';
     }
 }
 

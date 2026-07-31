@@ -39,6 +39,15 @@ async function fetchCondominium(cep) {
     }
 }
 
+function getCondominiumIdentifier(user) {
+    if (!user || !user.condominium) return null;
+
+    return user.condominium.cep ||
+        user.condominium.condominium_id ||
+        user.condominium.condominiumId ||
+        null;
+}
+
 async function fetchReservations() {
     try {
         const url = selectedSpace
@@ -475,8 +484,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    if (currentUser.condominium && currentUser.condominium.cep) {
-        await fetchCondominium(currentUser.condominium.cep);
+    const condominiumIdentifier = getCondominiumIdentifier(currentUser);
+
+    if (condominiumIdentifier) {
+        await fetchCondominium(condominiumIdentifier);
         if (!condominiumSpaces.length && currentUser.condominium.condominium_spaces) {
             condominiumSpaces = currentUser.condominium.condominium_spaces;
         }

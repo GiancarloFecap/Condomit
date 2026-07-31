@@ -13,7 +13,7 @@ class ProfilePhotoEditor {
     this.startX = 0;
     this.startY = 0;
     this.startPinchDistance = 0;
-    this.minZoom = 0.5;
+    this.minZoom = 1;
     this.maxZoom = 2;
     this.recentAvatars = [];
     this.init();
@@ -201,8 +201,8 @@ class ProfilePhotoEditor {
     img.onload = () => {
       this.currentImage = img;
       this.cropImage.src = imageData;
-      this.resetPosition();
       this.showEditorScreen();
+      this.resetPosition();
     };
     img.src = imageData;
   }
@@ -224,8 +224,8 @@ class ProfilePhotoEditor {
       this.currentImage = new Image();
       this.currentImage.onload = () => {
         this.cropImage.src = e.target.result;
-        this.resetPosition();
         this.showEditorScreen();
+        this.resetPosition();
       };
       this.currentImage.src = e.target.result;
     };
@@ -246,39 +246,59 @@ class ProfilePhotoEditor {
     }
   }
 
+  getCropAreaSize() {
+    const rect = this.cropContainer.getBoundingClientRect();
+    return {
+      width: rect.width || 300,
+      height: rect.height || 300
+    };
+  }
+
+  clampOffsets() {
+    if (!this.currentImage) return;
+
+    const { width: cropAreaWidth, height: cropAreaHeight } = this.getCropAreaSize();
+    const scaledImgWidth = this.currentImage.width * this.zoom;
+    const scaledImgHeight = this.currentImage.height * this.zoom;
+
+    if (scaledImgWidth <= cropAreaWidth) {
+      this.offsetX = (cropAreaWidth - scaledImgWidth) / 2;
+    } else {
+      const minOffsetX = cropAreaWidth - scaledImgWidth;
+      this.offsetX = Math.max(minOffsetX, Math.min(0, this.offsetX));
+    }
+
+    if (scaledImgHeight <= cropAreaHeight) {
+      this.offsetY = (cropAreaHeight - scaledImgHeight) / 2;
+    } else {
+      const minOffsetY = cropAreaHeight - scaledImgHeight;
+      this.offsetY = Math.max(minOffsetY, Math.min(0, this.offsetY));
+    }
+  }
+
   resetPosition() {
-    const cropAreaWidth = 300;
-    const cropAreaHeight = 300;
+    const { width: cropAreaWidth, height: cropAreaHeight } = this.getCropAreaSize();
     const imgWidth = this.currentImage.width;
     const imgHeight = this.currentImage.height;
 
-    // Calculate max zoom based on original image size
-    // Max zoom is when the smaller dimension matches crop area
-    const minDimension = Math.min(imgWidth, imgHeight);
-    this.maxZoom = minDimension / cropAreaWidth;
-    if (this.maxZoom < 1) this.maxZoom = 1;
-    if (this.maxZoom > 5) this.maxZoom = 5;
+    this.minZoom = Math.max(cropAreaWidth / imgWidth, cropAreaHeight / imgHeight);
+    this.maxZoom = Math.min(Math.max(this.minZoom * 4, this.minZoom + 2), 8);
+    this.zoom = this.minZoom;
 
-    // Initial zoom to fit
-    const scale = cropAreaWidth / minDimension;
-    this.zoom = scale > 1 ? scale : 1;
-    this.zoom = Math.min(this.zoom, this.maxZoom);
-
-    // Calculate center position
-    const scaledImgWidth = imgWidth * this.zoom;
-    const scaledImgHeight = imgHeight * this.zoom;
-    this.offsetX = (cropAreaWidth - scaledImgWidth) / 2;
-    this.offsetY = (cropAreaHeight - scaledImgHeight) / 2;
+    this.offsetX = (cropAreaWidth - (imgWidth * this.zoom)) / 2;
+    this.offsetY = (cropAreaHeight - (imgHeight * this.zoom)) / 2;
+    this.clampOffsets();
 
     const slider = document.getElementById('zoomSlider');
+    slider.min = Math.round(this.minZoom * 100);
     slider.max = this.maxZoom * 100;
     slider.value = this.zoom * 100;
     this.updateImageTransform();
   }
 
   updateImageTransform() {
-    // Set transform origin to center and apply translation and scale
-    this.cropImage.style.transformOrigin = 'center center';
+    this.clampOffsets();
+    this.cropImage.style.transformOrigin = 'top left';
     this.cropImage.style.transform = `translate(${this.offsetX}px, ${this.offsetY}px) scale(${this.zoom})`;
   }
 
@@ -350,6 +370,9 @@ class ProfilePhotoEditor {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const size = 512; // Discord recommended 512x512
+    const { width: cropAreaWidth, height: cropAreaHeight } = this.getCropAreaSize();
+    const scaleX = size / cropAreaWidth;
+    const scaleY = size / cropAreaHeight;
 
     canvas.width = size;
     canvas.height = size;
@@ -359,10 +382,10 @@ class ProfilePhotoEditor {
     ctx.closePath();
     ctx.clip();
 
-    const imgWidth = this.currentImage.width * this.zoom;
-    const imgHeight = this.currentImage.height * this.zoom;
-    const x = (size - imgWidth) / 2 + this.offsetX;
-    const y = (size - imgHeight) / 2 + this.offsetY;
+    const imgWidth = this.currentImage.width * this.zoom * scaleX;
+    const imgHeight = this.currentImage.height * this.zoom * scaleY;
+    const x = this.offsetX * scaleX;
+    const y = this.offsetY * scaleY;
 
     ctx.drawImage(this.currentImage, x, y, imgWidth, imgHeight);
 

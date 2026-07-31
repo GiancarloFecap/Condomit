@@ -178,5 +178,5 @@ async function loadPendingNotices(cep) {
 
 function logout() {
     sessionStorage.removeItem('condominiumUser');
-    window.location.href = 'inicio.html';
+    window.location.href = '../inicio.html';
 }

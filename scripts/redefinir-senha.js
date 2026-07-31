@@ -1,172 +1,157 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const redefineForm = document.getElementById('redefineForm');
-    const newPasswordInput = document.getElementById('newPassword');
-    const confirmPasswordInput = document.getElementById('confirmPassword');
-    const submitBtn = document.getElementById('submitBtn');
-    const errorMessage = document.getElementById('errorMessage');
-    const successMessage = document.getElementById('successMessage');
-    const strengthLabel = document.getElementById('strengthLabel');
-    const strengthText = document.getElementById('strengthText');
-    const requirementsList = document.getElementById('requirementsList');
-    const toggleNewPassword = document.getElementById('toggleNewPassword');
-    const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
-    const strengthBarItems = [
-        document.getElementById('bar1'),
-        document.getElementById('bar2'),
-        document.getElementById('bar3'),
-        document.getElementById('bar4'),
-        document.getElementById('bar5')
-    ];
+let isResetSessionValid = false;
+let resetToken = '';
 
-    // Obtém token da URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
+document.addEventListener('DOMContentLoaded', () => {
+    resetToken = new URLSearchParams(window.location.search).get('token') || '';
+    checkResetToken();
+
+    document.getElementById('toggleNewPassword').addEventListener('click', function() {
+        togglePasswordVisibility('newPassword', this);
+    });
+
+    document.getElementById('toggleConfirmPassword').addEventListener('click', function() {
+        togglePasswordVisibility('confirmPassword', this);
+    });
+
+    document.getElementById('newPassword').addEventListener('input', validatePassword);
+    document.getElementById('confirmPassword').addEventListener('input', validatePassword);
+    document.getElementById('resetPasswordForm').addEventListener('submit', handleResetPassword);
+
+    validatePassword();
+});
+
+function checkResetToken() {
+    if (!resetToken) {
+        showInvalidLink();
+        return;
+    }
+
+    isResetSessionValid = true;
+    showResetForm();
+}
+
+function showResetForm() {
+    document.getElementById('invalidLinkMessage').style.display = 'none';
+    document.getElementById('successMessage').style.display = 'none';
+    document.getElementById('resetPasswordForm').style.display = 'flex';
+}
+
+function showInvalidLink() {
+    document.getElementById('invalidLinkMessage').style.display = 'block';
+    document.getElementById('successMessage').style.display = 'none';
+    document.getElementById('resetPasswordForm').style.display = 'none';
+}
+
+function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    const icon = button.querySelector('i');
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+        return;
+    }
+
+    input.type = 'password';
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+}
+
+function validatePassword() {
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
 
     const requirements = {
-        length: { el: document.getElementById('req-length'), check: (p) => p.length >= 8 },
-        uppercase: { el: document.getElementById('req-uppercase'), check: (p) => /[A-Z]/.test(p) && /[a-z]/.test(p) },
-        number: { el: document.getElementById('req-number'), check: (p) => /\d/.test(p) },
-        special: { el: document.getElementById('req-special'), check: (p) => /[!@#$%&*]/.test(p) }
+        length: newPassword.length >= 8,
+        uppercase: /[A-Z]/.test(newPassword),
+        lowercase: /[a-z]/.test(newPassword),
+        number: /[0-9]/.test(newPassword),
+        special: /[!@#$%^&*]/.test(newPassword),
+        match: newPassword === confirmPassword && confirmPassword.length > 0
     };
 
-    // Toggle password visibility
-    function togglePasswordVisibility(input, button) {
-        const type = input.type === 'password' ? 'text' : 'password';
-        input.type = type;
-        const icon = button.querySelector('i');
-        icon.classList.toggle('fa-eye');
-        icon.classList.toggle('fa-eye-slash');
+    Object.keys(requirements).forEach((key) => {
+        const el = document.getElementById(`req-${key}`);
+        const icon = el.querySelector('i');
+
+        if (requirements[key]) {
+            el.classList.add('valid');
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-check');
+        } else {
+            el.classList.remove('valid');
+            icon.classList.remove('fa-check');
+            icon.classList.add('fa-times');
+        }
+    });
+
+    const isValid = Object.values(requirements).every(Boolean);
+    document.getElementById('submitBtn').disabled = !isValid;
+
+    return isValid;
+}
+
+async function handleResetPassword(e) {
+    e.preventDefault();
+
+    if (!isResetSessionValid || !resetToken) {
+        showError('Link de redefinição inválido. Solicite um novo e-mail.');
+        return;
     }
 
-    toggleNewPassword.addEventListener('click', () => togglePasswordVisibility(newPasswordInput, toggleNewPassword));
-    toggleConfirmPassword.addEventListener('click', () => togglePasswordVisibility(confirmPasswordInput, toggleConfirmPassword));
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
 
-    // Update password strength indicator
-    function updatePasswordStrength(password) {
-        let validCount = 0;
-        Object.values(requirements).forEach(req => {
-            const isValid = req.check(password);
-            const i = req.el.querySelector('i');
-            const span = req.el.querySelector('span');
-            if (isValid) {
-                i.classList.remove('fa-times-circle');
-                i.classList.add('fa-check-circle');
-                span.classList.remove('invalid');
-                span.classList.add('valid');
-                validCount++;
-            } else {
-                i.classList.remove('fa-check-circle');
-                i.classList.add('fa-times-circle');
-                span.classList.remove('valid');
-                span.classList.add('invalid');
-            }
-        });
-
-        // Update strength bar and label
-        strengthBarItems.forEach((bar, index) => {
-            if (index < validCount) {
-                if (validCount === 1) {
-                    bar.style.background = '#dc2626';
-                } else if (validCount === 2) {
-                    bar.style.background = '#f97316';
-                } else if (validCount === 3) {
-                    bar.style.background = '#eab308';
-                } else if (validCount >= 4) {
-                    bar.style.background = '#22c55e';
-                }
-            } else {
-                bar.style.background = '#d1d5db';
-            }
-        });
-
-        let strengthLabelText = 'Fraca';
-        strengthText.className = 'strength-text fraca';
-        if (validCount === 2) {
-            strengthLabelText = 'Razoável';
-            strengthText.className = 'strength-text razoavel';
-        } else if (validCount === 3) {
-            strengthLabelText = 'Bom';
-            strengthText.className = 'strength-text bom';
-        } else if (validCount >= 4) {
-            strengthLabelText = 'Forte';
-            strengthText.className = 'strength-text forte';
-        }
-        strengthLabel.textContent = strengthLabelText;
-
-        return validCount >= 4;
+    if (newPassword !== confirmPassword) {
+        showError('As senhas não coincidem.');
+        return;
     }
 
-    newPasswordInput.addEventListener('input', () => {
-        updatePasswordStrength(newPasswordInput.value);
-        if (errorMessage.style.display === 'block') {
-            errorMessage.style.display = 'none';
-        }
-    });
+    if (!validatePassword()) {
+        showError('Por favor, preencha todos os requisitos da senha.');
+        return;
+    }
 
-    // Check if passwords match
-    confirmPasswordInput.addEventListener('input', () => {
-        if (errorMessage.style.display === 'block') {
-            errorMessage.style.display = 'none';
-        }
-    });
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
 
-    // Handle form submission
-    redefineForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const newPassword = newPasswordInput.value;
-        const confirmPassword = confirmPasswordInput.value;
+    try {
+        const response = await fetch('/api/reset-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                token: resetToken,
+                password: newPassword
+            })
+        });
 
-        if (!token) {
-            errorMessage.textContent = 'Token inválido ou expirado.';
-            errorMessage.style.display = 'block';
-            return;
-        }
+        const data = await response.json().catch(() => ({}));
 
-        // Validate requirements
-        const isPasswordValid = updatePasswordStrength(newPassword);
-        if (!isPasswordValid) {
-            errorMessage.textContent = 'A senha não atende a todos os requisitos.';
-            errorMessage.style.display = 'block';
-            return;
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao redefinir senha.');
         }
 
-        if (newPassword !== confirmPassword) {
-            errorMessage.textContent = 'As senhas não coincidem.';
-            errorMessage.style.display = 'block';
-            return;
-        }
+        document.getElementById('errorMessage').style.display = 'none';
+        document.getElementById('resetPasswordForm').style.display = 'none';
+        document.getElementById('successMessage').style.display = 'block';
 
-        errorMessage.style.display = 'none';
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Redefinindo...';
+        setTimeout(() => {
+            window.location.href = 'entrar.html';
+        }, 3000);
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        showError(error.message || 'Erro ao redefinir senha. Por favor, tente novamente.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Atualizar Senha';
+    }
+}
 
-        try {
-            const response = await fetch('/api/reset-password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ token, password: newPassword })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Ocorreu um erro');
-            }
-
-            successMessage.style.display = 'block';
-            redefineForm.style.display = 'none';
-
-            setTimeout(() => {
-                window.location.href = 'entrar.html';
-            }, 2000);
-        } catch (error) {
-            console.error('Error updating password:', error);
-            errorMessage.textContent = 'Ocorreu um erro ao redefinir a senha. Tente novamente.';
-            errorMessage.style.display = 'block';
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Redefinir senha';
-        }
-    });
-});
+function showError(message) {
+    const errorEl = document.getElementById('errorMessage');
+    errorEl.textContent = message;
+    errorEl.style.display = 'block';
+}

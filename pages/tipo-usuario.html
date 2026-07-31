@@ -3,44 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CondoSmart - Escolha seu Perfil</title>
+    <title>Condomit - Escolha seu Perfil</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/tipo-usuario.css">
     <link rel="stylesheet" href="../styles/theme.css">
 </head>
 <body>
+    <div class="page-bg">
+        <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&auto=format&fit=crop&w=1800&q=80" alt="Condomínio" class="page-bg-image">
+        <div class="page-bg-overlay"></div>
+        <div class="page-bg-glow"></div>
+        <div class="bg-corner bg-corner-tr"></div>
+        <div class="bg-corner bg-corner-bl"></div>
+    </div>
+
     <div class="type-selection-page">
         <div class="container">
-            <button class="btn-back" onclick="window.location.href='inicio.html'">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </button>
-            <img src="../assets/logo-full.png" alt="Condomit Logo" class="type-logo">
-            <h1>Bem-vindo ao Condomit</h1>
-            <p class="subtitle">Selecione seu perfil para acessar a plataforma</p>
-            
+            <header class="top-header">
+                <button class="btn-back" onclick="window.location.href='../inicio.html'">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </button>
+                <div class="brand-header">
+                    <img src="../assets/logo-full2.png" alt="Condomit Logo" class="brand-logo-img">
+                </div>
+                <div class="header-spacer"></div>
+            </header>
+
+            <div class="page-title-area">
+                <h2 class="page-title">Bem-vindo ao <span class="gradient-text">Condomit</span></h2>
+                <p class="subtitle">Selecione seu perfil para acessar a plataforma</p>
+            </div>
+
             <div class="type-grid">
-                <div class="type-card" data-type="morador" onclick="selectType('morador')">
-                    <div class="type-icon morador-icon">
-                        <i class="fas fa-home"></i>
+                <div class="type-card morador-card" data-type="morador" onclick="selectType('morador')">
+                    <div class="type-icon-circle morador-circle">
+                        <svg width="68" height="68" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14 32L34 16L54 32V54C54 56.7614 51.7614 59 49 59H19C16.2386 59 14 56.7614 14 54V32Z" stroke="#059669" stroke-width="3" stroke-linejoin="round" fill="none"/>
+                            <path d="M14 32L34 16L54 32" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M27 50V40H41V50" stroke="#059669" stroke-width="3" stroke-linecap="round"/>
+                            <rect x="40" y="35" width="9" height="9" rx="1.5" stroke="#059669" stroke-width="3" fill="none"/>
+                            <rect x="45" y="52" width="3" height="3" rx="1" fill="#059669"/>
+                            <rect x="49" y="50" width="3" height="3" rx="1" fill="#059669"/>
+                            <rect x="52" y="53" width="3" height="3" rx="1" fill="#059669"/>
+                        </svg>
                     </div>
-                    <h3>Morador</h3>
-                    <p>Serviços, reservas e avisos da sua unidade</p>
+                    <h3 class="type-title morador-title">Morador</h3>
+                    <div class="type-divider morador-divider"></div>
+                    <p class="type-desc">Acesse serviços, reservas, avisos e informações do seu condomínio.</p>
+                    <button class="type-btn morador-btn" onclick="event.stopPropagation(); selectType('morador')">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
                 </div>
-                
-                <div class="type-card" data-type="sindico" onclick="selectType('sindico')">
-                    <div class="type-icon sindico-icon">
-                        <i class="fas fa-shield-alt"></i>
+
+                <div class="type-card sindico-card" data-type="sindico" onclick="selectType('sindico')">
+                    <div class="type-icon-circle sindico-circle">
+                        <svg width="68" height="68" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="20" y="12" width="28" height="48" rx="3" stroke="#7C3AED" stroke-width="3" fill="none"/>
+                            <path d="M14 60H54" stroke="#7C3AED" stroke-width="3" stroke-linecap="round"/>
+                            <rect x="26" y="48" width="16" height="12" rx="1.5" stroke="#7C3AED" stroke-width="3" fill="none"/>
+                            <rect x="24" y="18" width="8" height="9" rx="1" stroke="#7C3AED" stroke-width="2.5" fill="none"/>
+                            <rect x="36" y="18" width="8" height="9" rx="1" stroke="#7C3AED" stroke-width="2.5" fill="none"/>
+                            <rect x="24" y="31" width="8" height="9" rx="1" stroke="#7C3AED" stroke-width="2.5" fill="none"/>
+                            <rect x="36" y="31" width="8" height="9" rx="1" stroke="#7C3AED" stroke-width="2.5" fill="none"/>
+                            <g>
+                                <rect x="9" y="34" width="6" height="8" rx="1" stroke="#7C3AED" stroke-width="2.2" fill="none"/>
+                                <circle cx="12" cy="51.5" r="2.8" stroke="#7C3AED" stroke-width="2.2" fill="none"/>
+                                <path d="M12 54.3V60" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round"/>
+                                <path d="M7 60H17" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round"/>
+                            </g>
+                            <g>
+                                <rect x="53" y="34" width="6" height="8" rx="1" stroke="#7C3AED" stroke-width="2.2" fill="none"/>
+                                <circle cx="56" cy="51.5" r="2.8" stroke="#7C3AED" stroke-width="2.2" fill="none"/>
+                                <path d="M56 54.3V60" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round"/>
+                                <path d="M51 60H61" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round"/>
+                            </g>
+                        </svg>
                     </div>
-                    <h3>Síndico</h3>
-                    <p>Gestão administrativa e financeira completa</p>
+                    <h3 class="type-title sindico-title">Síndico</h3>
+                    <div class="type-divider sindico-divider"></div>
+                    <p class="type-desc">Gerencie o condomínio com ferramentas administrativas e financeiras completas.</p>
+                    <button class="type-btn sindico-btn" onclick="event.stopPropagation(); selectType('sindico')">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
                 </div>
-                
-                <div class="type-card" data-type="porteiro" onclick="selectType('porteiro')">
-                    <div class="type-icon porteiro-icon">
-                        <i class="fas fa-user-clock"></i>
+
+                <div class="type-card porteiro-card" data-type="porteiro" onclick="selectType('porteiro')">
+                    <div class="type-icon-circle porteiro-circle">
+                        <svg width="68" height="68" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M34 12C39.5228 12 44 16.4772 44 22C44 27.5228 39.5228 32 34 32C28.4772 32 24 27.5228 24 22C24 16.4772 28.4772 12 34 12Z" stroke="#1D4ED8" stroke-width="3" fill="none"/>
+                            <path d="M25 9C25 7.34315 26.3431 6 28 6H40C41.6569 6 43 7.34315 43 9V12H25V9Z" stroke="#1D4ED8" stroke-width="3" fill="none"/>
+                            <path d="M34 4C32.3431 4 31 5.34315 31 7V9H37V7C37 5.34315 35.6569 4 34 4Z" fill="#1D4ED8"/>
+                            <path d="M34 8L28.5 10.5" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M34 8L39.5 10.5" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M20 60C20 51.1634 26.835 44 35.5 44C44.165 44 51 51.1634 51 60" stroke="#1D4ED8" stroke-width="3" stroke-linecap="round" fill="none"/>
+                            <path d="M22 36L30.5 34.2L34 37.5L37.5 34.2L46 36L48 45H20L22 36Z" stroke="#1D4ED8" stroke-width="3" stroke-linejoin="round" fill="none"/>
+                            <path d="M34 37.5V50" stroke="#1D4ED8" stroke-width="2.4" stroke-linecap="round"/>
+                            <rect x="27" y="41" width="5" height="5" rx="0.8" stroke="#1D4ED8" stroke-width="2" fill="none"/>
+                            <rect x="36" y="41" width="5" height="5" rx="0.8" stroke="#1D4ED8" stroke-width="2" fill="none"/>
+                            <path d="M29.5 38.8L31 39.5" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M38.5 38.8L40 39.5" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M26 40.5H42" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
                     </div>
-                    <h3>Porteiro</h3>
-                    <p>Controle operacional e segurança do edifício</p>
+                    <h3 class="type-title porteiro-title">Porteiro</h3>
+                    <div class="type-divider porteiro-divider"></div>
+                    <p class="type-desc">Controle operacional e segurança do edifício com praticidade e eficiência.</p>
+                    <button class="type-btn porteiro-btn" onclick="event.stopPropagation(); selectType('porteiro')">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="trust-banner">
+                <div class="trust-icon">
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 3.5L31.5 9V18C31.5 25.732 25.732 32.5 18 32.5C10.268 32.5 4.5 25.732 4.5 18V9L18 3.5Z" stroke="#2563EB" stroke-width="2.5" fill="#DBEAFE"/>
+                        <path d="M12.5 18.5L16.5 22.5L24.5 14.5" stroke="#2563EB" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
+                </div>
+                <div class="trust-text">
+                    <h4>Seguro, confiável e completo</h4>
+                    <p>O Condomit foi desenvolvido para facilitar a gestão e melhorar a vida em condomínio.</p>
                 </div>
             </div>
         </div>
