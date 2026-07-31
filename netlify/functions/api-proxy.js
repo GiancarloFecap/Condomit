@@ -1,18 +1,12 @@
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { Brevo, BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDQxNTA2NCwiZXhwIjoyMDk1OTkxMDY0fQ.wi0H-LHiBiMm3_WPXw1lslRnhAw3atf_BGUZCp2PdNA';
 const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
 const APP_BASE_URL = process.env.APP_BASE_URL || 'https://condomit.netlify.app';
-const SMTP_HOST = process.env.SMTP_HOST || '';
-const SMTP_PORT = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
-const SMTP_SECURE = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true';
-const SMTP_SERVICE = process.env.SMTP_SERVICE || '';
-const SMTP_USER = process.env.SMTP_USER || '';
-const SMTP_PASS = process.env.SMTP_PASS || '';
-const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || '"Condomit" <no-reply@condomit.com.br>';
+const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
 const KEYCLOAK_BASE_URL = (process.env.KEYCLOAK_BASE_URL || process.env.KEYCLOAK_URL || '').replace(/\/$/, '');
 const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM || '';
 const KEYCLOAK_ADMIN_REALM = process.env.KEYCLOAK_ADMIN_REALM || 'master';
@@ -23,6 +17,10 @@ const KEYCLOAK_ADMIN_PASSWORD = process.env.KEYCLOAK_ADMIN_PASSWORD || '';
 
 const mpClient = new MercadoPagoConfig({ accessToken: MERCADO_PAGO_ACCESS_TOKEN });
 const preference = new Preference(mpClient);
+const brevoClient = BREVO_API_KEY ? new BrevoClient({
+  apiKey: BREVO_API_KEY,
+  environment: BrevoEnvironment.Production
+}) : null;
 
 const resetTokens = new Map();
 
@@ -30,8 +28,8 @@ function generateResetToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-function hasRealEmailConfig() {
-  return Boolean((SMTP_SERVICE || SMTP_HOST) && SMTP_USER && SMTP_PASS);
+function hasBrevoConfig() {
+  return Boolean(BREVO_API_KEY && brevoClient);
 }
 
 function hasKeycloakConfig() {
@@ -67,44 +65,6 @@ function buildResetLink(event, token, providedResetPageUrl) {
   return resetUrl.toString();
 }
 
-function createMailTransport() {
-  if (hasRealEmailConfig()) {
-    if (SMTP_SERVICE) {
-      return nodemailer.createTransport({
-        service: SMTP_SERVICE,
-        auth: {
-          user: SMTP_USER,
-          pass: SMTP_PASS
-        }
-      });
-    }
-    return nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
-  }
-  return nodemailer.createTransport({
-    host: 'smtp.ethereal.email',
-    port: 587,
-    secure: false,
-    auth: {
-      user: 'laila58@ethereal.email',
-      pass: 'z6qZ5U1h8QdDf3G2jK5L'
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
-}
-
 function getDisplayName(usuario, fallbackEmail) {
   const nome = usuario?.nome || usuario?.name || usuario?.firstName || usuario?.username;
   if (nome && String(nome).trim()) {
@@ -114,29 +74,36 @@ function getDisplayName(usuario, fallbackEmail) {
 }
 
 async function sendResetEmail(toEmail, usuario, resetLink) {
-  const nomeUsuario = getDisplayName(usuario, toEmail);
-  const transporter = createMailTransport();
-  const info = await transporter.sendMail({
-    from: SMTP_FROM,
-    to: toEmail,
-    subject: 'Recuperação de senha - Condomit',
-    text: `Olá, ${nomeUsuario}!\n\nVocê solicitou a recuperação de senha no Condomit.\nClique no link abaixo para criar uma nova senha:\n${resetLink}\n\nEste link é válido por 1 hora.\n\nSe você não solicitou isso, ignore este e-mail.\n\nAtenciosamente,\nEquipe Condomit`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-        <h2 style="color: #32C26D;">Recuperação de senha</h2>
-        <p>Olá, <strong>${nomeUsuario}</strong>!</p>
-        <p>Clique no botão abaixo para criar uma nova senha:</p>
-        <a href="${resetLink}" style="display:inline-block;background:linear-gradient(135deg,#79D836,#32C26D);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">Redefinir minha senha</a>
-        <p style="color:#5A5A5A;font-size:14px;">Este link é válido por <strong>1 hora</strong>.</p>
-        <hr style="border:none;border-top:1px solid #C2C2C2;margin:24px 0;">
-        <p style="color:#C2C2C2;font-size:12px;">Condomit - O app do seu condomínio</p>
-      </div>
-    `,
-  });
-  if (!hasRealEmailConfig()) {
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    console.log('Preview do e-mail:', previewUrl);
+  if (!hasBrevoConfig()) {
+    throw new Error('BREVO_API_KEY não configurada');
   }
+
+  const email = toEmail;
+  const link = resetLink;
+  const usuarioBrevo = {
+    ...usuario,
+    nome: usuario?.nome || usuario?.name || getDisplayName(usuario, toEmail)
+  };
+
+  const info = await brevoClient.transactionalEmails.sendTransacEmail({
+    sender: { name: 'Condomit', email: 'contato.condomit@gmail.com' },
+    to: [{ email: email }],
+    subject: 'Recuperação de senha — Condomit',
+    htmlContent: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
+            <h2 style="color: #32C26D;">Recuperação de senha</h2>
+            <p>Olá, <strong>${usuarioBrevo.nome}</strong>!</p>
+            <p>Clique no botão abaixo para criar uma nova senha:</p>
+            <a href="${link}" style="display:inline-block;background:linear-gradient(135deg,#79D836,#32C26D);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">
+                Redefinir minha senha
+            </a>
+            <p style="color:#5A5A5A;font-size:14px;">Este link é válido por <strong>1 hora</strong>.</p>
+            <hr style="border:none;border-top:1px solid #C2C2C2;margin:24px 0;">
+            <p style="color:#C2C2C2;font-size:12px;">Condomit — O app do seu condomínio</p>
+        </div>
+    `
+  });
+
   console.log('Link de reset:', resetLink);
   return info;
 }
@@ -354,7 +321,7 @@ function parsePath(event) {
       const rest = p.slice(apiProxyIndex + '/.netlify/functions/api-proxy'.length);
       return rest.startsWith('/') ? rest : '/' + rest;
     }
-    if (p.startsWith('/users') || p.startsWith('/register') || p.startsWith('/condominiums') || p.startsWith('/pagamento') || p.startsWith('/reserva') || p.startsWith('/plano') || p.startsWith('/forgot') || p.startsWith('/reset') || p.startsWith('/mercadopago') || p.startsWith('/user_condominiums')) {
+    if (p.startsWith('/users') || p.startsWith('/register') || p.startsWith('/condominiums') || p.startsWith('/pagamento') || p.startsWith('/reserva') || p.startsWith('/plano') || p.startsWith('/forgot') || p.startsWith('/reset') || p.startsWith('/mercadopago') || p.startsWith('/user_condominiums') || p.startsWith('/esqueceu-senha')) {
       return p;
     }
   }
@@ -519,7 +486,7 @@ exports.handler = async (event, context) => {
       return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
     }
 
-    if (pathname === '/forgot-password' && rawMethod === 'POST') {
+    if ((pathname === '/forgot-password' || pathname === '/esqueceu-senha') && rawMethod === 'POST') {
       return await handleForgotPassword(event, body);
     }
 

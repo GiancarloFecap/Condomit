@@ -2,69 +2,77 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetForm = document.getElementById('resetForm');
     const emailInput = document.getElementById('email');
     const submitBtn = document.getElementById('submitBtn');
-    const errorMessage = document.getElementById('errorMessage');
-    const successMessage = document.getElementById('successMessage');
+    const feedbackMessage = document.getElementById('feedbackMessage');
+    const successPanel = document.getElementById('successPanel');
 
-    function validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
+    function isValidEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     }
 
-    resetForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = emailInput.value.trim();
+    function setFeedback(message, type) {
+        feedbackMessage.textContent = message;
+        feedbackMessage.className = `feedback-message ${type}`;
+        feedbackMessage.style.display = message ? 'block' : 'none';
+    }
 
-        if (!email || !validateEmail(email)) {
-            errorMessage.textContent = 'Digite um e-mail válido.';
-            errorMessage.style.display = 'block';
-            successMessage.style.display = 'none';
+    function setLoading(isLoading) {
+        submitBtn.disabled = isLoading;
+        submitBtn.textContent = isLoading ? 'Enviando...' : 'Enviar link de recuperação';
+    }
+
+    async function solicitarRecuperacao(email) {
+        const resetPageUrl = `${window.location.origin}/pages/redefinir-senha.html`;
+
+        const response = await fetch('/esqueceu-senha', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email,
+                resetPageUrl
+            })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Ocorreu um erro ao solicitar a redefinição.');
+        }
+
+        return data;
+    }
+
+    resetForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const email = emailInput.value.trim().toLowerCase();
+
+        if (!email || !isValidEmail(email)) {
+            setFeedback('Digite um e-mail válido para continuar.', 'error');
+            successPanel.hidden = true;
             return;
         }
 
-        errorMessage.style.display = 'none';
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Enviando...';
+        setFeedback('', '');
+        setLoading(true);
 
         try {
-            const resetPageUrl = `${window.location.origin}/pages/redefinir-senha.html`;
-
-            const response = await fetch('/esqueceu-senha', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    email,
-                    resetPageUrl
-                })
-            });
-
-            const data = await response.json().catch(() => ({}));
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Ocorreu um erro ao solicitar a redefinição.');
-            }
-
-            successMessage.innerHTML = `
-                <i class="fas fa-check-circle"></i>
-                <h2>Enviamos um e-mail</h2>
-                <p>Caso o e-mail informado esteja cadastrado, você receberá uma mensagem com um link para redefinir sua senha.</p>
-            `;
-            successMessage.style.display = 'block';
-            resetForm.style.display = 'none';
-            
+            await solicitarRecuperacao(email);
+            resetForm.hidden = true;
+            successPanel.hidden = false;
+            setFeedback('Solicitação enviada com sucesso.', 'success');
         } catch (error) {
-            console.error('Error sending reset email:', error);
-            errorMessage.textContent = error.message || 'Ocorreu um erro ao enviar o e-mail. Tente novamente.';
-            errorMessage.style.display = 'block';
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Enviar link de redefinição';
+            console.error('Erro ao solicitar recuperação de senha:', error);
+            setFeedback(error.message || 'Não foi possível enviar o link de recuperação.', 'error');
+        } finally {
+            setLoading(false);
         }
     });
 
     emailInput.addEventListener('input', () => {
-        if (errorMessage.style.display === 'block') {
-            errorMessage.style.display = 'none';
+        if (feedbackMessage.style.display === 'block') {
+            setFeedback('', '');
         }
     });
 });

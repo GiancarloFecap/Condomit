@@ -5,7 +5,13 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["nodemailer", "mercadopago"]
+  external_node_modules = ["@getbrevo/brevo", "mercadopago"]
+
+[[redirects]]
+  from = "/esqueceu-senha"
+  to = "/.netlify/functions/api-proxy/esqueceu-senha"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/api/*"

@@ -3,55 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Condomit - Esqueci minha senha</title>
+    <title>Condomit - Recuperação de senha</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/entrar.css">
     <link rel="stylesheet" href="../styles/esqueci-senha.css">
 </head>
 <body>
-    <div class="login-page">
-        <div class="login-container">
-            <div class="login-header">
+    <main class="login-page forgot-password-page">
+        <section class="login-container forgot-password-container">
+            <div class="login-header forgot-password-header">
                 <img src="../assets/logo-full.png" alt="Condomit Logo" class="login-logo">
-            </div>
-            <div class="reset-icon">
-                <i class="fas fa-lock"></i>
-            </div>
-            <h1>Esqueci minha senha</h1>
-            <p class="subtitle">Digite seu e-mail cadastrado para receber um link de redefinição de senha.</p>
-
-            <div id="successMessage" class="success-message">
-                <i class="fas fa-check-circle"></i>
-                <h2>Enviamos um link de redefinição para seu e-mail.</h2>
-                <p>Verifique sua caixa de entrada (e a caixa de spam, se necessário).</p>
+                <div class="reset-icon" aria-hidden="true">
+                    <i class="fas fa-envelope-open-text"></i>
+                </div>
+                <h1>Esqueceu sua senha?</h1>
+                <p class="subtitle">
+                    Informe o e-mail cadastrado para receber um link seguro de recuperação.
+                </p>
             </div>
 
-            <form id="resetForm" class="reset-form">
+            <div id="feedbackMessage" class="feedback-message" role="alert" aria-live="polite"></div>
+
+            <form id="resetForm" class="reset-form" novalidate>
                 <div class="form-group">
-                    <label for="email">E-mail</label>
+                    <label for="email">E-mail cadastrado</label>
                     <div class="email-input-group">
-                        <input type="email" id="email" name="email" placeholder="Digite seu e-mail" required>
-                        <i class="fas fa-envelope"></i>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            placeholder="seuemail@exemplo.com"
+                            autocomplete="email"
+                            required
+                        >
+                        <i class="fas fa-at"></i>
                     </div>
                 </div>
-                <div id="errorMessage" class="error-message">Digite um e-mail válido.</div>
+
                 <button type="submit" id="submitBtn" class="btn btn-primary btn-large">
-                    Enviar link de redefinição
+                    Enviar link de recuperação
                 </button>
             </form>
 
-            <a href="entrar.html" class="back-link">
-                <i class="fas fa-arrow-left"></i> Voltar para o login
-            </a>
-
-            <div class="help-section">
-                <p>Ainda precisa de ajuda?</p>
-                <a href="#">Fale com o administrador do condomínio</a>
+            <div id="successPanel" class="success-panel" hidden>
+                <i class="fas fa-circle-check"></i>
+                <h2>Solicitação enviada</h2>
+                <p>
+                    Se o e-mail informado estiver cadastrado, você receberá uma mensagem com o link para redefinir sua senha.
+                </p>
             </div>
-        </div>
-    </div>
 
-    <script src="../scripts/supabase-client.js"></script>
+            <div class="forgot-password-actions">
+                <a href="entrar.html" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    Voltar para o login
+                </a>
+            </div>
+        </section>
+    </main>
+
     <script src="../scripts/esqueci-senha.js"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const crypto = require('crypto');
-const { BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
+const { Brevo, BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const root = process.cwd();
@@ -28,7 +28,7 @@ const mpClient = new MercadoPagoConfig({ accessToken: MERCADO_PAGO_ACCESS_TOKEN 
 const preference = new Preference(mpClient);
 const brevoClient = BREVO_API_KEY ? new BrevoClient({
   apiKey: BREVO_API_KEY,
-  ...(BrevoEnvironment?.Production ? { environment: BrevoEnvironment.Production } : {})
+  environment: BrevoEnvironment.Production
 }) : null;
 
 function loadEnv(filePath) {
@@ -392,24 +392,29 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
     throw new Error('BREVO_API_KEY nao configurada');
   }
 
-  const nomeUsuario = getDisplayName(usuario, toEmail);
+  const email = toEmail;
+  const link = resetLink;
+  const usuarioBrevo = {
+    ...usuario,
+    nome: usuario?.nome || usuario?.name || getDisplayName(usuario, toEmail)
+  };
 
   const info = await brevoClient.transactionalEmails.sendTransacEmail({
     sender: { name: 'Condomit', email: 'contato.condomit@gmail.com' },
-    to: [{ email: toEmail }],
-    subject: 'Recuperacao de senha - Condomit',
+    to: [{ email: email }],
+    subject: 'Recuperação de senha — Condomit',
     htmlContent: `
-      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-        <h2 style="color: #32C26D;">Recuperacao de senha</h2>
-        <p>Ola, <strong>${nomeUsuario}</strong>!</p>
-        <p>Clique no botao abaixo para criar uma nova senha:</p>
-        <a href="${resetLink}" style="display:inline-block;background:linear-gradient(135deg,#79D836,#32C26D);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">
-          Redefinir minha senha
-        </a>
-        <p style="color:#5A5A5A;font-size:14px;">Este link e valido por <strong>1 hora</strong>.</p>
-        <hr style="border:none;border-top:1px solid #C2C2C2;margin:24px 0;">
-        <p style="color:#C2C2C2;font-size:12px;">Condomit - O app do seu condominio</p>
-      </div>
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
+            <h2 style="color: #32C26D;">Recuperação de senha</h2>
+            <p>Olá, <strong>${usuarioBrevo.nome}</strong>!</p>
+            <p>Clique no botão abaixo para criar uma nova senha:</p>
+            <a href="${link}" style="display:inline-block;background:linear-gradient(135deg,#79D836,#32C26D);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">
+                Redefinir minha senha
+            </a>
+            <p style="color:#5A5A5A;font-size:14px;">Este link é válido por <strong>1 hora</strong>.</p>
+            <hr style="border:none;border-top:1px solid #C2C2C2;margin:24px 0;">
+            <p style="color:#C2C2C2;font-size:12px;">Condomit — O app do seu condomínio</p>
+        </div>
     `
   });
 
