@@ -33,7 +33,8 @@ const iconePorCategoria = {
 };
 
 function logout() {
-    sessionStorage.removeItem('condominiumUser');
+    try { sessionStorage.removeItem('condominiumUser'); } catch(_) {}
+    try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
     window.location.href = '../inicio.html';
 }
 
@@ -497,8 +498,27 @@ function handlePagination(e) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    currentUser = JSON.parse(sessionStorage.getItem('condominiumUser'));
+document.addEventListener('DOMContentLoaded', async function () {
+    let raw = null;
+    try { raw = sessionStorage.getItem('condominiumUser'); } catch(_) {}
+    if (!raw) {
+        try {
+            const persistRaw = localStorage.getItem('condominiumPersistentUser');
+            if (persistRaw) {
+                const persist = JSON.parse(persistRaw);
+                if (persist && persist.email && typeof fetchUserByEmail === 'function') {
+                    const fresh = await fetchUserByEmail(persist.email).catch(() => null);
+                    if (fresh) {
+                        const restored = { ...fresh, password: fresh.password || null };
+                        sessionStorage.setItem('condominiumUser', JSON.stringify(restored));
+                        raw = sessionStorage.getItem('condominiumUser');
+                        if (typeof syncAllAvatars === 'function') syncAllAvatars(restored);
+                    }
+                }
+            }
+        } catch (_) {}
+    }
+    try { currentUser = raw ? JSON.parse(raw) : null; } catch (_) { currentUser = null; }
 
     if (!currentUser) {
         window.location.href = 'entrar.html';

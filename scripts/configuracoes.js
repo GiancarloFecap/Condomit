@@ -11,7 +11,14 @@ async function fetchApprovedPayment(email) {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
-    let currentUser = JSON.parse(sessionStorage.getItem('condominiumUser'));
+    let currentUser = null;
+    try {
+        const raw = sessionStorage.getItem('condominiumUser');
+        if (raw) currentUser = JSON.parse(raw);
+    } catch (_) {}
+    if (!currentUser) {
+        currentUser = await restorePersistentLogin();
+    }
     if (!currentUser) {
         window.location.href = 'entrar.html';
         return;
@@ -67,14 +74,53 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 function getCurrentUser() {
-    const raw = sessionStorage.getItem('condominiumUser');
-    return raw ? JSON.parse(raw) : null;
+    try {
+        const raw = sessionStorage.getItem('condominiumUser');
+        if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    return null;
 }
 
 function setCurrentUser(user) {
-    sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+    try {
+        sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+        if (user && user.email) {
+            const persistent = { email: user.email, name: user.name || null, type: user.type || null, t: Date.now() };
+            localStorage.setItem('condominiumPersistentUser', JSON.stringify(persistent));
+        }
+    } catch (_) {}
     updateUIWithUserData(user);
     if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
+}
+
+async function restorePersistentLogin() {
+    try {
+        const inSession = getCurrentUser();
+        if (inSession && inSession.email) return inSession;
+    } catch (_) {}
+    try {
+        const raw = localStorage.getItem('condominiumPersistentUser');
+        if (!raw) return null;
+        const persist = JSON.parse(raw);
+        if (!persist || !persist.email) return null;
+        if (typeof fetchUserByEmail !== 'function') return null;
+        const fresh = await fetchUserByEmail(persist.email).catch(() => null);
+        if (!fresh) {
+            localStorage.removeItem('condominiumPersistentUser');
+            return null;
+        }
+        const user = { ...fresh, password: fresh.password || null };
+        try { sessionStorage.setItem('condominiumUser', JSON.stringify(user)); } catch(_) {}
+        if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
+        return user;
+    } catch (_) {
+        return null;
+    }
+}
+
+function clearLoginPersistent() {
+    try { sessionStorage.removeItem('condominiumUser'); } catch(_) {}
+    try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
 }
 
 function updateUIWithUserData(currentUser) {

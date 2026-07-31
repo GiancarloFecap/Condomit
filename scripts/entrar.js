@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         const type = getNormalizedUserType(user);
         user.type = type;
         sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+        try {
+            const persistent = { email: user.email, name: user.name || null, type: user.type || null, t: Date.now() };
+            localStorage.setItem('condominiumPersistentUser', JSON.stringify(persistent));
+        } catch(_) {}
         if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
 
         if (type === 'sindico') {
@@ -52,9 +56,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     // Check if already logged in
+    let user = null;
     const loggedInUser = sessionStorage.getItem('condominiumUser');
     if (loggedInUser) {
-        const user = JSON.parse(loggedInUser);
+        user = JSON.parse(loggedInUser);
+    } else {
+        try {
+            const raw = localStorage.getItem('condominiumPersistentUser');
+            if (raw) {
+                const persist = JSON.parse(raw);
+                if (persist && persist.email && typeof fetchUserByEmail === 'function') {
+                    const fresh = await fetchUserByEmail(persist.email).catch(() => null);
+                    if (fresh) {
+                        user = { ...fresh, password: fresh.password || null };
+                        try { sessionStorage.setItem('condominiumUser', JSON.stringify(user)); } catch(_) {}
+                        if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
+                    }
+                }
+            }
+        } catch (_) {}
+    }
+    if (user) {
         // Se nao tem profilePhoto no cache mas tem e-mail, busca do banco ANTES de redirecionar
         if (user && user.email && !user.profilePhoto && typeof refreshCurrentUserFromDb === 'function') {
             try {
@@ -66,6 +88,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             } catch (_) {}
         }
+        try {
+            const persistent = { email: user.email, name: user.name || null, type: user.type || null, t: Date.now() };
+            localStorage.setItem('condominiumPersistentUser', JSON.stringify(persistent));
+        } catch(_) {}
         redirectByUserType(user);
         return;
     }
@@ -116,6 +142,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 user.type = getNormalizedUserType(user);
             }
             sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+            try {
+                const persistent = { email: user.email, name: user.name || null, type: user.type || null, t: Date.now() };
+                localStorage.setItem('condominiumPersistentUser', JSON.stringify(persistent));
+            } catch(_) {}
             if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
 
             redirectByUserType(user);

@@ -7,6 +7,253 @@ let localStream = null;
 let selectedImageData = null;
 let participants = [];
 
+let assemblyChannel = null;
+const ASSEMBLY_PARTICIPANT_TTL_MS = 45000;
+const PARTICIPANT_HEARTBEAT_MS = 12000;
+let participantHeartbeatTimer = null;
+let participantCleanupTimer = null;
+let myPeerId = null;
+
+function channelKeyFor(assemblyId) {
+    return 'condomit-assembly-' + String(assemblyId);
+}
+
+function chatKeyFor(assemblyId) {
+    return 'condomit-chat-' + String(assemblyId);
+}
+
+function storageParticipantsKey(assemblyId) {
+    return 'condomit-participants-' + String(assemblyId);
+}
+
+function getInitials(name) {
+    if (!name) return 'US';
+    return String(name).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function getMyPeerId() {
+    if (!myPeerId) {
+        try {
+            const existing = sessionStorage.getItem('condomitPeerId');
+            if (existing) { myPeerId = existing; }
+            else {
+                myPeerId = 'peer-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+                sessionStorage.setItem('condomitPeerId', myPeerId);
+            }
+        } catch (_) {
+            myPeerId = 'peer-' + Date.now().toString(36);
+        }
+    }
+    return myPeerId;
+}
+
+function persistParticipantList(assemblyId, list) {
+    try { localStorage.setItem(storageParticipantsKey(assemblyId), JSON.stringify(list)); } catch(_) {}
+}
+
+function loadPersistedParticipants(assemblyId) {
+    try {
+        const raw = localStorage.getItem(storageParticipantsKey(assemblyId));
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+    } catch(_) { return []; }
+}
+
+function serializeParticipantFromUser(user, opts = {}) {
+    if (!user) return null;
+    const name = user.name || 'Usuário';
+    const type = user.type || (user.user_type === 'sindico' ? 'sindico' : 'morador') || 'morador';
+    return {
+        peerId: opts.peerId || getMyPeerId(),
+        email: user.email || null,
+        name: name,
+        initials: opts.initials || getInitials(name),
+        type: type,
+        profilePhoto: user.profilePhoto || null,
+        micOn: typeof opts.micOn === 'boolean' ? opts.micOn : true,
+        cameraOn: typeof opts.cameraOn === 'boolean' ? opts.cameraOn : false,
+        lastSeen: Date.now()
+    };
+}
+
+function openAssemblyChannel(assemblyId) {
+    closeAssemblyChannel();
+    const key = channelKeyFor(assemblyId);
+    try {
+        const bc = new BroadcastChannel(key);
+        bc.onmessage = (ev) => handleAssemblyMessage(assemblyId, ev.data);
+        assemblyChannel = bc;
+    } catch (_) {
+        assemblyChannel = null;
+    }
+    // Carrega participantes persistidos de outras abas
+    const persisted = loadPersistedParticipants(assemblyId);
+    if (persisted && persisted.length) {
+        const now = Date.now();
+        participants = persisted.filter(p => now - (p.lastSeen || 0) < ASSEMBLY_PARTICIPANT_TTL_MS);
+    }
+    // Carrega chat histórico
+    loadPersistedChatHistory(assemblyId);
+    // Temporizador de limpeza
+    participantCleanupTimer = setInterval(() => {
+        const before = participants.length;
+        const now = Date.now();
+        participants = participants.filter(p => now - (p.lastSeen || 0) < ASSEMBLY_PARTICIPANT_TTL_MS);
+        if (before !== participants.length) {
+            persistParticipantList(assemblyId, participants);
+            renderParticipants();
+        }
+    }, 5000);
+}
+
+function closeAssemblyChannel() {
+    if (assemblyChannel) {
+        try { assemblyChannel.close(); } catch(_) {}
+        assemblyChannel = null;
+    }
+    if (participantHeartbeatTimer) {
+        clearInterval(participantHeartbeatTimer);
+        participantHeartbeatTimer = null;
+    }
+    if (participantCleanupTimer) {
+        clearInterval(participantCleanupTimer);
+        participantCleanupTimer = null;
+    }
+}
+
+function broadcastToAssembly(type, payload) {
+    const msg = { type, ts: Date.now(), data: payload };
+    try {
+        if (assemblyChannel) assemblyChannel.postMessage(msg);
+    } catch (_) {}
+}
+
+function sendParticipantPresence(opts = {}) {
+    if (!currentAssemblyId || !currentUser) return;
+    const p = serializeParticipantFromUser(currentUser, {
+        peerId: getMyPeerId(),
+        micOn: typeof opts.micOn === 'boolean' ? opts.micOn : micOn,
+        cameraOn: typeof opts.cameraOn === 'boolean' ? opts.cameraOn : cameraOn
+    });
+    // Atualiza lista local
+    const idx = participants.findIndex(x => x.peerId === p.peerId);
+    if (idx >= 0) participants[idx] = p;
+    else participants.push(p);
+    persistParticipantList(currentAssemblyId, participants);
+    broadcastToAssembly('participant-presence', p);
+}
+
+function startParticipantHeartbeat() {
+    if (participantHeartbeatTimer) return;
+    sendParticipantPresence({ announce: true });
+    participantHeartbeatTimer = setInterval(() => {
+        sendParticipantPresence();
+    }, PARTICIPANT_HEARTBEAT_MS);
+}
+
+function handleAssemblyMessage(assemblyId, msg) {
+    if (!msg || !msg.type) return;
+    const data = msg.data || msg.payload || null;
+    switch (msg.type) {
+        case 'participant-presence': {
+            if (!data || !data.peerId) return;
+            if (assemblyId !== currentAssemblyId) return;
+            const p = { ...data, lastSeen: msg.ts || Date.now() };
+            const idx = participants.findIndex(x => x.peerId === p.peerId);
+            if (idx >= 0) participants[idx] = p;
+            else participants.push(p);
+            persistParticipantList(assemblyId, participants);
+            renderParticipants();
+            // Se for nova entrada, respondo com minha presença para o novo peer me ver
+            if (msg.data?.announce && p.peerId !== getMyPeerId()) {
+                setTimeout(() => sendParticipantPresence(), 200);
+            }
+            break;
+        }
+        case 'participant-leave': {
+            if (!data?.peerId || assemblyId !== currentAssemblyId) return;
+            const before = participants.length;
+            participants = participants.filter(p => p.peerId !== data.peerId);
+            persistParticipantList(assemblyId, participants);
+            if (before !== participants.length) renderParticipants();
+            break;
+        }
+        case 'chat-message': {
+            if (!data || assemblyId !== currentAssemblyId) return;
+            appendIncomingChatMessage(data);
+            break;
+        }
+        case 'participant-request-roster': {
+            if (assemblyId !== currentAssemblyId) return;
+            sendParticipantPresence();
+            break;
+        }
+    }
+}
+
+function loadPersistedChatHistory(assemblyId) {
+    try {
+        const raw = localStorage.getItem(chatKeyFor(assemblyId));
+        if (!raw) return;
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return;
+        arr.forEach(m => appendIncomingChatMessage(m, { silent: true, history: true }));
+    } catch(_) {}
+}
+
+function appendIncomingChatMessage(msg, opts = {}) {
+    if (!msg) return;
+    const sender = msg.sender || msg.name || 'Usuário';
+    const isMe = msg.peerId && msg.peerId === getMyPeerId();
+    const userType = msg.userType || 'morador';
+    const text = msg.text || '';
+    const imageData = msg.imageData || null;
+    const time = msg.time || getCurrentTime();
+    const ts = msg.ts || Date.now();
+    const messagesDiv = document.getElementById('chat-messages');
+    if (!messagesDiv) return;
+    // Evitar duplicatas
+    if (msg.id) {
+        const already = messagesDiv.querySelector(`[data-msg-id="${String(msg.id).replace(/"/g,'')}"]`);
+        if (already) return;
+    }
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message ' + (isMe ? 'sent' : 'received');
+    if (msg.id) messageDiv.dataset.msgId = String(msg.id);
+    const typeLabel = userType === 'sindico' ? 'Síndico' : 'Morador';
+    let contentHTML = `
+        <div class="message-header">
+            <strong>${escapeHtml(sender)}</strong>
+            <span class="user-type-tag">${typeLabel}</span>
+        </div>
+    `;
+    if (text) contentHTML += `<p>${escapeHtml(text)}</p>`;
+    if (imageData) {
+        contentHTML += `
+            <div class="message-image-wrapper">
+                <img src="${imageData}" alt="Imagem enviada" class="message-image" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: contain;">
+            </div>`;
+    }
+    contentHTML += `<span class="time">${time}</span>`;
+    messageDiv.innerHTML = contentHTML;
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function persistChatMessage(assemblyId, msg) {
+    try {
+        const key = chatKeyFor(assemblyId);
+        const raw = localStorage.getItem(key);
+        let arr = [];
+        if (raw) { try { arr = JSON.parse(raw); } catch(_) { arr = []; } }
+        if (!Array.isArray(arr)) arr = [];
+        arr.push(msg);
+        if (arr.length > 400) arr = arr.slice(-400);
+        localStorage.setItem(key, JSON.stringify(arr));
+    } catch(_) {}
+}
+
 // Demo assembly data
 let scheduledAssemblies = [];
 let pastAssemblies = [];
@@ -20,8 +267,26 @@ const assemblyData = {
 };
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // Check if user is logged in
-    const storedUser = sessionStorage.getItem('condominiumUser');
+    // Check if user is logged in (sessionStorage OU localStorage persistent)
+    let storedUser = null;
+    try { storedUser = sessionStorage.getItem('condominiumUser'); } catch(_) {}
+    if (!storedUser) {
+        try {
+            const persistRaw = localStorage.getItem('condominiumPersistentUser');
+            if (persistRaw) {
+                const persist = JSON.parse(persistRaw);
+                if (persist && persist.email && typeof fetchUserByEmail === 'function') {
+                    const fresh = await fetchUserByEmail(persist.email).catch(() => null);
+                    if (fresh) {
+                        const restored = { ...fresh, password: fresh.password || null };
+                        sessionStorage.setItem('condominiumUser', JSON.stringify(restored));
+                        storedUser = sessionStorage.getItem('condominiumUser');
+                        if (typeof syncAllAvatars === 'function') syncAllAvatars(restored);
+                    }
+                }
+            }
+        } catch (_) {}
+    }
     if (!storedUser) {
         window.location.href = 'entrar.html';
         return;
@@ -348,11 +613,18 @@ function joinAssembly(assemblyId) {
         roomEl.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
-        
+
+    currentAssemblyId = String(assemblyId);
+    participants = [];
+
     micOn = true;
     cameraOn = false;
     updateControlsUI();
     renderParticipants();
+
+    openAssemblyChannel(currentAssemblyId);
+    startParticipantHeartbeat();
+    broadcastToAssembly('participant-request-roster', { peerId: getMyPeerId() });
 
     // Liga o microfone (assim como antes o join abria a camera; agora mantem só mic ligado)
     try {
@@ -369,25 +641,42 @@ function joinAssembly(assemblyId) {
                     if (videoElement && cameraOn && localStream.getVideoTracks().length) {
                         videoElement.srcObject = localStream;
                     }
+                    sendParticipantPresence();
                 })
-                .catch(err => console.warn('Não foi possível acessar o microfone:', err));
+                .catch(err => {
+                    console.warn('Não foi possível acessar o microfone:', err);
+                    sendParticipantPresence({ micOn: false });
+                });
+        } else {
+            sendParticipantPresence();
         }
     } catch (e) {
         console.warn('getUserMedia indisponível:', e);
+        sendParticipantPresence({ micOn: false });
     }
 }
 
 function leaveAssembly() {
-    document.getElementById('assembly-room').classList.remove('active');
+    const leavingId = currentAssemblyId;
+    const roomEl = document.getElementById('assembly-room');
+    const chatEl = document.getElementById('chat-sidebar');
+    if (roomEl) roomEl.classList.remove('active');
     document.body.style.overflow = 'auto';
     chatOpen = false;
-    document.getElementById('chat-sidebar').classList.add('closed');
+    if (chatEl) chatEl.classList.add('closed');
+
+    if (leavingId) {
+        broadcastToAssembly('participant-leave', { peerId: getMyPeerId() });
+    }
+    closeAssemblyChannel();
     participants = [];
+    currentAssemblyId = null;
     
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
     }
+    renderParticipants();
 }
 
 function renderParticipants() {
@@ -546,11 +835,15 @@ function toggleMic() {
                     // Se câmera desligada, cria novo stream apenas com áudio
                     localStream = audioStream;
                 }
+                sendParticipantPresence({ micOn: true });
             }).catch(error => {
                 console.error('Erro ao capturar áudio:', error);
                 alert('Não foi possível acessar o microfone. Verifique as permissões.');
                 micOn = false;
+                sendParticipantPresence({ micOn: false });
             });
+        } else {
+            sendParticipantPresence({ micOn: true });
         }
     } else {
         // Desativa microfone - remove áudio do stream
@@ -560,6 +853,7 @@ function toggleMic() {
                 localStream.removeTrack(track);
             });
         }
+        sendParticipantPresence({ micOn: false });
     }
     
     updateControlsUI();
@@ -595,10 +889,12 @@ async function toggleCamera() {
             }
             
             videoElement.srcObject = localStream;
+            sendParticipantPresence({ cameraOn: true });
         } catch (error) {
             console.error('Erro ao acessar câmera:', error);
             alert('Não foi possível acessar a câmera. Verifique as permissões.');
             cameraOn = false;
+            sendParticipantPresence({ cameraOn: false });
         }
     } else {
         // Desativa câmera
@@ -607,6 +903,7 @@ async function toggleCamera() {
             localStream = null;
         }
         renderParticipants();
+        sendParticipantPresence({ cameraOn: false });
     }
     
     updateControlsUI();
@@ -631,12 +928,32 @@ function sendMessage() {
     if (!message && !imageData) {
         return;
     }
-
-    if (currentUser) {
-        addMessage(message, imageData, 'Você', currentUser.type);
-        input.value = '';
-        removeSelectedImage();
+    if (!currentUser) return;
+    if (!currentAssemblyId) {
+        alert('Entre em uma assembleia antes de enviar mensagens.');
+        return;
     }
+
+    const msgId = 'msg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    const chatMsg = {
+        id: msgId,
+        peerId: getMyPeerId(),
+        assemblyId: currentAssemblyId,
+        sender: currentUser.name || 'Usuário',
+        email: currentUser.email || null,
+        userType: currentUser.type === 'sindico' ? 'sindico' : 'morador',
+        text: message,
+        imageData: imageData || null,
+        time: getCurrentTime(),
+        ts: Date.now()
+    };
+
+    persistChatMessage(currentAssemblyId, chatMsg);
+    appendIncomingChatMessage(chatMsg);
+    broadcastToAssembly('chat-message', chatMsg);
+
+    input.value = '';
+    removeSelectedImage();
 }
 
 function removeSelectedImage() {
@@ -718,6 +1035,16 @@ function sendComment() {
 }
 
 function logout() {
-    sessionStorage.removeItem('condominiumUser');
+    try { sessionStorage.removeItem('condominiumUser'); } catch(_) {}
+    try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
     window.location.href = '../inicio.html';
+}
+
+if (typeof window.addEventListener === 'function') {
+    window.addEventListener('beforeunload', () => {
+        if (currentAssemblyId) {
+            try { broadcastToAssembly('participant-leave', { peerId: getMyPeerId() }); } catch(_) {}
+        }
+        try { closeAssemblyChannel(); } catch(_) {}
+    });
 }

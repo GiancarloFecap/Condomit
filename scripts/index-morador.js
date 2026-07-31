@@ -44,6 +44,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Navegação do sidebar
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            if (href && href !== '' && href !== '#') {
+                return;
+            }
             const section = this.dataset.section;
 
             if (section === 'inicio') {
@@ -69,8 +73,26 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function checkAuthAndBind() {
         try {
-            // 1. Obter usuário logado do sessionStorage
-            const loggedInUser = sessionStorage.getItem('condominiumUser');
+            // 1. Obter usuário logado do sessionStorage OU localStorage (persistent)
+            let raw = sessionStorage.getItem('condominiumUser');
+            if (!raw) {
+                try {
+                    const persistRaw = localStorage.getItem('condominiumPersistentUser');
+                    if (persistRaw) {
+                        const persist = JSON.parse(persistRaw);
+                        if (persist && persist.email && typeof fetchUserByEmail === 'function') {
+                            const fresh = await fetchUserByEmail(persist.email).catch(() => null);
+                            if (fresh) {
+                                const restored = { ...fresh, password: fresh.password || null };
+                                sessionStorage.setItem('condominiumUser', JSON.stringify(restored));
+                                raw = sessionStorage.getItem('condominiumUser');
+                                if (typeof syncAllAvatars === 'function') syncAllAvatars(restored);
+                            }
+                        }
+                    }
+                } catch (_) {}
+            }
+            const loggedInUser = raw;
             
             if (!loggedInUser) {
                 // Se não há usuário logado, redirecionar para login
@@ -79,6 +101,29 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
 
             currentUser = JSON.parse(loggedInUser);
+
+            // 1.1 Atualizar foto/nome/telefone do banco para este morador
+            try {
+                if (typeof refreshCurrentUserFromDb === 'function') {
+                    const refreshed = await refreshCurrentUserFromDb();
+                    if (refreshed) currentUser = refreshed;
+                } else {
+                    if (currentUser.email && typeof fetchUserByEmail === 'function') {
+                        const fresh = await fetchUserByEmail(currentUser.email).catch(() => null);
+                        if (fresh) {
+                            const updated = { ...currentUser, ...fresh, password: currentUser.password || fresh.password };
+                            if (fresh.condominium && typeof fresh.condominium === 'object' && currentUser.condominium) {
+                                updated.condominium = { ...currentUser.condominium, ...fresh.condominium };
+                            } else if (fresh.condominium) {
+                                try { updated.condominium = typeof fresh.condominium === 'string' ? JSON.parse(fresh.condominium) : fresh.condominium; } catch (_) {}
+                            }
+                            sessionStorage.setItem('condominiumUser', JSON.stringify(updated));
+                            currentUser = updated;
+                        }
+                    }
+                }
+                if (typeof syncAllAvatars === 'function') syncAllAvatars(currentUser);
+            } catch (_) {}
 
             // 2. Verificar se o tipo é morador
             if (currentUser.type !== 'morador') {
@@ -162,6 +207,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await checkAuthAndBind();
 });
 function logout() {
-    sessionStorage.removeItem('condominiumUser');
+    try { sessionStorage.removeItem('condominiumUser'); } catch(_) {}
+    try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
     window.location.href = '../inicio.html';
 }
