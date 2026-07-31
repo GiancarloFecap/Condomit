@@ -175,10 +175,16 @@ function logout() {
 }
 
 function openConfigSection(sectionKey) {
-    switch (sectionKey) {
-        case 'foto-de-perfil':
+    if (sectionKey === 'foto-de-perfil') {
+        if (window.profilePhotoEditor && typeof window.profilePhotoEditor.open === 'function') {
+            window.profilePhotoEditor.open();
+        } else {
+            console.warn('ProfilePhotoEditor não carregado; abrindo input de fallback.');
             document.getElementById('profile-photo-input')?.click();
-            break;
+        }
+        return;
+    }
+    switch (sectionKey) {
         case 'editar-perfil':
         case 'dados-pessoais':
             if (typeof openEditProfileModal === 'function') {
