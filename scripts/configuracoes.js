@@ -240,9 +240,13 @@ function openConfigSection(sectionKey) {
                 alert('Editor de perfil está carregando...');
             }
             break;
+        case 'alterar-senha':
+            if (confirm('Deseja alterar a sua senha agora?')) {
+                window.location.href = 'redefinir-senha.html?source=configuracoes';
+            }
+            break;
         case 'minha-unidade':
         case 'meus-condominos':
-        case 'alterar-senha':
         case 'autenticacao-2fa':
         case 'controle-acesso':
         case 'comunicados-sindico':

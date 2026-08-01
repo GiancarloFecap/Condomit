@@ -154,7 +154,7 @@ async function fetchPendingNoticesCount(cep) {
 
 async function fetchResidentsByCondoCep(cep) {
   if (!cep) return [];
-  const normalizedCep = String(cep).replace(/\D/g, '');
+  const normalizedCondoIdentifier = String(cep).replace(/\D/g, '');
   const data = await supabaseFetch('/users?select=name,user_type,condominium&user_type=eq.morador');
 
   return (Array.isArray(data) ? data : [])
@@ -176,7 +176,11 @@ async function fetchResidentsByCondoCep(cep) {
     })
     .filter((resident) => {
       const residentCep = String(resident?.condominium?.cep || '').replace(/\D/g, '');
-      return residentCep && residentCep === normalizedCep;
+      const residentCondominiumId = String(resident?.condominium?.condominium_id || '').replace(/\D/g, '');
+      return (
+        (residentCep && residentCep === normalizedCondoIdentifier) ||
+        (residentCondominiumId && residentCondominiumId === normalizedCondoIdentifier)
+      );
     });
 }
 

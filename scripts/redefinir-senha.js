@@ -1,8 +1,13 @@
 let isResetSessionValid = false;
 let resetToken = '';
+let resetMode = 'token';
 
 document.addEventListener('DOMContentLoaded', () => {
-    resetToken = new URLSearchParams(window.location.search).get('token') || '';
+    const params = new URLSearchParams(window.location.search);
+    resetToken = params.get('token') || '';
+    if (!resetToken && params.get('source') === 'configuracoes') {
+        resetMode = 'authenticated';
+    }
     checkResetToken();
 
     document.getElementById('toggleNewPassword').addEventListener('click', function() {
@@ -21,6 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function checkResetToken() {
+    if (resetMode === 'authenticated') {
+        const currentUser = getAuthenticatedUser();
+        if (!currentUser?.email) {
+            showInvalidLink();
+            return;
+        }
+
+        isResetSessionValid = true;
+        showResetForm();
+        return;
+    }
+
     if (!resetToken) {
         showInvalidLink();
         return;
@@ -95,7 +112,7 @@ function validatePassword() {
 async function handleResetPassword(e) {
     e.preventDefault();
 
-    if (!isResetSessionValid || !resetToken) {
+    if (!isResetSessionValid || (resetMode === 'token' && !resetToken)) {
         showError('Link de redefinição inválido. Solicite um novo e-mail.');
         return;
     }
@@ -118,21 +135,30 @@ async function handleResetPassword(e) {
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
 
     try {
-        const response = await fetch('/api/reset-password', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                token: resetToken,
-                password: newPassword
-            })
-        });
+        if (resetMode === 'authenticated') {
+            const currentUser = getAuthenticatedUser();
+            if (!currentUser?.email) {
+                throw new Error('Sessão inválida. Faça login novamente para alterar sua senha.');
+            }
 
-        const data = await response.json().catch(() => ({}));
+            await updateUserByEmail(currentUser.email, { password: newPassword });
+        } else {
+            const response = await fetch('/api/reset-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    token: resetToken,
+                    password: newPassword
+                })
+            });
 
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro ao redefinir senha.');
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro ao redefinir senha.');
+            }
         }
 
         document.getElementById('errorMessage').style.display = 'none';
@@ -154,4 +180,13 @@ function showError(message) {
     const errorEl = document.getElementById('errorMessage');
     errorEl.textContent = message;
     errorEl.style.display = 'block';
+}
+
+function getAuthenticatedUser() {
+    try {
+        const rawUser = sessionStorage.getItem('condominiumUser');
+        return rawUser ? JSON.parse(rawUser) : null;
+    } catch (_) {
+        return null;
+    }
 }

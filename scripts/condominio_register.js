@@ -162,6 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
             condoForm.reset();
             spacesBody.innerHTML = '';
             updateBlockInputs(0);
+            window.location.href = '../inicio.html';
         }
     });
 
