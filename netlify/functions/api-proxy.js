@@ -121,54 +121,54 @@ function getBrevoErrorMessage(error) {
 
 function buildResetEmailHtml(usuarioNome, link) {
   return `
-    <div style="margin:0;padding:32px 16px;background-color:#eef4ff;">
-      <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #dbeafe;border-radius:24px;overflow:hidden;box-shadow:0 18px 48px rgba(30,64,175,0.14);font-family:Arial,sans-serif;color:#1f2937;">
-        <div style="padding:28px 32px;background:linear-gradient(135deg,#1e40af 0%,#2563eb 55%,#32C26D 100%);">
-          <div style="display:inline-block;padding:8px 14px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.2);border-radius:999px;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
+    <div style="margin:0;padding:36px 16px;background:#edf3ff;">
+      <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:28px;overflow:hidden;border:1px solid #d9e7ff;box-shadow:0 24px 60px rgba(30,64,175,0.12);font-family:Arial,sans-serif;color:#1f2937;">
+        <div style="padding:32px 36px;background:linear-gradient(135deg,#123c95 0%,#1e40af 45%,#32C26D 100%);">
+          <div style="display:inline-block;padding:7px 14px;border-radius:999px;background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.22);color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
             Condomit
           </div>
-          <h1 style="margin:18px 0 10px;color:#ffffff;font-size:28px;line-height:1.2;">Recuperação de senha</h1>
-          <p style="margin:0;color:rgba(255,255,255,0.92);font-size:15px;line-height:1.7;">
-            Recebemos uma solicitação para redefinir a senha da sua conta.
+          <h1 style="margin:18px 0 10px;color:#ffffff;font-size:30px;line-height:1.2;font-weight:700;">Redefina sua senha com seguranca</h1>
+          <p style="margin:0;max-width:420px;color:rgba(255,255,255,0.92);font-size:15px;line-height:1.75;">
+            Recebemos um pedido para atualizar o acesso da sua conta. Use o botao abaixo para continuar com total seguranca.
           </p>
         </div>
 
-        <div style="padding:32px;">
-          <p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:#374151;">
+        <div style="padding:34px 36px 28px;">
+          <p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:#334155;">
             Olá, <strong style="color:#1e40af;">${usuarioNome}</strong>.
           </p>
-          <p style="margin:0 0 24px;font-size:15px;line-height:1.8;color:#4b5563;">
-            Para cadastrar uma nova senha com segurança, clique no botão abaixo. Este link temporário foi gerado exclusivamente para a sua conta.
+          <p style="margin:0 0 24px;font-size:15px;line-height:1.8;color:#475569;">
+            Para criar uma nova senha da sua conta Condomit, clique no botão abaixo. Esse link foi gerado exclusivamente para você e pode ser usado uma única vez durante o período de validade.
           </p>
 
-          <div style="margin:0 0 28px;text-align:center;">
-            <a href="${link}" style="display:inline-block;padding:15px 28px;border-radius:14px;background:linear-gradient(135deg,#79D836 0%,#32C26D 100%);color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;box-shadow:0 12px 24px rgba(50,194,109,0.24);">
-              Redefinir minha senha
+          <div style="margin:0 0 28px;padding:24px;background:linear-gradient(180deg,#f8fbff 0%,#f3f8ff 100%);border:1px solid #dbeafe;border-radius:20px;text-align:center;">
+            <a href="${link}" style="display:inline-block;padding:16px 32px;border-radius:14px;background:linear-gradient(135deg,#79D836 0%,#32C26D 100%);color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;letter-spacing:0.01em;box-shadow:0 14px 28px rgba(50,194,109,0.24);">
+              Criar nova senha
             </a>
-          </div>
-
-          <div style="padding:18px 20px;background:#f8fbff;border:1px solid #dbeafe;border-radius:16px;">
-            <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#1e3a8a;">Informacoes importantes</p>
-            <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#475569;">
-              Este link e valido por <strong style="color:#1e40af;">5 minutos</strong>.
-            </p>
-            <p style="margin:0;font-size:14px;line-height:1.7;color:#475569;">
-              Se voce nao solicitou esta redefinicao, ignore este email. Sua senha atual permanecera inalterada.
+            <p style="margin:14px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
+              Link temporário válido por <strong style="color:#1e40af;">5 minutos</strong>.
             </p>
           </div>
 
-          <p style="margin:24px 0 8px;font-size:13px;line-height:1.7;color:#64748b;">
-            Caso o botao nao funcione, copie e cole este link no seu navegador:
+          <div style="margin:0 0 22px;padding:18px 20px;background:#f9fbff;border-left:4px solid #32C26D;border-radius:16px;">
+            <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:#123c95;">Importante</p>
+            <p style="margin:0;font-size:14px;line-height:1.75;color:#475569;">
+              Se você não solicitou esta alteração, desconsidere este email. Nenhuma modificação será feita na sua conta sem a confirmação pelo link acima.
+            </p>
+          </div>
+
+          <p style="margin:0 0 8px;font-size:13px;line-height:1.7;color:#64748b;">
+            Se o botão não abrir, copie e cole este endereço no navegador:
           </p>
           <p style="margin:0;word-break:break-word;">
             <a href="${link}" style="color:#2563eb;font-size:13px;line-height:1.7;text-decoration:none;">${link}</a>
           </p>
         </div>
 
-        <div style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e5e7eb;">
+        <div style="padding:20px 36px;background:#f8fafc;border-top:1px solid #e5e7eb;">
           <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#1e40af;">Condomit</p>
-          <p style="margin:0;font-size:12px;line-height:1.6;color:#94a3b8;">
-            O app do seu condominio.
+          <p style="margin:0;font-size:12px;line-height:1.7;color:#94a3b8;">
+            Tecnologia para simplificar a vida no seu condomínio.
           </p>
         </div>
       </div>
