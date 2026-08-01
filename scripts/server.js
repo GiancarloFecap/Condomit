@@ -16,7 +16,6 @@ const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJI
 const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
 const APP_BASE_URL = env.APP_BASE_URL || 'https://condomit.netlify.app';
 const BREVO_API_KEY = env.BREVO_API_KEY || process.env.BREVO_API_KEY || '';
-const BREVO_SENDER_EMAIL = env.BREVO_SENDER_EMAIL || process.env.BREVO_SENDER_EMAIL || 'contato.condomit@gmail.com';
 const KEYCLOAK_BASE_URL = (env.KEYCLOAK_BASE_URL || env.KEYCLOAK_URL || '').replace(/\/$/, '');
 const KEYCLOAK_REALM = env.KEYCLOAK_REALM || '';
 const KEYCLOAK_ADMIN_REALM = env.KEYCLOAK_ADMIN_REALM || 'master';
@@ -406,6 +405,27 @@ function getDisplayName(usuario, fallbackEmail) {
   return String(fallbackEmail || '').split('@')[0] || 'morador';
 }
 
+function getBrevoErrorMessage(error) {
+  const candidates = [
+    error?.body?.message,
+    error?.response?.data?.message,
+    error?.response?.body?.message,
+    error?.message
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && String(candidate).trim()) {
+      return String(candidate).trim();
+    }
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch (_) {
+    return 'Falha ao enviar e-mail pelo Brevo';
+  }
+}
+
 async function sendResetEmail(toEmail, usuario, resetLink) {
   console.log('========================================');
   console.log('📧 INICIANDO ENVIO DO E-MAIL DE RESET');
@@ -422,11 +442,11 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
   const link = resetLink;
   const usuarioBrevo = {
     ...usuario,
-    nome: usuario?.nome || usuario?.name || getDisplayName(usuario, toEmail)
+    nome: getDisplayName(usuario, toEmail)
   };
 
   const info = await brevoClient.transactionalEmails.sendTransacEmail({
-    sender: { name: 'Condomit', email: BREVO_SENDER_EMAIL },
+    sender: { name: 'Condomit', email: 'contato.condomit@gmail.com' },
     to: [{ email: email }],
     subject: 'Recuperação de senha — Condomit',
     htmlContent: `
@@ -627,13 +647,13 @@ function handleForgotPassword(req, res) {
         console.log(`📧 E-mail de reset enviado para ${normalizedEmail}`);
       } catch (emailError) {
         // #region debug-point B:server-email-error
-        fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"post-fix",hypothesisId:"B",location:"scripts/server.js:handleForgotPassword:sendResetEmail:catch",msg:"[DEBUG] Envio de email falhou no servidor local",data:{normalizedEmail,message:emailError?.message||String(emailError)},ts:Date.now()})}).catch(()=>{});
+        fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"post-fix",hypothesisId:"B",location:"scripts/server.js:handleForgotPassword:sendResetEmail:catch",msg:"[DEBUG] Envio de email falhou no servidor local",data:{normalizedEmail,message:getBrevoErrorMessage(emailError)},ts:Date.now()})}).catch(()=>{});
         // #endregion
-        console.error('[Email Error] Falha ao enviar e-mail:', emailError?.message || emailError);
+        console.error('[Email Error] Falha ao enviar e-mail:', getBrevoErrorMessage(emailError));
         res.writeHead(502, { 'Content-Type': 'application/json' });
         const errorMessage = emailError?.message === 'BREVO_API_KEY nao configurada'
-          ? 'Serviço de e-mail não configurado. Defina BREVO_API_KEY no ambiente local.'
-          : 'Não foi possível enviar o e-mail de recuperação. Verifique a configuração do Brevo.';
+          ? 'Servico de e-mail nao configurado. Defina BREVO_API_KEY no ambiente local.'
+          : getBrevoErrorMessage(emailError);
         res.end(JSON.stringify({ error: errorMessage }));
         return;
       }

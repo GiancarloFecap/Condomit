@@ -40,3 +40,15 @@ Status: OPEN
 ## Conclusão atual
 - A correção local existe, mas a produção não está com o script atualizado.
 - É necessário publicar a nova versão para que o fallback e a rota nova entrem em vigor no ambiente `condomit.netlify.app`.
+
+## Nova evidência
+- `.dbg/trae-debug-log-forgot-password-error.ndjson:15-17` mostra que o fallback para `/api/forgot-password` foi executado e a produção respondeu `502`.
+- Isso confirma que a falha atual está dentro do envio do Brevo no backend publicado, não mais na página.
+
+## Ajuste aplicado
+- `scripts/server.js` e `netlify/functions/api-proxy.js` agora usam o envio com Brevo no formato pedido, com `sender.email` fixo em `contato.condomit@gmail.com`.
+- Os handlers passaram a devolver a mensagem real do Brevo quando o envio falhar, em vez de esconder tudo atrás de um erro genérico.
+
+## Próxima verificação
+- Após novo deploy, testar novamente a página `esqueci-senha`.
+- Se ainda falhar, a mensagem exibida deve revelar a causa exata do Brevo para a próxima iteração.
