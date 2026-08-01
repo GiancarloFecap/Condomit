@@ -9,11 +9,16 @@ const { Brevo, BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
 
 const root = process.cwd();
 const port = process.env.PORT ? Number(process.env.PORT) : 8081;
+const DEFAULT_MERCADO_PAGO_PUBLIC_KEY = 'TEST-2e849067-4d43-456f-8ed4-e4e4928cb8ce';
 const DEFAULT_MERCADO_PAGO_ACCESS_TOKEN = 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
 
 const env = loadEnv(path.join(root, '.env'));
 const SUPABASE_URL = env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTUwNjQsImV4cCI6MjA5NTk5MTA2NH0.WTk0rZaTsPvs30uEWDfylc-z6L3G8IUb_J73oYtjuWU';
+const MERCADO_PAGO_PUBLIC_KEY =
+  env.MERCADO_PAGO_PUBLIC_KEY ||
+  process.env.MERCADO_PAGO_PUBLIC_KEY ||
+  DEFAULT_MERCADO_PAGO_PUBLIC_KEY;
 const MERCADO_PAGO_ACCESS_TOKEN =
   env.MERCADO_PAGO_ACCESS_TOKEN ||
   env.MERCADO_PAGO_ACESS_TOKEN ||
@@ -30,7 +35,9 @@ const KEYCLOAK_CLIENT_ID = env.KEYCLOAK_CLIENT_ID || '';
 const KEYCLOAK_CLIENT_SECRET = env.KEYCLOAK_CLIENT_SECRET || '';
 const KEYCLOAK_ADMIN_USERNAME = env.KEYCLOAK_ADMIN_USERNAME || '';
 const KEYCLOAK_ADMIN_PASSWORD = env.KEYCLOAK_ADMIN_PASSWORD || '';
-const MERCADO_PAGO_IS_TEST_MODE = /^TEST-/i.test(String(MERCADO_PAGO_ACCESS_TOKEN || '').trim());
+const MERCADO_PAGO_IS_TEST_MODE =
+  /^TEST-/i.test(String(MERCADO_PAGO_ACCESS_TOKEN || '').trim()) ||
+  /^TEST-/i.test(String(MERCADO_PAGO_PUBLIC_KEY || '').trim());
 
 const brevoClient = BREVO_API_KEY ? new BrevoClient({
   apiKey: BREVO_API_KEY,
@@ -51,60 +58,106 @@ function readJsonBody(req) {
   });
 }
 
+function ensureMercadoPagoConfigured() {
+  if (!MERCADO_PAGO_ACCESS_TOKEN) {
+    throw new Error('MERCADO_PAGO_ACCESS_TOKEN não configurado');
+  }
+}
+
 function mpRequest(requestPath, method = 'GET', payload = null) {
   return new Promise((resolve, reject) => {
-    if (!MERCADO_PAGO_ACCESS_TOKEN) {
-      reject(new Error('MERCADO_PAGO_ACCESS_TOKEN não configurado'));
+    try {
+      ensureMercadoPagoConfigured();
+    } catch (error) {
+      reject(error);
       return;
     }
 
     const body = payload ? JSON.stringify(payload) : null;
-    const options = {
+    const request = https.request({
       hostname: 'api.mercadopago.com',
       path: requestPath,
       method,
       headers: {
-        Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
+        Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
+        ...(body ? {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body)
+        } : {})
       }
-    };
-
-    if (body) {
-      options.headers['Content-Type'] = 'application/json';
-      options.headers['Content-Length'] = Buffer.byteLength(body);
-    }
-
-    const request = https.request(options, (response) => {
-      let data = '';
-      response.on('data', chunk => data += chunk);
+    }, (response) => {
+      let rawResponse = '';
+      response.on('data', (chunk) => {
+        rawResponse += chunk;
+      });
       response.on('end', () => {
         let parsed = null;
         try {
-          parsed = data ? JSON.parse(data) : null;
+          parsed = rawResponse ? JSON.parse(rawResponse) : null;
         } catch (_) {
-          // #region debug-point C:mercadopago-parse-error
-          fetch("http://127.0.0.1:7778/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercadopago-payment-error",runId:"pre-fix",hypothesisId:"C",location:"scripts/server.js:mpRequest:parse-error",msg:"[DEBUG] Resposta do Mercado Pago nao pode ser parseada",data:{requestPath,method,statusCode:response.statusCode,raw:data},ts:Date.now()})}).catch(()=>{});
-          // #endregion
           reject(new Error('Erro ao parsear resposta do Mercado Pago'));
           return;
         }
-        // #region debug-point C:mercadopago-response
-        fetch("http://127.0.0.1:7778/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercadopago-payment-error",runId:"pre-fix",hypothesisId:"C",location:"scripts/server.js:mpRequest:response",msg:"[DEBUG] Resposta do Mercado Pago recebida no backend local",data:{requestPath,method,statusCode:response.statusCode,parsed},ts:Date.now()})}).catch(()=>{});
-        // #endregion
+
         if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
-          const message = parsed?.message || parsed?.error || `Erro Mercado Pago (HTTP ${response.statusCode})`;
+          const apiCause = Array.isArray(parsed?.cause) ? parsed.cause.map((item) => item?.description).filter(Boolean).join(' | ') : '';
+          const message = apiCause || parsed?.message || parsed?.error || `Erro Mercado Pago (HTTP ${response.statusCode})`;
           reject(new Error(message));
           return;
         }
+
         resolve(parsed);
       });
     });
 
-    request.on('error', (e) => reject(e));
+    request.on('error', reject);
     if (body) {
       request.write(body);
     }
     request.end();
   });
+}
+
+function buildMercadoPagoPreferencePayload({ amount, planName, planId, baseUrl }) {
+  const normalizedAmount = parseMercadoPagoAmount(amount);
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    throw new Error('Valor do plano inválido para gerar o pagamento');
+  }
+
+  const successUrl = new URL('/pages/checkout.html', baseUrl);
+  const failureUrl = new URL('/pages/checkout.html', baseUrl);
+  const pendingUrl = new URL('/pages/checkout.html', baseUrl);
+
+  successUrl.searchParams.set('checkout_status', 'approved');
+  failureUrl.searchParams.set('checkout_status', 'failure');
+  pendingUrl.searchParams.set('checkout_status', 'pending');
+
+  if (planId !== undefined && planId !== null && planId !== '') {
+    successUrl.searchParams.set('plan_id', String(planId));
+    failureUrl.searchParams.set('plan_id', String(planId));
+    pendingUrl.searchParams.set('plan_id', String(planId));
+  }
+
+  return {
+    items: [
+      {
+        id: String(planId || 'condomit-plan'),
+        title: `Plano ${planName || 'Condomit'}`,
+        description: 'Assinatura Condomit',
+        quantity: 1,
+        currency_id: 'BRL',
+        unit_price: normalizedAmount
+      }
+    ],
+    back_urls: {
+      success: successUrl.toString(),
+      failure: failureUrl.toString(),
+      pending: pendingUrl.toString()
+    },
+    auto_return: 'approved',
+    binary_mode: true,
+    external_reference: `CONDOMIT-${planId || 'plan'}-${Date.now()}`
+  };
 }
 
 function mpCreatePreference(preferencePayload) {
@@ -113,6 +166,13 @@ function mpCreatePreference(preferencePayload) {
 
 function mpFetchPayment(paymentId) {
   return mpRequest(`/v1/payments/${encodeURIComponent(String(paymentId))}`, 'GET');
+}
+
+function mpCreateTestUser(testUserPayload) {
+  return mpRequest('/users/test_user', 'POST', {
+    site_id: testUserPayload?.site_id || 'MLB',
+    description: testUserPayload?.description || `Condomit Test User ${Date.now()}`
+  });
 }
 
 function parseMercadoPagoAmount(value) {
@@ -241,6 +301,10 @@ const server = http.createServer((req, res) => {
 
     if (pathname === '/api/mercadopago/payment-status' && req.method === 'POST') {
         return getMercadoPagoPaymentStatus(req, res);
+    }
+
+    if (pathname === '/api/mercadopago/test-user' && req.method === 'POST') {
+        return createMercadoPagoTestUser(req, res);
     }
 
     // ENDPOINT: GET /api/plano - Fetch all plans
@@ -409,50 +473,10 @@ function proxySupabaseRequest(req, res, pathSuffix, method) {
 async function createMercadoPagoPreference(req, res) {
   try {
     const data = await readJsonBody(req);
-    const { amount, planName, payerEmail, planId } = data || {};
-    const normalizedAmount = parseMercadoPagoAmount(amount);
-
-    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
-      throw new Error('Valor do plano inválido para gerar o pagamento');
-    }
-
+    const { amount, planName, planId } = data || {};
     const origin = getRequestOrigin(req);
     const base = APP_BASE_URL || origin;
-    const successUrl = new URL('/pages/checkout.html', base);
-    const failureUrl = new URL('/pages/checkout.html', base);
-    const pendingUrl = new URL('/pages/checkout.html', base);
-    successUrl.searchParams.set('checkout_status', 'approved');
-    failureUrl.searchParams.set('checkout_status', 'failure');
-    pendingUrl.searchParams.set('checkout_status', 'pending');
-    if (planId !== undefined && planId !== null) {
-      successUrl.searchParams.set('plan_id', String(planId));
-      failureUrl.searchParams.set('plan_id', String(planId));
-      pendingUrl.searchParams.set('plan_id', String(planId));
-    }
-
-    const preferencePayload = {
-      items: [
-        {
-          title: `Plano ${planName} - Condomit`,
-          quantity: 1,
-          currency_id: 'BRL',
-          unit_price: normalizedAmount
-        }
-      ],
-      back_urls: {
-        success: successUrl.toString(),
-        failure: failureUrl.toString(),
-        pending: pendingUrl.toString()
-      },
-      auto_return: 'approved',
-      statement_descriptor: 'CONDOMIT',
-      external_reference: `CONDOMIT-${planId || 'plan'}-${Date.now()}`
-    };
-
-    // #region debug-point B:mercadopago-preference-payload
-    fetch("http://127.0.0.1:7778/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercadopago-payment-error",runId:"pre-fix",hypothesisId:"B",location:"scripts/server.js:createMercadoPagoPreference:payload",msg:"[DEBUG] Preferencia do Mercado Pago preparada no backend local",data:{amount,normalizedAmount,planName,planId,hasPayer:Boolean(preferencePayload.payer),backUrls:preferencePayload.back_urls,testModeByToken:MERCADO_PAGO_IS_TEST_MODE},ts:Date.now()})}).catch(()=>{});
-    // #endregion
-
+    const preferencePayload = buildMercadoPagoPreferencePayload({ amount, planName, planId, baseUrl: base });
     const created = await mpCreatePreference(preferencePayload);
     const initPoint = resolveMercadoPagoCheckoutUrl(created);
     const detectedTestMode = Boolean(created?.sandbox_init_point) || MERCADO_PAGO_IS_TEST_MODE;
@@ -464,7 +488,8 @@ async function createMercadoPagoPreference(req, res) {
     res.end(JSON.stringify({
       preferenceId: created.id,
       initPoint,
-      testMode: detectedTestMode
+      testMode: detectedTestMode,
+      publicKey: MERCADO_PAGO_PUBLIC_KEY
     }));
   } catch (error) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -495,6 +520,24 @@ async function getMercadoPagoPaymentStatus(req, res) {
   } catch (error) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: error.message || 'Erro ao consultar pagamento no Mercado Pago' }));
+  }
+}
+
+async function createMercadoPagoTestUser(req, res) {
+  try {
+    const data = await readJsonBody(req);
+    const created = await mpCreateTestUser(data || {});
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      id: created?.id,
+      nickname: created?.nickname,
+      password: created?.password,
+      site_status: created?.site_status,
+      email: created?.email
+    }));
+  } catch (error) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: error.message || 'Erro ao criar usuário de teste no Mercado Pago' }));
   }
 }
 

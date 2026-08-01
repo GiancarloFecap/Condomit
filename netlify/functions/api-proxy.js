@@ -1,10 +1,14 @@
 const crypto = require('crypto');
 const https = require('https');
 const { Brevo, BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
+const DEFAULT_MERCADO_PAGO_PUBLIC_KEY = 'TEST-2e849067-4d43-456f-8ed4-e4e4928cb8ce';
 const DEFAULT_MERCADO_PAGO_ACCESS_TOKEN = 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDQxNTA2NCwiZXhwIjoyMDk1OTkxMDY0fQ.wi0H-LHiBiMm3_WPXw1lslRnhAw3atf_BGUZCp2PdNA';
+const MERCADO_PAGO_PUBLIC_KEY =
+  process.env.MERCADO_PAGO_PUBLIC_KEY ||
+  DEFAULT_MERCADO_PAGO_PUBLIC_KEY;
 const MERCADO_PAGO_ACCESS_TOKEN =
   process.env.MERCADO_PAGO_ACCESS_TOKEN ||
   process.env.MERCADO_PAGO_ACESS_TOKEN ||
@@ -19,61 +23,88 @@ const KEYCLOAK_CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID || '';
 const KEYCLOAK_CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET || '';
 const KEYCLOAK_ADMIN_USERNAME = process.env.KEYCLOAK_ADMIN_USERNAME || '';
 const KEYCLOAK_ADMIN_PASSWORD = process.env.KEYCLOAK_ADMIN_PASSWORD || '';
-const MERCADO_PAGO_IS_TEST_MODE = /^TEST-/i.test(String(MERCADO_PAGO_ACCESS_TOKEN || '').trim());
+const MERCADO_PAGO_IS_TEST_MODE =
+  /^TEST-/i.test(String(MERCADO_PAGO_ACCESS_TOKEN || '').trim()) ||
+  /^TEST-/i.test(String(MERCADO_PAGO_PUBLIC_KEY || '').trim());
 
 const brevoClient = BREVO_API_KEY ? new BrevoClient({
   apiKey: BREVO_API_KEY,
   environment: BrevoEnvironment.Production
 }) : null;
 
+function ensureMercadoPagoConfigured() {
+  if (!MERCADO_PAGO_ACCESS_TOKEN) {
+    throw new Error('MERCADO_PAGO_ACCESS_TOKEN não configurado');
+  }
+}
+
 function mpRequest(requestPath, method = 'GET', payload = null) {
   return new Promise((resolve, reject) => {
-    if (!MERCADO_PAGO_ACCESS_TOKEN) {
-      reject(new Error('MERCADO_PAGO_ACCESS_TOKEN não configurado'));
+    try {
+      ensureMercadoPagoConfigured();
+    } catch (error) {
+      reject(error);
       return;
     }
 
     const body = payload ? JSON.stringify(payload) : null;
-    const options = {
+    const request = https.request({
       hostname: 'api.mercadopago.com',
       path: requestPath,
       method,
       headers: {
-        Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
+        Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
+        ...(body ? {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body)
+        } : {})
       }
-    };
-
-    if (body) {
-      options.headers['Content-Type'] = 'application/json';
-      options.headers['Content-Length'] = Buffer.byteLength(body);
-    }
-
-    const request = https.request(options, (response) => {
-      let data = '';
-      response.on('data', chunk => data += chunk);
+    }, (response) => {
+      let rawResponse = '';
+      response.on('data', (chunk) => {
+        rawResponse += chunk;
+      });
       response.on('end', () => {
         let parsed = null;
         try {
-          parsed = data ? JSON.parse(data) : null;
+          parsed = rawResponse ? JSON.parse(rawResponse) : null;
         } catch (_) {
           reject(new Error('Erro ao parsear resposta do Mercado Pago'));
           return;
         }
+
         if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
-          const message = parsed?.message || parsed?.error || `Erro Mercado Pago (HTTP ${response.statusCode})`;
+          const apiCause = Array.isArray(parsed?.cause) ? parsed.cause.map((item) => item?.description).filter(Boolean).join(' | ') : '';
+          const message = apiCause || parsed?.message || parsed?.error || `Erro Mercado Pago (HTTP ${response.statusCode})`;
           reject(new Error(message));
           return;
         }
+
         resolve(parsed);
       });
     });
 
-    request.on('error', (e) => reject(e));
+    request.on('error', reject);
     if (body) {
       request.write(body);
     }
     request.end();
   });
+}
+
+async function createMercadoPagoTestUser(data) {
+  const created = await mpRequest('/users/test_user', 'POST', {
+    site_id: data?.site_id || 'MLB',
+    description: data?.description || `Condomit Test User ${Date.now()}`
+  });
+
+  return {
+    id: created?.id,
+    nickname: created?.nickname,
+    password: created?.password,
+    site_status: created?.site_status,
+    email: created?.email
+  };
 }
 
 function mpCreatePreference(preferencePayload) {
@@ -115,6 +146,48 @@ function resolveMercadoPagoCheckoutUrl(createdPreference) {
   const sandboxInitPoint = createdPreference?.sandbox_init_point || '';
   const productionInitPoint = createdPreference?.init_point || '';
   return sandboxInitPoint || productionInitPoint || '';
+}
+
+function buildMercadoPagoPreferencePayload({ amount, planName, planId, baseUrl }) {
+  const normalizedAmount = parseMercadoPagoAmount(amount);
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    throw new Error('Valor do plano inválido para gerar o pagamento');
+  }
+
+  const successUrl = new URL('/pages/checkout.html', baseUrl);
+  const failureUrl = new URL('/pages/checkout.html', baseUrl);
+  const pendingUrl = new URL('/pages/checkout.html', baseUrl);
+
+  successUrl.searchParams.set('checkout_status', 'approved');
+  failureUrl.searchParams.set('checkout_status', 'failure');
+  pendingUrl.searchParams.set('checkout_status', 'pending');
+
+  if (planId !== undefined && planId !== null && planId !== '') {
+    successUrl.searchParams.set('plan_id', String(planId));
+    failureUrl.searchParams.set('plan_id', String(planId));
+    pendingUrl.searchParams.set('plan_id', String(planId));
+  }
+
+  return {
+    items: [
+      {
+        id: String(planId || 'condomit-plan'),
+        title: `Plano ${planName || 'Condomit'}`,
+        description: 'Assinatura Condomit',
+        quantity: 1,
+        currency_id: 'BRL',
+        unit_price: normalizedAmount
+      }
+    ],
+    back_urls: {
+      success: successUrl.toString(),
+      failure: failureUrl.toString(),
+      pending: pendingUrl.toString()
+    },
+    auto_return: 'approved',
+    binary_mode: true,
+    external_reference: `CONDOMIT-${planId || 'plan'}-${Date.now()}`
+  };
 }
 
 const RESET_TOKEN_SECRET = process.env.RESET_TOKEN_SECRET || SUPABASE_SERVICE_ROLE_KEY;
@@ -421,48 +494,19 @@ async function updateKeycloakPassword(email, password) {
 }
 
 async function createMercadoPagoPreference(data) {
-  const { amount, planName, payerEmail, planId } = data;
-  const normalizedAmount = parseMercadoPagoAmount(amount);
-  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
-    throw new Error('Valor do plano inválido para gerar o pagamento');
-  }
+  const { amount, planName, planId } = data;
   const base = APP_BASE_URL || 'https://condomit.netlify.app';
-  const successUrl = new URL('/pages/checkout.html', base);
-  const failureUrl = new URL('/pages/checkout.html', base);
-  const pendingUrl = new URL('/pages/checkout.html', base);
-  successUrl.searchParams.set('checkout_status', 'approved');
-  failureUrl.searchParams.set('checkout_status', 'failure');
-  pendingUrl.searchParams.set('checkout_status', 'pending');
-  if (planId !== undefined && planId !== null) {
-    successUrl.searchParams.set('plan_id', String(planId));
-    failureUrl.searchParams.set('plan_id', String(planId));
-    pendingUrl.searchParams.set('plan_id', String(planId));
-  }
-
-  const preferencePayload = {
-    items: [
-      {
-        title: `Plano ${planName} - Condomit`,
-        quantity: 1,
-        currency_id: 'BRL',
-        unit_price: normalizedAmount
-      }
-    ],
-    back_urls: {
-      success: successUrl.toString(),
-      failure: failureUrl.toString(),
-      pending: pendingUrl.toString()
-    },
-    auto_return: 'approved',
-    statement_descriptor: 'CONDOMIT',
-    external_reference: `CONDOMIT-${planId || 'plan'}-${Date.now()}`
-  };
-
+  const preferencePayload = buildMercadoPagoPreferencePayload({ amount, planName, planId, baseUrl: base });
   const created = await mpCreatePreference(preferencePayload);
   const initPoint = resolveMercadoPagoCheckoutUrl(created);
   const detectedTestMode = Boolean(created?.sandbox_init_point) || MERCADO_PAGO_IS_TEST_MODE;
   if (!initPoint) throw new Error(created?.message || 'Link de pagamento não retornado');
-  return { preferenceId: created.id, initPoint, testMode: detectedTestMode };
+  return {
+    preferenceId: created.id,
+    initPoint,
+    testMode: detectedTestMode,
+    publicKey: MERCADO_PAGO_PUBLIC_KEY
+  };
 }
 
 async function getMercadoPagoPaymentStatus(data) {
@@ -715,6 +759,11 @@ exports.handler = async (event, context) => {
     if (pathname === '/mercadopago/payment-status' && rawMethod === 'POST') {
       const mpStatusResult = await getMercadoPagoPaymentStatus(body || {});
       return { statusCode: mpStatusResult.statusCode, headers, body: mpStatusResult.body };
+    }
+
+    if (pathname === '/mercadopago/test-user' && rawMethod === 'POST') {
+      const user = await createMercadoPagoTestUser(body || {});
+      return { statusCode: 200, headers, body: JSON.stringify(user) };
     }
 
     if (pathname === '/plano' && rawMethod === 'GET') {
