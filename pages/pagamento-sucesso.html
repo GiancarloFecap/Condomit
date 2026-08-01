@@ -100,6 +100,10 @@
         <p>Seu pagamento foi processado com sucesso. Estamos confirmando a ativação do seu plano.</p>
         <div class="pagamento-info">
             <h3>Detalhes do pagamento</h3>
+            <div class="info-row" id="info-plan-row" style="display:none;">
+                <span class="label">Plano</span>
+                <span class="value" id="plan-value">-</span>
+            </div>
             <div class="info-row">
                 <span class="label">Status</span>
                 <span class="value" style="color:#16a34a;">Aprovado</span>
@@ -107,6 +111,14 @@
             <div class="info-row" id="info-payment-id" style="display:none;">
                 <span class="label">Pagamento</span>
                 <span class="value" id="payment-id-value">-</span>
+            </div>
+            <div class="info-row" id="info-date-row" style="display:none;">
+                <span class="label">Data</span>
+                <span class="value" id="payment-date-value">-</span>
+            </div>
+            <div class="info-row" id="info-amount-row" style="display:none;">
+                <span class="label">Valor</span>
+                <span class="value" id="payment-amount-value">-</span>
             </div>
         </div>
         <button type="button" id="btn-continuar">
@@ -117,6 +129,10 @@
         (function () {
             const p = new URLSearchParams(location.search);
             const pid = p.get("payment_id") || p.get("collection_id");
+            const titleEl = document.querySelector('.resultado-pagamento h1');
+            const messageEl = document.querySelector('.resultado-pagamento p');
+            const continueButton = document.getElementById('btn-continuar');
+
             if (pid) {
                 document.getElementById("info-payment-id").style.display = "flex";
                 document.getElementById("payment-id-value").textContent = pid;
@@ -124,50 +140,63 @@
 
             async function finalizarPagamentoAprovado() {
                 try {
-                    const cached = sessionStorage.getItem('condominiumUser');
-                    if (!cached) return;
-                    const user = JSON.parse(cached);
-                    if (!user || !user.email) return;
+                    if (!pid) {
+                        messageEl.textContent = 'Seu pagamento foi aprovado, mas o identificador da transação não foi encontrado para concluir a validação automática.';
+                        return;
+                    }
 
-                    // Buscar pagamentos do usuário e marcar o mais recente como aprovado
-                    const resp = await fetch(`/api/pagamento?email=${encodeURIComponent(user.email)}`);
-                    if (resp.ok) {
-                        const pagamentos = await resp.json();
-                        if (Array.isArray(pagamentos) && pagamentos.length) {
-                            pagamentos.sort((a, b) => {
-                                const da = new Date(a.data_pagamento || 0).getTime();
-                                const db = new Date(b.data_pagamento || 0).getTime();
-                                return db - da;
-                            });
-                            const ultimo = pagamentos[0];
-                            if (ultimo && ultimo.status_pagamento !== 'aprovado') {
-                                try {
-                                    await fetch(`/api/pagamento?id=${encodeURIComponent(ultimo.id)}`, {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            status_pagamento: 'aprovado',
-                                            data_pagamento: new Date().toISOString()
-                                        })
-                                    });
-                                } catch (_) {}
-                            }
-                            // Atualizar plano do usuário
-                            if (ultimo && ultimo.plano_id) {
-                                try {
-                                    await fetch(`/api/users?email=${encodeURIComponent(user.email)}`, {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ plan: ultimo.plano_id })
-                                    });
-                                    user.plan = ultimo.plano_id;
-                                    sessionStorage.setItem('condominiumUser', JSON.stringify(user));
-                                } catch (_) {}
+                    continueButton.disabled = true;
+                    continueButton.textContent = 'Confirmando...';
+
+                    const resp = await fetch('/api/mercadopago/confirm', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            paymentId: pid,
+                            status: p.get('status') || 'approved'
+                        })
+                    });
+
+                    const data = await resp.json().catch(() => ({}));
+                    if (!resp.ok) {
+                        throw new Error(data.error || 'Não foi possível validar o pagamento aprovado.');
+                    }
+
+                    if (data.planName) {
+                        document.getElementById('info-plan-row').style.display = 'flex';
+                        document.getElementById('plan-value').textContent = data.planName;
+                    }
+
+                    if (data.approvedAtFormatted) {
+                        document.getElementById('info-date-row').style.display = 'flex';
+                        document.getElementById('payment-date-value').textContent = data.approvedAtFormatted;
+                    }
+
+                    if (data.amountFormatted) {
+                        document.getElementById('info-amount-row').style.display = 'flex';
+                        document.getElementById('payment-amount-value').textContent = data.amountFormatted;
+                    }
+
+                    try {
+                        const cached = sessionStorage.getItem('condominiumUser');
+                        if (cached) {
+                            const user = JSON.parse(cached);
+                            if (user) {
+                                if (data.planId) user.plan = data.planId;
+                                else if (data.planName) user.plan = data.planName;
+                                sessionStorage.setItem('condominiumUser', JSON.stringify(user));
                             }
                         }
-                    }
-                } catch (e) {
-                    console.warn('Erro ao finalizar pagamento aprovado:', e);
+                    } catch (_) {}
+
+                    titleEl.textContent = data.alreadyProcessed ? 'Pagamento já confirmado' : 'Pagamento aprovado';
+                    messageEl.textContent = 'Seu plano foi validado com sucesso e seu acesso já está disponível para uso.';
+                } catch (error) {
+                    console.warn('Erro ao validar pagamento aprovado:', error);
+                    messageEl.textContent = error.message || 'Não foi possível validar o pagamento agora. Tente continuar em instantes.';
+                } finally {
+                    continueButton.disabled = false;
+                    continueButton.textContent = 'Continuar';
                 }
             }
 

@@ -154,7 +154,7 @@ function updateSummary() {
     summaryTotalPrice.textContent = `R$ ${Number(selectedPrice).toFixed(2).replace('.', ',')}`;
 }
 
-async function createPreference() {
+async function createPreference(pendingPaymentId) {
     if (!currentUser || !currentUser.email) {
         console.error('[Checkout] Usuário não autenticado ou sem email');
         throw new Error('Usuário não autenticado. Por favor, faça login novamente.');
@@ -174,7 +174,8 @@ async function createPreference() {
             body: JSON.stringify({
                 amount: selectedPrice,
                 planName: selectedPlan.nome,
-                payerEmail: currentUser.email
+                payerEmail: currentUser.email,
+                pendingPaymentId
             })
         });
 
@@ -190,6 +191,16 @@ async function createPreference() {
         console.error('[Checkout] Erro detalhado ao criar preferência:', error);
         throw error;
     }
+}
+
+function getMercadoPagoPaymentId(dados = {}) {
+    return (
+        dados.paymentId ||
+        dados.payment_id ||
+        dados.collection_id ||
+        dados.collectionId ||
+        null
+    );
 }
 
 // Função para criar registro de pagamento PENDENTE antes de abrir checkout
@@ -249,23 +260,29 @@ function addMercadoPagoReturnListener() {
 
         try {
             if (status === 'approved') {
-                if (currentPagamentoId) {
-                    await updatePaymentStatus(currentPagamentoId, 'aprovado');
-                }
-                await updateUserByEmail(currentUser.email, { plan: selectedPlan.nome });
-                currentUser.plan = selectedPlan.nome;
-                sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
-                window.location.href = 'index.html';
+                const paymentId = getMercadoPagoPaymentId(dados);
+                const search = new URLSearchParams();
+                if (paymentId) search.set('payment_id', paymentId);
+                if (dados.externalReference) search.set('external_reference', dados.externalReference);
+                if (dados.preferenceId) search.set('preference_id', dados.preferenceId);
+                search.set('status', 'approved');
+                window.location.href = `pagamento-sucesso.html?${search.toString()}`;
             } else if (status === 'pending') {
                 if (currentPagamentoId) {
                     await updatePaymentStatus(currentPagamentoId, 'pendente');
                 }
-                window.location.href = 'pagamento-pendente.html';
+                const paymentId = getMercadoPagoPaymentId(dados);
+                window.location.href = paymentId
+                    ? `pagamento-pendente.html?payment_id=${encodeURIComponent(paymentId)}&status=pending`
+                    : 'pagamento-pendente.html';
             } else {
                 if (currentPagamentoId) {
                     await updatePaymentStatus(currentPagamentoId, 'falhou');
                 }
-                window.location.href = 'pagamento-falha.html';
+                const paymentId = getMercadoPagoPaymentId(dados);
+                window.location.href = paymentId
+                    ? `pagamento-falha.html?payment_id=${encodeURIComponent(paymentId)}&status=${encodeURIComponent(status || 'failure')}`
+                    : 'pagamento-falha.html';
             }
         } catch (err) {
             console.error('[Checkout] Erro ao processar retorno MP:', err);
@@ -310,7 +327,7 @@ function hideLoadingOverlay() {
 
 async function initCheckoutButton() {
     const container = document.getElementById('payment-brick_container');
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;"><i class="fas fa-spinner fa-spin"></i> Carregando pagamento...</div>';
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;"><i class="fas fa-spinner fa-spin"></i> Preparando pagamento...</div>';
 
     if (!selectedPlan || selectedPrice == null) {
         container.innerHTML = `<div style="text-align:center;padding:20px;color:#f59e0b;"><i class="fas fa-exclamation-triangle"></i> Selecione um plano para continuar.</div>`;
@@ -322,10 +339,6 @@ async function initCheckoutButton() {
         
         // Garante listener de retorno do MP
         addMercadoPagoReturnListener();
-
-        const preferenceData = await createPreference();
-        currentInitPoint = preferenceData.initPoint;
-        console.log('[Checkout] Preference created with init_point:', currentInitPoint);
         
         container.innerHTML = `
             <div style="text-align:center;">
@@ -354,12 +367,18 @@ async function initCheckoutButton() {
                 // Show loading overlay first
                 showLoadingOverlay();
 
+                currentPagamentoId = null;
+
                 // Cria pagamento PENDENTE no banco antes de abrir popup
                 try {
                     await createPendingPayment();
                 } catch (paymentErr) {
                     console.warn('[Checkout] Aviso: não criou pagamento pendente:', paymentErr);
                 }
+
+                const preferenceData = await createPreference(currentPagamentoId);
+                currentInitPoint = preferenceData.initPoint;
+                console.log('[Checkout] Preference created with init_point:', currentInitPoint);
                 
                 // Open Mercado Pago in a popup
                 mpPopup = window.open(currentInitPoint, 'MercadoPago', 'width=800,height=800');

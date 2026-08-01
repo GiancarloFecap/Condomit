@@ -143,6 +143,14 @@ const server = http.createServer((req, res) => {
         return createMercadoPagoPreference(req, res);
     }
 
+    if (pathname === '/api/mercadopago/confirm' && req.method === 'POST') {
+        return handleMercadoPagoConfirmation(req, res);
+    }
+
+    if (pathname === '/api/mercadopago/webhook' && (req.method === 'POST' || req.method === 'GET')) {
+        return handleMercadoPagoWebhook(req, res, parsedUrl.query);
+    }
+
     // ENDPOINT: GET /api/plano - Fetch all plans
     if (pathname === '/api/plano' && req.method === 'GET') {
         return proxySupabaseRequest(req, res, '/plano?select=*', 'GET');
@@ -306,13 +314,36 @@ function proxySupabaseRequest(req, res, pathSuffix, method) {
   });
 }
 
+async function proxySupabasePayload(body, pathSuffix, method) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1${pathSuffix}`, {
+    method,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+
+  const text = await response.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (parseError) {
+    data = text;
+  }
+
+  return { status: response.status, data };
+}
+
 async function createMercadoPagoPreference(req, res) {
   let body = '';
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
     try {
       const data = JSON.parse(body);
-      const { amount, planName, payerEmail } = data;
+      const { amount, planName, payerEmail, pendingPaymentId } = data;
 
       const protocol = (req.headers['x-forwarded-proto'] || 'http');
       const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`;
@@ -321,6 +352,7 @@ async function createMercadoPagoPreference(req, res) {
       const successUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-sucesso.html' : '/pages/pagamento-sucesso.html');
       const pendingUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-pendente.html' : '/pages/pagamento-pendente.html');
       const failureUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-falha.html' : '/pages/pagamento-falha.html');
+      const webhookUrl = `${baseUrl}/api/mercadopago/webhook`;
 
       const preferenceData = {
         items: [
@@ -339,7 +371,14 @@ async function createMercadoPagoPreference(req, res) {
           pending: pendingUrl,
           failure: failureUrl
         },
-        auto_return: 'approved'
+        auto_return: 'approved',
+        notification_url: webhookUrl,
+        external_reference: pendingPaymentId ? String(pendingPaymentId) : undefined,
+        metadata: {
+          pending_payment_id: pendingPaymentId ? String(pendingPaymentId) : '',
+          payer_email: payerEmail,
+          plan_name: normalizePlanName(planName)
+        }
       };
 
       console.log('[MercadoPago] Creating preference for:', payerEmail, 'amount:', amount, 'plan:', planName);
@@ -368,6 +407,8 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const RESET_TOKEN_SECRET = process.env.RESET_TOKEN_SECRET || SUPABASE_SERVICE_ROLE_KEY;
 const RESET_TOKEN_TTL_MS = 5 * 60 * 1000;
+const MERCADO_PAGO_API_BASE = 'https://api.mercadopago.com';
+const SUPPORT_PAYMENT_MAILTO = 'mailto:contato.condomit@gmail.com?subject=Suporte%20Condomit%20-%20Pagamento';
 
 function generateResetToken(email) {
   const payload = Buffer.from(JSON.stringify({
@@ -461,6 +502,63 @@ function getBrevoErrorMessage(error) {
   } catch (_) {
     return 'Falha ao enviar e-mail pelo Brevo';
   }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function normalizePlanName(planName) {
+  const raw = String(planName || '').trim();
+  const normalized = raw.toLowerCase();
+
+  if (normalized.includes('essencial')) return 'Essencial';
+  if (normalized.includes('premium')) return 'Premium';
+  if (normalized.includes('pro')) return 'Pro';
+
+  return raw || 'Plano Condomit';
+}
+
+function normalizePaymentStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+
+  if (['approved', 'aprovado'].includes(normalized)) return 'aprovado';
+  if (['pending', 'in_process', 'pendente', 'em_processo'].includes(normalized)) return 'pendente';
+  if (['cancelled', 'canceled', 'cancelado'].includes(normalized)) return 'cancelado';
+  if (['refunded', 'charged_back', 'estornado'].includes(normalized)) return 'estornado';
+  if (['rejected', 'recusado', 'falhou', 'failure'].includes(normalized)) return 'recusado';
+
+  return normalized || 'desconhecido';
+}
+
+function isApprovedPaymentStatus(status) {
+  return normalizePaymentStatus(status) === 'aprovado';
+}
+
+function formatBrazilianDate(dateValue) {
+  if (!dateValue) return '';
+
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return '';
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo'
+  }).format(parsed);
+}
+
+function formatBrazilianCurrency(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 'R$ 0,00';
+
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(amount);
 }
 
 function buildResetEmailHtml(usuarioNome, link) {
@@ -579,6 +677,420 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
   console.log('========================================');
   
   return info;
+}
+
+function buildPaymentConfirmationEmailHtml({ usuarioNome, nomePlano, dataPagamento, valorPago, loginUrl }) {
+  const logoUrl = `${APP_BASE_URL}/assets/logo-full2.png`;
+
+  const infoRows = [
+    { icon: 'P', label: 'Plano', value: normalizePlanName(nomePlano) },
+    { icon: 'OK', label: 'Status', value: 'Pagamento aprovado' },
+    { icon: 'D', label: 'Data', value: dataPagamento },
+    { icon: 'R$', label: 'Valor', value: valorPago }
+  ].map((item, index, items) => `
+    <tr>
+      <td style="padding:${index === items.length - 1 ? '0' : '0 0 14px'};">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+          <tr>
+            <td width="52" valign="middle" style="padding:0 16px 0 0;">
+              <table role="presentation" width="36" height="36" cellspacing="0" cellpadding="0" border="0" style="width:36px;height:36px;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;">
+                <tr>
+                  <td align="center" valign="middle" style="font-family:Arial,sans-serif;font-size:13px;font-weight:700;line-height:1;color:#2563eb;">
+                    ${escapeHtml(item.icon)}
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td valign="middle" style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#1e3a8a;font-weight:700;padding:0 14px 0 0;">
+              ${escapeHtml(item.label)}:
+            </td>
+            <td valign="middle" style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#1f2f5c;">
+              ${escapeHtml(item.value)}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <body style="margin:0;padding:0;background-color:#efefef;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#efefef;margin:0;padding:0;">
+          <tr>
+            <td align="center" style="padding:20px 12px 28px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:820px;">
+                <tr>
+                  <td align="center" style="padding:0 0 18px;">
+                    <img src="${logoUrl}" alt="Condomit" width="264" style="display:block;width:264px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color:#ffffff;border:1px solid #d8d8d8;border-radius:12px;padding:0;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td style="padding:56px 56px 26px;font-family:Arial,sans-serif;color:#172554;font-size:18px;line-height:1.7;">
+                          <p style="margin:0 0 28px;font-size:18px;line-height:1.7;color:#172554;">
+                            <strong>Olá, ${escapeHtml(usuarioNome)},</strong>
+                          </p>
+                          <p style="margin:0 0 10px;font-size:18px;line-height:1.75;color:#1f2f5c;">
+                            Recebemos a confirmação do pagamento do seu plano na Condomit.
+                          </p>
+                          <p style="margin:0 0 34px;font-size:18px;line-height:1.75;color:#1f2f5c;">
+                            Seu acesso foi ativado com sucesso e sua assinatura já está disponível para uso.
+                          </p>
+                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 34px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;">
+                            <tr>
+                              <td style="padding:20px 22px;">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                  ${infoRows}
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 42px;">
+                            <tr>
+                              <td align="center" bgcolor="#2563eb" style="border-radius:6px;">
+                                <a href="${loginUrl}" style="display:inline-block;padding:17px 52px;font-family:Arial,sans-serif;font-size:18px;font-weight:400;line-height:1.2;color:#ffffff;text-decoration:none;background:#2563eb;border-radius:6px;">
+                                  Acessar minha conta
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                          <div style="border-top:1px solid #d9d9d9;font-size:1px;line-height:1px;margin:0 0 34px;">&nbsp;</div>
+                          <p style="margin:0 0 12px;font-size:16px;line-height:1.85;color:#1f2f5c;">
+                            Precisa de ajuda?
+                            <a href="${SUPPORT_PAYMENT_MAILTO}" style="color:#2563eb;text-decoration:none;">Entre em contato com nossa equipe de suporte</a>
+                          </p>
+                          <p style="margin:0 0 12px;font-size:16px;line-height:1.85;color:#1f2f5c;">
+                            ou acesse nossa
+                            <a href="${SUPPORT_PAYMENT_MAILTO}" style="color:#2563eb;text-decoration:none;">Central de Ajuda</a>.
+                          </p>
+                          <p style="margin:0;font-size:16px;line-height:1.85;color:#1f2f5c;">
+                            A segurança da sua conta é importante para nós.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding:18px 24px 0;font-family:Arial,sans-serif;color:#7c8aa5;">
+                    <p style="margin:0 0 8px;font-size:14px;line-height:1.7;">Este é um e-mail automático, por favor não responda.</p>
+                    <p style="margin:0;font-size:14px;line-height:1.7;">© 2026 Condomit. Todos os direitos reservados.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+}
+
+async function sendPaymentConfirmationEmail(toEmail, usuario, paymentDetails) {
+  if (!hasBrevoConfig()) {
+    throw new Error('BREVO_API_KEY nao configurada');
+  }
+  if (!BREVO_SENDER_EMAIL) {
+    throw new Error('BREVO_SENDER_EMAIL nao configurado');
+  }
+
+  const usuarioNome = getDisplayName(usuario, toEmail);
+  const loginUrl = `${APP_BASE_URL}/pages/entrar.html`;
+  const info = await brevoClient.transactionalEmails.sendTransacEmail({
+    sender: { name: 'Condomit', email: BREVO_SENDER_EMAIL },
+    replyTo: { email: BREVO_SENDER_EMAIL },
+    to: [{ email: toEmail }],
+    subject: 'Pagamento confirmado — seu plano Condomit está ativo',
+    htmlContent: buildPaymentConfirmationEmailHtml({
+      usuarioNome,
+      nomePlano: paymentDetails.planName,
+      dataPagamento: formatBrazilianDate(paymentDetails.approvedAt),
+      valorPago: formatBrazilianCurrency(paymentDetails.amount),
+      loginUrl
+    })
+  });
+
+  const messageId = info?.messageId || info?.body?.messageId;
+  if (!messageId) {
+    throw new Error('O Brevo nao confirmou o recebimento do e-mail');
+  }
+
+  return { ...info, messageId };
+}
+
+async function fetchSupabaseUserRecordByEmail(email) {
+  if (!email) return null;
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&email=eq.${encodeURIComponent(email)}&limit=1`, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Falha ao consultar usuario para confirmacao do pagamento');
+  }
+
+  const users = await response.json().catch(() => []);
+  return Array.isArray(users) && users.length ? users[0] : null;
+}
+
+async function fetchSupabasePlanById(planId) {
+  if (!planId) return null;
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/plano?select=*&id=eq.${encodeURIComponent(planId)}&limit=1`, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Falha ao consultar plano do pagamento');
+  }
+
+  const plans = await response.json().catch(() => []);
+  return Array.isArray(plans) && plans.length ? plans[0] : null;
+}
+
+async function fetchSupabasePaymentById(paymentId) {
+  if (!paymentId) return null;
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/pagamento?select=*&id=eq.${encodeURIComponent(paymentId)}&limit=1`, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Falha ao consultar pagamento pendente');
+  }
+
+  const payments = await response.json().catch(() => []);
+  return Array.isArray(payments) && payments.length ? payments[0] : null;
+}
+
+async function fetchSupabasePaymentByTransactionCode(transactionCode) {
+  if (!transactionCode) return null;
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/pagamento?select=*&codigo_transacao=eq.${encodeURIComponent(transactionCode)}&limit=1`, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Falha ao consultar transacao ja processada');
+  }
+
+  const payments = await response.json().catch(() => []);
+  return Array.isArray(payments) && payments.length ? payments[0] : null;
+}
+
+async function fetchLatestSupabasePaymentByEmail(email) {
+  if (!email) return null;
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/pagamento?select=*&email=eq.${encodeURIComponent(email)}&status_pagamento=neq.aprovado&order=data_pagamento.desc.nullslast&limit=1`, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Falha ao localizar pagamento pendente do usuario');
+  }
+
+  const payments = await response.json().catch(() => []);
+  return Array.isArray(payments) && payments.length ? payments[0] : null;
+}
+
+async function patchSupabasePayment(paymentId, updates) {
+  const result = await proxySupabasePayload(updates, `/pagamento?id=eq.${encodeURIComponent(paymentId)}`, 'PATCH');
+  if (result.status >= 400) {
+    throw new Error('Falha ao atualizar status do pagamento');
+  }
+  return Array.isArray(result.data) && result.data.length ? result.data[0] : result.data;
+}
+
+async function patchSupabaseUserPlan(email, planId) {
+  const result = await proxySupabasePayload({ plan: planId }, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
+  if (result.status >= 400) {
+    throw new Error('Falha ao atualizar o plano do usuario');
+  }
+  return result.data;
+}
+
+async function fetchMercadoPagoPayment(paymentId) {
+  const response = await fetch(`${MERCADO_PAGO_API_BASE}/v1/payments/${encodeURIComponent(paymentId)}`, {
+    headers: {
+      Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload?.message || 'Falha ao consultar pagamento no Mercado Pago');
+  }
+
+  return payload;
+}
+
+function extractMercadoPagoPaymentId(query = {}, body = {}) {
+  return (
+    body?.data?.id ||
+    body?.id ||
+    body?.paymentId ||
+    query['data.id'] ||
+    query.id ||
+    query.payment_id ||
+    query.paymentId ||
+    null
+  );
+}
+
+async function processMercadoPagoPaymentConfirmation(paymentId) {
+  if (!paymentId) {
+    throw new Error('paymentId e obrigatorio para confirmar o pagamento');
+  }
+
+  const mercadoPagoPayment = await fetchMercadoPagoPayment(paymentId);
+  const paymentStatus = normalizePaymentStatus(mercadoPagoPayment.status);
+  const transactionId = String(mercadoPagoPayment.id || paymentId);
+  const approvedAt = mercadoPagoPayment.date_approved || mercadoPagoPayment.date_last_updated || mercadoPagoPayment.date_created || new Date().toISOString();
+  const amount = Number(mercadoPagoPayment.transaction_amount || 0);
+  const externalReference = mercadoPagoPayment.external_reference || mercadoPagoPayment.metadata?.pending_payment_id || null;
+  const payerEmail = mercadoPagoPayment.payer?.email || mercadoPagoPayment.metadata?.payer_email || mercadoPagoPayment.metadata?.email || '';
+
+  const existingProcessedPayment = await fetchSupabasePaymentByTransactionCode(transactionId);
+  if (existingProcessedPayment && isApprovedPaymentStatus(existingProcessedPayment.status_pagamento)) {
+    const processedPlan = await fetchSupabasePlanById(existingProcessedPayment.plano_id).catch(() => null);
+    return {
+      approved: true,
+      alreadyProcessed: true,
+      paymentId: transactionId,
+      paymentStatus,
+      planId: existingProcessedPayment.plano_id || null,
+      planName: normalizePlanName(processedPlan?.nome || mercadoPagoPayment.metadata?.plan_name || existingProcessedPayment.plano_id),
+      approvedAtFormatted: formatBrazilianDate(existingProcessedPayment.data_pagamento || approvedAt),
+      amountFormatted: formatBrazilianCurrency(existingProcessedPayment.valor_pago || amount)
+    };
+  }
+
+  let targetPayment = externalReference ? await fetchSupabasePaymentById(externalReference) : null;
+  if (!targetPayment && payerEmail) {
+    targetPayment = await fetchLatestSupabasePaymentByEmail(payerEmail);
+  }
+
+  if (!targetPayment) {
+    throw new Error('Pagamento pendente nao encontrado para a transacao informada');
+  }
+
+  const planRecord = await fetchSupabasePlanById(targetPayment.plano_id).catch(() => null);
+  const planName = normalizePlanName(planRecord?.nome || mercadoPagoPayment.metadata?.plan_name || targetPayment.plano_id);
+
+  if (!isApprovedPaymentStatus(paymentStatus)) {
+    return {
+      approved: false,
+      alreadyProcessed: false,
+      paymentId: transactionId,
+      paymentStatus,
+      planId: targetPayment.plano_id || null,
+      planName
+    };
+  }
+
+  await patchSupabasePayment(targetPayment.id, {
+    status_pagamento: 'aprovado',
+    data_pagamento: approvedAt,
+    valor_pago: amount || targetPayment.valor_pago,
+    codigo_transacao: transactionId
+  });
+
+  const userEmail = targetPayment.email || payerEmail;
+  const userRecord = await fetchSupabaseUserRecordByEmail(userEmail).catch(() => null);
+
+  if (userEmail && targetPayment.plano_id) {
+    await patchSupabaseUserPlan(userEmail, targetPayment.plano_id);
+  }
+
+  let emailSent = false;
+  let emailError = null;
+
+  if (userEmail) {
+    try {
+      await sendPaymentConfirmationEmail(userEmail, userRecord || { name: userEmail.split('@')[0] }, {
+        planName,
+        approvedAt,
+        amount: amount || targetPayment.valor_pago || targetPayment.valor_minimo || 0
+      });
+      emailSent = true;
+    } catch (error) {
+      emailError = getBrevoErrorMessage(error);
+      console.error(`[Payment Confirmation Email Error] paymentId=${transactionId}`, emailError);
+    }
+  }
+
+  return {
+    approved: true,
+    alreadyProcessed: false,
+    paymentId: transactionId,
+    paymentStatus,
+    planId: targetPayment.plano_id || null,
+    planName,
+    approvedAtFormatted: formatBrazilianDate(approvedAt),
+    amountFormatted: formatBrazilianCurrency(amount || targetPayment.valor_pago || targetPayment.valor_minimo || 0),
+    emailSent,
+    emailError
+  };
+}
+
+function handleMercadoPagoConfirmation(req, res) {
+  let body = '';
+  req.on('data', chunk => body += chunk);
+  req.on('end', async () => {
+    try {
+      const payload = body ? JSON.parse(body) : {};
+      const paymentId = payload.paymentId || payload.payment_id || null;
+      const result = await processMercadoPagoPaymentConfirmation(paymentId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message || 'Erro ao confirmar pagamento' }));
+    }
+  });
+}
+
+function handleMercadoPagoWebhook(req, res, query = {}) {
+  let body = '';
+  req.on('data', chunk => body += chunk);
+  req.on('end', async () => {
+    try {
+      const payload = body ? JSON.parse(body) : {};
+      const paymentId = extractMercadoPagoPaymentId(query, payload);
+      if (!paymentId) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ received: true, ignored: true }));
+        return;
+      }
+
+      const result = await processMercadoPagoPaymentConfirmation(paymentId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ received: true, paymentId, approved: result.approved, alreadyProcessed: result.alreadyProcessed }));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error.message || 'Erro ao processar webhook' }));
+    }
+  });
 }
 
 async function fetchSupabaseUsersByEmail(email) {
