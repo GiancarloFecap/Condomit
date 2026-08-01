@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento Não Aprovado - Condomit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #fff1f2 0%, #ffffff 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            color: var(--text-primary, #111827);
+        }
+        html[data-theme="dark"] body {
+            background: linear-gradient(135deg, #0f172a 0%, #450a0a 100%);
+        }
+        .result-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 56px 48px;
+            max-width: 520px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(239, 68, 68, 0.15);
+        }
+        html[data-theme="dark"] .result-card {
+            background: #1e293b;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+        }
+        .logo {
+            height: 72px;
+            width: auto;
+            margin-bottom: 32px;
+        }
+        .icon-circle {
+            width: 96px;
+            height: 96px;
+            margin: 0 auto 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: shakeIn 0.6s ease-out;
+        }
+        .icon-circle i {
+            font-size: 42px;
+            color: white;
+        }
+        @keyframes shakeIn {
+            0% { transform: translateX(-30px) scale(0); opacity: 0; }
+            30% { transform: translateX(10px) scale(1.05); }
+            50% { transform: translateX(-6px); }
+            70% { transform: translateX(3px); }
+            100% { transform: translateX(0) scale(1); opacity: 1; }
+        }
+        h1 {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: #991b1b;
+            margin-bottom: 14px;
+        }
+        html[data-theme="dark"] h1 { color: #fca5a5; }
+        .subtitle {
+            font-size: 1rem;
+            color: #6b7280;
+            line-height: 1.7;
+            margin-bottom: 28px;
+        }
+        html[data-theme="dark"] .subtitle { color: #94a3b8; }
+        .tips {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 14px;
+            padding: 22px;
+            margin-bottom: 32px;
+            text-align: left;
+        }
+        html[data-theme="dark"] .tips {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.25);
+        }
+        .tips-title {
+            font-weight: 700;
+            color: #991b1b;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+        html[data-theme="dark"] .tips-title { color: #fca5a5; }
+        .tips ul { list-style: none; }
+        .tips li {
+            font-size: 0.9rem;
+            color: #7f1d1d;
+            line-height: 1.7;
+            padding: 5px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        html[data-theme="dark"] .tips li { color: #fecaca; }
+        .tips i {
+            color: #ef4444;
+            margin-top: 3px;
+            flex-shrink: 0;
+            font-size: 0.8rem;
+        }
+        .btn-primary {
+            display: inline-block;
+            width: 100%;
+            padding: 16px 28px;
+            background: var(--primary-color, #1e40af);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background: var(--secondary-blue, #1e3a8a);
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            display: inline-block;
+            width: 100%;
+            padding: 14px 28px;
+            margin-top: 12px;
+            background: transparent;
+            color: #991b1b;
+            border: 2px solid var(--border-color, #e5e7eb);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        html[data-theme="dark"] .btn-secondary { color: #fca5a5; }
+        .btn-secondary:hover {
+            border-color: #991b1b;
+        }
+    </style>
+</head>
+<body>
+    <main class="result-card" role="main">
+        <img src="../assets/logo-full.png" alt="Condomit Logo" class="logo">
+        <div class="icon-circle" aria-hidden="true">
+            <i class="fas fa-times"></i>
+        </div>
+        <h1>Pagamento não aprovado</h1>
+        <p class="subtitle">
+            Não foi possível concluir o pagamento. Tente novamente ou utilize outro meio de pagamento.
+        </p>
+        <div class="tips">
+            <div class="tips-title"><i class="fas fa-lightbulb"></i> Dicas para tentar novamente:</div>
+            <ul>
+                <li><i class="fas fa-chevron-right"></i> Verifique os dados do cartão (número, validade e CVV).</li>
+                <li><i class="fas fa-chevron-right"></i> Confirme se há saldo ou limite disponível.</li>
+                <li><i class="fas fa-chevron-right"></i> Experimente utilizar outro cartão de crédito.</li>
+                <li><i class="fas fa-chevron-right"></i> Você também pode optar por PIX ou boleto bancário.</li>
+            </ul>
+        </div>
+        <button type="button" class="btn-primary" id="btn-tentar-novamente">
+            <i class="fas fa-redo"></i> Tentar Novamente
+        </button>
+        <button type="button" class="btn-secondary" id="btn-voltar">
+            Voltar para o Checkout
+        </button>
+    </main>
+
+    <script>
+        (function() {
+            function extrairParametros() {
+                var params = {};
+                try {
+                    var usp = new URLSearchParams(window.location.search);
+                    usp.forEach(function(v, k) { params[k] = v; });
+                } catch (_) {}
+                return params;
+            }
+            var params = extrairParametros();
+
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.postMessage({
+                        tipo: 'RETORNO_MERCADO_PAGO',
+                        status: 'failure',
+                        collection_id: params.collection_id || params.payment_id || null,
+                        payment_id: params.payment_id || params.collection_id || null,
+                        preference_id: params.preference_id || null,
+                        external_reference: params.external_reference || null
+                    }, window.location.origin);
+                } catch (err) {
+                    console.warn('Não foi possível enviar mensagem para opener:', err.message);
+                }
+                setTimeout(function() { try { window.close(); } catch (_) {} }, 800);
+            }
+
+            function voltarCheckout() { window.location.href = 'checkout.html'; }
+            document.getElementById('btn-tentar-novamente').addEventListener('click', voltarCheckout);
+            document.getElementById('btn-voltar').addEventListener('click', voltarCheckout);
+        })();
+    </script>
+</body>
+</html>
