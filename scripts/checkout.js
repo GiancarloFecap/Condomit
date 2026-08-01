@@ -7,6 +7,7 @@ let plans = [];
 let currentPagamentoId = null; // armazena o ID do pagamento pendente criado
 let mpPopup = null;
 let paymentListenerAdded = false;
+let mpReturnHandled = false;
 
 document.addEventListener('DOMContentLoaded', async function() {
     // 1. Verificar autenticação
@@ -252,6 +253,7 @@ function addMercadoPagoReturnListener() {
 
         const status = event.data.status;
         const dados = event.data.dados || {};
+        mpReturnHandled = true;
 
         hideLoadingOverlay();
         if (mpPopup && !mpPopup.closed) {
@@ -368,6 +370,7 @@ async function initCheckoutButton() {
                 showLoadingOverlay();
 
                 currentPagamentoId = null;
+                mpReturnHandled = false;
 
                 // Cria pagamento PENDENTE no banco antes de abrir popup
                 try {
@@ -387,6 +390,9 @@ async function initCheckoutButton() {
                 const checkPopup = setInterval(async () => {
                     if (mpPopup && mpPopup.closed) {
                         clearInterval(checkPopup);
+                        if (mpReturnHandled) {
+                            return;
+                        }
                         // Se o popup foi fechado sem retorno (aprovado/pendente/falha), consideramos como cancelado/falha
                         hideLoadingOverlay();
                         alert('Janela de pagamento foi fechada. Tente novamente.');

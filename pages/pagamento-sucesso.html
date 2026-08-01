@@ -206,19 +206,7 @@
             const btn = document.getElementById('btn-continuar');
             if (btn) {
                 btn.addEventListener('click', function() {
-                    if (typeof window.fecharRetornoMercadoPago === 'function') {
-                        fecharRetornoMercadoPago();
-                    } else {
-                        // Caso não tenha opener, redireciona para index ou entrar
-                        const cached = sessionStorage.getItem('condominiumUser');
-                        if (cached) {
-                            const u = JSON.parse(cached);
-                            if (u.type === 'morador') location.href = 'index-morador.html';
-                            else location.href = 'index.html';
-                        } else {
-                            location.href = 'entrar.html';
-                        }
-                    }
+                    location.href = 'index.html';
                 });
             }
         })();
