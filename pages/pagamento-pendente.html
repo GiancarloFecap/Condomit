@@ -1,214 +1,115 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!doctype html>
+<html lang="pt-BR" data-pagamento-status="pending">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pagamento Pendente - Condomit</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Pagamento pendente - Condomit</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/checkout.css">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
-            min-height: 100vh;
+        .resultado-pagamento {
+            min-height: calc(100vh - 80px);
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 24px;
-            color: var(--text-primary, #111827);
-        }
-        html[data-theme="dark"] body {
-            background: linear-gradient(135deg, #0f172a 0%, #422006 100%);
-        }
-        .result-card {
-            background: #ffffff;
-            border-radius: 24px;
-            padding: 56px 48px;
-            max-width: 520px;
-            width: 100%;
+            padding: 40px 24px;
+            max-width: 600px;
+            margin: 0 auto;
             text-align: center;
-            box-shadow: 0 30px 60px rgba(245, 158, 11, 0.15);
         }
-        html[data-theme="dark"] .result-card {
-            background: #1e293b;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
-        }
-        .logo {
-            height: 72px;
-            width: auto;
-            margin-bottom: 32px;
-        }
-        .icon-circle {
+        .resultado-pagamento .icon-box {
             width: 96px;
             height: 96px;
-            margin: 0 auto 28px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            background: #fef3c7;
+            color: #d97706;
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: pulse 1.8s ease-in-out infinite;
+            font-size: 48px;
+            margin-bottom: 32px;
+            box-shadow: 0 10px 25px rgba(217, 119, 6, 0.15);
+            position: relative;
         }
-        .icon-circle i {
-            font-size: 42px;
-            color: white;
+        .resultado-pagamento .icon-box i {
+            animation: pulse 2s ease-in-out infinite;
         }
         @keyframes pulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
-            50% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(245, 158, 11, 0); }
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.08); opacity: 0.85; }
         }
-        h1 {
-            font-size: 1.85rem;
+        .resultado-pagamento h1 {
+            font-size: 2rem;
             font-weight: 800;
-            color: #92400e;
-            margin-bottom: 14px;
+            color: var(--text-main);
+            margin-bottom: 12px;
         }
-        html[data-theme="dark"] h1 { color: #fcd34d; }
-        .subtitle {
-            font-size: 1rem;
-            color: #6b7280;
-            line-height: 1.7;
-            margin-bottom: 28px;
-        }
-        html[data-theme="dark"] .subtitle { color: #94a3b8; }
-        .warning-box {
-            background: #fffbeb;
-            border: 1px solid #fde68a;
-            border-radius: 14px;
-            padding: 22px;
+        .resultado-pagamento p {
+            font-size: 1.05rem;
+            color: var(--text-muted);
             margin-bottom: 32px;
+            line-height: 1.6;
+        }
+        .resultado-pagamento button {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 15px 48px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+        }
+        .resultado-pagamento button:hover {
+            background: var(--secondary-blue);
+            transform: translateY(-1px);
+        }
+        .aviso-box {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            border: 1px solid #fde68a;
+            background-color: #fffbeb;
+            width: 100%;
             text-align: left;
         }
-        html[data-theme="dark"] .warning-box {
-            background: rgba(245, 158, 11, 0.08);
-            border-color: rgba(245, 158, 11, 0.25);
-        }
-        .warning-title {
-            font-weight: 700;
+        .aviso-box h3 {
             color: #92400e;
-            margin-bottom: 10px;
-            font-size: 0.95rem;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        html[data-theme="dark"] .warning-title { color: #fcd34d; }
-        .warning-box p {
-            font-size: 0.9rem;
+        .aviso-box p {
             color: #78350f;
-            line-height: 1.7;
-            padding: 5px 0;
-        }
-        html[data-theme="dark"] .warning-box p { color: #fde68a; }
-        .pix-info {
-            margin-top: 14px;
-            padding: 14px;
-            background: rgba(245, 158, 11, 0.08);
-            border-radius: 10px;
-            font-size: 0.88rem;
-        }
-        .btn-primary {
-            display: inline-block;
-            width: 100%;
-            padding: 16px 28px;
-            background: var(--primary-color, #1e40af);
-            color: #ffffff;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        .btn-primary:hover {
-            background: var(--secondary-blue, #1e3a8a);
-            transform: translateY(-1px);
-        }
-        .btn-secondary {
-            display: inline-block;
-            width: 100%;
-            padding: 14px 28px;
-            margin-top: 12px;
-            background: transparent;
-            color: #92400e;
-            border: 2px solid var(--border-color, #e5e7eb);
-            border-radius: 12px;
             font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        html[data-theme="dark"] .btn-secondary { color: #fcd34d; }
-        .btn-secondary:hover {
-            border-color: #92400e;
+            margin-bottom: 0;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
-    <main class="result-card" role="main">
-        <img src="../assets/logo-full.png" alt="Condomit Logo" class="logo">
-        <div class="icon-circle" aria-hidden="true">
+    <main class="resultado-pagamento">
+        <div class="icon-box">
             <i class="fas fa-clock"></i>
         </div>
         <h1>Pagamento pendente</h1>
-        <p class="subtitle">
-            O Mercado Pago ainda está processando o pagamento. O plano será ativado após a confirmação.
-        </p>
-        <div class="warning-box">
-            <div class="warning-title"><i class="fas fa-hourglass-half"></i> O que fazer agora?</div>
-            <p>• Aguarde a confirmação automática pelo Mercado Pago. Boleto e PIX podem levar até 2 dias úteis para compensar.</p>
-            <p>• Assim que confirmado, seu plano será liberado automaticamente sem necessidade de novo contato.</p>
-            <div class="pix-info">
-                <i class="fas fa-qrcode" style="color:#d97706;margin-right:6px;"></i>
-                <strong>PIX:</strong> O pagamento PIX costuma ser confirmado em minutos durante horário comercial.
-            </div>
+        <p>O Mercado Pago ainda está processando o pagamento. O plano será ativado após a confirmação.</p>
+        <div class="aviso-box">
+            <h3><i class="fas fa-hourglass-half"></i> Aguarde a confirmação</h3>
+            <p>Pagamentos via boleto ou Pix podem levar até 1 dia útil para serem confirmados. Assim que o pagamento for aprovado, enviaremos uma confirmação por e-mail e seu plano será ativado automaticamente.</p>
         </div>
-        <button type="button" class="btn-primary" id="btn-ir-painel">
-            <i class="fas fa-home"></i> Ir para o Painel
-        </button>
-        <button type="button" class="btn-secondary" id="btn-voltar-checkout">
-            Voltar para Checkout
+        <button type="button" onclick="fecharRetornoMercadoPago()">
+            Continuar
         </button>
     </main>
-
-    <script>
-        (function() {
-            function extrairParametros() {
-                var params = {};
-                try {
-                    var usp = new URLSearchParams(window.location.search);
-                    usp.forEach(function(v, k) { params[k] = v; });
-                } catch (_) {}
-                return params;
-            }
-            var params = extrairParametros();
-
-            if (window.opener && !window.opener.closed) {
-                try {
-                    window.opener.postMessage({
-                        tipo: 'RETORNO_MERCADO_PAGO',
-                        status: 'pending',
-                        collection_id: params.collection_id || params.payment_id || null,
-                        payment_id: params.payment_id || params.collection_id || null,
-                        preference_id: params.preference_id || null,
-                        external_reference: params.external_reference || null
-                    }, window.location.origin);
-                } catch (err) {
-                    console.warn('Não foi possível enviar mensagem para opener:', err.message);
-                }
-                setTimeout(function() { try { window.close(); } catch (_) {} }, 800);
-            }
-
-            document.getElementById('btn-ir-painel').addEventListener('click', function() {
-                window.location.href = 'index.html';
-            });
-            document.getElementById('btn-voltar-checkout').addEventListener('click', function() {
-                window.location.href = 'checkout.html';
-            });
-        })();
-    </script>
+    <script src="../assets/js/retorno-mercado-pago.js"></script>
 </body>
 </html>

@@ -1,447 +1,305 @@
-const crypto = require('crypto');
+const PLANOS = Object.freeze({
+  essencial: { id: "essencial", preco: 79 },
+  pro: { id: "pro", preco: 149 },
+  premium: { id: "premium", preco: 199 }
+});
 
-const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
-const MERCADO_PAGO_WEBHOOK_SECRET = process.env.MERCADO_PAGO_WEBHOOK_SECRET || '';
-const MERCADO_PAGO_ENV = process.env.MERCADO_PAGO_ENV || 'test';
+const json = (statusCode, body) => ({
+  statusCode,
+  headers: {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Access-Control-Allow-Origin": "*"
+  },
+  body: JSON.stringify(body)
+});
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDQxNTA2NCwiZXhwIjoyMDk1OTkxMDY0fQ.wi0H-LHiBiMm3_WPXw1lslRnhAw3atf_BGUZCp2PdNA';
+const valorCorreto = (a, b) =>
+  Math.abs(Number(a) - Number(b)) < 0.01;
 
-const PLANOS = {
-  essencial: { preco: 79.00 },
-  pro: { preco: 149.00 },
-  premium: { preco: 199.00 }
-};
+async function consultarPagamento(id, token) {
+  const r = await fetch(
+    `https://api.mercadopago.com/v1/payments/${encodeURIComponent(id)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  );
 
-const MP_API_BASE = 'https://api.mercadopago.com';
+  const pagamento = await r.json();
 
-function normalizarPlanoId(planoIdBruto) {
-  if (!planoIdBruto) return null;
-  const str = String(planoIdBruto).trim().toLowerCase();
-  if (str.includes('essencial') || str === '1' || str === 'essencial' || str.includes('básico') || str.includes('basico')) {
-    return 'essencial';
+  if (!r.ok) {
+    console.error("Erro Mercado Pago:", pagamento);
+    throw new Error("Falha ao consultar pagamento.");
   }
-  if (str.includes('premium') || str === '3' || str === 'premium') {
-    return 'premium';
-  }
-  if (str.includes('pro') || str === '2' || str === 'pro') {
-    return 'pro';
-  }
-  return str in PLANOS ? str : null;
+
+  return pagamento;
 }
 
-async function supabaseFetch(path, options = {}) {
-  const url = `${SUPABASE_URL}/rest/v1${path}`;
-  const response = await fetch(url, {
-    ...options,
+async function supabase(caminho, opcoes = {}) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error("Supabase privado não configurado.");
+  }
+
+  const r = await fetch(`${url}${caminho}`, {
+    ...opcoes,
     headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-      ...(options.headers || {})
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      ...(opcoes.headers || {})
     }
   });
-  const text = await response.text();
-  let data;
+
+  const texto = await r.text();
+  let dados = texto;
+
   try {
-    data = text ? JSON.parse(text) : null;
-  } catch (_) {
-    data = text;
+    dados = texto ? JSON.parse(texto) : null;
+  } catch {}
+
+  if (!r.ok) {
+    console.error("Erro Supabase:", dados, "Status:", r.status, "Caminho:", caminho);
+    throw new Error("Falha ao atualizar banco.");
   }
-  if (!response.ok) {
-    const msg = (typeof data === 'object' && data?.message) ? data.message : `HTTP ${response.status}`;
-    throw new Error(`Supabase error: ${msg}`);
-  }
-  return { status: response.status, data };
+
+  return dados;
 }
 
-function extrairIdPagamento(event, body) {
-  const query = event.queryStringParameters || {};
-  if (query['data.id']) return query['data.id'];
-  if (query['id']) return query['id'];
-  if (query.payment_id) return query.payment_id;
-  if (body && typeof body === 'object') {
-    if (body.data && typeof body.data === 'object' && body.data.id) return String(body.data.id);
-    if (body.id && body.type) return String(body.id);
-    if (body.payment_id) return String(body.payment_id);
+async function pagamentoJaExiste(id) {
+  try {
+    const registros = await supabase(
+      `/rest/v1/pagamento?codigo_transacao=eq.${encodeURIComponent(String(id))}&select=codigo_transacao&limit=1`,
+      { method: "GET" }
+    );
+    return Array.isArray(registros) && registros.length > 0;
+  } catch (_) {
+    try {
+      const registrosFallback = await supabase(
+        `/rest/v1/pagamento?id=eq.${encodeURIComponent(String(id))}&select=id&limit=1`,
+        { method: "GET" }
+      );
+      return Array.isArray(registrosFallback) && registrosFallback.length > 0;
+    } catch (__) {
+      return false;
+    }
   }
+}
+
+async function buscarUsuarioPorEmail(email) {
+  try {
+    const usuarios = await supabase(
+      `/rest/v1/users?email=eq.${encodeURIComponent(String(email))}&select=email,condominium&limit=1`,
+      { method: "GET" }
+    );
+    if (Array.isArray(usuarios) && usuarios.length > 0) {
+      return usuarios[0];
+    }
+  } catch (_) {}
   return null;
 }
 
-function extrairTipoNotificacao(body) {
-  if (!body || typeof body !== 'object') return null;
-  return body.type || body.topic || null;
-}
-
-function validarAssinaturaMercadoPago(event, body, webhookSecret) {
-  if (!webhookSecret) {
-    console.warn('[webhook] MERCADO_PAGO_WEBHOOK_SECRET não configurado. Validação de assinatura SKIPPED (permitido em sandbox, mas obrigatório em produção).');
-    return true;
-  }
-  if (MERCADO_PAGO_ENV === 'production' && !webhookSecret) {
-    console.error('[webhook] AMBIENTE PRODUÇÃO SEM MERCADO_PAGO_WEBHOOK_SECRET configurado. Bloqueando processamento.');
-    return false;
-  }
-
-  const signatureHeader = (event.headers || {})['x-signature'] || (event.headers || {})['X-Signature'];
-  const requestIdHeader = (event.headers || {})['x-request-id'] || (event.headers || {})['X-Request-Id'];
-
-  if (!signatureHeader || !requestIdHeader) {
-    console.warn('[webhook] Cabeçalhos x-signature e/ou x-request-id ausentes.');
-    return MERCADO_PAGO_ENV !== 'production';
-  }
-
+function extrairCepCondominio(usuario) {
+  if (!usuario?.condominium) return null;
   try {
-    const params = new URLSearchParams(signatureHeader);
-    const ts = params.get('ts');
-    const hash = params.get('v1');
-    if (!ts || !hash) {
-      console.warn('[webhook] Assinatura MP malformada (falta ts ou v1).');
-      return MERCADO_PAGO_ENV !== 'production';
-    }
-    const manifest = `id:${requestIdHeader};request-id:${requestIdHeader};ts:${ts};`;
-    const expected = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(manifest)
-      .digest('hex');
-    if (hash.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(expected))) {
-      console.error('[webhook] Assinatura MP inválida (HMAC não confere).');
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error('[webhook] Exceção ao validar assinatura MP:', err.message);
-    return MERCADO_PAGO_ENV !== 'production';
-  }
-}
-
-async function consultarPagamentoMP(paymentId) {
-  const response = await fetch(`${MP_API_BASE}/v1/payments/${encodeURIComponent(paymentId)}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  const text = await response.text();
-  let data;
-  try {
-    data = text ? JSON.parse(text) : {};
+    const condo = typeof usuario.condominium === "string"
+      ? JSON.parse(usuario.condominium)
+      : usuario.condominium;
+    return condo.cep || null;
   } catch (_) {
-    data = { raw: text };
-  }
-  if (!response.ok) {
-    throw new Error(`MP retornou HTTP ${response.status}: ${data?.error || data?.message || text || 'unknown'}`);
-  }
-  return data;
-}
-
-function mapearStatusMP(statusMP) {
-  switch (String(statusMP || '').toLowerCase()) {
-    case 'approved':
-    case 'authorized':
-      return 'aprovado';
-    case 'pending':
-    case 'in_process':
-    case 'in_mediation':
-      return 'pendente';
-    case 'rejected':
-    case 'cancelled':
-    case 'refunded':
-    case 'charged_back':
-      return 'rejeitado';
-    default:
-      return 'pendente';
-  }
-}
-
-async function verificarPagamentoJaProcessado(mpPaymentId) {
-  try {
-    const result = await supabaseFetch(`/pagamento?select=id,mp_payment_id,status_pagamento&mp_payment_id=eq.${encodeURIComponent(String(mpPaymentId))}`, {
-      method: 'GET',
-      headers: { Prefer: 'return=representation' }
-    });
-    return Array.isArray(result.data) && result.data.length > 0;
-  } catch (err) {
-    console.warn('[webhook] Não foi possível consultar pagamento existente (coluna mp_payment_id pode não existir ainda):', err.message);
-    return false;
-  }
-}
-
-async function buscarPagamentoPorExternalRef(externalReference) {
-  try {
-    const result = await supabaseFetch(`/pagamento?select=*&external_reference=eq.${encodeURIComponent(String(externalReference))}`, {
-      method: 'GET'
-    });
-    return Array.isArray(result.data) ? result.data : [];
-  } catch (_) {
-    return [];
-  }
-}
-
-async function upsertPagamentoNoSupabase(pagamentoMP, planoIdValidado, statusTraduzido) {
-  const mpPaymentId = String(pagamentoMP.id);
-  const externalReference = pagamentoMP.external_reference || null;
-  const transactionAmount = Number(pagamentoMP.transaction_amount || 0);
-  const currencyId = String(pagamentoMP.currency_id || 'BRL');
-  const payerEmail = String(pagamentoMP.payer?.email || pagamentoMP.metadata?.email_usuario || '').trim().toLowerCase();
-  const usuarioId = pagamentoMP.metadata?.usuario_id || null;
-  const statusDetail = pagamentoMP.status_detail || null;
-  const dateApproved = pagamentoMP.date_approved || pagamentoMP.date_created || new Date().toISOString();
-  const agora = new Date().toISOString();
-
-  const row = {
-    mp_payment_id: mpPaymentId,
-    external_reference: externalReference,
-    plano_id: planoIdValidado,
-    status_pagamento: statusTraduzido,
-    status_detail: statusDetail,
-    valor_pago: transactionAmount,
-    moeda: currencyId,
-    email: payerEmail,
-    usuario_id: usuarioId || null,
-    data_pagamento: dateApproved,
-    data_atualizacao: agora,
-    mp_status: pagamentoMP.status || null,
-    mp_status_detail: statusDetail
-  };
-
-  const existentes = await buscarPagamentoPorExternalRef(externalReference);
-  if (existentes && existentes.length > 0) {
-    const existente = existentes[0];
-    const idKey = existente.id !== undefined ? 'id' : (existente.mp_payment_id ? 'mp_payment_id' : 'external_reference');
-    const idValue = idKey === 'id' ? existente.id : (idKey === 'mp_payment_id' ? mpPaymentId : externalReference);
-    console.log(`[webhook] Atualizando registro existente via ${idKey}=${idValue}`);
-    const path = idKey === 'id'
-      ? `/pagamento?id=eq.${encodeURIComponent(String(idValue))}`
-      : `/pagamento?${idKey}=eq.${encodeURIComponent(String(idValue))}`;
-    await supabaseFetch(path, {
-      method: 'PATCH',
-      body: JSON.stringify(row)
-    });
-    return { modo: 'atualizado', ...row };
-  }
-
-  try {
-    const result = await supabaseFetch('/pagamento', {
-      method: 'POST',
-      body: JSON.stringify(row),
-      headers: { Prefer: 'return=representation,resolution=merge-duplicates' }
-    });
-    return { modo: 'criado', ...row, ...(Array.isArray(result.data) ? result.data[0] : result.data) };
-  } catch (insertErr) {
-    console.warn('[webhook] INSERT falhou (talvez colunas ainda não existam). Tentando UPDATE por external_reference...', insertErr.message);
-    try {
-      await supabaseFetch(`/pagamento?external_reference=eq.${encodeURIComponent(String(externalReference))}`, {
-        method: 'PATCH',
-        body: JSON.stringify(row)
-      });
-      return { modo: 'atualizado-fallback', ...row };
-    } catch (patchErr) {
-      console.warn('[webhook] PATCH também falhou. Tentando inserir com subconjunto de colunas compatíveis com tabela antiga...');
-      const minimalRow = {
-        email: payerEmail,
-        plano_id: planoIdValidado,
-        status_pagamento: statusTraduzido,
-        external_reference: externalReference,
-        data_pagamento: dateApproved
-      };
-      const result2 = await supabaseFetch('/pagamento', {
-        method: 'POST',
-        body: JSON.stringify(minimalRow)
-      });
-      return { modo: 'criado-minimal', ...minimalRow, ...(Array.isArray(result2.data) ? result2.data[0] : result2.data) };
-    }
-  }
-}
-
-async function atualizarPlanoUsuarioSupabase(emailUsuario, planoIdValidado) {
-  if (!emailUsuario || !planoIdValidado) return null;
-  try {
-    const result = await supabaseFetch(`/users?select=*&email=eq.${encodeURIComponent(emailUsuario)}`, {
-      method: 'GET'
-    });
-    const usuarios = Array.isArray(result.data) ? result.data : [];
-    if (!usuarios.length) {
-      console.warn(`[webhook] Nenhum usuário encontrado com email ${emailUsuario} para ativar plano.`);
-      return null;
-    }
-    const atualizados = [];
-    for (const usuario of usuarios) {
-      const idKey = usuario.id !== undefined ? 'id' : 'email';
-      const idValue = idKey === 'id' ? usuario.id : emailUsuario;
-      const path = idKey === 'id'
-        ? `/users?id=eq.${encodeURIComponent(String(idValue))}`
-        : `/users?email=eq.${encodeURIComponent(emailUsuario)}`;
-      await supabaseFetch(path, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          plan: planoIdValidado,
-          plano: planoIdValidado,
-          data_ativacao_plano: new Date().toISOString()
-        })
-      });
-      atualizados.push(idValue);
-    }
-    return atualizados;
-  } catch (err) {
-    console.error('[webhook] Erro ao atualizar plano do usuário:', err.message);
     return null;
   }
 }
 
-exports.handler = async (event, context) => {
-  const headers = {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-signature, x-request-id',
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
-    'Access-Control-Max-Age': '86400'
+async function registrar(pagamento, plano, email) {
+  if (await pagamentoJaExiste(pagamento.id)) {
+    return { duplicado: true };
+  }
+
+  const usuario = await buscarUsuarioPorEmail(email);
+  const cep = extrairCepCondominio(usuario);
+
+  const dadosPagamento = {
+    plano_id: plano.id,
+    valor_pago: Number(pagamento.transaction_amount),
+    status_pagamento: "aprovado",
+    codigo_transacao: String(pagamento.id),
+    data_pagamento:
+      pagamento.date_approved || pagamento.date_created || new Date().toISOString(),
+    external_reference:
+      pagamento.external_reference || null,
+    status_detail: pagamento.status_detail || null,
+    email_usuario: email,
+    email: email
   };
 
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers };
+  if (cep) {
+    dadosPagamento.cep = cep;
   }
 
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Método não permitido. Webhook aceita apenas POST.' })
-    };
-  }
-
-  if (!MERCADO_PAGO_ACCESS_TOKEN) {
-    console.error('[webhook] MERCADO_PAGO_ACCESS_TOKEN não configurado.');
-    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Webhook não configurado.' }) };
-  }
-
-  let body = null;
-  let rawBody = '';
-  try {
-    rawBody = event.isBase64Encoded
-      ? Buffer.from(event.body, 'base64').toString('utf-8')
-      : (event.body || '');
-    body = rawBody ? JSON.parse(rawBody) : null;
-  } catch (parseError) {
-    console.error('[webhook] Body inválido (JSON esperado):', parseError.message);
-    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Body inválido.' }) };
-  }
-
-  const tipoNotificacao = extrairTipoNotificacao(body);
-  const paymentId = extrairIdPagamento(event, body);
-
-  console.log('[webhook] Evento recebido:', {
-    tipoNotificacao,
-    paymentId: paymentId ? '[presente]' : '[ausente]',
-    action: body?.action || null,
-    query: event.queryStringParameters || null
+  await supabase("/rest/v1/pagamento", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(dadosPagamento)
   });
 
-  const actionIgnored = tipoNotificacao && !['payment', 'payment.created', 'payment.updated', 'payment.approved'].includes(tipoNotificacao) && !['payment.updated', 'payment.created'].includes(String(body?.action || ''));
-  if (actionIgnored || !paymentId) {
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ status: 'ignored', motivo: actionIgnored ? 'tipo-notificacao-nao-pagamento' : 'sem-payment-id' })
-    };
-  }
-
-  const assinaturaValida = validarAssinaturaMercadoPago(event, body, MERCADO_PAGO_WEBHOOK_SECRET);
-  if (!assinaturaValida) {
-    return {
-      statusCode: MERCADO_PAGO_ENV === 'production' ? 401 : 200,
-      headers,
-      body: JSON.stringify({ status: MERCADO_PAGO_ENV === 'production' ? 'invalid-signature' : 'ignored-invalid-signature-dev' })
-    };
-  }
-
-  let pagamentoMP;
   try {
-    pagamentoMP = await consultarPagamentoMP(paymentId);
-  } catch (err) {
-    console.error('[webhook] Falha ao consultar pagamento na API do MP:', err.message);
-    return { statusCode: 502, headers, body: JSON.stringify({ error: 'Falha ao consultar pagamento.' }) };
+    await supabase(
+      "/rest/v1/user_plan_status?on_conflict=email",
+      {
+        method: "POST",
+        headers: {
+          Prefer:
+            "resolution=merge-duplicates,return=representation"
+        },
+        body: JSON.stringify({
+          email,
+          plano_escolhido: plano.id,
+          status: "ativo"
+        })
+      }
+    );
+  } catch (erroUserPlan) {
+    console.warn("Tabela user_plan_status não disponível, tentando atualizar users diretamente:", erroUserPlan.message || erroUserPlan);
+    try {
+      await supabase(
+        `/rest/v1/users?email=eq.${encodeURIComponent(String(email))}`,
+        {
+          method: "PATCH",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify({
+            plano: plano.id,
+            plano_escolhido: plano.id,
+            plan_status: "ativo"
+          })
+        }
+      );
+    } catch (erroUpdateUser) {
+      console.warn("Não foi possível atualizar tabela users também:", erroUpdateUser.message || erroUpdateUser);
+    }
   }
 
-  console.log('[webhook] Pagamento MP consultado:', {
-    id: pagamentoMP.id,
-    status: pagamentoMP.status,
-    status_detail: pagamentoMP.status_detail,
-    external_reference: pagamentoMP.external_reference,
-    transaction_amount: pagamentoMP.transaction_amount,
-    currency_id: pagamentoMP.currency_id,
-    payer_email: pagamentoMP.payer?.email,
-    metadata: pagamentoMP.metadata
-  });
+  return { duplicado: false };
+}
 
-  const metadata = pagamentoMP.metadata || {};
-  const planoIdBruto = metadata.plano_id || pagamentoMP.items?.[0]?.id || null;
-  const planoIdValidado = normalizarPlanoId(planoIdBruto);
-  const valorEsperado = planoIdValidado ? PLANOS[planoIdValidado].preco : null;
-  const transactionAmount = Number(pagamentoMP.transaction_amount || 0);
-  const currencyId = String(pagamentoMP.currency_id || '').toUpperCase();
-  const payerEmail = String(pagamentoMP.payer?.email || metadata.email_usuario || '').trim().toLowerCase();
-  const emailMetadata = String(metadata.email_usuario || '').trim().toLowerCase();
-
-  if (!planoIdValidado) {
-    console.error(`[webhook] Plano inválido/desconhecido: ${planoIdBruto}`);
-    return { statusCode: 200, headers, body: JSON.stringify({ status: 'plano-invalido', paymentId }) };
+exports.handler = async event => {
+  if (event.httpMethod === "OPTIONS") {
+    return json(204, {});
   }
 
-  if (!valorEsperado || Math.abs(transactionAmount - valorEsperado) > 0.02) {
-    console.error(`[webhook] Valor inesperado. Esperado R$${valorEsperado}, recebido R$${transactionAmount}. Bloqueando ativação.`);
-    await upsertPagamentoNoSupabase(pagamentoMP, planoIdValidado, 'rejeitado');
-    return { statusCode: 200, headers, body: JSON.stringify({ status: 'valor-incorreto', paymentId }) };
+  if (event.httpMethod !== "POST") {
+    return json(405, { erro: "Método não permitido." });
   }
 
-  if (currencyId !== 'BRL') {
-    console.error(`[webhook] Moeda incorreta: ${currencyId}. Esperado BRL.`);
-    await upsertPagamentoNoSupabase(pagamentoMP, planoIdValidado, 'rejeitado');
-    return { statusCode: 200, headers, body: JSON.stringify({ status: 'moeda-incorreta', paymentId }) };
+  const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+
+  if (!token) {
+    return json(500, {
+      erro: "Credencial do Mercado Pago ausente."
+    });
   }
 
-  if (emailMetadata && payerEmail && emailMetadata !== payerEmail) {
-    console.warn(`[webhook] Divergência de e-mail: metadata=${emailMetadata} vs payer=${payerEmail}. Mantendo payer como oficial.`);
-  }
-
-  const jaProcessado = await verificarPagamentoJaProcessado(pagamentoMP.id);
-  if (jaProcessado && pagamentoMP.status === 'approved') {
-    console.log(`[webhook] Pagamento ${pagamentoMP.id} JÁ FOI processado anteriormente (idempotência). Nenhuma alteração repetida.`);
-    return { statusCode: 200, headers, body: JSON.stringify({ status: 'idempotente-ja-aprovado', paymentId }) };
-  }
-
-  const statusTraduzido = mapearStatusMP(pagamentoMP.status);
-
-  let dbResult;
   try {
-    dbResult = await upsertPagamentoNoSupabase(pagamentoMP, planoIdValidado, statusTraduzido);
-  } catch (dbErr) {
-    console.error('[webhook] Falha ao gravar no Supabase (talvez precise rodar o SQL de migração):', dbErr.message);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Falha ao persistir pagamento.', detalhe: dbErr.message }) };
-  }
+    let corpo = {};
+    try {
+      corpo = JSON.parse(event.body || "{}");
+    } catch {}
 
-  let usuarioAtualizado = null;
-  if (pagamentoMP.status === 'approved') {
-    const emailParaAtivar = payerEmail || emailMetadata;
-    usuarioAtualizado = await atualizarPlanoUsuarioSupabase(emailParaAtivar, planoIdValidado);
-    console.log(`[webhook] ✅ Pagamento APROVADO ${pagamentoMP.id}. Plano ${planoIdValidado} ativado para ${emailParaAtivar}. Usuários atualizados:`, usuarioAtualizado);
-  } else {
-    console.log(`[webhook] Pagamento ${pagamentoMP.id} com status ${pagamentoMP.status} (${statusTraduzido}). Aguardando aprovação para ativar plano.`);
-  }
+    const q = event.queryStringParameters || {};
+    const pagamentoId =
+      corpo?.data?.id ||
+      corpo?.id ||
+      q["data.id"] ||
+      q.data_id ||
+      q.id;
 
-  return {
-    statusCode: 200,
-    headers,
-    body: JSON.stringify({
-      status: 'processado',
-      paymentId,
-      mpStatus: pagamentoMP.status,
-      statusTraduzido,
-      planoId: planoIdValidado,
-      dbOperacao: dbResult?.modo || null,
-      usuariosAtualizados: usuarioAtualizado
-    })
-  };
+    if (!pagamentoId) {
+      console.log("[Webhook MP] Sem ID de pagamento. Corpo:", JSON.stringify(corpo), "Query:", JSON.stringify(q));
+      return json(200, {
+        recebido: true,
+        ignorado: true
+      });
+    }
+
+    console.log("[Webhook MP] Processando pagamento:", pagamentoId);
+
+    const pagamento = await consultarPagamento(
+      pagamentoId,
+      token
+    );
+
+    console.log("[Webhook MP] Status pagamento:", pagamento.status, "detail:", pagamento.status_detail);
+
+    const plano = PLANOS[
+      String(
+        pagamento.metadata?.plano_id || ""
+      ).toLowerCase()
+    ];
+
+    if (!plano) {
+      return json(400, { erro: "Plano inválido no metadata." });
+    }
+
+    if (pagamento.currency_id !== "BRL") {
+      return json(400, { erro: "Moeda inválida." });
+    }
+
+    if (
+      !valorCorreto(
+        pagamento.transaction_amount,
+        plano.preco
+      )
+    ) {
+      console.warn(`[Webhook MP] Valor divergente: esperado R$${plano.preco}, recebido R$${pagamento.transaction_amount}`);
+      return json(400, {
+        erro: "Valor diferente do plano."
+      });
+    }
+
+    const email = String(
+      pagamento.metadata?.email_usuario ||
+      pagamento.payer?.email ||
+      pagamento.metadata?.email ||
+      ""
+    ).trim().toLowerCase();
+
+    if (!email) {
+      return json(400, {
+        erro: "Usuário não identificado."
+      });
+    }
+
+    if (pagamento.status === "approved") {
+      const resultado = await registrar(
+        pagamento,
+        plano,
+        email
+      );
+
+      console.log("[Webhook MP] Pagamento aprovado. Duplicado:", resultado.duplicado, "Email:", email, "Plano:", plano.id);
+
+      return json(200, {
+        recebido: true,
+        aprovado: true,
+        duplicado: resultado.duplicado
+      });
+    }
+
+    return json(200, {
+      recebido: true,
+      aprovado: false,
+      status: pagamento.status,
+      statusDetail: pagamento.status_detail || null
+    });
+  } catch (erro) {
+    console.error("Erro no webhook:", erro);
+
+    return json(500, {
+      erro: "Erro interno no webhook."
+    });
+  }
 };

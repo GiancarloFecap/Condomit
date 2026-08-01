@@ -2,7 +2,6 @@ let currentUser = null;
 let selectedPlan = null;
 let selectedPrice = 0;
 let plans = [];
-let selectedPlanSlug = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
     const loggedInUser = sessionStorage.getItem('condominiumUser');
@@ -27,7 +26,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     try {
         plans = await fetchPlans();
-        configurarContextoMercadoPago();
         renderPlans();
         initCheckoutButton();
     } catch (error) {
@@ -35,58 +33,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         alert('Erro ao carregar planos. Tente novamente.');
     }
 });
-
-function configurarContextoMercadoPago() {
-    window.MP_AUTO_INIT = false;
-    window.mercadoPagoContexto = {
-        obterPlanoSelecionado: function() {
-            if (selectedPlanSlug) return selectedPlanSlug;
-            if (selectedPlan) {
-                return mapearNomePlanoParaSlug(selectedPlan.nome || selectedPlan.id);
-            }
-            const cardSelecionado = document.querySelector('.plan-card-option.selected');
-            if (cardSelecionado && cardSelecionado.dataset.planId) {
-                return mapearNomePlanoParaSlug(cardSelecionado.dataset.planId);
-            }
-            return null;
-        },
-        aoDeslogar: function() {
-            sessionStorage.removeItem('condominiumUser');
-            window.location.href = 'entrar.html';
-        },
-        aoRetornar: function(dados) {
-            console.log('[Checkout] Retorno Mercado Pago:', dados);
-        },
-        aposAprovado: async function() {
-            try {
-                const fresh = await refreshCurrentUserFromDb();
-                if (typeof syncAllAvatars === 'function' && fresh) syncAllAvatars(fresh);
-            } catch (_) {}
-            setTimeout(function() {
-                window.location.href = 'index.html';
-            }, 1200);
-        },
-        aposFalha: function() {
-        },
-        aposPendente: function() {
-            setTimeout(function() {
-                window.location.href = 'index.html';
-            }, 800);
-        }
-    };
-    if (typeof window.MercadoPagoCheckout !== 'undefined' && typeof window.MercadoPagoCheckout.inicializarBotoes === 'function') {
-        window.MercadoPagoCheckout.inicializarBotoes(window.mercadoPagoContexto);
-    }
-}
-
-function mapearNomePlanoParaSlug(planNomeOuId) {
-    if (!planNomeOuId) return null;
-    const str = String(planNomeOuId).trim().toLowerCase();
-    if (str.includes('essencial') || str === '1' || str === 'essencial' || str.includes('básico') || str.includes('basico')) return 'essencial';
-    if (str.includes('premium') || str === '3' || str === 'premium') return 'premium';
-    if (str.includes('pro') || str === '2' || str === 'pro') return 'pro';
-    return null;
-}
 
 function configureLogoutButton() {
     const logoutBtn = document.getElementById('btn-logout-checkout');
@@ -157,7 +103,9 @@ async function fetchPlans() {
         throw new Error('Falha ao buscar planos');
     }
     const data = await response.json();
-    return Array.isArray(data) ? data : [];
+    const planosArray = Array.isArray(data) ? data : [];
+    window.__planosDisponiveis = planosArray;
+    return planosArray;
 }
 
 function renderPlans() {
@@ -170,6 +118,7 @@ function renderPlans() {
         const isRecommended = index === 1;
         planCard.className = `plan-card-option ${isRecommended ? 'selected' : ''}`;
         planCard.dataset.planId = String(plan.id);
+        planCard.dataset.planName = String(plan.nome || '');
 
         let icon = 'fa-leaf';
         let features = [];
@@ -223,16 +172,6 @@ function selectPlan(card, plan) {
     card.classList.add('selected');
     selectedPlan = plan;
     selectedPrice = getPlanPrice(plan);
-    selectedPlanSlug = mapearNomePlanoParaSlug(plan?.nome || plan?.id);
-    window.mercadoPagoSelectedPlanSlug = selectedPlanSlug;
-    const checkoutBtn = document.getElementById('checkout-btn');
-    if (checkoutBtn && selectedPlanSlug) {
-        checkoutBtn.setAttribute('data-mercado-pago-plano', selectedPlanSlug);
-        checkoutBtn.dataset.mpCheckoutInitialized = '';
-        if (typeof window.MercadoPagoCheckout !== 'undefined' && typeof window.MercadoPagoCheckout.inicializarBotoes === 'function') {
-            window.MercadoPagoCheckout.inicializarBotoes(window.mercadoPagoContexto);
-        }
-    }
     updateSummary();
     initCheckoutButton();
 }
@@ -262,59 +201,68 @@ function setCheckoutButtonState(disabled) {
     btn.style.cursor = disabled ? 'not-allowed' : 'pointer';
 }
 
-function initCheckoutButton() {
-    const container = document.getElementById('payment-brick_container');
-    const hint = document.querySelector('.payment-hint');
-    const planoSlug = selectedPlanSlug || (selectedPlan ? mapearNomePlanoParaSlug(selectedPlan.nome || selectedPlan.id) : null) || 'pro';
-    const temPlanoValido = Boolean(planoSlug);
+function mapearNomePlanoParaId(nomePlano) {
+    if (!nomePlano) return '';
+    const chave = String(nomePlano).trim().toLowerCase();
+    if (chave.includes('essencial')) return 'essencial';
+    if (chave.includes('premium')) return 'premium';
+    if (chave.includes('pro')) return 'pro';
+    return '';
+}
 
-    if (hint) {
-        hint.textContent = 'Pagamento processado pelo Mercado Pago — checkout seguro e criptografado.';
+function initCheckoutButton() {
+    const planoId = mapearNomePlanoParaId(selectedPlan?.nome);
+
+    if (window.atualizarPlanoSelecionado) {
+        window.atualizarPlanoSelecionado(planoId);
     }
 
+    const container = document.getElementById('payment-brick_container');
     container.innerHTML = `
         <div style="text-align:center;">
             <button
                 type="button"
                 id="checkout-btn"
-                data-mercado-pago-plano="${planoSlug}"
-                class="mp-checkout-btn"
+                data-mercado-pago-checkout
+                data-mercado-pago-plano="${planoId || ''}"
                 style="
                     background-color: #009ee3;
                     color: white;
                     border: none;
                     padding: 15px 40px;
                     font-size: 18px;
-                    border-radius: 8px;
-                    cursor: ${temPlanoValido ? 'pointer' : 'not-allowed'};
+                    border-radius: 10px;
+                    cursor: pointer;
                     font-weight: bold;
-                    transition: background-color 0.25s ease, transform 0.15s ease, box-shadow 0.2s ease;
-                    box-shadow: 0 8px 24px rgba(0, 158, 227, 0.18);
+                    transition: all 0.2s ease;
+                    box-shadow: 0 4px 12px rgba(0, 158, 227, 0.2);
                     width: 100%;
-                    max-width: 360px;
+                    max-width: 340px;
                 "
-                onmouseover="if(!this.disabled){this.style.backgroundColor='#0088c7';this.style.transform='translateY(-1px)';this.style.boxShadow='0 12px 28px rgba(0, 158, 227, 0.25)'}"
-                onmouseout="if(!this.disabled){this.style.backgroundColor='#009ee3';this.style.transform='translateY(0)';this.style.boxShadow='0 8px 24px rgba(0, 158, 227, 0.18)'}"
-                onmousedown="if(!this.disabled){this.style.transform='translateY(0)';this.style.boxShadow='0 5px 16px rgba(0, 158, 227, 0.2)'}"
-                onmouseup="if(!this.disabled){this.style.transform='translateY(-1px)'}"
+                onmouseover="this.style.backgroundColor='#007fc0';this.style.transform='translateY(-1px)';"
+                onmouseout="this.style.backgroundColor='#009ee3';this.style.transform='translateY(0)';"
             >
-                <i class="fas fa-credit-card" style="margin-right:10px;"></i><span class="btn-texto">Pagar com Mercado Pago</span>
+                <i class="fas fa-credit-card"></i> Pagar com Mercado Pago
             </button>
-            <p style="margin-top:14px;color:#64748b;font-size:13.5px;line-height:1.6;">
-                Checkout seguro do Mercado Pago.<br/>
-                Aceita cartão de crédito, PIX, boleto e mais.
+            <p style="margin-top:16px;color:#64748b;font-size:14px;line-height:1.6;">
+                Pagamento 100% seguro via Mercado Pago.<br>
+                Aprovamos cartões, Pix e boleto.
             </p>
-            <div style="margin-top:16px;display:flex;justify-content:center;gap:10px;align-items:center;flex-wrap:wrap;color:#94a3b8;font-size:12px;">
-                <span><i class="fas fa-lock" style="color:#10b981;margin-right:5px;"></i> SSL 256-bit</span>
-                <span style="color:#cbd5e1;">•</span>
-                <span><i class="fas fa-shield-alt" style="color:#10b981;margin-right:5px;"></i> Proteção Mercado Pago</span>
+            <div style="margin-top:16px;display:flex;justify-content:center;gap:14px;flex-wrap:wrap;color:#94a3b8;font-size:14px;">
+                <span><i class="fas fa-credit-card"></i> Cartão</span>
+                <span><i class="fas fa-qrcode"></i> Pix</span>
+                <span><i class="fas fa-barcode"></i> Boleto</span>
             </div>
         </div>
     `;
 
-    setCheckoutButtonState(!temPlanoValido);
-
-    if (typeof window.MercadoPagoCheckout !== 'undefined' && typeof window.MercadoPagoCheckout.inicializarBotoes === 'function') {
-        window.MercadoPagoCheckout.inicializarBotoes(window.mercadoPagoContexto);
+    const btn = document.getElementById('checkout-btn');
+    if (btn && typeof window.pagar === 'function') {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            window.pagar(btn);
+        });
     }
+
+    setCheckoutButtonState(!selectedPlan);
 }
