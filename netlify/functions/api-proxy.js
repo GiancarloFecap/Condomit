@@ -120,59 +120,73 @@ function getBrevoErrorMessage(error) {
 }
 
 function buildResetEmailHtml(usuarioNome, link) {
+  const logoUrl = `${APP_BASE_URL}/assets/logo-full.png`;
+  const supportMailto = 'mailto:contato.condomit@gmail.com?subject=Suporte%20Condomit';
   return `
-    <div style="margin:0;padding:36px 16px;background:#edf3ff;">
-      <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:28px;overflow:hidden;border:1px solid #d9e7ff;box-shadow:0 24px 60px rgba(30,64,175,0.12);font-family:Arial,sans-serif;color:#1f2937;">
-        <div style="padding:32px 36px;background:linear-gradient(135deg,#123c95 0%,#1e40af 45%,#32C26D 100%);">
-          <div style="display:inline-block;padding:7px 14px;border-radius:999px;background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.22);color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
-            Condomit
-          </div>
-          <h1 style="margin:18px 0 10px;color:#ffffff;font-size:30px;line-height:1.2;font-weight:700;">Redefina sua senha com seguranca</h1>
-          <p style="margin:0;max-width:420px;color:rgba(255,255,255,0.92);font-size:15px;line-height:1.75;">
-            Recebemos um pedido para atualizar o acesso da sua conta. Use o botao abaixo para continuar com total seguranca.
-          </p>
-        </div>
-
-        <div style="padding:34px 36px 28px;">
-          <p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:#334155;">
-            Olá, <strong style="color:#1e40af;">${usuarioNome}</strong>.
-          </p>
-          <p style="margin:0 0 24px;font-size:15px;line-height:1.8;color:#475569;">
-            Para criar uma nova senha da sua conta Condomit, clique no botão abaixo. Esse link foi gerado exclusivamente para você e pode ser usado uma única vez durante o período de validade.
-          </p>
-
-          <div style="margin:0 0 28px;padding:24px;background:linear-gradient(180deg,#f8fbff 0%,#f3f8ff 100%);border:1px solid #dbeafe;border-radius:20px;text-align:center;">
-            <a href="${link}" style="display:inline-block;padding:16px 32px;border-radius:14px;background:linear-gradient(135deg,#79D836 0%,#32C26D 100%);color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;letter-spacing:0.01em;box-shadow:0 14px 28px rgba(50,194,109,0.24);">
-              Criar nova senha
-            </a>
-            <p style="margin:14px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
-              Link temporário válido por <strong style="color:#1e40af;">5 minutos</strong>.
-            </p>
-          </div>
-
-          <div style="margin:0 0 22px;padding:18px 20px;background:#f9fbff;border-left:4px solid #32C26D;border-radius:16px;">
-            <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:#123c95;">Importante</p>
-            <p style="margin:0;font-size:14px;line-height:1.75;color:#475569;">
-              Se você não solicitou esta alteração, desconsidere este email. Nenhuma modificação será feita na sua conta sem a confirmação pelo link acima.
-            </p>
-          </div>
-
-          <p style="margin:0 0 8px;font-size:13px;line-height:1.7;color:#64748b;">
-            Se o botão não abrir, copie e cole este endereço no navegador:
-          </p>
-          <p style="margin:0;word-break:break-word;">
-            <a href="${link}" style="color:#2563eb;font-size:13px;line-height:1.7;text-decoration:none;">${link}</a>
-          </p>
-        </div>
-
-        <div style="padding:20px 36px;background:#f8fafc;border-top:1px solid #e5e7eb;">
-          <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#1e40af;">Condomit</p>
-          <p style="margin:0;font-size:12px;line-height:1.7;color:#94a3b8;">
-            Tecnologia para simplificar a vida no seu condomínio.
-          </p>
-        </div>
-      </div>
-    </div>
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <body style="margin:0;padding:0;background-color:#efefef;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#efefef;margin:0;padding:0;">
+          <tr>
+            <td align="center" style="padding:20px 12px 28px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:820px;">
+                <tr>
+                  <td align="center" style="padding:0 0 18px;">
+                    <img src="${logoUrl}" alt="Condomit" width="264" style="display:block;width:264px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color:#ffffff;border:1px solid #d8d8d8;border-radius:12px;padding:0;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td style="padding:56px 56px 26px;font-family:Arial,sans-serif;color:#172554;font-size:18px;line-height:1.7;">
+                          <p style="margin:0 0 28px;font-size:18px;line-height:1.7;color:#172554;">
+                            <strong>Olá, ${usuarioNome},</strong>
+                          </p>
+                          <p style="margin:0 0 26px;font-size:18px;line-height:1.75;color:#1f2f5c;">
+                            Recebemos uma solicitação para redefinir a senha da sua conta no Condomit. Clique no botão abaixo para criar uma nova senha.
+                          </p>
+                          <p style="margin:0 0 34px;font-size:18px;line-height:1.75;color:#1f2f5c;">
+                            Se você não solicitou a troca de senha, pode ignorar este e-mail.
+                          </p>
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 42px;">
+                            <tr>
+                              <td align="center" bgcolor="#2563eb" style="border-radius:6px;">
+                                <a href="${link}" style="display:inline-block;padding:17px 52px;font-family:Arial,sans-serif;font-size:18px;font-weight:400;line-height:1.2;color:#ffffff;text-decoration:none;background:#2563eb;border-radius:6px;">
+                                  Redefinir senha
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                          <div style="border-top:1px solid #d9d9d9;font-size:1px;line-height:1px;margin:0 0 34px;">&nbsp;</div>
+                          <p style="margin:0 0 12px;font-size:16px;line-height:1.85;color:#1f2f5c;">
+                            Precisa de ajuda?
+                            <a href="${supportMailto}" style="color:#2563eb;text-decoration:none;">Entre em contato com nossa equipe de suporte</a>
+                          </p>
+                          <p style="margin:0 0 12px;font-size:16px;line-height:1.85;color:#1f2f5c;">
+                            ou acesse nossa
+                            <a href="${supportMailto}" style="color:#2563eb;text-decoration:none;">Central de Ajuda</a>.
+                          </p>
+                          <p style="margin:0;font-size:16px;line-height:1.85;color:#1f2f5c;">
+                            A segurança da sua conta é importante para nós.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding:18px 24px 0;font-family:Arial,sans-serif;color:#7c8aa5;">
+                    <p style="margin:0 0 8px;font-size:14px;line-height:1.7;">Este é um e-mail automático, por favor não responda.</p>
+                    <p style="margin:0;font-size:14px;line-height:1.7;">© 2026 Condomit. Todos os direitos reservados.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
   `;
 }
 
