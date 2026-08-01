@@ -15,6 +15,7 @@ const KEYCLOAK_CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID || '';
 const KEYCLOAK_CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET || '';
 const KEYCLOAK_ADMIN_USERNAME = process.env.KEYCLOAK_ADMIN_USERNAME || '';
 const KEYCLOAK_ADMIN_PASSWORD = process.env.KEYCLOAK_ADMIN_PASSWORD || '';
+const MERCADO_PAGO_IS_TEST_MODE = /^TEST-/i.test(String(MERCADO_PAGO_ACCESS_TOKEN || '').trim());
 
 const brevoClient = BREVO_API_KEY ? new BrevoClient({
   apiKey: BREVO_API_KEY,
@@ -437,7 +438,7 @@ async function createMercadoPagoPreference(data) {
         unit_price: normalizedAmount
       }
     ],
-    payer: payerEmail ? { email: payerEmail } : undefined,
+    payer: !MERCADO_PAGO_IS_TEST_MODE && payerEmail ? { email: payerEmail } : undefined,
     back_urls: {
       success: successUrl.toString(),
       failure: failureUrl.toString(),
@@ -449,9 +450,11 @@ async function createMercadoPagoPreference(data) {
   };
 
   const created = await mpCreatePreference(preferencePayload);
-  const initPoint = created?.init_point || created?.sandbox_init_point;
+  const initPoint = MERCADO_PAGO_IS_TEST_MODE
+    ? (created?.sandbox_init_point || created?.init_point)
+    : (created?.init_point || created?.sandbox_init_point);
   if (!initPoint) throw new Error(created?.message || 'Link de pagamento não retornado');
-  return { preferenceId: created.id, initPoint };
+  return { preferenceId: created.id, initPoint, testMode: MERCADO_PAGO_IS_TEST_MODE };
 }
 
 async function getMercadoPagoPaymentStatus(data) {
