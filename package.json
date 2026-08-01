@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@getbrevo/brevo": "^6.0.2",
+    "mercadopago": "^3.1.0",
     "nodemailer": "^9.0.1"
   }
 }

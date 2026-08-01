@@ -1,8 +1,10 @@
 const crypto = require('crypto');
 const { Brevo, BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
+const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDQxNTA2NCwiZXhwIjoyMDk1OTkxMDY0fQ.wi0H-LHiBiMm3_WPXw1lslRnhAw3atf_BGUZCp2PdNA';
+const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
 const APP_BASE_URL = process.env.APP_BASE_URL || 'https://condomit.netlify.app';
 const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || '';
@@ -14,6 +16,8 @@ const KEYCLOAK_CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET || '';
 const KEYCLOAK_ADMIN_USERNAME = process.env.KEYCLOAK_ADMIN_USERNAME || '';
 const KEYCLOAK_ADMIN_PASSWORD = process.env.KEYCLOAK_ADMIN_PASSWORD || '';
 
+const mpClient = new MercadoPagoConfig({ accessToken: MERCADO_PAGO_ACCESS_TOKEN });
+const preference = new Preference(mpClient);
 const brevoClient = BREVO_API_KEY ? new BrevoClient({
   apiKey: BREVO_API_KEY,
   environment: BrevoEnvironment.Production
@@ -322,6 +326,23 @@ async function updateKeycloakPassword(email, password) {
   return { synced: true };
 }
 
+async function createMercadoPagoPreference(data) {
+  const { amount, planName, payerEmail } = data;
+  const preferenceData = {
+    items: [
+      {
+        title: `Plano ${planName} - Condomit`,
+        unit_price: parseFloat(amount),
+        quantity: 1,
+        currency_id: 'BRL'
+      }
+    ],
+    payer: { email: payerEmail }
+  };
+  const result = await preference.create({ body: preferenceData });
+  return { preferenceId: result.id, initPoint: result.init_point };
+}
+
 async function handleForgotPassword(event, body) {
   const { email, resetPageUrl } = body || {};
   // #region debug-point C:netlify-handler-start
@@ -425,7 +446,7 @@ function parsePath(event) {
       const rest = p.slice(apiProxyIndex + '/.netlify/functions/api-proxy'.length);
       return rest.startsWith('/') ? rest : '/' + rest;
     }
-    if (p.startsWith('/users') || p.startsWith('/register') || p.startsWith('/condominiums') || p.startsWith('/pagamento') || p.startsWith('/reserva') || p.startsWith('/plano') || p.startsWith('/forgot') || p.startsWith('/reset') || p.startsWith('/user_condominiums') || p.startsWith('/esqueceu-senha')) {
+    if (p.startsWith('/users') || p.startsWith('/register') || p.startsWith('/condominiums') || p.startsWith('/pagamento') || p.startsWith('/reserva') || p.startsWith('/plano') || p.startsWith('/forgot') || p.startsWith('/reset') || p.startsWith('/mercadopago') || p.startsWith('/user_condominiums') || p.startsWith('/esqueceu-senha')) {
       return p;
     }
   }
@@ -544,6 +565,11 @@ exports.handler = async (event, context) => {
     if (pathname === '/user_condominiums' && rawMethod === 'POST') {
       const result = await proxySupabaseRequest(body, '/user_condominiums', 'POST');
       return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/mercadopago/preference' && rawMethod === 'POST') {
+      const mpResult = await createMercadoPagoPreference(body || {});
+      return { statusCode: 200, headers, body: JSON.stringify(mpResult) };
     }
 
     if (pathname === '/plano' && rawMethod === 'GET') {
