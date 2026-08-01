@@ -1,11 +1,11 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const crypto = require('crypto');
 const { Brevo, BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
-const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const root = process.cwd();
 const port = process.env.PORT ? Number(process.env.PORT) : 8081;
@@ -13,7 +13,7 @@ const port = process.env.PORT ? Number(process.env.PORT) : 8081;
 const env = loadEnv(path.join(root, '.env'));
 const SUPABASE_URL = env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTUwNjQsImV4cCI6MjA5NTk5MTA2NH0.WTk0rZaTsPvs30uEWDfylc-z6L3G8IUb_J73oYtjuWU';
-const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
+const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
 const APP_BASE_URL = env.APP_BASE_URL || 'https://condomit.netlify.app';
 const BREVO_API_KEY = env.BREVO_API_KEY || process.env.BREVO_API_KEY || '';
 const BREVO_SENDER_EMAIL = env.BREVO_SENDER_EMAIL || process.env.BREVO_SENDER_EMAIL || '';
@@ -25,12 +25,69 @@ const KEYCLOAK_CLIENT_SECRET = env.KEYCLOAK_CLIENT_SECRET || '';
 const KEYCLOAK_ADMIN_USERNAME = env.KEYCLOAK_ADMIN_USERNAME || '';
 const KEYCLOAK_ADMIN_PASSWORD = env.KEYCLOAK_ADMIN_PASSWORD || '';
 
-const mpClient = new MercadoPagoConfig({ accessToken: MERCADO_PAGO_ACCESS_TOKEN });
-const preference = new Preference(mpClient);
 const brevoClient = BREVO_API_KEY ? new BrevoClient({
   apiKey: BREVO_API_KEY,
   environment: BrevoEnvironment.Production
 }) : null;
+
+function readJsonBody(req) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch (_) {
+        resolve({});
+      }
+    });
+  });
+}
+
+function mpCreatePreference(preferencePayload) {
+  return new Promise((resolve, reject) => {
+    if (!MERCADO_PAGO_ACCESS_TOKEN) {
+      reject(new Error('MERCADO_PAGO_ACCESS_TOKEN não configurado'));
+      return;
+    }
+
+    const body = JSON.stringify(preferencePayload);
+    const options = {
+      hostname: 'api.mercadopago.com',
+      path: '/checkout/preferences',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
+        'Content-Length': Buffer.byteLength(body)
+      }
+    };
+
+    const request = https.request(options, (response) => {
+      let data = '';
+      response.on('data', chunk => data += chunk);
+      response.on('end', () => {
+        let parsed = null;
+        try {
+          parsed = data ? JSON.parse(data) : null;
+        } catch (_) {
+          reject(new Error('Erro ao parsear resposta do Mercado Pago'));
+          return;
+        }
+        if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+          const message = parsed?.message || parsed?.error || `Erro Mercado Pago (HTTP ${response.statusCode})`;
+          reject(new Error(message));
+          return;
+        }
+        resolve(parsed);
+      });
+    });
+
+    request.on('error', (e) => reject(e));
+    request.write(body);
+    request.end();
+  });
+}
 
 function loadEnv(filePath) {
   const env = {};
@@ -287,40 +344,48 @@ function proxySupabaseRequest(req, res, pathSuffix, method) {
 }
 
 async function createMercadoPagoPreference(req, res) {
-  let body = '';
-  req.on('data', chunk => body += chunk);
-  req.on('end', async () => {
-    try {
-      const data = JSON.parse(body);
-      const { amount, planName, payerEmail } = data;
+  try {
+    const data = await readJsonBody(req);
+    const { amount, planName, payerEmail } = data || {};
 
-      const preferenceData = {
-        items: [
-          {
-            title: `Plano ${planName} - Condomit`,
-            unit_price: parseFloat(amount),
-            quantity: 1,
-            currency_id: 'BRL'
-          }
-        ],
-        payer: {
-          email: payerEmail
+    const origin = getRequestOrigin(req);
+    const base = APP_BASE_URL || origin;
+    const successUrl = new URL('/pages/index.html', base).toString();
+    const failureUrl = new URL('/pages/checkout.html', base).toString();
+    const pendingUrl = new URL('/pages/index.html', base).toString();
+
+    const preferencePayload = {
+      items: [
+        {
+          title: `Plano ${planName} - Condomit`,
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: Number(amount)
         }
-      };
+      ],
+      payer: payerEmail ? { email: payerEmail } : undefined,
+      back_urls: {
+        success: successUrl,
+        failure: failureUrl,
+        pending: pendingUrl
+      },
+      auto_return: 'approved',
+      statement_descriptor: 'CONDOMIT',
+      external_reference: `CONDOMIT-${Date.now()}`
+    };
 
-      console.log('[MercadoPago] Creating preference for:', payerEmail);
-      const result = await preference.create({ body: preferenceData });
-      console.log('[MercadoPago] Full preference response:', JSON.stringify(result, null, 2));
-      console.log('[MercadoPago] Preference created:', result.id, 'init_point:', result.init_point, 'back_urls:', result.back_urls);
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ preferenceId: result.id, initPoint: result.init_point }));
-    } catch (error) {
-      console.error('[MercadoPago Error]', error.message);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: error.message }));
+    const created = await mpCreatePreference(preferencePayload);
+    const initPoint = created?.init_point || created?.sandbox_init_point;
+    if (!initPoint) {
+      throw new Error(created?.message || 'Link de pagamento não retornado');
     }
-  });
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ preferenceId: created.id, initPoint }));
+  } catch (error) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: error.message || 'Erro ao criar preferência' }));
+  }
 }
 
 process.on('uncaughtException', (err) => {

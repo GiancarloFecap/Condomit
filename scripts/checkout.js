@@ -2,7 +2,6 @@
 let currentUser = null;
 let selectedPlan = null; // will hold the full plano object from DB
 let selectedPrice = 149.00;
-let currentInitPoint = null;
 let plans = [];
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -230,10 +229,6 @@ async function initCheckoutButton() {
 
     try {
         console.log('[Checkout] initCheckoutButton starting...');
-        const preferenceData = await createPreference();
-        currentInitPoint = preferenceData.initPoint;
-        console.log('[Checkout] Preference created with init_point:', currentInitPoint);
-        
         container.innerHTML = `
             <div style="text-align:center;">
                 <button id="checkout-btn" style="
@@ -257,12 +252,30 @@ async function initCheckoutButton() {
         
         const btn = document.getElementById('checkout-btn');
         btn.addEventListener('click', async () => {
+            let mpPopup = null;
             try {
                 // Show loading overlay first
                 showLoadingOverlay();
-                
-                // Open Mercado Pago in a popup
-                const mpPopup = window.open(currentInitPoint, 'MercadoPago', 'width=800,height=800');
+
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+
+                const popupWidth = 820;
+                const popupHeight = 820;
+                const left = Math.max(0, Math.floor((window.screen.width - popupWidth) / 2));
+                const top = Math.max(0, Math.floor((window.screen.height - popupHeight) / 2));
+                mpPopup = window.open('', 'MercadoPago', `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`);
+                if (!mpPopup) {
+                    hideLoadingOverlay();
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    alert('Não foi possível abrir o pop-up de pagamento. Verifique se o bloqueador de pop-ups está ativado.');
+                    return;
+                }
+
+                const preferenceData = await createPreference();
+                const initPoint = preferenceData.initPoint;
+                mpPopup.location.href = initPoint;
                 
                 // Check if popup is closed every 500ms
                 const checkPopup = setInterval(async () => {
@@ -295,18 +308,27 @@ async function initCheckoutButton() {
                             
                             // Hide overlay
                             hideLoadingOverlay();
+
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
                             
                             // Redirect to index
                             window.location.href = 'index.html';
                         } catch (error) {
                             console.error('[Checkout] Error after payment:', error);
                             hideLoadingOverlay();
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
                             alert('Erro ao finalizar o pagamento. Tente novamente.');
                         }
                     }
                 }, 500);
             } catch (error) {
                 console.error('Erro ao processar pagamento:', error);
+                hideLoadingOverlay();
+                try { mpPopup?.close(); } catch (_) {}
+                btn.disabled = false;
+                btn.style.opacity = '1';
                 alert('Erro ao processar pagamento. Tente novamente.');
             }
         });
