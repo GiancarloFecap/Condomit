@@ -461,22 +461,22 @@ async function redirectToHome() {
   if (user.type === 'morador') {
     window.location.href = 'index-morador.html';
   } else if (user.type === 'sindico') {
-    // Verificar se o síndico tem pagamento aprovado
-    const approvedPayment = await fetchApprovedPayment(user.email);
-    
-    if (approvedPayment) {
-      // Atualizar o usuário com o plano do pagamento aprovado
-      if (approvedPayment.plano_id && !user.plan) {
-        // Podemos buscar o nome do plano se necessário, ou usar um padrão
-        user.plan = approvedPayment.plano_id;
-        sessionStorage.setItem('condominiumUser', JSON.stringify(user));
-      }
-      window.location.href = 'index.html';
-    } else if (!user.plan) {
-      window.location.href = 'checkout.html';
-    } else {
-      window.location.href = 'index.html';
+    if (!user.condominium) {
+      window.location.href = 'condominio_register.html';
+      return;
     }
+
+    const approvedPayment = await fetchApprovedPayment(user.email);
+    if (!approvedPayment) {
+      window.location.href = 'checkout.html';
+      return;
+    }
+
+    if (approvedPayment.plano_id && !user.plan) {
+      user.plan = approvedPayment.plano_id;
+      sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+    }
+    window.location.href = 'index.html';
   } else {
     // Caso padrão ou outros tipos (ex: porteiro)
     window.location.href = 'index.html';

@@ -21,19 +21,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Check if user is sindico and has condo registered
     if (currentUser.type === 'sindico') {
-        const approvedPayment = await fetchApprovedPayment(currentUser.email);
-        if (!approvedPayment && !currentUser.plan) {
-            window.location.href = 'checkout.html';
-            return;
-        }
-        // Atualizar o usuário com o plano se houver pagamento aprovado
-        if (approvedPayment && !currentUser.plan) {
-            currentUser.plan = approvedPayment.plano_id;
-            sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
-        }
         if (!currentUser.condominium) {
             window.location.href = 'condominio_register.html';
             return;
+        }
+        const approvedPayment = await fetchApprovedPayment(currentUser.email);
+        if (!approvedPayment) {
+            window.location.href = 'checkout.html';
+            return;
+        }
+        if (!currentUser.plan) {
+            currentUser.plan = approvedPayment.plano_id;
+            sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
         }
     }
     

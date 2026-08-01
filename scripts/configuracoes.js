@@ -30,13 +30,16 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Se for síndico, verificar se tem plano ou pagamento aprovado
     if (currentUser.type === 'sindico') {
+        if (!currentUser.condominium) {
+            window.location.href = 'condominio_register.html';
+            return;
+        }
         const approvedPayment = await fetchApprovedPayment(currentUser.email);
-        if (!approvedPayment && !currentUser.plan) {
+        if (!approvedPayment) {
             window.location.href = 'checkout.html';
             return;
         }
-        // Atualizar o usuário com o plano se houver pagamento aprovado
-        if (approvedPayment && !currentUser.plan) {
+        if (!currentUser.plan) {
             currentUser.plan = approvedPayment.plano_id;
             sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
         }

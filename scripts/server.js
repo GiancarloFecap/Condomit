@@ -44,24 +44,27 @@ function readJsonBody(req) {
   });
 }
 
-function mpCreatePreference(preferencePayload) {
+function mpRequest(requestPath, method = 'GET', payload = null) {
   return new Promise((resolve, reject) => {
     if (!MERCADO_PAGO_ACCESS_TOKEN) {
       reject(new Error('MERCADO_PAGO_ACCESS_TOKEN não configurado'));
       return;
     }
 
-    const body = JSON.stringify(preferencePayload);
+    const body = payload ? JSON.stringify(payload) : null;
     const options = {
       hostname: 'api.mercadopago.com',
-      path: '/checkout/preferences',
-      method: 'POST',
+      path: requestPath,
+      method,
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
-        'Content-Length': Buffer.byteLength(body)
+        Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
       }
     };
+
+    if (body) {
+      options.headers['Content-Type'] = 'application/json';
+      options.headers['Content-Length'] = Buffer.byteLength(body);
+    }
 
     const request = https.request(options, (response) => {
       let data = '';
@@ -84,9 +87,46 @@ function mpCreatePreference(preferencePayload) {
     });
 
     request.on('error', (e) => reject(e));
-    request.write(body);
+    if (body) {
+      request.write(body);
+    }
     request.end();
   });
+}
+
+function mpCreatePreference(preferencePayload) {
+  return mpRequest('/checkout/preferences', 'POST', preferencePayload);
+}
+
+function mpFetchPayment(paymentId) {
+  return mpRequest(`/v1/payments/${encodeURIComponent(String(paymentId))}`, 'GET');
+}
+
+function parseMercadoPagoAmount(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : NaN;
+  }
+
+  const raw = String(value ?? '').trim();
+  if (!raw) {
+    return NaN;
+  }
+
+  const cleaned = raw.replace(/[^\d,.-]/g, '');
+  const lastComma = cleaned.lastIndexOf(',');
+  const lastDot = cleaned.lastIndexOf('.');
+  const decimalIndex = Math.max(lastComma, lastDot);
+
+  let normalized = cleaned;
+  if (decimalIndex >= 0) {
+    const integerPart = cleaned.slice(0, decimalIndex).replace(/[.,]/g, '');
+    const decimalPart = cleaned.slice(decimalIndex + 1).replace(/[.,]/g, '');
+    normalized = `${integerPart}.${decimalPart}`;
+  } else {
+    normalized = cleaned.replace(/[.,]/g, '');
+  }
+
+  return Number(normalized);
 }
 
 function loadEnv(filePath) {
@@ -178,6 +218,10 @@ const server = http.createServer((req, res) => {
 
     if (pathname === '/api/mercadopago/preference' && req.method === 'POST') {
         return createMercadoPagoPreference(req, res);
+    }
+
+    if (pathname === '/api/mercadopago/payment-status' && req.method === 'POST') {
+        return getMercadoPagoPaymentStatus(req, res);
     }
 
     // ENDPOINT: GET /api/plano - Fetch all plans
@@ -346,13 +390,26 @@ function proxySupabaseRequest(req, res, pathSuffix, method) {
 async function createMercadoPagoPreference(req, res) {
   try {
     const data = await readJsonBody(req);
-    const { amount, planName, payerEmail } = data || {};
+    const { amount, planName, payerEmail, planId } = data || {};
+    const normalizedAmount = parseMercadoPagoAmount(amount);
+
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+      throw new Error('Valor do plano inválido para gerar o pagamento');
+    }
 
     const origin = getRequestOrigin(req);
     const base = APP_BASE_URL || origin;
-    const successUrl = new URL('/pages/index.html', base).toString();
-    const failureUrl = new URL('/pages/checkout.html', base).toString();
-    const pendingUrl = new URL('/pages/index.html', base).toString();
+    const successUrl = new URL('/pages/checkout.html', base);
+    const failureUrl = new URL('/pages/checkout.html', base);
+    const pendingUrl = new URL('/pages/checkout.html', base);
+    successUrl.searchParams.set('checkout_status', 'approved');
+    failureUrl.searchParams.set('checkout_status', 'failure');
+    pendingUrl.searchParams.set('checkout_status', 'pending');
+    if (planId !== undefined && planId !== null) {
+      successUrl.searchParams.set('plan_id', String(planId));
+      failureUrl.searchParams.set('plan_id', String(planId));
+      pendingUrl.searchParams.set('plan_id', String(planId));
+    }
 
     const preferencePayload = {
       items: [
@@ -360,18 +417,18 @@ async function createMercadoPagoPreference(req, res) {
           title: `Plano ${planName} - Condomit`,
           quantity: 1,
           currency_id: 'BRL',
-          unit_price: Number(amount)
+          unit_price: normalizedAmount
         }
       ],
       payer: payerEmail ? { email: payerEmail } : undefined,
       back_urls: {
-        success: successUrl,
-        failure: failureUrl,
-        pending: pendingUrl
+        success: successUrl.toString(),
+        failure: failureUrl.toString(),
+        pending: pendingUrl.toString()
       },
       auto_return: 'approved',
       statement_descriptor: 'CONDOMIT',
-      external_reference: `CONDOMIT-${Date.now()}`
+      external_reference: `CONDOMIT-${planId || 'plan'}-${Date.now()}`
     };
 
     const created = await mpCreatePreference(preferencePayload);
@@ -385,6 +442,32 @@ async function createMercadoPagoPreference(req, res) {
   } catch (error) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: error.message || 'Erro ao criar preferência' }));
+  }
+}
+
+async function getMercadoPagoPaymentStatus(req, res) {
+  try {
+    const data = await readJsonBody(req);
+    const paymentId = data?.paymentId;
+
+    if (!paymentId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'paymentId é obrigatório' }));
+      return;
+    }
+
+    const payment = await mpFetchPayment(paymentId);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      id: payment?.id,
+      status: payment?.status,
+      status_detail: payment?.status_detail,
+      transaction_amount: payment?.transaction_amount,
+      external_reference: payment?.external_reference
+    }));
+  } catch (error) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: error.message || 'Erro ao consultar pagamento no Mercado Pago' }));
   }
 }
 

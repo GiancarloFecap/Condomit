@@ -1,5 +1,19 @@
 document.addEventListener('DOMContentLoaded', function() {
 
+    async function fetchApprovedPayment(email) {
+        try {
+            const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
+            if (!response.ok) return null;
+            const payments = await response.json();
+            return Array.isArray(payments)
+                ? payments.find((payment) => payment.status_pagamento === 'aprovado')
+                : null;
+        } catch (error) {
+            console.error('Erro ao verificar pagamento aprovado:', error);
+            return null;
+        }
+    }
+
     // Check if user is logged in and is a sindico
 
     let currentUser = JSON.parse(sessionStorage.getItem('condominiumUser'));
@@ -9,12 +23,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (currentUser.type !== 'sindico') {
         window.location.href = 'assembleia.html';
-        return;
-    }
-    
-    // If sindico already has a condo, check for plan/payment
-    if (currentUser.condominium) {
-        window.location.href = 'index.html';
         return;
     }
     
@@ -30,6 +38,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelBtn = document.querySelector('.btn-cancel');
 
     let blockCounter = 0;
+
+    // If the condo is already registered, only allow index access after payment approval
+    if (currentUser.condominium) {
+        fetchApprovedPayment(currentUser.email)
+            .then((approvedPayment) => {
+                window.location.href = approvedPayment ? 'index.html' : 'checkout.html';
+            })
+            .catch(() => {
+                window.location.href = 'checkout.html';
+            });
+        return;
+    }
 
     cepInput.addEventListener('input', function(e) {
         let value = e.target.value.replace(/\D/g, '');
@@ -220,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
             condominium_name: condoName,
             address,
             address_number: number,
-            complement,
+            complement: complement || null,
             neighborhood,
             city,
             state,
@@ -228,10 +248,10 @@ document.addEventListener('DOMContentLoaded', function() {
             total_blocks: totalBlocks,
             block_names: blockNames,
             condominium_spaces: spaces,
-            cnpj,
-            municipal_registration: inscricao,
-            condominium_email: emailCondo,
-            condominium_phone: phone
+            cnpj: cnpj || null,
+            municipal_registration: inscricao || null,
+            condominium_email: emailCondo || null,
+            condominium_phone: phone || null
         };
 
         try {

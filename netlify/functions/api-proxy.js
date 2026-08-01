@@ -21,24 +21,27 @@ const brevoClient = BREVO_API_KEY ? new BrevoClient({
   environment: BrevoEnvironment.Production
 }) : null;
 
-function mpCreatePreference(preferencePayload) {
+function mpRequest(requestPath, method = 'GET', payload = null) {
   return new Promise((resolve, reject) => {
     if (!MERCADO_PAGO_ACCESS_TOKEN) {
       reject(new Error('MERCADO_PAGO_ACCESS_TOKEN não configurado'));
       return;
     }
 
-    const body = JSON.stringify(preferencePayload);
+    const body = payload ? JSON.stringify(payload) : null;
     const options = {
       hostname: 'api.mercadopago.com',
-      path: '/checkout/preferences',
-      method: 'POST',
+      path: requestPath,
+      method,
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
-        'Content-Length': Buffer.byteLength(body)
+        Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
       }
     };
+
+    if (body) {
+      options.headers['Content-Type'] = 'application/json';
+      options.headers['Content-Length'] = Buffer.byteLength(body);
+    }
 
     const request = https.request(options, (response) => {
       let data = '';
@@ -61,9 +64,46 @@ function mpCreatePreference(preferencePayload) {
     });
 
     request.on('error', (e) => reject(e));
-    request.write(body);
+    if (body) {
+      request.write(body);
+    }
     request.end();
   });
+}
+
+function mpCreatePreference(preferencePayload) {
+  return mpRequest('/checkout/preferences', 'POST', preferencePayload);
+}
+
+function mpFetchPayment(paymentId) {
+  return mpRequest(`/v1/payments/${encodeURIComponent(String(paymentId))}`, 'GET');
+}
+
+function parseMercadoPagoAmount(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : NaN;
+  }
+
+  const raw = String(value ?? '').trim();
+  if (!raw) {
+    return NaN;
+  }
+
+  const cleaned = raw.replace(/[^\d,.-]/g, '');
+  const lastComma = cleaned.lastIndexOf(',');
+  const lastDot = cleaned.lastIndexOf('.');
+  const decimalIndex = Math.max(lastComma, lastDot);
+
+  let normalized = cleaned;
+  if (decimalIndex >= 0) {
+    const integerPart = cleaned.slice(0, decimalIndex).replace(/[.,]/g, '');
+    const decimalPart = cleaned.slice(decimalIndex + 1).replace(/[.,]/g, '');
+    normalized = `${integerPart}.${decimalPart}`;
+  } else {
+    normalized = cleaned.replace(/[.,]/g, '');
+  }
+
+  return Number(normalized);
 }
 
 const RESET_TOKEN_SECRET = process.env.RESET_TOKEN_SECRET || SUPABASE_SERVICE_ROLE_KEY;
@@ -370,11 +410,23 @@ async function updateKeycloakPassword(email, password) {
 }
 
 async function createMercadoPagoPreference(data) {
-  const { amount, planName, payerEmail } = data;
+  const { amount, planName, payerEmail, planId } = data;
+  const normalizedAmount = parseMercadoPagoAmount(amount);
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    throw new Error('Valor do plano inválido para gerar o pagamento');
+  }
   const base = APP_BASE_URL || 'https://condomit.netlify.app';
-  const successUrl = new URL('/pages/index.html', base).toString();
-  const failureUrl = new URL('/pages/checkout.html', base).toString();
-  const pendingUrl = new URL('/pages/index.html', base).toString();
+  const successUrl = new URL('/pages/checkout.html', base);
+  const failureUrl = new URL('/pages/checkout.html', base);
+  const pendingUrl = new URL('/pages/checkout.html', base);
+  successUrl.searchParams.set('checkout_status', 'approved');
+  failureUrl.searchParams.set('checkout_status', 'failure');
+  pendingUrl.searchParams.set('checkout_status', 'pending');
+  if (planId !== undefined && planId !== null) {
+    successUrl.searchParams.set('plan_id', String(planId));
+    failureUrl.searchParams.set('plan_id', String(planId));
+    pendingUrl.searchParams.set('plan_id', String(planId));
+  }
 
   const preferencePayload = {
     items: [
@@ -382,24 +434,42 @@ async function createMercadoPagoPreference(data) {
         title: `Plano ${planName} - Condomit`,
         quantity: 1,
         currency_id: 'BRL',
-        unit_price: Number(amount)
+        unit_price: normalizedAmount
       }
     ],
     payer: payerEmail ? { email: payerEmail } : undefined,
     back_urls: {
-      success: successUrl,
-      failure: failureUrl,
-      pending: pendingUrl
+      success: successUrl.toString(),
+      failure: failureUrl.toString(),
+      pending: pendingUrl.toString()
     },
     auto_return: 'approved',
     statement_descriptor: 'CONDOMIT',
-    external_reference: `CONDOMIT-${Date.now()}`
+    external_reference: `CONDOMIT-${planId || 'plan'}-${Date.now()}`
   };
 
   const created = await mpCreatePreference(preferencePayload);
   const initPoint = created?.init_point || created?.sandbox_init_point;
   if (!initPoint) throw new Error(created?.message || 'Link de pagamento não retornado');
   return { preferenceId: created.id, initPoint };
+}
+
+async function getMercadoPagoPaymentStatus(data) {
+  const paymentId = data?.paymentId;
+  if (!paymentId) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'paymentId é obrigatório' }) };
+  }
+  const payment = await mpFetchPayment(paymentId);
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      id: payment?.id,
+      status: payment?.status,
+      status_detail: payment?.status_detail,
+      transaction_amount: payment?.transaction_amount,
+      external_reference: payment?.external_reference
+    })
+  };
 }
 
 async function handleForgotPassword(event, body) {
@@ -629,6 +699,11 @@ exports.handler = async (event, context) => {
     if (pathname === '/mercadopago/preference' && rawMethod === 'POST') {
       const mpResult = await createMercadoPagoPreference(body || {});
       return { statusCode: 200, headers, body: JSON.stringify(mpResult) };
+    }
+
+    if (pathname === '/mercadopago/payment-status' && rawMethod === 'POST') {
+      const mpStatusResult = await getMercadoPagoPaymentStatus(body || {});
+      return { statusCode: mpStatusResult.statusCode, headers, body: mpStatusResult.body };
     }
 
     if (pathname === '/plano' && rawMethod === 'GET') {
