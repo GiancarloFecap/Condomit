@@ -295,7 +295,7 @@ async function handleForgotPassword(event, body) {
     }
   }
   if ((!users || users.length === 0) && !keycloakUser) {
-    return { statusCode: 200, body: JSON.stringify({ message: 'Se o e-mail existir, um link de reset foi enviado' }) };
+    return { statusCode: 404, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Nenhuma conta foi encontrada para este e-mail.' }) };
   }
   const token = generateResetToken(normalizedEmail);
   const resetLink = buildResetLink(event, token, resetPageUrl);
@@ -316,7 +316,7 @@ async function handleForgotPassword(event, body) {
       : getBrevoErrorMessage(emailError);
     return { statusCode: 502, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: errorMessage }) };
   }
-  return { statusCode: 200, body: JSON.stringify({ message: 'Se o e-mail existir, um link de reset foi enviado' }) };
+  return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'Link de reset enviado com sucesso.', emailSent: true }) };
 }
 
 async function handleResetPassword(body) {

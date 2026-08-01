@@ -628,8 +628,8 @@ function handleForgotPassword(req, res) {
       }
 
       if ((!users || users.length === 0) && !keycloakUser) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ message: 'Se o e-mail existir, um link de reset foi enviado' }));
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Nenhuma conta foi encontrada para este e-mail.' }));
         return;
       }
 
@@ -660,7 +660,8 @@ function handleForgotPassword(req, res) {
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ 
-        message: 'Se o e-mail existir, um link de reset foi enviado'
+        message: 'Link de reset enviado com sucesso.',
+        emailSent: true
       }));
     } catch (error) {
       // #region debug-point D:server-handler-error

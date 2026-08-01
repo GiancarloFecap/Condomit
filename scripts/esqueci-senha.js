@@ -46,8 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"post-fix",hypothesisId:"A",location:"scripts/esqueci-senha.js:solicitarRecuperacao:response",msg:"[DEBUG] Resposta da recuperacao recebida",data:{ok:response.ok,status:response.status,url:response.url||endpoint,payload:data,endpoint},ts:Date.now()})}).catch(()=>{});
             // #endregion
 
-            if (response.ok) {
+            if (response.ok && data && data.emailSent === true) {
                 return data;
+            }
+
+            if (response.ok) {
+                throw new Error('O servidor nao confirmou o envio do e-mail de recuperacao.');
             }
 
             if (response.status !== 404) {

@@ -44,10 +44,15 @@ Status: OPEN
 ## Nova evidência
 - `.dbg/trae-debug-log-forgot-password-error.ndjson:15-17` mostra que o fallback para `/api/forgot-password` foi executado e a produção respondeu `502`.
 - Isso confirma que a falha atual está dentro do envio do Brevo no backend publicado, não mais na página.
+- `.dbg/trae-debug-log-forgot-password-error.ndjson:43-46` mostra um novo cenário: a produção respondeu `200`, mas sem prova local de entrega do email.
+- A consulta pública em `GET /api/users?email=giancarlo.fecap@gmail.com` confirmou que a conta existe na base, então esse `200` não veio do ramo "usuário não encontrado".
 
 ## Ajuste aplicado
 - `scripts/server.js` e `netlify/functions/api-proxy.js` agora usam o envio com Brevo no formato pedido, com `sender.email` fixo em `contato.condomit@gmail.com`.
 - Os handlers passaram a devolver a mensagem real do Brevo quando o envio falhar, em vez de esconder tudo atrás de um erro genérico.
+- O contrato da rota foi endurecido: sucesso real agora retorna `emailSent: true`.
+- `scripts/esqueci-senha.js` só exibe "Solicitação enviada com sucesso." quando `emailSent === true`.
+- Se a conta não existir, a rota retorna `404` com erro explícito, evitando sucesso falso.
 
 ## Próxima verificação
 - Após novo deploy, testar novamente a página `esqueci-senha`.
