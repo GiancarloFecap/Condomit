@@ -7,6 +7,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJh
 const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
 const APP_BASE_URL = process.env.APP_BASE_URL || 'https://condomit.netlify.app';
 const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || '';
 const KEYCLOAK_BASE_URL = (process.env.KEYCLOAK_BASE_URL || process.env.KEYCLOAK_URL || '').replace(/\/$/, '');
 const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM || '';
 const KEYCLOAK_ADMIN_REALM = process.env.KEYCLOAK_ADMIN_REALM || 'master';
@@ -121,6 +122,9 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
   if (!hasBrevoConfig()) {
     throw new Error('BREVO_API_KEY não configurada');
   }
+  if (!BREVO_SENDER_EMAIL) {
+    throw new Error('BREVO_SENDER_EMAIL não configurado');
+  }
 
   const email = toEmail;
   const link = resetLink;
@@ -130,7 +134,8 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
   };
 
   const info = await brevoClient.transactionalEmails.sendTransacEmail({
-    sender: { name: 'Condomit', email: 'contato.condomit@gmail.com' },
+    sender: { name: 'Condomit', email: BREVO_SENDER_EMAIL },
+    replyTo: { email: BREVO_SENDER_EMAIL },
     to: [{ email: email }],
     subject: 'Recuperação de senha — Condomit',
     htmlContent: `
@@ -148,8 +153,13 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
     `
   });
 
+  const messageId = info?.messageId || info?.body?.messageId;
+  if (!messageId) {
+    throw new Error('O Brevo não confirmou o recebimento do e-mail');
+  }
+
   console.log('Link de reset:', resetLink);
-  return info;
+  return { ...info, messageId };
 }
 
 async function proxySupabaseRequest(body, pathSuffix, method) {
@@ -313,6 +323,8 @@ async function handleForgotPassword(event, body) {
     console.error('[Email Error] Falha ao enviar e-mail:', getBrevoErrorMessage(emailError));
     const errorMessage = emailError?.message === 'BREVO_API_KEY não configurada'
       ? 'Serviço de e-mail não configurado. Defina BREVO_API_KEY no Netlify.'
+      : emailError?.message === 'BREVO_SENDER_EMAIL não configurado'
+        ? 'Remetente de e-mail não configurado. Defina BREVO_SENDER_EMAIL no Netlify com um endereço validado no Brevo.'
       : getBrevoErrorMessage(emailError);
     return { statusCode: 502, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: errorMessage }) };
   }

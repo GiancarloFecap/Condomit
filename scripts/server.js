@@ -16,6 +16,7 @@ const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJI
 const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
 const APP_BASE_URL = env.APP_BASE_URL || 'https://condomit.netlify.app';
 const BREVO_API_KEY = env.BREVO_API_KEY || process.env.BREVO_API_KEY || '';
+const BREVO_SENDER_EMAIL = env.BREVO_SENDER_EMAIL || process.env.BREVO_SENDER_EMAIL || '';
 const KEYCLOAK_BASE_URL = (env.KEYCLOAK_BASE_URL || env.KEYCLOAK_URL || '').replace(/\/$/, '');
 const KEYCLOAK_REALM = env.KEYCLOAK_REALM || '';
 const KEYCLOAK_ADMIN_REALM = env.KEYCLOAK_ADMIN_REALM || 'master';
@@ -437,6 +438,9 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
   if (!hasBrevoConfig()) {
     throw new Error('BREVO_API_KEY nao configurada');
   }
+  if (!BREVO_SENDER_EMAIL) {
+    throw new Error('BREVO_SENDER_EMAIL nao configurado');
+  }
 
   const email = toEmail;
   const link = resetLink;
@@ -446,7 +450,8 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
   };
 
   const info = await brevoClient.transactionalEmails.sendTransacEmail({
-    sender: { name: 'Condomit', email: 'contato.condomit@gmail.com' },
+    sender: { name: 'Condomit', email: BREVO_SENDER_EMAIL },
+    replyTo: { email: BREVO_SENDER_EMAIL },
     to: [{ email: email }],
     subject: 'Recuperação de senha — Condomit',
     htmlContent: `
@@ -463,6 +468,11 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
         </div>
     `
   });
+
+  const messageId = info?.messageId || info?.body?.messageId;
+  if (!messageId) {
+    throw new Error('O Brevo nao confirmou o recebimento do e-mail');
+  }
 
   console.log('');
   console.log('✅ E-MAIL REGISTRADO COM SUCESSO!');
@@ -653,6 +663,8 @@ function handleForgotPassword(req, res) {
         res.writeHead(502, { 'Content-Type': 'application/json' });
         const errorMessage = emailError?.message === 'BREVO_API_KEY nao configurada'
           ? 'Servico de e-mail nao configurado. Defina BREVO_API_KEY no ambiente local.'
+          : emailError?.message === 'BREVO_SENDER_EMAIL nao configurado'
+            ? 'Remetente de e-mail nao configurado. Defina BREVO_SENDER_EMAIL no ambiente local com um endereco validado no Brevo.'
           : getBrevoErrorMessage(emailError);
         res.end(JSON.stringify({ error: errorMessage }));
         return;
