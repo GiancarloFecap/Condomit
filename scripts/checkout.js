@@ -6,7 +6,6 @@ let activePaymentPopup = null;
 let activePopupWatcher = null;
 let paymentResultHandled = false;
 let paymentFinalizationInProgress = false;
-let generatedTestBuyer = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
     if (handlePopupReturnToOpener()) {
@@ -20,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     currentUser = JSON.parse(loggedInUser);
+    const checkoutReturnData = getCheckoutReturnFromUrl();
 
     if (currentUser.type !== 'sindico') {
         window.location.href = 'assembleia.html';
@@ -55,68 +55,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     await initCheckoutButton();
-    initTestModeHelper();
+
+    if (checkoutReturnData) {
+        await processMercadoPagoReturn(checkoutReturnData);
+    }
 });
 
-function initTestModeHelper() {
-    const container = document.getElementById('payment-brick_container');
-    const hintId = 'mp-testmode-hint';
-    if (!container || document.getElementById(hintId)) {
-        return;
+function getCheckoutReturnFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get('checkout_status');
+    const paymentId = params.get('payment_id') || params.get('collection_id');
+    const planId = params.get('plan_id');
+
+    if (!checkoutStatus && !paymentId) {
+        return null;
     }
 
-    const hint = document.createElement('div');
-    hint.id = hintId;
-    hint.style.cssText = 'margin-top:12px;padding:14px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.5;text-align:left;';
-    hint.innerHTML = `
-        <div style="font-weight:700;margin-bottom:6px;">Modo teste (sandbox)</div>
-        <div style="margin-bottom:10px;">Use somente comprador de teste e cartão de teste do Mercado Pago. Isso evita o erro de mistura entre conta real e conta sandbox.</div>
-        <button type="button" id="btn-mp-test-user" style="background:#f97316;color:#fff;border:none;border-radius:8px;padding:10px 12px;font-weight:700;cursor:pointer;width:100%;">Gerar comprador de teste</button>
-        <div id="mp-test-user-result" style="display:none;margin-top:12px;padding:12px;border-radius:10px;background:#fff;border:1px dashed #fdba74;color:#7c2d12;white-space:pre-line;"></div>
-    `;
-    container.appendChild(hint);
-
-    const btn = document.getElementById('btn-mp-test-user');
-    if (!btn) return;
-
-    btn.addEventListener('click', async () => {
-        btn.disabled = true;
-        btn.style.opacity = '0.7';
-        try {
-            const res = await fetch('/api/mercadopago/test-user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ site_id: 'MLB', description: `Condomit buyer ${Date.now()}` })
-            });
-            const data = await res.json().catch(() => null);
-            if (!res.ok || data?.error) {
-                throw new Error(data?.error || 'Não foi possível criar usuário de teste.');
-            }
-            generatedTestBuyer = data;
-            renderTestBuyerResult(data);
-        } catch (err) {
-            alert(err.message || 'Erro ao criar comprador de teste.');
-        } finally {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-        }
-    });
-}
-
-function renderTestBuyerResult(testBuyer) {
-    const resultBox = document.getElementById('mp-test-user-result');
-    if (!resultBox || !testBuyer) {
-        return;
-    }
-
-    resultBox.style.display = 'block';
-    resultBox.textContent = [
-        'Comprador de teste criado com sucesso.',
-        `Email: ${testBuyer.email || '-'}`,
-        `Senha: ${testBuyer.password || '-'}`,
-        '',
-        'Use essas credenciais ao entrar no checkout sandbox.'
-    ].join('\n');
+    return {
+        checkoutStatus,
+        paymentId,
+        planId
+    };
 }
 
 function handlePopupReturnToOpener() {
@@ -171,6 +130,9 @@ function registerPaymentMessageListener() {
             return;
         }
 
+        // #region debug-point E:popup-return-message
+        fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"E",location:"scripts/checkout.js:registerPaymentMessageListener",msg:"[DEBUG] Mensagem recebida do popup",data,ts:Date.now()})}).catch(()=>{});
+        // #endregion
         paymentResultHandled = true;
         clearPopupWatcher();
         await processMercadoPagoReturn(data);
@@ -379,6 +341,9 @@ async function createPreference() {
         throw new Error('Selecione um plano antes de continuar.');
     }
 
+    // #region debug-point C:create-preference-start
+    fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"C",location:"scripts/checkout.js:createPreference:start",msg:"[DEBUG] Iniciando criacao da preferencia no frontend",data:{selectedPlanId:selectedPlan?.id,selectedPlanName:selectedPlan?.nome,selectedPrice,currentUserEmail:currentUser?.email},ts:Date.now()})}).catch(()=>{});
+    // #endregion
     const response = await fetch('/api/mercadopago/preference', {
         method: 'POST',
         headers: {
@@ -392,6 +357,9 @@ async function createPreference() {
     });
 
     const data = await response.json().catch(() => null);
+    // #region debug-point C:create-preference-response
+    fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"C",location:"scripts/checkout.js:createPreference:response",msg:"[DEBUG] Preferencia recebida no frontend",data:{ok:response.ok,status:response.status,data},ts:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!response.ok || data?.error) {
         throw new Error(data?.error || 'Erro ao criar preferencia de pagamento');
     }
@@ -596,6 +564,9 @@ async function initCheckoutButton() {
 
         btn.addEventListener('click', async () => {
             try {
+                // #region debug-point A:checkout-button-click
+                fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"A",location:"scripts/checkout.js:initCheckoutButton:click",msg:"[DEBUG] Clique no botao de pagamento",data:{selectedPlanId:selectedPlan?.id,selectedPlanName:selectedPlan?.nome,selectedPrice},ts:Date.now()})}).catch(()=>{});
+                // #endregion
                 paymentResultHandled = false;
                 showLoadingOverlay('Aguardando pagamento...');
                 setCheckoutButtonState(true);
@@ -604,28 +575,37 @@ async function initCheckoutButton() {
                 const popupHeight = 820;
                 const left = Math.max(0, Math.floor((window.screen.width - popupWidth) / 2));
                 const top = Math.max(0, Math.floor((window.screen.height - popupHeight) / 2));
-                activePaymentPopup = window.open('', 'MercadoPago', `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`);
+                activePaymentPopup = window.open('about:blank', 'MercadoPago', `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`);
+                // #region debug-point A:popup-open
+                fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"A",location:"scripts/checkout.js:initCheckoutButton:window.open",msg:"[DEBUG] Resultado da abertura inicial do popup",data:{popupOpened:Boolean(activePaymentPopup)},ts:Date.now()})}).catch(()=>{});
+                // #endregion
 
-                if (!activePaymentPopup) {
-                    hideLoadingOverlay();
-                    setCheckoutButtonState(false);
-                    alert('Nao foi possivel abrir o pop-up de pagamento. Verifique o bloqueador de pop-ups.');
-                    return;
+                if (activePaymentPopup && !activePaymentPopup.closed) {
+                    activePaymentPopup.document.write(`
+                        <html>
+                        <head><title>Redirecionando para o pagamento</title></head>
+                        <body style="font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f8fafc;color:#0f172a;">
+                            <div style="text-align:center;padding:24px;">
+                                <h1 style="font-size:22px;margin-bottom:12px;">Abrindo Mercado Pago...</h1>
+                                <p style="margin:0;color:#475569;">Se o redirecionamento nao acontecer, volte para a aba principal e tente novamente.</p>
+                            </div>
+                        </body>
+                        </html>
+                    `);
+                    activePaymentPopup.document.close();
                 }
 
                 const preferenceData = await createPreference();
-                if (preferenceData?.testMode && !generatedTestBuyer) {
-                    const wantsToContinue = window.confirm('O checkout está em modo teste. Para evitar erro na finalização, o ideal é gerar um comprador de teste antes de continuar.\n\nDeseja abrir o checkout mesmo assim?');
-                    if (!wantsToContinue) {
-                        hideLoadingOverlay();
-                        try { activePaymentPopup?.close(); } catch (_) {}
-                        activePaymentPopup = null;
-                        setCheckoutButtonState(false);
-                        return;
-                    }
+                if (activePaymentPopup && !activePaymentPopup.closed) {
+                    activePaymentPopup.location.replace(preferenceData.initPoint);
+                    startPopupWatcher();
+                } else {
+                    window.location.href = preferenceData.initPoint;
+                    return;
                 }
-                activePaymentPopup.location.href = preferenceData.initPoint;
-                startPopupWatcher();
+                // #region debug-point A:popup-navigate
+                fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"A",location:"scripts/checkout.js:initCheckoutButton:popupNavigate",msg:"[DEBUG] Navegando popup para URL da preferencia",data:{initPoint:preferenceData?.initPoint,testMode:preferenceData?.testMode,usedPopup:Boolean(activePaymentPopup && !activePaymentPopup.closed)},ts:Date.now()})}).catch(()=>{});
+                // #endregion
             } catch (error) {
                 console.error('[Checkout] Erro ao processar pagamento:', error);
                 hideLoadingOverlay();

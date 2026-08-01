@@ -168,13 +168,6 @@ function mpFetchPayment(paymentId) {
   return mpRequest(`/v1/payments/${encodeURIComponent(String(paymentId))}`, 'GET');
 }
 
-function mpCreateTestUser(testUserPayload) {
-  return mpRequest('/users/test_user', 'POST', {
-    site_id: testUserPayload?.site_id || 'MLB',
-    description: testUserPayload?.description || `Condomit Test User ${Date.now()}`
-  });
-}
-
 function parseMercadoPagoAmount(value) {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : NaN;
@@ -301,10 +294,6 @@ const server = http.createServer((req, res) => {
 
     if (pathname === '/api/mercadopago/payment-status' && req.method === 'POST') {
         return getMercadoPagoPaymentStatus(req, res);
-    }
-
-    if (pathname === '/api/mercadopago/test-user' && req.method === 'POST') {
-        return createMercadoPagoTestUser(req, res);
     }
 
     // ENDPOINT: GET /api/plano - Fetch all plans
@@ -476,10 +465,19 @@ async function createMercadoPagoPreference(req, res) {
     const { amount, planName, planId } = data || {};
     const origin = getRequestOrigin(req);
     const base = APP_BASE_URL || origin;
+    // #region debug-point B:server-preference-input
+    fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"B",location:"scripts/server.js:createMercadoPagoPreference:input",msg:"[DEBUG] Backend local recebeu pedido para criar preferencia",data:{amount,planName,planId,origin,base,testMode:MERCADO_PAGO_IS_TEST_MODE},ts:Date.now()})}).catch(()=>{});
+    // #endregion
     const preferencePayload = buildMercadoPagoPreferencePayload({ amount, planName, planId, baseUrl: base });
+    // #region debug-point C:server-preference-payload
+    fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"C",location:"scripts/server.js:createMercadoPagoPreference:payload",msg:"[DEBUG] Payload de preferencia montado no backend local",data:preferencePayload,ts:Date.now()})}).catch(()=>{});
+    // #endregion
     const created = await mpCreatePreference(preferencePayload);
     const initPoint = resolveMercadoPagoCheckoutUrl(created);
     const detectedTestMode = Boolean(created?.sandbox_init_point) || MERCADO_PAGO_IS_TEST_MODE;
+    // #region debug-point B:server-preference-output
+    fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"B",location:"scripts/server.js:createMercadoPagoPreference:output",msg:"[DEBUG] Mercado Pago respondeu criacao de preferencia no backend local",data:{preferenceId:created?.id,hasInitPoint:Boolean(created?.init_point),hasSandboxInitPoint:Boolean(created?.sandbox_init_point),resolvedInitPoint:initPoint,testMode:detectedTestMode},ts:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!initPoint) {
       throw new Error(created?.message || 'Link de pagamento não retornado');
     }
@@ -488,8 +486,7 @@ async function createMercadoPagoPreference(req, res) {
     res.end(JSON.stringify({
       preferenceId: created.id,
       initPoint,
-      testMode: detectedTestMode,
-      publicKey: MERCADO_PAGO_PUBLIC_KEY
+      testMode: detectedTestMode
     }));
   } catch (error) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -520,24 +517,6 @@ async function getMercadoPagoPaymentStatus(req, res) {
   } catch (error) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: error.message || 'Erro ao consultar pagamento no Mercado Pago' }));
-  }
-}
-
-async function createMercadoPagoTestUser(req, res) {
-  try {
-    const data = await readJsonBody(req);
-    const created = await mpCreateTestUser(data || {});
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      id: created?.id,
-      nickname: created?.nickname,
-      password: created?.password,
-      site_status: created?.site_status,
-      email: created?.email
-    }));
-  } catch (error) {
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: error.message || 'Erro ao criar usuário de teste no Mercado Pago' }));
   }
 }
 

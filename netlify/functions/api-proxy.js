@@ -92,21 +92,6 @@ function mpRequest(requestPath, method = 'GET', payload = null) {
   });
 }
 
-async function createMercadoPagoTestUser(data) {
-  const created = await mpRequest('/users/test_user', 'POST', {
-    site_id: data?.site_id || 'MLB',
-    description: data?.description || `Condomit Test User ${Date.now()}`
-  });
-
-  return {
-    id: created?.id,
-    nickname: created?.nickname,
-    password: created?.password,
-    site_status: created?.site_status,
-    email: created?.email
-  };
-}
-
 function mpCreatePreference(preferencePayload) {
   return mpRequest('/checkout/preferences', 'POST', preferencePayload);
 }
@@ -496,16 +481,24 @@ async function updateKeycloakPassword(email, password) {
 async function createMercadoPagoPreference(data) {
   const { amount, planName, planId } = data;
   const base = APP_BASE_URL || 'https://condomit.netlify.app';
+  // #region debug-point D:netlify-preference-input
+  fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"D",location:"netlify/functions/api-proxy.js:createMercadoPagoPreference:input",msg:"[DEBUG] Netlify recebeu pedido para criar preferencia",data:{amount,planName,planId,base,testMode:MERCADO_PAGO_IS_TEST_MODE},ts:Date.now()})}).catch(()=>{});
+  // #endregion
   const preferencePayload = buildMercadoPagoPreferencePayload({ amount, planName, planId, baseUrl: base });
+  // #region debug-point D:netlify-preference-payload
+  fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"D",location:"netlify/functions/api-proxy.js:createMercadoPagoPreference:payload",msg:"[DEBUG] Payload de preferencia montado no Netlify",data:preferencePayload,ts:Date.now()})}).catch(()=>{});
+  // #endregion
   const created = await mpCreatePreference(preferencePayload);
   const initPoint = resolveMercadoPagoCheckoutUrl(created);
   const detectedTestMode = Boolean(created?.sandbox_init_point) || MERCADO_PAGO_IS_TEST_MODE;
+  // #region debug-point D:netlify-preference-output
+  fetch("http://127.0.0.1:7780/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercado-pago-sandbox",runId:"pre-fix",hypothesisId:"D",location:"netlify/functions/api-proxy.js:createMercadoPagoPreference:output",msg:"[DEBUG] Mercado Pago respondeu criacao de preferencia no Netlify",data:{preferenceId:created?.id,hasInitPoint:Boolean(created?.init_point),hasSandboxInitPoint:Boolean(created?.sandbox_init_point),resolvedInitPoint:initPoint,testMode:detectedTestMode},ts:Date.now()})}).catch(()=>{});
+  // #endregion
   if (!initPoint) throw new Error(created?.message || 'Link de pagamento não retornado');
   return {
     preferenceId: created.id,
     initPoint,
-    testMode: detectedTestMode,
-    publicKey: MERCADO_PAGO_PUBLIC_KEY
+    testMode: detectedTestMode
   };
 }
 
@@ -759,11 +752,6 @@ exports.handler = async (event, context) => {
     if (pathname === '/mercadopago/payment-status' && rawMethod === 'POST') {
       const mpStatusResult = await getMercadoPagoPaymentStatus(body || {});
       return { statusCode: mpStatusResult.statusCode, headers, body: mpStatusResult.body };
-    }
-
-    if (pathname === '/mercadopago/test-user' && rawMethod === 'POST') {
-      const user = await createMercadoPagoTestUser(body || {});
-      return { statusCode: 200, headers, body: JSON.stringify(user) };
     }
 
     if (pathname === '/plano' && rawMethod === 'GET') {
