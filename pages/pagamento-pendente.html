@@ -106,10 +106,67 @@
             <h3><i class="fas fa-hourglass-half"></i> Aguarde a confirmação</h3>
             <p>Pagamentos via boleto ou Pix podem levar até 1 dia útil para serem confirmados. Assim que o pagamento for aprovado, enviaremos uma confirmação por e-mail e seu plano será ativado automaticamente.</p>
         </div>
-        <button type="button" onclick="fecharRetornoMercadoPago()">
+        <button type="button" id="btn-continuar">
             Continuar
         </button>
     </main>
+    <script>
+        (function () {
+            async function finalizarPagamentoPendente() {
+                try {
+                    const cached = sessionStorage.getItem('condominiumUser');
+                    if (!cached) return;
+                    const user = JSON.parse(cached);
+                    if (!user || !user.email) return;
+
+                    const resp = await fetch(`/api/pagamento?email=${encodeURIComponent(user.email)}`);
+                    if (resp.ok) {
+                        const pagamentos = await resp.json();
+                        if (Array.isArray(pagamentos) && pagamentos.length) {
+                            pagamentos.sort((a, b) => {
+                                const da = new Date(a.data_pagamento || 0).getTime();
+                                const db = new Date(b.data_pagamento || 0).getTime();
+                                return db - da;
+                            });
+                            const ultimo = pagamentos[0];
+                            if (ultimo && !['aprovado', 'pendente'].includes(ultimo.status_pagamento)) {
+                                try {
+                                    await fetch(`/api/pagamento?id=${encodeURIComponent(ultimo.id)}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            status_pagamento: 'pendente'
+                                        })
+                                    });
+                                } catch (_) {}
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Erro ao marcar pagamento pendente:', e);
+                }
+            }
+            finalizarPagamentoPendente();
+
+            const btn = document.getElementById('btn-continuar');
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    if (typeof window.fecharRetornoMercadoPago === 'function') {
+                        fecharRetornoMercadoPago();
+                    } else {
+                        const cached = sessionStorage.getItem('condominiumUser');
+                        if (cached) {
+                            const u = JSON.parse(cached);
+                            if (u.type === 'morador') location.href = 'index-morador.html';
+                            else location.href = 'checkout.html';
+                        } else {
+                            location.href = 'entrar.html';
+                        }
+                    }
+                });
+            }
+        })();
+    </script>
     <script src="../assets/js/retorno-mercado-pago.js"></script>
 </body>
 </html>

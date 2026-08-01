@@ -326,8 +326,18 @@ async function updateKeycloakPassword(email, password) {
   return { synced: true };
 }
 
-async function createMercadoPagoPreference(data) {
+async function createMercadoPagoPreference(data, event) {
   const { amount, planName, payerEmail } = data;
+
+  const headers = event.headers || {};
+  const protocol = headers['x-forwarded-proto'] || 'https';
+  const host = headers['x-forwarded-host'] || headers.host || APP_BASE_URL.replace('https://', '').replace('http://', '');
+  const baseUrl = APP_BASE_URL || `${protocol}://${host}`;
+
+  const successUrl = `${baseUrl}/pages/pagamento-sucesso.html`;
+  const pendingUrl = `${baseUrl}/pages/pagamento-pendente.html`;
+  const failureUrl = `${baseUrl}/pages/pagamento-falha.html`;
+
   const preferenceData = {
     items: [
       {
@@ -337,8 +347,18 @@ async function createMercadoPagoPreference(data) {
         currency_id: 'BRL'
       }
     ],
-    payer: { email: payerEmail }
+    payer: { email: payerEmail },
+    back_urls: {
+      success: successUrl,
+      pending: pendingUrl,
+      failure: failureUrl
+    },
+    auto_return: 'approved'
   };
+
+  console.log('[MercadoPago Netlify] Creating preference for:', payerEmail, 'amount:', amount, 'plan:', planName);
+  console.log('[MercadoPago Netlify] Back URLs:', { successUrl, pendingUrl, failureUrl });
+
   const result = await preference.create({ body: preferenceData });
   return { preferenceId: result.id, initPoint: result.init_point };
 }
@@ -568,7 +588,7 @@ exports.handler = async (event, context) => {
     }
 
     if (pathname === '/mercadopago/preference' && rawMethod === 'POST') {
-      const mpResult = await createMercadoPagoPreference(body || {});
+      const mpResult = await createMercadoPagoPreference(body || {}, event);
       return { statusCode: 200, headers, body: JSON.stringify(mpResult) };
     }
 

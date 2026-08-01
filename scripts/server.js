@@ -294,6 +294,14 @@ async function createMercadoPagoPreference(req, res) {
       const data = JSON.parse(body);
       const { amount, planName, payerEmail } = data;
 
+      const protocol = (req.headers['x-forwarded-proto'] || 'http');
+      const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`;
+      const baseUrl = `${protocol}://${host}`;
+
+      const successUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-sucesso.html' : '/pages/pagamento-sucesso.html');
+      const pendingUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-pendente.html' : '/pages/pagamento-pendente.html');
+      const failureUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-falha.html' : '/pages/pagamento-falha.html');
+
       const preferenceData = {
         items: [
           {
@@ -305,10 +313,17 @@ async function createMercadoPagoPreference(req, res) {
         ],
         payer: {
           email: payerEmail
-        }
+        },
+        back_urls: {
+          success: successUrl,
+          pending: pendingUrl,
+          failure: failureUrl
+        },
+        auto_return: 'approved'
       };
 
-      console.log('[MercadoPago] Creating preference for:', payerEmail);
+      console.log('[MercadoPago] Creating preference for:', payerEmail, 'amount:', amount, 'plan:', planName);
+      console.log('[MercadoPago] Back URLs:', { successUrl, pendingUrl, failureUrl });
       const result = await preference.create({ body: preferenceData });
       console.log('[MercadoPago] Full preference response:', JSON.stringify(result, null, 2));
       console.log('[MercadoPago] Preference created:', result.id, 'init_point:', result.init_point, 'back_urls:', result.back_urls);

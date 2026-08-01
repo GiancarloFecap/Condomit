@@ -1,9 +1,12 @@
 
 let currentUser = null;
 let selectedPlan = null; // will hold the full plano object from DB
-let selectedPrice = 149.00;
+let selectedPrice = null; // inicializa null, será definido ao carregar os planos
 let currentInitPoint = null;
 let plans = [];
+let currentPagamentoId = null; // armazena o ID do pagamento pendente criado
+let mpPopup = null;
+let paymentListenerAdded = false;
 
 document.addEventListener('DOMContentLoaded', async function() {
     // 1. Verificar autenticação
@@ -189,6 +192,88 @@ async function createPreference() {
     }
 }
 
+// Função para criar registro de pagamento PENDENTE antes de abrir checkout
+async function createPendingPayment() {
+    const pagamentoData = {
+        email: currentUser.email,
+        cep: currentUser.condominium?.cep || '',
+        plano_id: selectedPlan.id,
+        total_apartamentos: currentUser.condominium?.totalApartments || 0,
+        valor_por_unidade: selectedPlan.valor_por_unidade,
+        valor_minimo: selectedPlan.valor_minimo,
+        valor_pago: selectedPrice,
+        status_pagamento: 'pendente',
+        codigo_transacao: `TXN-${Date.now()}`,
+        data_pagamento: new Date().toISOString()
+    };
+
+    const result = await createPayment(pagamentoData);
+    if (result && result.id) {
+        currentPagamentoId = result.id;
+    } else if (Array.isArray(result) && result.length && result[0].id) {
+        currentPagamentoId = result[0].id;
+    }
+    return result;
+}
+
+// Atualiza status do pagamento no banco
+async function updatePaymentStatus(id, status) {
+    const response = await fetch(`/api/pagamento?id=${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            status_pagamento: status,
+            data_pagamento: new Date().toISOString()
+        })
+    });
+    if (!response.ok) throw new Error('Failed to update payment');
+    return await response.json();
+}
+
+// Listener para receber retorno real do Mercado Pago
+function addMercadoPagoReturnListener() {
+    if (paymentListenerAdded) return;
+    paymentListenerAdded = true;
+
+    window.addEventListener('message', async (event) => {
+        if (event.origin !== location.origin) return;
+        if (event.data?.tipo !== 'RETORNO_MERCADO_PAGO') return;
+
+        const status = event.data.status;
+        const dados = event.data.dados || {};
+
+        hideLoadingOverlay();
+        if (mpPopup && !mpPopup.closed) {
+            try { mpPopup.close(); } catch (_) {}
+        }
+
+        try {
+            if (status === 'approved') {
+                if (currentPagamentoId) {
+                    await updatePaymentStatus(currentPagamentoId, 'aprovado');
+                }
+                await updateUserByEmail(currentUser.email, { plan: selectedPlan.nome });
+                currentUser.plan = selectedPlan.nome;
+                sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
+                window.location.href = 'index.html';
+            } else if (status === 'pending') {
+                if (currentPagamentoId) {
+                    await updatePaymentStatus(currentPagamentoId, 'pendente');
+                }
+                window.location.href = 'pagamento-pendente.html';
+            } else {
+                if (currentPagamentoId) {
+                    await updatePaymentStatus(currentPagamentoId, 'falhou');
+                }
+                window.location.href = 'pagamento-falha.html';
+            }
+        } catch (err) {
+            console.error('[Checkout] Erro ao processar retorno MP:', err);
+            alert('Erro ao confirmar status do pagamento. Tente novamente.');
+        }
+    });
+}
+
 // Function to show loading overlay
 function showLoadingOverlay() {
     const overlay = document.createElement('div');
@@ -227,8 +312,17 @@ async function initCheckoutButton() {
     const container = document.getElementById('payment-brick_container');
     container.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;"><i class="fas fa-spinner fa-spin"></i> Carregando pagamento...</div>';
 
+    if (!selectedPlan || selectedPrice == null) {
+        container.innerHTML = `<div style="text-align:center;padding:20px;color:#f59e0b;"><i class="fas fa-exclamation-triangle"></i> Selecione um plano para continuar.</div>`;
+        return;
+    }
+
     try {
         console.log('[Checkout] initCheckoutButton starting...');
+        
+        // Garante listener de retorno do MP
+        addMercadoPagoReturnListener();
+
         const preferenceData = await createPreference();
         currentInitPoint = preferenceData.initPoint;
         console.log('[Checkout] Preference created with init_point:', currentInitPoint);
@@ -259,53 +353,34 @@ async function initCheckoutButton() {
             try {
                 // Show loading overlay first
                 showLoadingOverlay();
+
+                // Cria pagamento PENDENTE no banco antes de abrir popup
+                try {
+                    await createPendingPayment();
+                } catch (paymentErr) {
+                    console.warn('[Checkout] Aviso: não criou pagamento pendente:', paymentErr);
+                }
                 
                 // Open Mercado Pago in a popup
-                const mpPopup = window.open(currentInitPoint, 'MercadoPago', 'width=800,height=800');
+                mpPopup = window.open(currentInitPoint, 'MercadoPago', 'width=800,height=800');
                 
-                // Check if popup is closed every 500ms
+                // Check if popup is closed every 500ms (fallback)
                 const checkPopup = setInterval(async () => {
-                    if (mpPopup.closed) {
+                    if (mpPopup && mpPopup.closed) {
                         clearInterval(checkPopup);
-                        
+                        // Se o popup foi fechado sem retorno (aprovado/pendente/falha), consideramos como cancelado/falha
+                        hideLoadingOverlay();
+                        alert('Janela de pagamento foi fechada. Tente novamente.');
                         try {
-                            // Create payment record in DB with status 'aprovado'
-                            const pagamentoData = {
-                                email: currentUser.email,
-                                cep: currentUser.condominium?.cep || '',
-                                plano_id: selectedPlan.id,
-                                total_apartamentos: currentUser.condominium?.totalApartments || 0,
-                                valor_por_unidade: selectedPlan.valor_por_unidade,
-                                valor_minimo: selectedPlan.valor_minimo,
-                                valor_pago: selectedPrice,
-                                status_pagamento: 'aprovado',
-                                codigo_transacao: `TXN-${Date.now()}`,
-                                data_pagamento: new Date().toISOString()
-                            };
-                            
-                            await createPayment(pagamentoData);
-                            
-                            // Update user's plan in DB for compatibility
-                            await updateUserByEmail(currentUser.email, { plan: selectedPlan.nome });
-                            
-                            // Update currentUser object and sessionStorage
-                            currentUser.plan = selectedPlan.nome;
-                            sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
-                            
-                            // Hide overlay
-                            hideLoadingOverlay();
-                            
-                            // Redirect to index
-                            window.location.href = 'index.html';
-                        } catch (error) {
-                            console.error('[Checkout] Error after payment:', error);
-                            hideLoadingOverlay();
-                            alert('Erro ao finalizar o pagamento. Tente novamente.');
-                        }
+                            if (currentPagamentoId) {
+                                await updatePaymentStatus(currentPagamentoId, 'falhou');
+                            }
+                        } catch (_) {}
                     }
                 }, 500);
             } catch (error) {
                 console.error('Erro ao processar pagamento:', error);
+                hideLoadingOverlay();
                 alert('Erro ao processar pagamento. Tente novamente.');
             }
         });

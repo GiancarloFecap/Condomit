@@ -228,10 +228,10 @@ document.addEventListener('DOMContentLoaded', function() {
             total_blocks: totalBlocks,
             block_names: blockNames,
             condominium_spaces: spaces,
-            cnpj,
-            municipal_registration: inscricao,
-            condominium_email: emailCondo,
-            condominium_phone: phone
+            cnpj: cnpj ? cnpj : null,
+            municipal_registration: inscricao ? inscricao : null,
+            condominium_email: emailCondo ? emailCondo : null,
+            condominium_phone: phone ? phone : null
         };
 
         try {
