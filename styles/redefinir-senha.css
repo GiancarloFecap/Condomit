@@ -1,31 +1,65 @@
-.login-container {
-    background: white;
-    border-radius: 16px;
-    padding: 40px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+.reset-page {
+    max-width: 560px;
+}
+
+.reset-container {
+    padding: 42px 34px;
+    border-radius: 24px;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+
+.reset-header {
+    margin-bottom: 28px;
 }
 
 .reset-icon {
-    width: 120px;
-    height: 120px;
-    background: #e8f4ff;
+    width: 96px;
+    height: 96px;
+    margin: 16px auto 18px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 2rem;
-}
-
-.reset-icon i {
-    font-size: 3.5rem;
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.12), rgba(59, 130, 246, 0.2));
     color: #1e40af;
 }
 
-h1 {
-    font-size: 2.2rem;
-    color: #111827;
+.reset-icon i {
+    font-size: 2.5rem;
+}
+
+.reset-header h1 {
+    margin: 0 0 12px;
     text-align: center;
-    margin-bottom: 1rem;
+    color: #111827;
+    font-size: 2rem;
+    line-height: 1.2;
+}
+
+.reset-subtitle {
+    margin: 0;
+    text-align: center;
+    color: #6b7280;
+    font-size: 1rem;
+    line-height: 1.7;
+}
+
+.reset-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #374151;
 }
 
 .password-input {
@@ -34,134 +68,211 @@ h1 {
 
 .password-input input {
     width: 100%;
-    padding: 1.2rem 3.5rem 1.2rem 1.2rem;
-    border: 2px solid #d1d5db;
-    border-radius: 12px;
-    font-size: 1.2rem;
-    transition: border-color 0.3s ease;
+    min-height: 56px;
+    padding: 16px 52px 16px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    font-size: 1rem;
+    color: #111827;
+    background: #f8fafc;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .password-input input:focus {
     outline: none;
-    border-color: #1e40af;
+    border-color: #2563eb;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
 .toggle-password {
     position: absolute;
-    right: 1.2rem;
     top: 50%;
+    right: 14px;
     transform: translateY(-50%);
-    background: transparent;
+    width: 36px;
+    height: 36px;
     border: none;
-    cursor: pointer;
+    border-radius: 10px;
+    background: transparent;
     color: #9ca3af;
-    font-size: 1.4rem;
-    transition: color 0.3s ease;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .toggle-password:hover {
     color: #1e40af;
+    background: rgba(30, 64, 175, 0.08);
 }
 
 .password-requirements {
-    background: #f9fafb;
-    border-radius: 12px;
-    padding: 1rem 1.5rem;
-    margin-top: 1rem;
+    padding: 18px 18px 16px;
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #f8fbff 0%, #f2f7ff 100%);
 }
 
 .password-requirements p {
-    color: #374151;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
+    margin: 0 0 14px;
+    color: #1f2937;
+    font-size: 1rem;
+    font-weight: 700;
 }
 
 .password-requirements ul {
     list-style: none;
+    display: grid;
+    gap: 10px;
     padding: 0;
+    margin: 0;
 }
 
 .password-requirements li {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-    color: #6b7280;
-    font-size: 0.95rem;
+    align-items: flex-start;
+    gap: 10px;
+    color: #64748b;
+    font-size: 0.96rem;
+    line-height: 1.45;
 }
 
 .password-requirements li.valid {
-    color: #22c55e;
+    color: #15803d;
 }
 
 .password-requirements li i {
     width: 18px;
+    margin-top: 2px;
     text-align: center;
+    color: inherit;
+}
+
+.status-card {
+    border-radius: 16px;
+    padding: 18px 18px 16px;
+    margin-bottom: 18px;
 }
 
 .success-message {
-    background: #f0fdf4;
-    border: 1px solid #86efac;
-    border-radius: 12px;
-    padding: 1.5rem;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
     text-align: center;
-    display: none;
-    margin-bottom: 1.5rem;
 }
 
 .success-message i {
-    color: #22c55e;
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
+    display: block;
+    margin-bottom: 10px;
+    font-size: 2rem;
 }
 
 .success-message h2 {
-    color: #111827;
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
+    margin: 0 0 8px;
+    font-size: 1.35rem;
+    color: #065f46;
 }
 
 .success-message p {
-    color: #6b7280;
-    font-size: 1rem;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.success-message p + p {
+    margin-top: 6px;
 }
 
 .error-message {
     background: #fef2f2;
-    border: 1px solid #fca5a5;
-    border-radius: 8px;
-    padding: 1rem;
-    color: #dc2626;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+}
+
+.error-message i {
+    margin-right: 8px;
+}
+
+.error-message h2 {
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+    color: #991b1b;
+}
+
+.error-message p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.error-message a {
+    color: #991b1b;
+    font-weight: 700;
+}
+
+#errorMessage {
     font-size: 0.95rem;
-    margin-bottom: 1rem;
-    display: none;
+    line-height: 1.5;
 }
 
 .btn-primary {
-    padding: 1.4rem !important;
-    font-size: 1.15rem !important;
-    border-radius: 12px !important;
-    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.25) !important;
+    min-height: 56px;
+    border-radius: 14px !important;
+    font-size: 1.05rem !important;
+    box-shadow: 0 10px 24px rgba(30, 64, 175, 0.22) !important;
 }
 
 .btn-primary:disabled {
-    background: #9ca3af !important;
+    background: #94a3b8 !important;
     cursor: not-allowed !important;
     box-shadow: none !important;
+    transform: none !important;
+}
+
+.reset-actions {
+    margin-top: 26px;
+    display: flex;
+    justify-content: center;
 }
 
 .back-link {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
+    gap: 8px;
     color: #1e40af;
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
     text-decoration: none;
-    margin: 2rem 0;
 }
 
 .back-link:hover {
     text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+    .reset-container {
+        padding: 30px 22px;
+        border-radius: 18px;
+    }
+
+    .reset-header h1 {
+        font-size: 1.7rem;
+    }
+
+    .reset-subtitle {
+        font-size: 0.96rem;
+    }
+
+    .reset-icon {
+        width: 82px;
+        height: 82px;
+    }
+
+    .reset-icon i {
+        font-size: 2rem;
+    }
+
+    .password-input input {
+        min-height: 52px;
+        font-size: 0.98rem;
+    }
 }
