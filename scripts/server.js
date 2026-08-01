@@ -9,6 +9,7 @@ const { Brevo, BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
 
 const root = process.cwd();
 const port = process.env.PORT ? Number(process.env.PORT) : 8081;
+const DEFAULT_MERCADO_PAGO_ACCESS_TOKEN = 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
 
 const env = loadEnv(path.join(root, '.env'));
 const SUPABASE_URL = env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
@@ -18,7 +19,7 @@ const MERCADO_PAGO_ACCESS_TOKEN =
   env.MERCADO_PAGO_ACESS_TOKEN ||
   process.env.MERCADO_PAGO_ACCESS_TOKEN ||
   process.env.MERCADO_PAGO_ACESS_TOKEN ||
-  '';
+  DEFAULT_MERCADO_PAGO_ACCESS_TOKEN;
 const APP_BASE_URL = env.APP_BASE_URL || 'https://condomit.netlify.app';
 const BREVO_API_KEY = env.BREVO_API_KEY || process.env.BREVO_API_KEY || '';
 const BREVO_SENDER_EMAIL = env.BREVO_SENDER_EMAIL || process.env.BREVO_SENDER_EMAIL || '';
