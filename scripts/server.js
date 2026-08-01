@@ -332,11 +332,12 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 const RESET_TOKEN_SECRET = process.env.RESET_TOKEN_SECRET || SUPABASE_SERVICE_ROLE_KEY;
+const RESET_TOKEN_TTL_MS = 5 * 60 * 1000;
 
 function generateResetToken(email) {
   const payload = Buffer.from(JSON.stringify({
     email,
-    expires: Date.now() + 3600000,
+    expires: Date.now() + RESET_TOKEN_TTL_MS,
     nonce: crypto.randomBytes(16).toString('hex')
   })).toString('base64url');
   const signature = crypto.createHmac('sha256', RESET_TOKEN_SECRET).update(payload).digest('base64url');
@@ -427,6 +428,63 @@ function getBrevoErrorMessage(error) {
   }
 }
 
+function buildResetEmailHtml(usuarioNome, link) {
+  return `
+    <div style="margin:0;padding:32px 16px;background-color:#eef4ff;">
+      <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #dbeafe;border-radius:24px;overflow:hidden;box-shadow:0 18px 48px rgba(30,64,175,0.14);font-family:Arial,sans-serif;color:#1f2937;">
+        <div style="padding:28px 32px;background:linear-gradient(135deg,#1e40af 0%,#2563eb 55%,#32C26D 100%);">
+          <div style="display:inline-block;padding:8px 14px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.2);border-radius:999px;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
+            Condomit
+          </div>
+          <h1 style="margin:18px 0 10px;color:#ffffff;font-size:28px;line-height:1.2;">Recuperação de senha</h1>
+          <p style="margin:0;color:rgba(255,255,255,0.92);font-size:15px;line-height:1.7;">
+            Recebemos uma solicitação para redefinir a senha da sua conta.
+          </p>
+        </div>
+
+        <div style="padding:32px;">
+          <p style="margin:0 0 16px;font-size:16px;line-height:1.7;color:#374151;">
+            Olá, <strong style="color:#1e40af;">${usuarioNome}</strong>.
+          </p>
+          <p style="margin:0 0 24px;font-size:15px;line-height:1.8;color:#4b5563;">
+            Para cadastrar uma nova senha com segurança, clique no botão abaixo. Este link temporário foi gerado exclusivamente para a sua conta.
+          </p>
+
+          <div style="margin:0 0 28px;text-align:center;">
+            <a href="${link}" style="display:inline-block;padding:15px 28px;border-radius:14px;background:linear-gradient(135deg,#79D836 0%,#32C26D 100%);color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;box-shadow:0 12px 24px rgba(50,194,109,0.24);">
+              Redefinir minha senha
+            </a>
+          </div>
+
+          <div style="padding:18px 20px;background:#f8fbff;border:1px solid #dbeafe;border-radius:16px;">
+            <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#1e3a8a;">Informacoes importantes</p>
+            <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#475569;">
+              Este link e valido por <strong style="color:#1e40af;">5 minutos</strong>.
+            </p>
+            <p style="margin:0;font-size:14px;line-height:1.7;color:#475569;">
+              Se voce nao solicitou esta redefinicao, ignore este email. Sua senha atual permanecera inalterada.
+            </p>
+          </div>
+
+          <p style="margin:24px 0 8px;font-size:13px;line-height:1.7;color:#64748b;">
+            Caso o botao nao funcione, copie e cole este link no seu navegador:
+          </p>
+          <p style="margin:0;word-break:break-word;">
+            <a href="${link}" style="color:#2563eb;font-size:13px;line-height:1.7;text-decoration:none;">${link}</a>
+          </p>
+        </div>
+
+        <div style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e5e7eb;">
+          <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#1e40af;">Condomit</p>
+          <p style="margin:0;font-size:12px;line-height:1.6;color:#94a3b8;">
+            O app do seu condominio.
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 async function sendResetEmail(toEmail, usuario, resetLink) {
   console.log('========================================');
   console.log('📧 INICIANDO ENVIO DO E-MAIL DE RESET');
@@ -454,19 +512,7 @@ async function sendResetEmail(toEmail, usuario, resetLink) {
     replyTo: { email: BREVO_SENDER_EMAIL },
     to: [{ email: email }],
     subject: 'Recuperação de senha — Condomit',
-    htmlContent: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
-            <h2 style="color: #32C26D;">Recuperação de senha</h2>
-            <p>Olá, <strong>${usuarioBrevo.nome}</strong>!</p>
-            <p>Clique no botão abaixo para criar uma nova senha:</p>
-            <a href="${link}" style="display:inline-block;background:linear-gradient(135deg,#79D836,#32C26D);color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin:16px 0;">
-                Redefinir minha senha
-            </a>
-            <p style="color:#5A5A5A;font-size:14px;">Este link é válido por <strong>1 hora</strong>.</p>
-            <hr style="border:none;border-top:1px solid #C2C2C2;margin:24px 0;">
-            <p style="color:#C2C2C2;font-size:12px;">Condomit — O app do seu condomínio</p>
-        </div>
-    `
+    htmlContent: buildResetEmailHtml(usuarioBrevo.nome, link)
   });
 
   const messageId = info?.messageId || info?.body?.messageId;
