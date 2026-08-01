@@ -119,14 +119,31 @@ async function loadResidents(cep) {
 
     try {
         const residents = await fetchResidentsByCondoCep(cep);
-        if (activeResidentsEl) activeResidentsEl.textContent = `Moradores Ativos: ${residents.length}`;
+        const normalizedResidents = residents
+            .map((resident) => {
+                const condo = resident?.condominium && typeof resident.condominium === 'object'
+                    ? resident.condominium
+                    : {};
 
-        if (!residents.length) {
+                return {
+                    apartment: condo.apartment ?? '-',
+                    block: condo.block ?? '-',
+                    name: resident?.name || 'Sem nome'
+                };
+            })
+            .sort((a, b) => {
+                const blockCompare = String(a.block).localeCompare(String(b.block), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                if (blockCompare !== 0) return blockCompare;
+                return String(a.apartment).localeCompare(String(b.apartment), 'pt-BR', { numeric: true, sensitivity: 'base' });
+            });
+        if (activeResidentsEl) activeResidentsEl.textContent = `Moradores Ativos: ${normalizedResidents.length}`;
+
+        if (!normalizedResidents.length) {
             tableBody.innerHTML = '<tr><td colspan="3">Nenhum morador cadastrado encontrado para este condomínio.</td></tr>';
             return;
         }
 
-        tableBody.innerHTML = residents.map((resident) => {
+        tableBody.innerHTML = normalizedResidents.map((resident) => {
             const apt = resident.apartment || '-';
             const block = resident.block || '-';
             const name = resident.name || 'Sem nome';

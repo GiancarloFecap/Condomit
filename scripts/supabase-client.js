@@ -154,8 +154,30 @@ async function fetchPendingNoticesCount(cep) {
 
 async function fetchResidentsByCondoCep(cep) {
   if (!cep) return [];
-  const data = await supabaseFetch(`/users?select=name,user_type,condominium&user_type=eq.morador&condominium->>cep=eq.${encodeURIComponent(cep)}`);
-  return Array.isArray(data) ? data : [];
+  const normalizedCep = String(cep).replace(/\D/g, '');
+  const data = await supabaseFetch('/users?select=name,user_type,condominium&user_type=eq.morador');
+
+  return (Array.isArray(data) ? data : [])
+    .map((resident) => {
+      let condominium = resident?.condominium || null;
+
+      if (typeof condominium === 'string') {
+        try {
+          condominium = JSON.parse(condominium);
+        } catch (_) {
+          condominium = null;
+        }
+      }
+
+      return {
+        ...resident,
+        condominium
+      };
+    })
+    .filter((resident) => {
+      const residentCep = String(resident?.condominium?.cep || '').replace(/\D/g, '');
+      return residentCep && residentCep === normalizedCep;
+    });
 }
 
 async function scheduleAssemblyDb(assembly) {

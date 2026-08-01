@@ -159,7 +159,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     cancelBtn.addEventListener('click', function() {
         if (confirm('Tem certeza que deseja cancelar? As alterações não serão salvas.')) {
-            window.location.href = 'index.html';
+            condoForm.reset();
+            spacesBody.innerHTML = '';
+            updateBlockInputs(0);
         }
     });
 
