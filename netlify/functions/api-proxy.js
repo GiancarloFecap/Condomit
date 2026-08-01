@@ -107,6 +107,12 @@ function parseMercadoPagoAmount(value) {
   return Number(normalized);
 }
 
+function resolveMercadoPagoCheckoutUrl(createdPreference) {
+  const sandboxInitPoint = createdPreference?.sandbox_init_point || '';
+  const productionInitPoint = createdPreference?.init_point || '';
+  return sandboxInitPoint || productionInitPoint || '';
+}
+
 const RESET_TOKEN_SECRET = process.env.RESET_TOKEN_SECRET || SUPABASE_SERVICE_ROLE_KEY;
 const RESET_TOKEN_TTL_MS = 5 * 60 * 1000;
 
@@ -438,7 +444,6 @@ async function createMercadoPagoPreference(data) {
         unit_price: normalizedAmount
       }
     ],
-    payer: !MERCADO_PAGO_IS_TEST_MODE && payerEmail ? { email: payerEmail } : undefined,
     back_urls: {
       success: successUrl.toString(),
       failure: failureUrl.toString(),
@@ -450,11 +455,10 @@ async function createMercadoPagoPreference(data) {
   };
 
   const created = await mpCreatePreference(preferencePayload);
-  const initPoint = MERCADO_PAGO_IS_TEST_MODE
-    ? (created?.sandbox_init_point || created?.init_point)
-    : (created?.init_point || created?.sandbox_init_point);
+  const initPoint = resolveMercadoPagoCheckoutUrl(created);
+  const detectedTestMode = Boolean(created?.sandbox_init_point) || MERCADO_PAGO_IS_TEST_MODE;
   if (!initPoint) throw new Error(created?.message || 'Link de pagamento não retornado');
-  return { preferenceId: created.id, initPoint, testMode: MERCADO_PAGO_IS_TEST_MODE };
+  return { preferenceId: created.id, initPoint, testMode: detectedTestMode };
 }
 
 async function getMercadoPagoPaymentStatus(data) {
