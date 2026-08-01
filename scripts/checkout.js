@@ -316,6 +316,10 @@ async function createPreference() {
         throw new Error('Selecione um plano antes de continuar.');
     }
 
+    // #region debug-point A:checkout-create-preference-start
+    fetch("http://127.0.0.1:7778/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercadopago-payment-error",runId:"pre-fix",hypothesisId:"A",location:"scripts/checkout.js:createPreference:start",msg:"[DEBUG] Iniciando criacao da preferencia do Mercado Pago",data:{planId:selectedPlan.id,planName:selectedPlan.nome,amount:selectedPrice,userEmail:currentUser.email},ts:Date.now()})}).catch(()=>{});
+    // #endregion
+
     const response = await fetch('/api/mercadopago/preference', {
         method: 'POST',
         headers: {
@@ -330,6 +334,9 @@ async function createPreference() {
     });
 
     const data = await response.json().catch(() => null);
+    // #region debug-point A:checkout-create-preference-response
+    fetch("http://127.0.0.1:7778/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercadopago-payment-error",runId:"pre-fix",hypothesisId:"A",location:"scripts/checkout.js:createPreference:response",msg:"[DEBUG] Resposta da preferencia do Mercado Pago recebida no frontend",data:{ok:response.ok,status:response.status,payload:data},ts:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!response.ok || data?.error) {
         throw new Error(data?.error || 'Erro ao criar preferencia de pagamento');
     }

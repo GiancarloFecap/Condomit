@@ -13,7 +13,7 @@ const port = process.env.PORT ? Number(process.env.PORT) : 8081;
 const env = loadEnv(path.join(root, '.env'));
 const SUPABASE_URL = env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTUwNjQsImV4cCI6MjA5NTk5MTA2NH0.WTk0rZaTsPvs30uEWDfylc-z6L3G8IUb_J73oYtjuWU';
-const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MERCADO_PAGO_ACCESS_TOKEN || 'APP_USR-2991875109649887-061020-07b3ac464f9a25e0272cd8ba40bf2321-3466462896';
+const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
 const APP_BASE_URL = env.APP_BASE_URL || 'https://condomit.netlify.app';
 const BREVO_API_KEY = env.BREVO_API_KEY || process.env.BREVO_API_KEY || '';
 const BREVO_SENDER_EMAIL = env.BREVO_SENDER_EMAIL || process.env.BREVO_SENDER_EMAIL || '';
@@ -75,9 +75,15 @@ function mpRequest(requestPath, method = 'GET', payload = null) {
         try {
           parsed = data ? JSON.parse(data) : null;
         } catch (_) {
+          // #region debug-point C:mercadopago-parse-error
+          fetch("http://127.0.0.1:7778/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercadopago-payment-error",runId:"pre-fix",hypothesisId:"C",location:"scripts/server.js:mpRequest:parse-error",msg:"[DEBUG] Resposta do Mercado Pago nao pode ser parseada",data:{requestPath,method,statusCode:response.statusCode,raw:data},ts:Date.now()})}).catch(()=>{});
+          // #endregion
           reject(new Error('Erro ao parsear resposta do Mercado Pago'));
           return;
         }
+        // #region debug-point C:mercadopago-response
+        fetch("http://127.0.0.1:7778/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercadopago-payment-error",runId:"pre-fix",hypothesisId:"C",location:"scripts/server.js:mpRequest:response",msg:"[DEBUG] Resposta do Mercado Pago recebida no backend local",data:{requestPath,method,statusCode:response.statusCode,parsed},ts:Date.now()})}).catch(()=>{});
+        // #endregion
         if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
           const message = parsed?.message || parsed?.error || `Erro Mercado Pago (HTTP ${response.statusCode})`;
           reject(new Error(message));
@@ -436,6 +442,10 @@ async function createMercadoPagoPreference(req, res) {
       statement_descriptor: 'CONDOMIT',
       external_reference: `CONDOMIT-${planId || 'plan'}-${Date.now()}`
     };
+
+    // #region debug-point B:mercadopago-preference-payload
+    fetch("http://127.0.0.1:7778/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"mercadopago-payment-error",runId:"pre-fix",hypothesisId:"B",location:"scripts/server.js:createMercadoPagoPreference:payload",msg:"[DEBUG] Preferencia do Mercado Pago preparada no backend local",data:{amount,normalizedAmount,planName,planId,hasPayer:Boolean(preferencePayload.payer),backUrls:preferencePayload.back_urls,testModeByToken:MERCADO_PAGO_IS_TEST_MODE},ts:Date.now()})}).catch(()=>{});
+    // #endregion
 
     const created = await mpCreatePreference(preferencePayload);
     const initPoint = resolveMercadoPagoCheckoutUrl(created);
