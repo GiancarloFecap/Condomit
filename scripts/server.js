@@ -409,6 +409,7 @@ const RESET_TOKEN_SECRET = process.env.RESET_TOKEN_SECRET || SUPABASE_SERVICE_RO
 const RESET_TOKEN_TTL_MS = 5 * 60 * 1000;
 const MERCADO_PAGO_API_BASE = 'https://api.mercadopago.com';
 const SUPPORT_PAYMENT_MAILTO = 'mailto:contato.condomit@gmail.com?subject=Suporte%20Condomit%20-%20Pagamento';
+const paymentConfirmationEmailAttempts = new Map();
 
 function generateResetToken(email) {
   const payload = Buffer.from(JSON.stringify({
@@ -822,6 +823,46 @@ async function sendPaymentConfirmationEmail(toEmail, usuario, paymentDetails) {
   return { ...info, messageId };
 }
 
+async function sendPaymentConfirmationEmailOnce(transactionId, toEmail, usuario, paymentDetails) {
+  const cacheKey = String(transactionId || '').trim();
+  if (!cacheKey || !toEmail) {
+    return { skipped: true, emailSent: false, emailError: 'Dados insuficientes para envio do e-mail' };
+  }
+
+  const cached = paymentConfirmationEmailAttempts.get(cacheKey);
+  if (cached?.status === 'sent') {
+    return { skipped: true, emailSent: true, messageId: cached.messageId || null };
+  }
+  if (cached?.status === 'pending' && cached.promise) {
+    return cached.promise;
+  }
+
+  const promise = (async () => {
+    try {
+      const result = await sendPaymentConfirmationEmail(toEmail, usuario, paymentDetails);
+      paymentConfirmationEmailAttempts.set(cacheKey, {
+        status: 'sent',
+        messageId: result?.messageId || null
+      });
+      return { skipped: false, emailSent: true, messageId: result?.messageId || null };
+    } catch (error) {
+      const emailError = getBrevoErrorMessage(error);
+      paymentConfirmationEmailAttempts.set(cacheKey, {
+        status: 'failed',
+        emailError
+      });
+      return { skipped: false, emailSent: false, emailError };
+    }
+  })();
+
+  paymentConfirmationEmailAttempts.set(cacheKey, {
+    status: 'pending',
+    promise
+  });
+
+  return promise;
+}
+
 async function fetchSupabaseUserRecordByEmail(email) {
   if (!email) return null;
 
@@ -973,6 +1014,21 @@ async function processMercadoPagoPaymentConfirmation(paymentId) {
   const existingProcessedPayment = await fetchSupabasePaymentByTransactionCode(transactionId);
   if (existingProcessedPayment && isApprovedPaymentStatus(existingProcessedPayment.status_pagamento)) {
     const processedPlan = await fetchSupabasePlanById(existingProcessedPayment.plano_id).catch(() => null);
+    const existingUserEmail = existingProcessedPayment.email || payerEmail;
+    const existingUserRecord = existingUserEmail ? await fetchSupabaseUserRecordByEmail(existingUserEmail).catch(() => null) : null;
+    const existingEmailResult = existingUserEmail
+      ? await sendPaymentConfirmationEmailOnce(
+          transactionId,
+          existingUserEmail,
+          existingUserRecord || { name: existingUserEmail.split('@')[0] },
+          {
+            planName: normalizePlanName(processedPlan?.nome || mercadoPagoPayment.metadata?.plan_name || existingProcessedPayment.plano_id),
+            approvedAt: existingProcessedPayment.data_pagamento || approvedAt,
+            amount: existingProcessedPayment.valor_pago || amount
+          }
+        )
+      : { skipped: true, emailSent: false, emailError: 'E-mail do usuário não encontrado' };
+
     return {
       approved: true,
       alreadyProcessed: true,
@@ -981,7 +1037,9 @@ async function processMercadoPagoPaymentConfirmation(paymentId) {
       planId: existingProcessedPayment.plano_id || null,
       planName: normalizePlanName(processedPlan?.nome || mercadoPagoPayment.metadata?.plan_name || existingProcessedPayment.plano_id),
       approvedAtFormatted: formatBrazilianDate(existingProcessedPayment.data_pagamento || approvedAt),
-      amountFormatted: formatBrazilianCurrency(existingProcessedPayment.valor_pago || amount)
+      amountFormatted: formatBrazilianCurrency(existingProcessedPayment.valor_pago || amount),
+      emailSent: existingEmailResult.emailSent,
+      emailError: existingEmailResult.emailError || null
     };
   }
 
@@ -1026,15 +1084,19 @@ async function processMercadoPagoPaymentConfirmation(paymentId) {
   let emailError = null;
 
   if (userEmail) {
-    try {
-      await sendPaymentConfirmationEmail(userEmail, userRecord || { name: userEmail.split('@')[0] }, {
+    const emailResult = await sendPaymentConfirmationEmailOnce(
+      transactionId,
+      userEmail,
+      userRecord || { name: userEmail.split('@')[0] },
+      {
         planName,
         approvedAt,
         amount: amount || targetPayment.valor_pago || targetPayment.valor_minimo || 0
-      });
-      emailSent = true;
-    } catch (error) {
-      emailError = getBrevoErrorMessage(error);
+      }
+    );
+    emailSent = emailResult.emailSent;
+    emailError = emailResult.emailError || null;
+    if (emailError) {
       console.error(`[Payment Confirmation Email Error] paymentId=${transactionId}`, emailError);
     }
   }
