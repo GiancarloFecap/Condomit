@@ -564,6 +564,24 @@ exports.handler = async (event, context) => {
       return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
     }
 
+    if (pathname === '/users' && rawMethod === 'DELETE') {
+      const email = query.email;
+      if (!email) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro email é obrigatório' }) };
+      }
+      const result = await proxySupabaseRequest(null, `/users?email=eq.${encodeURIComponent(email)}`, 'DELETE');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
+    if (pathname === '/condominiums' && rawMethod === 'DELETE') {
+      const cep = query.cep;
+      if (!cep) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro cep é obrigatório' }) };
+      }
+      const result = await proxySupabaseRequest(null, `/condominiums?cep=eq.${encodeURIComponent(cep)}`, 'DELETE');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+    }
+
     if (pathname === '/condominiums' && rawMethod === 'GET') {
       const queryCopy = { ...query };
       delete queryCopy.select;

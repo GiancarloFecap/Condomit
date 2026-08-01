@@ -618,4 +618,150 @@ function initPreferences() {
     }
 }
 
+/* ============ EXCLUIR CONTA ============ */
+
+function ensureDeleteAccountModal() {
+    let modal = document.getElementById('delete-account-modal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'delete-account-modal';
+    modal.className = 'delete-account-modal';
+    modal.innerHTML = `
+        <div class="delete-account-box">
+            <div class="dam-header">
+                <div class="dam-icon-circle"><i class="fas fa-triangle-exclamation"></i></div>
+                <h3>Excluir minha conta</h3>
+                <p>Esta ação é irreversível. Leia com atenção antes de continuar.</p>
+            </div>
+            <div class="dam-body">
+                <ul class="dam-warning-list" id="dam-warning-list">
+                    <!-- Populado dinamicamente -->
+                </ul>
+                <div class="dam-confirm-input">
+                    <label for="dam-confirm-text">Para confirmar, digite abaixo: <strong id="dam-confirm-expected">EXCLUIR</strong></label>
+                    <input type="text" id="dam-confirm-text" autocomplete="off" spellcheck="false" />
+                </div>
+                <div class="dam-message" id="dam-message">&nbsp;</div>
+            </div>
+            <div class="dam-footer">
+                <button type="button" class="dam-btn dam-btn-cancel" id="dam-cancel">Cancelar</button>
+                <button type="button" class="dam-btn dam-btn-confirm" id="dam-confirm" disabled>
+                    <i class="fas fa-trash-alt" style="margin-right:6px;"></i>Excluir permanentemente
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeDeleteAccountModal(); });
+    modal.querySelector('#dam-cancel').addEventListener('click', closeDeleteAccountModal);
+    modal.querySelector('#dam-confirm').addEventListener('click', executeDeleteAccount);
+    modal.querySelector('#dam-confirm-text').addEventListener('input', validateDeleteConfirmation);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('open')) closeDeleteAccountModal();
+    });
+
+    return modal;
+}
+
+function openDeleteAccountModal() {
+    const user = getCurrentUser();
+    if (!user) return;
+    const modal = ensureDeleteAccountModal();
+    const warnings = [];
+    warnings.push({ icon: 'fa-user-slash', text: 'Sua conta será permanentemente removida e não pode ser recuperada.' });
+    if (user.type === 'sindico') {
+        warnings.push({ icon: 'fa-building', text: 'O condomínio cadastrado por você também será excluído permanentemente.' });
+        warnings.push({ icon: 'fa-users', text: 'Dados de moradores e configurações do condomínio serão removidos.' });
+    } else {
+        warnings.push({ icon: 'fa-house', text: 'Seu vínculo com o condomínio será desfeito imediatamente.' });
+    }
+    warnings.push({ icon: 'fa-receipt', text: 'Pagamentos e histórico não serão reembolsados automaticamente.' });
+
+    const list = modal.querySelector('#dam-warning-list');
+    list.innerHTML = warnings.map(w => `<li><i class="fas ${w.icon}"></i><span>${w.text}</span></li>`).join('');
+
+    const txt = modal.querySelector('#dam-confirm-text');
+    txt.value = '';
+    modal.querySelector('#dam-message').innerHTML = '&nbsp;';
+    const btn = modal.querySelector('#dam-confirm');
+    btn.disabled = true;
+    btn.classList.remove('loading');
+    modal.classList.add('open');
+    setTimeout(() => txt.focus(), 120);
+}
+window.openDeleteAccountModal = openDeleteAccountModal;
+
+function closeDeleteAccountModal() {
+    const modal = document.getElementById('delete-account-modal');
+    if (modal) modal.classList.remove('open');
+}
+window.closeDeleteAccountModal = closeDeleteAccountModal;
+
+function validateDeleteConfirmation() {
+    const modal = document.getElementById('delete-account-modal');
+    if (!modal) return;
+    const val = (modal.querySelector('#dam-confirm-text').value || '').trim().toUpperCase();
+    const btn = modal.querySelector('#dam-confirm');
+    btn.disabled = val !== 'EXCLUIR';
+}
+
+async function executeDeleteAccount() {
+    const user = getCurrentUser();
+    if (!user) return;
+    const modal = document.getElementById('delete-account-modal');
+    if (!modal) return;
+    const btn = modal.querySelector('#dam-confirm');
+    const msg = modal.querySelector('#dam-message');
+    if (btn.disabled) return;
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+    msg.style.color = '#dc2626';
+    msg.textContent = 'Excluindo conta, aguarde...';
+
+    try {
+        if (user.type === 'sindico' && user.condominium && user.condominium.cep) {
+            try {
+                const delCondo = await fetch(`/api/condominiums?cep=${encodeURIComponent(user.condominium.cep)}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                console.log('[DeleteAccount] Exclusao condominio status:', delCondo.status);
+            } catch (condoErr) {
+                console.warn('[DeleteAccount] Aviso ao excluir condominio:', condoErr);
+            }
+        }
+
+        const delUser = await fetch(`/api/users?email=${encodeURIComponent(user.email)}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!delUser.ok && delUser.status !== 404) {
+            throw new Error('Não foi possível remover a conta no servidor (status ' + delUser.status + ')');
+        }
+
+        clearLoginPersistent();
+        try { sessionStorage.removeItem('selectedPlan'); } catch(_) {}
+        try { sessionStorage.removeItem('condominiumUser'); } catch(_) {}
+        try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
+        try { localStorage.removeItem('app-theme'); } catch(_) {}
+        try { localStorage.removeItem('app-font-size'); } catch(_) {}
+        try { localStorage.removeItem('app-language'); } catch(_) {}
+
+        msg.style.color = '#16a34a';
+        msg.textContent = 'Conta excluída com sucesso. Redirecionando...';
+        setTimeout(() => { window.location.href = '../inicio.html'; }, 900);
+    } catch (err) {
+        console.error('[DeleteAccount] Erro:', err);
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        msg.style.color = '#dc2626';
+        msg.textContent = 'Erro ao excluir conta: ' + (err.message || 'Tente novamente.');
+    }
+}
+
 

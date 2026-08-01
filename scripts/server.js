@@ -99,6 +99,26 @@ const server = http.createServer((req, res) => {
         return proxySupabaseRequest(req, res, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
     }
 
+    if (pathname === '/api/users' && req.method === 'DELETE') {
+        const email = parsedUrl.query.email;
+        if (!email) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Parâmetro email é obrigatório' }));
+            return;
+        }
+        return proxySupabaseRequest(req, res, `/users?email=eq.${encodeURIComponent(email)}`, 'DELETE');
+    }
+
+    if (pathname === '/api/condominiums' && req.method === 'DELETE') {
+        const cep = parsedUrl.query.cep;
+        if (!cep) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Parâmetro cep é obrigatório' }));
+            return;
+        }
+        return proxySupabaseRequest(req, res, `/condominiums?cep=eq.${encodeURIComponent(cep)}`, 'DELETE');
+    }
+
     if (pathname === '/api/condominiums' && req.method === 'GET') {
         const query = { ...parsedUrl.query };
         delete query.select;

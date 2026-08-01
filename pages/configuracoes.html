@@ -176,7 +176,14 @@
                         </div>
                         <div class="profile-card-actions">
                             <button class="btn-edit-profile" onclick="openConfigSection('editar-perfil')">Editar</button>
-                            <button class="btn-logout" onclick="logout()">Sair da Conta</button>
+                            <button class="btn-logout" id="btn-logout-main" onclick="logout()">
+                                <i class="fas fa-right-from-bracket"></i>
+                                Sair da Conta
+                            </button>
+                            <button class="btn-delete-account" onclick="openDeleteAccountModal()">
+                                <i class="fas fa-trash-alt"></i>
+                                Excluir Conta
+                            </button>
                         </div>
                     </div>
 
