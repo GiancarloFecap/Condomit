@@ -546,11 +546,37 @@ function renderScheduledAssemblies() {
     scheduledAssemblies.forEach(assembly => {
         const isOwn = assembly.created_by && currentUser && currentUser.email && assembly.created_by === currentUser.email;
         const canDelete = isSindico || isOwn;
+        const status = String(assembly.status || 'agendada');
+        const publicId = assembly.public_id || assembly.publicId || assembly.id;
+        const canEnter = status === 'em_andamento' || (isSindico && status === 'agendada');
+        const statusLabel = status === 'em_andamento'
+            ? 'Em andamento'
+            : status === 'encerrada'
+                ? 'Encerrada'
+                : status === 'cancelada'
+                    ? 'Cancelada'
+                    : 'Agendada';
+        const statusClass = status === 'em_andamento'
+            ? 'status-completed'
+            : status === 'encerrada' || status === 'cancelada'
+                ? 'status-cancelled'
+                : 'status-scheduled';
 
         const createdByHTML = assembly.created_by ? `<p><i class="fas fa-user-tie"></i> <strong>Criado por:</strong> ${escapeHtml(assembly.created_by)}</p>` : '';
         const timeText = assembly.end_time && assembly.end_time !== assembly.start_time
             ? ` às ${assembly.start_time || '--:--'} até ${assembly.end_time}`
             : ` às ${assembly.start_time || assembly.time || '--:--'}`;
+        const actionBtn = canEnter
+            ? `<button class="btn btn-primary" onclick="joinAssembly('${escapeHtml(String(publicId)).replace(/'/g, '&#39;')}')">
+                    <i class="fas fa-video"></i> ${status === 'agendada' ? 'Preparar Sala' : 'Entrar'}
+               </button>`
+            : status === 'agendada'
+                ? `<button class="btn btn-secondary" disabled>
+                        <i class="fas fa-hourglass-half"></i> Aguardando o síndico
+                   </button>`
+                : `<button class="btn btn-secondary" disabled>
+                        <i class="fas fa-lock"></i> ${statusLabel}
+                   </button>`;
 
         const deleteBtn = canDelete ? `
             <button class="btn btn-secondary" style="margin-left:8px;background:#fee2e2;color:#b91c1c;border-color:#fecaca;" onclick="confirmDeleteAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')" title="Excluir assembleia">
@@ -562,12 +588,11 @@ function renderScheduledAssemblies() {
                 <div class="assembly-info">
                     <h3>${escapeHtml(assembly.title)}</h3>
                     <p><i class="far fa-calendar-alt"></i> <strong>Data:</strong> ${formatDate(assembly.date)}${timeText}</p>
+                    <p><span class="status-badge ${statusClass}"><i class="fas fa-circle"></i> ${statusLabel}</span></p>
                     ${createdByHTML}
                 </div>
                 <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-                    <button class="btn btn-primary" onclick="joinAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')">
-                        <i class="fas fa-video"></i> Entrar na Chamada
-                    </button>
+                    ${actionBtn}
                     ${deleteBtn}
                 </div>
             </div>
@@ -632,65 +657,16 @@ function formatDate(dateStr) {
 }
 
 function joinAssembly(assemblyId) {
-    const assembly = scheduledAssemblies.find(a => String(a.id) === String(assemblyId));
-    const titleEl = document.getElementById('assembly-title');
-    const roomEl = document.getElementById('assembly-room');
+    const assembly = scheduledAssemblies.find(a =>
+        String(a.public_id || a.publicId || a.id) === String(assemblyId) || String(a.id) === String(assemblyId)
+    );
     if (!assembly) {
-        console.error('Assembleia não encontrada para id=', assemblyId, ' | disponiveis=', scheduledAssemblies.map(a => a.id));
-        if (assemblyId && titleEl && roomEl) {
-            titleEl.textContent = 'Assembleia';
-        } else {
-            alert('Assembleia não encontrada. Atualize a página e tente novamente.');
-            return;
-        }
-    } else if (titleEl) {
-        titleEl.textContent = assembly.title || 'Assembleia';
-    }
-    if (roomEl) {
-        roomEl.classList.add('active');
-        document.body.style.overflow = 'hidden';
+        alert('Assembleia não encontrada. Atualize a página e tente novamente.');
+        return;
     }
 
-    currentAssemblyId = String(assemblyId);
-    participants = [];
-
-    micOn = true;
-    cameraOn = false;
-    updateControlsUI();
-    renderParticipants();
-
-    openAssemblyChannel(currentAssemblyId);
-    startParticipantHeartbeat();
-    broadcastToAssembly('participant-request-roster', { peerId: getMyPeerId() });
-
-    // Liga o microfone (assim como antes o join abria a camera; agora mantem só mic ligado)
-    try {
-        if (!localStream || !localStream.getAudioTracks().length) {
-            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                .then(audioStream => {
-                    if (localStream && localStream.getVideoTracks().length) {
-                        localStream.getVideoTracks().forEach(t => audioStream.addTrack(t));
-                        localStream = audioStream;
-                    } else {
-                        localStream = audioStream;
-                    }
-                    const videoElement = document.getElementById('local-video');
-                    if (videoElement && cameraOn && localStream.getVideoTracks().length) {
-                        videoElement.srcObject = localStream;
-                    }
-                    sendParticipantPresence();
-                })
-                .catch(err => {
-                    console.warn('Não foi possível acessar o microfone:', err);
-                    sendParticipantPresence({ micOn: false });
-                });
-        } else {
-            sendParticipantPresence();
-        }
-    } catch (e) {
-        console.warn('getUserMedia indisponível:', e);
-        sendParticipantPresence({ micOn: false });
-    }
+    const publicId = assembly.public_id || assembly.publicId || assembly.id;
+    window.location.href = `assembleia-online.html?id=${encodeURIComponent(String(publicId))}`;
 }
 
 function leaveAssembly() {

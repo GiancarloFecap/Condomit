@@ -309,6 +309,16 @@ nav {
     margin-right: 0.25rem;
 }
 
+.status-cancelled {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.status-cancelled i {
+    color: #b91c1c;
+    margin-right: 0.25rem;
+}
+
 .btn {
     padding: 0.75rem 1.5rem;
     border: none;

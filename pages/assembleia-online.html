@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assembleia Online | Condomit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/assembleia-online.css">
+</head>
+<body>
+    <div class="dashboard-sindico assembleia-online-shell">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebar-condo-name">Condomit</h2>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <a href="index.html" class="nav-item" id="nav-home-link">
+                        <i class="fas fa-home"></i>
+                        <span>Início</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <a href="assembleia.html" class="nav-item active">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Assembleias</span>
+                    </a>
+                    <a href="configuracoes.html" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="btn-support">
+                    <i class="fas fa-headset"></i>
+                    <span>Central de Suporte</span>
+                </button>
+                <button class="btn-logout-sidebar" id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content assembleia-online-main">
+            <header class="top-bar assembleia-online-topbar">
+                <div class="top-bar-left">
+                    <h1><i class="fas fa-video"></i> Assembleia Online</h1>
+                    <p id="assembly-subtitle">Preparando sua entrada na assembleia.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="connection-pill" id="connection-pill" aria-live="polite">Desconectado</div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="current-user-name">Você</div>
+                            <div class="type" id="current-user-role">Morador</div>
+                        </div>
+                        <div class="avatar" id="current-user-avatar">VC</div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="toast-region" id="toast-region" aria-live="polite"></div>
+
+            <section class="prejoin-panel card" id="prejoin-panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 id="prejoin-title">Carregando assembleia...</h2>
+                        <p id="prejoin-meta">Aguarde enquanto preparamos os detalhes.</p>
+                    </div>
+                    <span class="status-chip" id="assembly-status-chip">Carregando</span>
+                </div>
+
+                <div class="prejoin-grid">
+                    <div class="preview-card">
+                        <div class="preview-stage" id="preview-stage">
+                            <video id="preview-video" autoplay playsinline muted></video>
+                            <div class="preview-placeholder" id="preview-placeholder">
+                                <i class="fas fa-camera"></i>
+                                <span>A pré-visualização aparece aqui depois da sua autorização.</span>
+                            </div>
+                        </div>
+
+                        <div class="preview-actions">
+                            <button type="button" class="btn btn-secondary" id="request-media-btn" aria-label="Ativar câmera e microfone">
+                                <i class="fas fa-plug"></i> Ativar dispositivos
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="test-audio-btn" aria-label="Testar áudio">
+                                <i class="fas fa-volume-up"></i> Testar áudio
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="prejoin-controls">
+                        <div class="control-card">
+                            <h3>Dispositivos</h3>
+                            <label for="camera-select">Câmera</label>
+                            <select id="camera-select" aria-label="Selecionar câmera"></select>
+
+                            <label for="microphone-select">Microfone</label>
+                            <select id="microphone-select" aria-label="Selecionar microfone"></select>
+
+                            <div class="toggle-row">
+                                <button type="button" class="device-toggle" id="toggle-camera-btn" aria-label="Ligar ou desligar câmera">
+                                    <i class="fas fa-video"></i>
+                                    <span>Câmera desligada</span>
+                                </button>
+                                <button type="button" class="device-toggle" id="toggle-mic-btn" aria-label="Ligar ou desligar microfone">
+                                    <i class="fas fa-microphone-slash"></i>
+                                    <span>Microfone desligado</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="control-card">
+                            <h3>Informações da assembleia</h3>
+                            <dl class="assembly-info-list">
+                                <div>
+                                    <dt>Condomínio</dt>
+                                    <dd id="condominium-name">-</dd>
+                                </div>
+                                <div>
+                                    <dt>Data</dt>
+                                    <dd id="assembly-date-text">-</dd>
+                                </div>
+                                <div>
+                                    <dt>Horário</dt>
+                                    <dd id="assembly-time-text">-</dd>
+                                </div>
+                                <div>
+                                    <dt>Pauta</dt>
+                                    <dd id="assembly-description-text">-</dd>
+                                </div>
+                            </dl>
+
+                            <div class="message-box info" id="prejoin-message" aria-live="polite">
+                                Clique em <strong>Ativar dispositivos</strong> para escolher câmera e microfone antes de entrar.
+                            </div>
+
+                            <div class="prejoin-footer">
+                                <button type="button" class="btn btn-primary" id="enter-assembly-btn" aria-label="Entrar na assembleia">
+                                    <i class="fas fa-right-to-bracket"></i> Entrar na assembleia
+                                </button>
+                                <a href="assembleia.html" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Voltar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="meeting-panel" id="meeting-panel" hidden>
+                <div class="meeting-header card">
+                    <div>
+                        <h2 id="meeting-title">Assembleia Online</h2>
+                        <p id="meeting-status-text">Sala ativa</p>
+                    </div>
+                    <div class="meeting-header-meta">
+                        <div class="meta-box">
+                            <span class="meta-label">Tempo</span>
+                            <strong id="elapsed-time">00:00:00</strong>
+                        </div>
+                        <div class="meta-box">
+                            <span class="meta-label">Participantes</span>
+                            <strong id="participant-count">0</strong>
+                        </div>
+                        <button type="button" class="btn btn-secondary host-only" id="start-assembly-btn" hidden>
+                            <i class="fas fa-play"></i> Iniciar
+                        </button>
+                        <button type="button" class="btn btn-danger host-only" id="end-assembly-btn" hidden>
+                            <i class="fas fa-stop"></i> Encerrar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="meeting-layout">
+                    <section class="meeting-stage">
+                        <div class="screen-share-stage" id="screen-share-stage" hidden>
+                            <div class="stage-title"><i class="fas fa-display"></i> Compartilhamento em destaque</div>
+                            <div id="screen-share-content" class="screen-share-content"></div>
+                        </div>
+
+                        <div class="video-grid" id="participant-grid" aria-live="polite"></div>
+                    </section>
+
+                    <aside class="meeting-sidebar card" id="meeting-sidebar">
+                        <div class="sidebar-tabs" role="tablist">
+                            <button type="button" class="sidebar-tab active" data-tab="participants">Participantes</button>
+                            <button type="button" class="sidebar-tab" data-tab="chat">Chat</button>
+                            <button type="button" class="sidebar-tab" data-tab="requests">Pedidos de fala</button>
+                            <button type="button" class="sidebar-tab" data-tab="polls" id="polls-tab">Votações</button>
+                            <button type="button" class="sidebar-tab host-only" data-tab="attendance" id="attendance-tab" hidden>Presença</button>
+                        </div>
+
+                        <div class="sidebar-panel active" data-panel="participants">
+                            <div class="panel-toolbar">
+                                <h3>Na sala</h3>
+                            </div>
+                            <div id="participant-list" class="list-stack"></div>
+                        </div>
+
+                        <div class="sidebar-panel" data-panel="chat">
+                            <div class="panel-toolbar">
+                                <h3>Chat em tempo real</h3>
+                            </div>
+                            <div id="chat-list" class="chat-list"></div>
+                            <form id="chat-form" class="chat-form">
+                                <textarea id="chat-input" maxlength="2000" placeholder="Digite sua mensagem..." aria-label="Mensagem do chat"></textarea>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Enviar
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="sidebar-panel" data-panel="requests">
+                            <div class="panel-toolbar">
+                                <h3>Fila de fala</h3>
+                                <button type="button" class="btn btn-secondary" id="raise-hand-btn">
+                                    <i class="fas fa-hand-paper"></i> Levantar a mão
+                                </button>
+                            </div>
+                            <div id="request-list" class="list-stack"></div>
+                        </div>
+
+                        <div class="sidebar-panel" data-panel="polls">
+                            <div class="panel-toolbar">
+                                <h3>Votações</h3>
+                                <button type="button" class="btn btn-secondary host-only" id="open-poll-modal-btn" hidden>
+                                    <i class="fas fa-plus"></i> Nova votação
+                                </button>
+                            </div>
+                            <div id="poll-list" class="list-stack"></div>
+                        </div>
+
+                        <div class="sidebar-panel host-only" data-panel="attendance" hidden>
+                            <div class="panel-toolbar">
+                                <h3>Lista de presença</h3>
+                            </div>
+                            <div id="attendance-list" class="list-stack"></div>
+                        </div>
+                    </aside>
+                </div>
+
+                <div class="meeting-controls card">
+                    <button type="button" class="round-control" id="meeting-mic-btn" aria-label="Ligar ou desligar microfone">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button type="button" class="round-control" id="meeting-camera-btn" aria-label="Ligar ou desligar câmera">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button type="button" class="round-control" id="meeting-screen-btn" aria-label="Compartilhar tela">
+                        <i class="fas fa-display"></i>
+                    </button>
+                    <button type="button" class="round-control" id="meeting-devices-btn" aria-label="Abrir configuração de dispositivos">
+                        <i class="fas fa-sliders"></i>
+                    </button>
+                    <button type="button" class="round-control" id="meeting-sidebar-btn" aria-label="Abrir ou fechar painel lateral">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <button type="button" class="round-control danger" id="leave-assembly-btn" aria-label="Sair da assembleia">
+                        <i class="fas fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="poll-modal" hidden>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="poll-modal-title">
+            <div class="modal-header">
+                <h3 id="poll-modal-title">Nova votação</h3>
+                <button type="button" class="icon-btn" id="close-poll-modal-btn" aria-label="Fechar modal de votação">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="poll-form" class="modal-form">
+                <label for="poll-title-input">Pergunta</label>
+                <input type="text" id="poll-title-input" maxlength="255" required>
+
+                <label for="poll-description-input">Descrição</label>
+                <textarea id="poll-description-input" maxlength="1000"></textarea>
+
+                <div id="poll-options-wrapper" class="poll-options-wrapper">
+                    <input type="text" class="poll-option-input" placeholder="Opção 1" maxlength="255" required>
+                    <input type="text" class="poll-option-input" placeholder="Opção 2" maxlength="255" required>
+                </div>
+
+                <button type="button" class="btn btn-secondary" id="add-poll-option-btn">
+                    <i class="fas fa-plus"></i> Adicionar opção
+                </button>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Criar votação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/i18n.js"></script>
+    <script type="module" src="../scripts/assembleia-online.js"></script>
+</body>
+</html>
