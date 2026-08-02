@@ -823,6 +823,7 @@ async function processMercadoPagoPaymentConfirmation(paymentId) {
 
 async function createMercadoPagoPreference(data, event) {
   const { amount, planName, payerEmail, pendingPaymentId } = data;
+  const isSandboxToken = /^TEST-/i.test(String(MERCADO_PAGO_ACCESS_TOKEN || '').trim());
 
   const headers = event.headers || {};
   const protocol = headers['x-forwarded-proto'] || 'https';
@@ -843,7 +844,6 @@ async function createMercadoPagoPreference(data, event) {
         currency_id: 'BRL'
       }
     ],
-    payer: { email: payerEmail },
     back_urls: {
       success: successUrl,
       pending: pendingUrl,
@@ -859,7 +859,13 @@ async function createMercadoPagoPreference(data, event) {
     }
   };
 
-  console.log('[MercadoPago Netlify] Creating preference for:', payerEmail, 'amount:', amount, 'plan:', planName);
+  // Em sandbox, fixar o payer.email do Condomit costuma quebrar o fluxo
+  // quando o pagamento é feito com contas de teste diferentes no Mercado Pago.
+  if (!isSandboxToken && payerEmail) {
+    preferenceData.payer = { email: payerEmail };
+  }
+
+  console.log('[MercadoPago Netlify] Creating preference for:', payerEmail, 'amount:', amount, 'plan:', planName, 'sandbox:', isSandboxToken);
   console.log('[MercadoPago Netlify] Back URLs:', { successUrl, pendingUrl, failureUrl });
 
   const result = await preference.create({ body: preferenceData });
