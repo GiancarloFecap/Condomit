@@ -160,12 +160,15 @@ async function createPreference(pendingPaymentId) {
         console.error('[Checkout] Usuário não autenticado ou sem email');
         throw new Error('Usuário não autenticado. Por favor, faça login novamente.');
     }
+
+    if (!selectedPlan?.id) {
+        throw new Error('Plano inválido. Selecione um plano novamente.');
+    }
+
+    if (!pendingPaymentId) {
+        throw new Error('Não foi possível preparar o pagamento. Tente novamente.');
+    }
     
-    console.log('[Checkout] Criando preferência com:', {
-        amount: selectedPrice,
-        planName: selectedPlan.nome,
-        payerEmail: currentUser.email
-    });
     try {
         const response = await fetch('/api/mercadopago/preference', {
             method: 'POST',
@@ -173,20 +176,20 @@ async function createPreference(pendingPaymentId) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                amount: selectedPrice,
-                planName: selectedPlan.nome,
-                payerEmail: currentUser.email,
+                planId: selectedPlan.id,
                 pendingPaymentId
             })
         });
 
-        console.log('[Checkout] Status da resposta:', response.status);
-        const data = await response.json();
-        console.log('[Checkout] Dados da resposta:', data);
-        
-        if (data.error) {
-            throw new Error(data.error);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.error || 'Não foi possível iniciar o pagamento.');
         }
+
+        if (!data.checkoutUrl) {
+            throw new Error('O Mercado Pago não retornou a URL do checkout.');
+        }
+
         return data;
     } catch (error) {
         console.error('[Checkout] Erro detalhado ao criar preferência:', error);
@@ -408,14 +411,10 @@ async function initCheckoutButton() {
                 mpReturnHandled = false;
 
                 // Cria pagamento PENDENTE no banco antes de abrir popup
-                try {
-                    await createPendingPayment();
-                } catch (paymentErr) {
-                    console.warn('[Checkout] Aviso: não criou pagamento pendente:', paymentErr);
-                }
+                await createPendingPayment();
 
                 const preferenceData = await createPreference(currentPagamentoId);
-                currentInitPoint = preferenceData.initPoint;
+                currentInitPoint = preferenceData.checkoutUrl;
                 console.log('[Checkout] Preference created with init_point:', currentInitPoint);
                 
                 // Open Mercado Pago in a popup

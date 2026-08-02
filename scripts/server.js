@@ -11,9 +11,10 @@ const root = process.cwd();
 const port = process.env.PORT ? Number(process.env.PORT) : 8081;
 
 const env = loadEnv(path.join(root, '.env'));
-const SUPABASE_URL = env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTUwNjQsImV4cCI6MjA5NTk5MTA2NH0.WTk0rZaTsPvs30uEWDfylc-z6L3G8IUb_J73oYtjuWU';
-const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
+const SUPABASE_URL = env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || '';
+const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || '';
+const MERCADO_PAGO_WEBHOOK_SECRET = env.MERCADO_PAGO_WEBHOOK_SECRET || '';
 const APP_BASE_URL = env.APP_BASE_URL || 'https://condomit.netlify.app';
 const BREVO_API_KEY = env.BREVO_API_KEY || process.env.BREVO_API_KEY || '';
 const BREVO_SENDER_EMAIL = env.BREVO_SENDER_EMAIL || process.env.BREVO_SENDER_EMAIL || '';
@@ -343,7 +344,44 @@ async function createMercadoPagoPreference(req, res) {
   req.on('end', async () => {
     try {
       const data = JSON.parse(body);
-      const { amount, planName, payerEmail, pendingPaymentId } = data;
+      ensureMercadoPagoConfig();
+      const pendingPaymentId = data?.pendingPaymentId;
+      const planId = data?.planId;
+
+      if (!pendingPaymentId) {
+        throw new Error('pendingPaymentId e obrigatorio para criar a preferencia');
+      }
+
+      const pendingPayment = await fetchSupabasePaymentById(pendingPaymentId);
+      if (!pendingPayment) {
+        throw new Error('Pagamento pendente nao encontrado');
+      }
+
+      const resolvedPlanId = planId || pendingPayment.plano_id;
+      if (!resolvedPlanId) {
+        throw new Error('planId e obrigatorio para criar a preferencia');
+      }
+
+      if (planId && String(planId) !== String(pendingPayment.plano_id)) {
+        throw new Error('O plano informado nao corresponde ao pagamento pendente');
+      }
+
+      const planRecord = await fetchSupabasePlanById(resolvedPlanId);
+      if (!planRecord) {
+        throw new Error('Plano nao encontrado');
+      }
+
+      const amount = Number(planRecord.valor_minimo);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error('Valor do plano invalido');
+      }
+
+      const payerEmail = String(pendingPayment.email || '').trim().toLowerCase();
+      if (!payerEmail) {
+        throw new Error('E-mail do usuario nao encontrado para o pagamento');
+      }
+
+      const planName = normalizePlanName(planRecord.nome || pendingPayment.plano_id);
 
       const protocol = (req.headers['x-forwarded-proto'] || 'http');
       const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`;
@@ -357,8 +395,10 @@ async function createMercadoPagoPreference(req, res) {
       const preferenceData = {
         items: [
           {
+            id: String(planRecord.id),
             title: `Plano ${planName} - Condomit`,
-            unit_price: parseFloat(amount),
+            description: planRecord.descricao || 'Plano Condomit',
+            unit_price: amount,
             quantity: 1,
             currency_id: 'BRL'
           }
@@ -373,22 +413,40 @@ async function createMercadoPagoPreference(req, res) {
         },
         auto_return: 'approved',
         notification_url: webhookUrl,
-        external_reference: pendingPaymentId ? String(pendingPaymentId) : undefined,
+        external_reference: String(pendingPaymentId),
         metadata: {
-          pending_payment_id: pendingPaymentId ? String(pendingPaymentId) : '',
+          pending_payment_id: String(pendingPaymentId),
           payer_email: payerEmail,
-          plan_name: normalizePlanName(planName)
+          user_email: payerEmail,
+          plan_id: String(planRecord.id),
+          plan_name: planName
         }
       };
 
-      console.log('[MercadoPago] Creating preference for:', payerEmail, 'amount:', amount, 'plan:', planName);
-      console.log('[MercadoPago] Back URLs:', { successUrl, pendingUrl, failureUrl });
+      console.log('[MercadoPago] Preferencia criada:', {
+        payerEmail,
+        amount,
+        planId: planRecord.id,
+        planName,
+        successUrl,
+        pendingUrl,
+        failureUrl,
+        webhookUrl
+      });
       const result = await preference.create({ body: preferenceData });
-      console.log('[MercadoPago] Full preference response:', JSON.stringify(result, null, 2));
-      console.log('[MercadoPago] Preference created:', result.id, 'init_point:', result.init_point, 'back_urls:', result.back_urls);
+      const checkoutUrl = result.sandbox_init_point || result.init_point || null;
+      console.log('[MercadoPago] Resultado da preferencia:', {
+        preferenceId: result.id,
+        hasCheckoutUrl: Boolean(checkoutUrl)
+      });
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ preferenceId: result.id, initPoint: result.init_point }));
+      res.end(JSON.stringify({
+        preferenceId: result.id,
+        checkoutUrl,
+        initPoint: checkoutUrl,
+        sandboxInitPoint: result.sandbox_init_point || null
+      }));
     } catch (error) {
       console.error('[MercadoPago Error]', error.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -529,9 +587,10 @@ function normalizePaymentStatus(status) {
   const normalized = String(status || '').trim().toLowerCase();
 
   if (['approved', 'aprovado'].includes(normalized)) return 'aprovado';
-  if (['pending', 'in_process', 'pendente', 'em_processo'].includes(normalized)) return 'pendente';
-  if (['cancelled', 'canceled', 'cancelado'].includes(normalized)) return 'cancelado';
-  if (['refunded', 'charged_back', 'estornado'].includes(normalized)) return 'estornado';
+  if (['pending', 'in_process', 'authorized', 'pendente', 'em_processo'].includes(normalized)) return 'pendente';
+  if (['cancelled', 'canceled', 'expired', 'cancelado'].includes(normalized)) return 'cancelado';
+  if (['refunded', 'estornado'].includes(normalized)) return 'estornado';
+  if (['charged_back', 'contestado'].includes(normalized)) return 'contestado';
   if (['rejected', 'recusado', 'falhou', 'failure'].includes(normalized)) return 'recusado';
 
   return normalized || 'desconhecido';
@@ -539,6 +598,68 @@ function normalizePaymentStatus(status) {
 
 function isApprovedPaymentStatus(status) {
   return normalizePaymentStatus(status) === 'aprovado';
+}
+
+function ensureSupabaseAdminConfig() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY precisam estar configurados');
+  }
+}
+
+function ensureMercadoPagoConfig() {
+  ensureSupabaseAdminConfig();
+  if (!MERCADO_PAGO_ACCESS_TOKEN) {
+    throw new Error('MERCADO_PAGO_ACCESS_TOKEN precisa estar configurado');
+  }
+}
+
+function parseMercadoPagoSignatureHeader(signatureHeader) {
+  return String(signatureHeader || '')
+    .split(',')
+    .reduce((acc, part) => {
+      const [key, ...value] = part.split('=');
+      if (key && value.length) {
+        acc[key.trim()] = value.join('=').trim();
+      }
+      return acc;
+    }, {});
+}
+
+function validateMercadoPagoWebhookSignature(headers, paymentId) {
+  if (!MERCADO_PAGO_WEBHOOK_SECRET) {
+    return { valid: false, reason: 'missing_secret' };
+  }
+
+  const signatureHeader = headers['x-signature'] || headers['X-Signature'] || '';
+  const requestId = headers['x-request-id'] || headers['X-Request-Id'] || '';
+
+  if (!signatureHeader || !requestId || !paymentId) {
+    return { valid: false, reason: 'missing_headers' };
+  }
+
+  const parsedHeader = parseMercadoPagoSignatureHeader(signatureHeader);
+  const ts = parsedHeader.ts;
+  const v1 = parsedHeader.v1;
+
+  if (!ts || !v1) {
+    return { valid: false, reason: 'invalid_signature_header', requestId };
+  }
+
+  const manifest = `id:${paymentId};request-id:${requestId};ts:${ts};`;
+  const expected = crypto
+    .createHmac('sha256', MERCADO_PAGO_WEBHOOK_SECRET)
+    .update(manifest)
+    .digest('hex');
+
+  const provided = String(v1);
+  const valid = provided.length === expected.length &&
+    crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+
+  return {
+    valid,
+    reason: valid ? null : 'signature_mismatch',
+    requestId
+  };
 }
 
 function formatBrazilianDate(dateValue) {
@@ -970,6 +1091,7 @@ async function patchSupabaseUserPlan(email, planId) {
 }
 
 async function fetchMercadoPagoPayment(paymentId) {
+  ensureMercadoPagoConfig();
   const response = await fetch(`${MERCADO_PAGO_API_BASE}/v1/payments/${encodeURIComponent(paymentId)}`, {
     headers: {
       Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
@@ -1004,7 +1126,8 @@ async function processMercadoPagoPaymentConfirmation(paymentId) {
   }
 
   const mercadoPagoPayment = await fetchMercadoPagoPayment(paymentId);
-  const paymentStatus = normalizePaymentStatus(mercadoPagoPayment.status);
+  const rawPaymentStatus = String(mercadoPagoPayment.status || '').trim().toLowerCase();
+  const paymentStatus = normalizePaymentStatus(rawPaymentStatus);
   const transactionId = String(mercadoPagoPayment.id || paymentId);
   const approvedAt = mercadoPagoPayment.date_approved || mercadoPagoPayment.date_last_updated || mercadoPagoPayment.date_created || new Date().toISOString();
   const amount = Number(mercadoPagoPayment.transaction_amount || 0);
@@ -1012,7 +1135,19 @@ async function processMercadoPagoPaymentConfirmation(paymentId) {
   const payerEmail = mercadoPagoPayment.payer?.email || mercadoPagoPayment.metadata?.payer_email || mercadoPagoPayment.metadata?.email || '';
 
   const existingProcessedPayment = await fetchSupabasePaymentByTransactionCode(transactionId);
-  if (existingProcessedPayment && isApprovedPaymentStatus(existingProcessedPayment.status_pagamento)) {
+  console.log('[MercadoPago] Pagamento consultado:', {
+    id: mercadoPagoPayment.id,
+    status: mercadoPagoPayment.status,
+    statusDetail: mercadoPagoPayment.status_detail,
+    externalReference: mercadoPagoPayment.external_reference,
+    paymentMethodId: mercadoPagoPayment.payment_method_id,
+    paymentTypeId: mercadoPagoPayment.payment_type_id,
+    dateCreated: mercadoPagoPayment.date_created,
+    dateLastUpdated: mercadoPagoPayment.date_last_updated,
+    liveMode: mercadoPagoPayment.live_mode
+  });
+
+  if (existingProcessedPayment && isApprovedPaymentStatus(existingProcessedPayment.status_pagamento) && rawPaymentStatus === 'approved') {
     const processedPlan = await fetchSupabasePlanById(existingProcessedPayment.plano_id).catch(() => null);
     const existingUserEmail = existingProcessedPayment.email || payerEmail;
     const existingUserRecord = existingUserEmail ? await fetchSupabaseUserRecordByEmail(existingUserEmail).catch(() => null) : null;
@@ -1044,6 +1179,9 @@ async function processMercadoPagoPaymentConfirmation(paymentId) {
   }
 
   let targetPayment = externalReference ? await fetchSupabasePaymentById(externalReference) : null;
+  if (!targetPayment && existingProcessedPayment) {
+    targetPayment = existingProcessedPayment;
+  }
   if (!targetPayment && payerEmail) {
     targetPayment = await fetchLatestSupabasePaymentByEmail(payerEmail);
   }
@@ -1054,65 +1192,123 @@ async function processMercadoPagoPaymentConfirmation(paymentId) {
 
   const planRecord = await fetchSupabasePlanById(targetPayment.plano_id).catch(() => null);
   const planName = normalizePlanName(planRecord?.nome || mercadoPagoPayment.metadata?.plan_name || targetPayment.plano_id);
-
-  if (!isApprovedPaymentStatus(paymentStatus)) {
-    return {
-      approved: false,
-      alreadyProcessed: false,
-      paymentId: transactionId,
-      paymentStatus,
-      planId: targetPayment.plano_id || null,
-      planName
-    };
-  }
-
-  await patchSupabasePayment(targetPayment.id, {
-    status_pagamento: 'aprovado',
-    data_pagamento: approvedAt,
-    valor_pago: amount || targetPayment.valor_pago,
-    codigo_transacao: transactionId
-  });
-
+  const expectedAmount = Number(planRecord?.valor_minimo);
   const userEmail = targetPayment.email || payerEmail;
-  const userRecord = await fetchSupabaseUserRecordByEmail(userEmail).catch(() => null);
+  const userRecord = userEmail ? await fetchSupabaseUserRecordByEmail(userEmail).catch(() => null) : null;
+  const paymentTimestamp = mercadoPagoPayment.date_last_updated || mercadoPagoPayment.date_created || approvedAt;
 
-  if (userEmail && targetPayment.plano_id) {
-    await patchSupabaseUserPlan(userEmail, targetPayment.plano_id);
-  }
-
-  let emailSent = false;
-  let emailError = null;
-
-  if (userEmail) {
-    const emailResult = await sendPaymentConfirmationEmailOnce(
-      transactionId,
-      userEmail,
-      userRecord || { name: userEmail.split('@')[0] },
-      {
-        planName,
-        approvedAt,
-        amount: amount || targetPayment.valor_pago || targetPayment.valor_minimo || 0
+  switch (rawPaymentStatus) {
+    case 'approved': {
+      if (Number.isFinite(expectedAmount) && expectedAmount > 0 && Math.abs(amount - expectedAmount) > 0.01) {
+        await patchSupabasePayment(targetPayment.id, {
+          status_pagamento: 'recusado',
+          data_pagamento: paymentTimestamp,
+          valor_pago: amount || targetPayment.valor_pago,
+          codigo_transacao: transactionId
+        });
+        throw new Error('O valor aprovado nao corresponde ao valor oficial do plano');
       }
-    );
-    emailSent = emailResult.emailSent;
-    emailError = emailResult.emailError || null;
-    if (emailError) {
-      console.error(`[Payment Confirmation Email Error] paymentId=${transactionId}`, emailError);
-    }
-  }
 
-  return {
-    approved: true,
-    alreadyProcessed: false,
-    paymentId: transactionId,
-    paymentStatus,
-    planId: targetPayment.plano_id || null,
-    planName,
-    approvedAtFormatted: formatBrazilianDate(approvedAt),
-    amountFormatted: formatBrazilianCurrency(amount || targetPayment.valor_pago || targetPayment.valor_minimo || 0),
-    emailSent,
-    emailError
-  };
+      await patchSupabasePayment(targetPayment.id, {
+        status_pagamento: 'aprovado',
+        data_pagamento: approvedAt,
+        valor_pago: amount || targetPayment.valor_pago,
+        codigo_transacao: transactionId
+      });
+
+      if (userEmail && targetPayment.plano_id) {
+        await patchSupabaseUserPlan(userEmail, targetPayment.plano_id);
+      }
+
+      let emailSent = false;
+      let emailError = null;
+
+      if (userEmail) {
+        const emailResult = await sendPaymentConfirmationEmailOnce(
+          transactionId,
+          userEmail,
+          userRecord || { name: userEmail.split('@')[0] },
+          {
+            planName,
+            approvedAt,
+            amount: amount || targetPayment.valor_pago || targetPayment.valor_minimo || 0
+          }
+        );
+        emailSent = emailResult.emailSent;
+        emailError = emailResult.emailError || null;
+        if (emailError) {
+          console.error(`[Payment Confirmation Email Error] paymentId=${transactionId}`, emailError);
+        }
+      }
+
+      console.log('[MercadoPago] Pagamento atualizado:', {
+        paymentId: transactionId,
+        status: rawPaymentStatus,
+        planActivated: true
+      });
+
+      return {
+        approved: true,
+        alreadyProcessed: false,
+        paymentId: transactionId,
+        paymentStatus,
+        planId: targetPayment.plano_id || null,
+        planName,
+        approvedAtFormatted: formatBrazilianDate(approvedAt),
+        amountFormatted: formatBrazilianCurrency(amount || targetPayment.valor_pago || targetPayment.valor_minimo || 0),
+        emailSent,
+        emailError
+      };
+    }
+    case 'pending':
+    case 'in_process':
+    case 'authorized':
+    case 'rejected':
+    case 'cancelled':
+    case 'canceled':
+    case 'expired':
+    case 'refunded':
+    case 'charged_back':
+      await patchSupabasePayment(targetPayment.id, {
+        status_pagamento: paymentStatus,
+        data_pagamento: paymentTimestamp,
+        valor_pago: amount || targetPayment.valor_pago,
+        codigo_transacao: transactionId
+      });
+      console.log('[MercadoPago] Pagamento atualizado:', {
+        paymentId: transactionId,
+        status: rawPaymentStatus,
+        planActivated: false
+      });
+      return {
+        approved: false,
+        alreadyProcessed: false,
+        paymentId: transactionId,
+        paymentStatus,
+        planId: targetPayment.plano_id || null,
+        planName
+      };
+    default:
+      await patchSupabasePayment(targetPayment.id, {
+        status_pagamento: paymentStatus,
+        data_pagamento: paymentTimestamp,
+        valor_pago: amount || targetPayment.valor_pago,
+        codigo_transacao: transactionId
+      });
+      console.log('[MercadoPago] Pagamento atualizado:', {
+        paymentId: transactionId,
+        status: rawPaymentStatus || 'unknown',
+        planActivated: false
+      });
+      return {
+        approved: false,
+        alreadyProcessed: false,
+        paymentId: transactionId,
+        paymentStatus,
+        planId: targetPayment.plano_id || null,
+        planName
+      };
+  }
 }
 
 function handleMercadoPagoConfirmation(req, res) {
@@ -1133,6 +1329,15 @@ function handleMercadoPagoConfirmation(req, res) {
 }
 
 function handleMercadoPagoWebhook(req, res, query = {}) {
+  if (req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      message: 'Webhook do Mercado Pago está ativo.'
+    }));
+    return;
+  }
+
   let body = '';
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
@@ -1142,6 +1347,24 @@ function handleMercadoPagoWebhook(req, res, query = {}) {
       if (!paymentId) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ received: true, ignored: true }));
+        return;
+      }
+
+      const signatureValidation = validateMercadoPagoWebhookSignature(req.headers || {}, paymentId);
+      console.log('[MercadoPago] Webhook recebido:', {
+        type: payload?.type || null,
+        action: payload?.action || null,
+        paymentId,
+        requestId: signatureValidation.requestId || req.headers?.['x-request-id'] || null,
+        liveMode: payload?.live_mode ?? null
+      });
+
+      if (!signatureValidation.valid) {
+        const errorMessage = signatureValidation.reason === 'missing_secret'
+          ? 'MERCADO_PAGO_WEBHOOK_SECRET nao configurado'
+          : 'Assinatura do webhook do Mercado Pago invalida';
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ received: false, error: errorMessage }));
         return;
       }
 
