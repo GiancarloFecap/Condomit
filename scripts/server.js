@@ -342,72 +342,29 @@ async function createMercadoPagoPreference(req, res) {
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
     try {
-      const data = body ? JSON.parse(body) : {};
-      const { pendingPaymentId, planId, payerEmail } = data;
-
-      if (!pendingPaymentId) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'pendingPaymentId é obrigatório para criar a preferência.' }));
-        return;
-      }
-
-      const pendingPayment = await fetchSupabasePaymentById(pendingPaymentId);
-      if (!pendingPayment) {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Pagamento pendente não encontrado.' }));
-        return;
-      }
-
-      const effectivePlanId = pendingPayment.plano_id || planId;
-      const planRecord = await fetchSupabasePlanById(effectivePlanId);
-      if (!planRecord) {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Plano do pagamento pendente não encontrado.' }));
-        return;
-      }
-
-      const effectiveEmail = pendingPayment.email || payerEmail || '';
-      if (!effectiveEmail) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Não foi possível identificar o e-mail do pagador.' }));
-        return;
-      }
-
-      const amount = Number(
-        planRecord.valor_minimo ??
-        pendingPayment.valor_pago ??
-        pendingPayment.valor_minimo ??
-        0
-      );
-      if (!Number.isFinite(amount) || amount <= 0) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Valor inválido para criar a preferência.' }));
-        return;
-      }
-
-      const planName = normalizePlanName(planRecord.nome || effectivePlanId);
+      const data = JSON.parse(body);
+      const { amount, planName, payerEmail, pendingPaymentId } = data;
 
       const protocol = (req.headers['x-forwarded-proto'] || 'http');
       const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`;
-      const baseUrl = APP_BASE_URL || `${protocol}://${host}`;
+      const baseUrl = `${protocol}://${host}`;
 
-      const successUrl = `${baseUrl}/pages/pagamento-sucesso.html`;
-      const pendingUrl = `${baseUrl}/pages/pagamento-pendente.html`;
-      const failureUrl = `${baseUrl}/pages/pagamento-falha.html`;
+      const successUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-sucesso.html' : '/pages/pagamento-sucesso.html');
+      const pendingUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-pendente.html' : '/pages/pagamento-pendente.html');
+      const failureUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-falha.html' : '/pages/pagamento-falha.html');
       const webhookUrl = `${baseUrl}/api/mercadopago/webhook`;
-      const externalReference = String(pendingPayment.id || pendingPaymentId || `CONDOMIT-${Date.now()}`);
 
       const preferenceData = {
         items: [
           {
             title: `Plano ${planName} - Condomit`,
+            unit_price: parseFloat(amount),
             quantity: 1,
-            currency_id: 'BRL',
-            unit_price: amount
+            currency_id: 'BRL'
           }
         ],
         payer: {
-          email: effectiveEmail
+          email: payerEmail
         },
         back_urls: {
           success: successUrl,
@@ -415,31 +372,23 @@ async function createMercadoPagoPreference(req, res) {
           failure: failureUrl
         },
         auto_return: 'approved',
-        statement_descriptor: 'CONDOMIT',
         notification_url: webhookUrl,
-        external_reference: externalReference,
-        payment_methods: {
-          installments: 1,
-          default_installments: 1
-        },
+        external_reference: pendingPaymentId ? String(pendingPaymentId) : undefined,
         metadata: {
-          pending_payment_id: externalReference,
-          payer_email: effectiveEmail,
-          plan_id: String(planRecord.id || effectivePlanId || ''),
-          plan_name: planName
+          pending_payment_id: pendingPaymentId ? String(pendingPaymentId) : '',
+          payer_email: payerEmail,
+          plan_name: normalizePlanName(planName)
         }
       };
 
-      console.log('[MercadoPago] Creating preference for:', effectiveEmail, 'amount:', amount, 'plan:', planName);
+      console.log('[MercadoPago] Creating preference for:', payerEmail, 'amount:', amount, 'plan:', planName);
       console.log('[MercadoPago] Back URLs:', { successUrl, pendingUrl, failureUrl });
       const result = await preference.create({ body: preferenceData });
+      console.log('[MercadoPago] Full preference response:', JSON.stringify(result, null, 2));
+      console.log('[MercadoPago] Preference created:', result.id, 'init_point:', result.init_point, 'back_urls:', result.back_urls);
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        preferenceId: result.id,
-        initPoint: result.init_point,
-        sandboxInitPoint: result.sandbox_init_point || null
-      }));
+      res.end(JSON.stringify({ preferenceId: result.id, initPoint: result.init_point }));
     } catch (error) {
       console.error('[MercadoPago Error]', error.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });

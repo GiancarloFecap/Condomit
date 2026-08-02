@@ -822,39 +822,7 @@ async function processMercadoPagoPaymentConfirmation(paymentId) {
 }
 
 async function createMercadoPagoPreference(data, event) {
-  const { pendingPaymentId, planId, payerEmail } = data || {};
-
-  if (!pendingPaymentId) {
-    throw new Error('pendingPaymentId é obrigatório para criar a preferência.');
-  }
-
-  const pendingPayment = await fetchSupabasePaymentById(pendingPaymentId);
-  if (!pendingPayment) {
-    throw new Error('Pagamento pendente não encontrado.');
-  }
-
-  const effectivePlanId = pendingPayment.plano_id || planId;
-  const planRecord = await fetchSupabasePlanById(effectivePlanId);
-  if (!planRecord) {
-    throw new Error('Plano do pagamento pendente não encontrado.');
-  }
-
-  const effectiveEmail = pendingPayment.email || payerEmail || '';
-  if (!effectiveEmail) {
-    throw new Error('Não foi possível identificar o e-mail do pagador.');
-  }
-
-  const amount = Number(
-    planRecord.valor_minimo ??
-    pendingPayment.valor_pago ??
-    pendingPayment.valor_minimo ??
-    0
-  );
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error('Valor inválido para criar a preferência.');
-  }
-
-  const planName = normalizePlanName(planRecord.nome || effectivePlanId);
+  const { amount, planName, payerEmail, pendingPaymentId } = data;
 
   const headers = event.headers || {};
   const protocol = headers['x-forwarded-proto'] || 'https';
@@ -865,48 +833,37 @@ async function createMercadoPagoPreference(data, event) {
   const pendingUrl = `${baseUrl}/pages/pagamento-pendente.html`;
   const failureUrl = `${baseUrl}/pages/pagamento-falha.html`;
   const webhookUrl = `${baseUrl}/api/mercadopago/webhook`;
-  const externalReference = String(pendingPayment.id || pendingPaymentId || `CONDOMIT-${Date.now()}`);
 
   const preferenceData = {
     items: [
       {
         title: `Plano ${planName} - Condomit`,
+        unit_price: parseFloat(amount),
         quantity: 1,
-        currency_id: 'BRL',
-        unit_price: amount
+        currency_id: 'BRL'
       }
     ],
-    payer: { email: effectiveEmail },
+    payer: { email: payerEmail },
     back_urls: {
       success: successUrl,
       pending: pendingUrl,
       failure: failureUrl
     },
     auto_return: 'approved',
-    statement_descriptor: 'CONDOMIT',
     notification_url: webhookUrl,
-    external_reference: externalReference,
-    payment_methods: {
-      installments: 1,
-      default_installments: 1
-    },
+    external_reference: pendingPaymentId ? String(pendingPaymentId) : undefined,
     metadata: {
-      pending_payment_id: externalReference,
-      payer_email: effectiveEmail,
-      plan_id: String(planRecord.id || effectivePlanId || ''),
-      plan_name: planName
+      pending_payment_id: pendingPaymentId ? String(pendingPaymentId) : '',
+      payer_email: payerEmail,
+      plan_name: normalizePlanName(planName)
     }
   };
 
-  console.log('[MercadoPago Netlify] Creating preference for:', effectiveEmail, 'amount:', amount, 'plan:', planName);
+  console.log('[MercadoPago Netlify] Creating preference for:', payerEmail, 'amount:', amount, 'plan:', planName);
   console.log('[MercadoPago Netlify] Back URLs:', { successUrl, pendingUrl, failureUrl });
 
   const result = await preference.create({ body: preferenceData });
-  return {
-    preferenceId: result.id,
-    initPoint: result.init_point,
-    sandboxInitPoint: result.sandbox_init_point || null
-  };
+  return { preferenceId: result.id, initPoint: result.init_point };
 }
 
 async function handleForgotPassword(event, body) {

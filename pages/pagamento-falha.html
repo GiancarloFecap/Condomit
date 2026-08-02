@@ -115,6 +115,42 @@
     </main>
     <script>
         (function () {
+            async function finalizarPagamentoFalha() {
+                try {
+                    const cached = sessionStorage.getItem('condominiumUser');
+                    if (!cached) return;
+                    const user = JSON.parse(cached);
+                    if (!user || !user.email) return;
+
+                    const resp = await fetch(`/api/pagamento?email=${encodeURIComponent(user.email)}`);
+                    if (resp.ok) {
+                        const pagamentos = await resp.json();
+                        if (Array.isArray(pagamentos) && pagamentos.length) {
+                            pagamentos.sort((a, b) => {
+                                const da = new Date(a.data_pagamento || 0).getTime();
+                                const db = new Date(b.data_pagamento || 0).getTime();
+                                return db - da;
+                            });
+                            const ultimo = pagamentos[0];
+                            if (ultimo && ultimo.status_pagamento !== 'aprovado') {
+                                try {
+                                    await fetch(`/api/pagamento?id=${encodeURIComponent(ultimo.id)}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            status_pagamento: 'falhou'
+                                        })
+                                    });
+                                } catch (_) {}
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Erro ao marcar pagamento falhou:', e);
+                }
+            }
+            finalizarPagamentoFalha();
+
             const btn = document.getElementById('btn-continuar');
             if (btn) {
                 btn.addEventListener('click', function() {
