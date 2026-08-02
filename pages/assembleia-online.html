@@ -289,8 +289,18 @@
                 <textarea id="poll-description-input" maxlength="1000"></textarea>
 
                 <div id="poll-options-wrapper" class="poll-options-wrapper">
-                    <input type="text" class="poll-option-input" placeholder="Opção 1" maxlength="255" required>
-                    <input type="text" class="poll-option-input" placeholder="Opção 2" maxlength="255" required>
+                    <div class="poll-option-row">
+                        <input type="text" class="poll-option-input" placeholder="Opção 1" maxlength="255" required>
+                        <button type="button" class="poll-option-remove" aria-label="Remover opção" disabled>
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                    <div class="poll-option-row">
+                        <input type="text" class="poll-option-input" placeholder="Opção 2" maxlength="255" required>
+                        <button type="button" class="poll-option-remove" aria-label="Remover opção" disabled>
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <button type="button" class="btn btn-secondary" id="add-poll-option-btn">

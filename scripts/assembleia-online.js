@@ -61,6 +61,8 @@ async function boot() {
     await ensureSupabaseSession();
     await loadAssemblyState();
     await populateDeviceSelectors(false);
+    togglePollModal(false);
+    refreshPollOptionButtons();
     renderAll();
 }
 
@@ -115,6 +117,16 @@ function bindStaticEvents() {
     els['poll-form']?.addEventListener('submit', createPoll);
     els['add-poll-option-btn']?.addEventListener('click', addPollOptionField);
     els['logout-btn']?.addEventListener('click', logout);
+    els['poll-modal']?.addEventListener('click', (event) => {
+        if (event.target === els['poll-modal']) {
+            togglePollModal(false);
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && els['poll-modal'] && !els['poll-modal'].hidden) {
+            togglePollModal(false);
+        }
+    });
     window.addEventListener('beforeunload', () => {
         stopHeartbeat();
         if (state.room) {
@@ -881,12 +893,27 @@ async function createPoll(event) {
 }
 
 function addPollOptionField() {
+    const optionNumber = els['poll-options-wrapper'].querySelectorAll('.poll-option-row').length + 1;
+    const row = document.createElement('div');
+    row.className = 'poll-option-row';
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'poll-option-input';
     input.maxLength = 255;
-    input.placeholder = `Opção ${els['poll-options-wrapper'].children.length + 1}`;
-    els['poll-options-wrapper'].appendChild(input);
+    input.placeholder = `Opção ${optionNumber}`;
+    input.required = true;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'poll-option-remove';
+    removeBtn.setAttribute('aria-label', 'Remover opção');
+    removeBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+    removeBtn.addEventListener('click', () => removePollOptionRow(row));
+
+    row.appendChild(input);
+    row.appendChild(removeBtn);
+    els['poll-options-wrapper'].appendChild(row);
+    refreshPollOptionButtons();
 }
 
 function resetPollOptions() {
@@ -898,6 +925,39 @@ function resetPollOptions() {
 function togglePollModal(show) {
     if (!els['poll-modal']) return;
     els['poll-modal'].hidden = !show;
+    if (!show) {
+        els['poll-form']?.reset();
+        resetPollOptions();
+    }
+}
+
+function removePollOptionRow(row) {
+    const rows = els['poll-options-wrapper'].querySelectorAll('.poll-option-row');
+    if (rows.length <= 2) {
+        showToast('A votação precisa ter pelo menos duas opções.', 'error');
+        return;
+    }
+    row.remove();
+    refreshPollOptionButtons();
+    refreshPollOptionPlaceholders();
+}
+
+function refreshPollOptionButtons() {
+    const rows = Array.from(els['poll-options-wrapper']?.querySelectorAll('.poll-option-row') || []);
+    rows.forEach((row) => {
+        const button = row.querySelector('.poll-option-remove');
+        if (button) {
+            button.disabled = rows.length <= 2;
+        }
+    });
+    refreshPollOptionPlaceholders();
+}
+
+function refreshPollOptionPlaceholders() {
+    const inputs = Array.from(els['poll-options-wrapper']?.querySelectorAll('.poll-option-input') || []);
+    inputs.forEach((input, index) => {
+        input.placeholder = `Opção ${index + 1}`;
+    });
 }
 
 async function castVote(pollId, optionId) {
