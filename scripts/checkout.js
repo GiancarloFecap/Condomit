@@ -204,6 +204,23 @@ function getMercadoPagoPaymentId(dados = {}) {
     );
 }
 
+async function confirmMercadoPagoPayment(paymentId) {
+    if (!paymentId) return null;
+
+    const response = await fetch('/api/mercadopago/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || 'Não foi possível confirmar o pagamento.');
+    }
+
+    return data;
+}
+
 // Função para criar registro de pagamento PENDENTE antes de abrir checkout
 async function createPendingPayment() {
     const pagamentoData = {
@@ -270,10 +287,28 @@ function addMercadoPagoReturnListener() {
                 search.set('status', 'approved');
                 window.location.href = `pagamento-sucesso.html?${search.toString()}`;
             } else if (status === 'pending') {
+                const paymentId = getMercadoPagoPaymentId(dados);
+
+                if (paymentId) {
+                    const confirmation = await confirmMercadoPagoPayment(paymentId).catch((error) => {
+                        console.warn('[Checkout] Não foi possível reconciliar o status pendente com o backend:', error);
+                        return null;
+                    });
+
+                    if (confirmation?.approved) {
+                        const search = new URLSearchParams();
+                        search.set('payment_id', paymentId);
+                        search.set('status', 'approved');
+                        if (dados.externalReference) search.set('external_reference', dados.externalReference);
+                        if (dados.preferenceId) search.set('preference_id', dados.preferenceId);
+                        window.location.href = `pagamento-sucesso.html?${search.toString()}`;
+                        return;
+                    }
+                }
+
                 if (currentPagamentoId) {
                     await updatePaymentStatus(currentPagamentoId, 'pendente');
                 }
-                const paymentId = getMercadoPagoPaymentId(dados);
                 window.location.href = paymentId
                     ? `pagamento-pendente.html?payment_id=${encodeURIComponent(paymentId)}&status=pending`
                     : 'pagamento-pendente.html';

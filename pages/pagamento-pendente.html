@@ -112,6 +112,37 @@
     </main>
     <script>
         (function () {
+            const params = new URLSearchParams(location.search);
+            const paymentId = params.get('payment_id') || params.get('collection_id');
+            const titleEl = document.querySelector('.resultado-pagamento h1');
+            const messageEl = document.querySelector('.resultado-pagamento p');
+            let confirmTimer = null;
+
+            async function confirmarPagamentoSeAprovado() {
+                if (!paymentId) return false;
+
+                const resp = await fetch('/api/mercadopago/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentId })
+                });
+
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    throw new Error(data.error || 'Não foi possível consultar o pagamento.');
+                }
+
+                if (data.approved) {
+                    const search = new URLSearchParams();
+                    search.set('payment_id', paymentId);
+                    search.set('status', 'approved');
+                    location.href = `pagamento-sucesso.html?${search.toString()}`;
+                    return true;
+                }
+
+                return false;
+            }
+
             async function finalizarPagamentoPendente() {
                 try {
                     const cached = sessionStorage.getItem('condominiumUser');
@@ -146,11 +177,41 @@
                     console.warn('Erro ao marcar pagamento pendente:', e);
                 }
             }
+
+            async function iniciarMonitoramentoPagamento() {
+                try {
+                    const aprovado = await confirmarPagamentoSeAprovado();
+                    if (aprovado) return;
+                } catch (error) {
+                    console.warn('Erro ao reconciliar pagamento pendente:', error);
+                }
+
+                if (!paymentId) return;
+
+                titleEl.textContent = 'Pagamento em análise';
+                messageEl.textContent = 'Estamos acompanhando a confirmação do Mercado Pago. Assim que o pagamento for aprovado, seu plano será ativado automaticamente.';
+
+                confirmTimer = window.setInterval(async () => {
+                    try {
+                        const aprovado = await confirmarPagamentoSeAprovado();
+                        if (aprovado && confirmTimer) {
+                            clearInterval(confirmTimer);
+                        }
+                    } catch (error) {
+                        console.warn('Erro ao verificar atualização do pagamento:', error);
+                    }
+                }, 5000);
+            }
+
             finalizarPagamentoPendente();
+            iniciarMonitoramentoPagamento();
 
             const btn = document.getElementById('btn-continuar');
             if (btn) {
                 btn.addEventListener('click', function() {
+                    if (confirmTimer) {
+                        clearInterval(confirmTimer);
+                    }
                     if (typeof window.fecharRetornoMercadoPago === 'function') {
                         fecharRetornoMercadoPago();
                     } else {
