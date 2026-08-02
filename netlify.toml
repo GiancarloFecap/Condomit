@@ -5,41 +5,11 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["@getbrevo/brevo", "mercadopago", "livekit-server-sdk", "@supabase/supabase-js"]
+  external_node_modules = ["@getbrevo/brevo", "mercadopago"]
 
 [[redirects]]
   from = "/esqueceu-senha"
   to = "/.netlify/functions/api-proxy/esqueceu-senha"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/livekit-token"
-  to = "/.netlify/functions/livekit-token"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/iniciar-assembleia"
-  to = "/.netlify/functions/iniciar-assembleia"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/encerrar-assembleia"
-  to = "/.netlify/functions/encerrar-assembleia"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/moderar-participante"
-  to = "/.netlify/functions/moderar-participante"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/assembly-event"
-  to = "/.netlify/functions/assembly-event"
   status = 200
   force = true
 
@@ -90,7 +60,7 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "geolocation=(), microphone=(self), camera=(self), display-capture=(self)"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PATCH, PUT, DELETE, OPTIONS"

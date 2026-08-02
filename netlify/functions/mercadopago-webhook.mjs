@@ -1,120 +1,60 @@
-function jsonResponse(statusCode, body, extraHeaders = {}) {
-  return {
-    statusCode,
+function jsonResponse(status, body) {
+  return new Response(JSON.stringify(body), {
+    status,
     headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-store',
-      ...extraHeaders
-    },
-    body: JSON.stringify(body)
-  };
-}
-
-function getCorsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
-  };
-}
-
-function extractPaymentId(query, body) {
-  return (
-    body?.data?.id ||
-    body?.payment_id ||
-    body?.paymentId ||
-    query.get('data.id') ||
-    query.get('id') ||
-    query.get('payment_id') ||
-    query.get('paymentId') ||
-    null
-  );
-}
-
-function buildBaseUrl(event) {
-  const headers = event.headers || {};
-  const protocol = headers['x-forwarded-proto'] || headers['X-Forwarded-Proto'] || 'https';
-  const host = headers['x-forwarded-host'] || headers['X-Forwarded-Host'] || headers.host || headers.Host;
-  if (!host) {
-    throw new Error('Host da requisição não encontrado.');
-  }
-  return `${protocol}://${host}`;
-}
-
-export async function handler(event) {
-  const corsHeaders = getCorsHeaders();
-
-  try {
-    if (event.httpMethod === 'OPTIONS') {
-      return {
-        statusCode: 204,
-        headers: corsHeaders,
-        body: ''
-      };
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store"
     }
+  });
+}
 
-    if (event.httpMethod === 'GET') {
+export default async function handler(request) {
+  try {
+    /*
+     * Permite testar a existência da função diretamente
+     * pelo navegador.
+     */
+    if (request.method === "GET") {
       return jsonResponse(200, {
         success: true,
-        message: 'Webhook do Mercado Pago está ativo.'
-      }, corsHeaders);
+        message: "Webhook do Mercado Pago está ativo."
+      });
     }
 
-    if (event.httpMethod !== 'POST') {
+    if (request.method !== "POST") {
       return jsonResponse(405, {
-        error: 'Método não permitido.'
-      }, corsHeaders);
+        error: "Método não permitido."
+      });
     }
 
-    const rawBody = event.isBase64Encoded
-      ? Buffer.from(event.body || '', 'base64').toString('utf-8')
-      : (event.body || '');
-    const body = rawBody ? JSON.parse(rawBody) : {};
-    const url = new URL(event.rawUrl || buildBaseUrl(event));
-    const paymentId = extractPaymentId(url.searchParams, body);
+    const url = new URL(request.url);
+    const body = await request.json().catch(() => ({}));
 
-    console.log('[mercadopago-webhook] Webhook recebido:', {
-      type: body?.type || null,
-      action: body?.action || null,
+    const paymentId =
+      body?.data?.id ||
+      url.searchParams.get("data.id") ||
+      url.searchParams.get("id");
+
+    console.log("Webhook Mercado Pago recebido:", {
+      type: body?.type,
+      action: body?.action,
       paymentId,
-      liveMode: body?.live_mode ?? null
+      liveMode: body?.live_mode
     });
-
-    if (!paymentId) {
-      return jsonResponse(200, {
-        received: true,
-        ignored: true
-      }, corsHeaders);
-    }
-
-    const baseUrl = buildBaseUrl(event);
-    const confirmResponse = await fetch(`${baseUrl}/.netlify/functions/api-proxy/mercadopago/confirm`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ paymentId })
-    });
-
-    const confirmData = await confirmResponse.json().catch(() => ({}));
-    if (!confirmResponse.ok) {
-      console.error('[mercadopago-webhook] Falha ao confirmar pagamento:', confirmData);
-      return jsonResponse(500, {
-        error: 'Falha ao processar a confirmação do pagamento.',
-        paymentId
-      }, corsHeaders);
-    }
 
     return jsonResponse(200, {
       received: true,
-      paymentId,
-      approved: Boolean(confirmData.approved),
-      alreadyProcessed: Boolean(confirmData.alreadyProcessed)
-    }, corsHeaders);
+      paymentId: paymentId || null
+    });
   } catch (error) {
-    console.error('[mercadopago-webhook] Erro no webhook Mercado Pago:', error);
+    console.error("Erro no webhook Mercado Pago:", error);
+
     return jsonResponse(500, {
-      error: 'Erro interno no webhook.'
-    }, corsHeaders);
+      error: "Erro interno no webhook."
+    });
   }
 }
+
+export const config = {
+  path: "/api/mercadopago/webhook"
+};
