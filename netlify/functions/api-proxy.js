@@ -2,7 +2,8 @@ const crypto = require('crypto');
 const { Brevo, BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const DEFAULT_SUPABASE_URL = 'https://zoplefkruidaxeapnrjp.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
 const MERCADO_PAGO_WEBHOOK_SECRET = process.env.MERCADO_PAGO_WEBHOOK_SECRET || '';
@@ -531,6 +532,7 @@ async function sendPaymentConfirmationEmailOnce(transactionId, toEmail, usuario,
 }
 
 async function proxySupabaseRequest(body, pathSuffix, method) {
+  ensureSupabaseAdminConfig();
   const response = await fetch(`${SUPABASE_URL}/rest/v1${pathSuffix}`, {
     method,
     headers: {

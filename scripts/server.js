@@ -11,7 +11,8 @@ const root = process.cwd();
 const port = process.env.PORT ? Number(process.env.PORT) : 8081;
 
 const env = loadEnv(path.join(root, '.env'));
-const SUPABASE_URL = env.SUPABASE_URL || '';
+const DEFAULT_SUPABASE_URL = 'https://zoplefkruidaxeapnrjp.supabase.co';
+const SUPABASE_URL = env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || '';
 const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || '';
 const MERCADO_PAGO_WEBHOOK_SECRET = env.MERCADO_PAGO_WEBHOOK_SECRET || '';
@@ -287,6 +288,7 @@ function proxySupabaseRequest(req, res, pathSuffix, method) {
   req.on('data', (chunk) => { body += chunk; });
   req.on('end', async () => {
     try {
+      ensureSupabaseAdminConfig();
       const response = await fetch(`${SUPABASE_URL}/rest/v1${pathSuffix}`, {
         method,
         headers: {
@@ -316,6 +318,7 @@ function proxySupabaseRequest(req, res, pathSuffix, method) {
 }
 
 async function proxySupabasePayload(body, pathSuffix, method) {
+  ensureSupabaseAdminConfig();
   const response = await fetch(`${SUPABASE_URL}/rest/v1${pathSuffix}`, {
     method,
     headers: {
