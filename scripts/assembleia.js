@@ -1,1848 +1,1087 @@
-const assemblyState = {
-    assembly: null,
-    currentUser: null,
-    currentAssemblyId: null,
-    connected: false,
-    joining: false,
-    leaving: false,
-    connectionStatus: 'Desconectado',
-    cameraEnabled: false,
-    microphoneEnabled: false,
-    screenShareEnabled: false,
-    handRaised: false,
-    activePanel: null,
-    openModal: null,
-    activePollId: null,
-    previewStream: null,
-    screenStream: null,
-    activeDevices: {
-        audioInputId: '',
-        videoInputId: ''
-    },
-    subscriptions: [],
-    attendanceId: null,
-    roomJoinedAt: null,
-    timerInterval: null,
-    heartbeatInterval: null,
-    cleanupInterval: null,
-    channel: null,
-    sidePanelLastFocus: null,
-    modalTrigger: null,
-    participantMap: new Map(),
-    polls: [],
-    processedEventIds: new Set(),
-    unreadChatCount: 0,
-    unreadPollCount: 0
-};
-
+let micOn = false;
+let cameraOn = false;
+let chatOpen = false;
+let currentAssemblyId = null;
+let currentUser = null;
+let localStream = null;
 let selectedImageData = null;
-let scheduledAssemblies = [];
-let pastAssemblies = [];
+let participants = [];
 
-function storageKey(prefix, assemblyId) {
-    return `condomit-${prefix}-${String(assemblyId)}`;
-}
+let assemblyChannel = null;
+const ASSEMBLY_PARTICIPANT_TTL_MS = 45000;
+const PARTICIPANT_HEARTBEAT_MS = 12000;
+let participantHeartbeatTimer = null;
+let participantCleanupTimer = null;
+let myPeerId = null;
 
 function channelKeyFor(assemblyId) {
-    return storageKey('assembly-channel', assemblyId);
+    return 'condomit-assembly-' + String(assemblyId);
 }
 
-function getChatStorageKey(assemblyId) {
-    return storageKey('assembly-chat', assemblyId);
+function chatKeyFor(assemblyId) {
+    return 'condomit-chat-' + String(assemblyId);
 }
 
-function getParticipantsStorageKey(assemblyId) {
-    return storageKey('assembly-participants', assemblyId);
-}
-
-function getPollsStorageKey(assemblyId) {
-    return storageKey('assembly-polls', assemblyId);
-}
-
-function getRequestsStorageKey(assemblyId) {
-    return storageKey('assembly-speaking-requests', assemblyId);
+function storageParticipantsKey(assemblyId) {
+    return 'condomit-participants-' + String(assemblyId);
 }
 
 function getInitials(name) {
-    const value = String(name || '').trim();
-    if (!value) return 'US';
-    return value.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+    if (!name) return 'US';
+    return String(name).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
 function getMyPeerId() {
-    let peerId = '';
-    try {
-        peerId = sessionStorage.getItem('condomitPeerId') || '';
-    } catch (_) {}
-
-    if (!peerId) {
-        peerId = `peer-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    if (!myPeerId) {
         try {
-            sessionStorage.setItem('condomitPeerId', peerId);
-        } catch (_) {}
-    }
-
-    return peerId;
-}
-
-function getCurrentUserEmail() {
-    return String(assemblyState.currentUser?.email || '').trim().toLowerCase();
-}
-
-function getCurrentUserType() {
-    if (typeof getNormalizedUserType === 'function') {
-        return getNormalizedUserType(assemblyState.currentUser);
-    }
-    return String(assemblyState.currentUser?.type || assemblyState.currentUser?.user_type || 'morador').toLowerCase();
-}
-
-function isSindico() {
-    return getCurrentUserType() === 'sindico';
-}
-
-function isPorteiro() {
-    return getCurrentUserType() === 'porteiro';
-}
-
-function canCurrentUserVote() {
-    return !isPorteiro();
-}
-
-function readStorageJson(key, fallback) {
-    try {
-        const raw = localStorage.getItem(key);
-        if (!raw) return fallback;
-        const parsed = JSON.parse(raw);
-        return parsed ?? fallback;
-    } catch (_) {
-        return fallback;
-    }
-}
-
-function writeStorageJson(key, value) {
-    try {
-        localStorage.setItem(key, JSON.stringify(value));
-    } catch (_) {}
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return '-';
-    const [year, month, day] = String(dateStr).split('-');
-    if (!year || !month || !day) return String(dateStr);
-    return `${day}/${month}/${year}`;
-}
-
-function formatTime(timeStr) {
-    if (!timeStr) return '--:--';
-    return String(timeStr).slice(0, 5);
-}
-
-function getCondoName(user) {
-    const condo = user?.condominium;
-    if (!condo) return 'Condominio atual';
-
-    if (typeof condo === 'string') {
-        try {
-            const parsed = JSON.parse(condo);
-            return parsed?.name || parsed?.condominium_name || parsed?.cep || 'Condominio atual';
+            const existing = sessionStorage.getItem('condomitPeerId');
+            if (existing) { myPeerId = existing; }
+            else {
+                myPeerId = 'peer-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+                sessionStorage.setItem('condomitPeerId', myPeerId);
+            }
         } catch (_) {
-            return condo;
+            myPeerId = 'peer-' + Date.now().toString(36);
         }
     }
-
-    return condo.name || condo.condominium_name || condo.cep || 'Condominio atual';
+    return myPeerId;
 }
+
+function persistParticipantList(assemblyId, list) {
+    try { localStorage.setItem(storageParticipantsKey(assemblyId), JSON.stringify(list)); } catch(_) {}
+}
+
+function loadPersistedParticipants(assemblyId) {
+    try {
+        const raw = localStorage.getItem(storageParticipantsKey(assemblyId));
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+    } catch(_) { return []; }
+}
+
+function serializeParticipantFromUser(user, opts = {}) {
+    if (!user) return null;
+    const name = user.name || 'Usuário';
+    const type = user.type || (user.user_type === 'sindico' ? 'sindico' : 'morador') || 'morador';
+    return {
+        peerId: opts.peerId || getMyPeerId(),
+        email: user.email || null,
+        name: name,
+        initials: opts.initials || getInitials(name),
+        type: type,
+        profilePhoto: user.profilePhoto || null,
+        micOn: typeof opts.micOn === 'boolean' ? opts.micOn : true,
+        cameraOn: typeof opts.cameraOn === 'boolean' ? opts.cameraOn : false,
+        lastSeen: Date.now()
+    };
+}
+
+function openAssemblyChannel(assemblyId) {
+    closeAssemblyChannel();
+    const key = channelKeyFor(assemblyId);
+    try {
+        const bc = new BroadcastChannel(key);
+        bc.onmessage = (ev) => handleAssemblyMessage(assemblyId, ev.data);
+        assemblyChannel = bc;
+    } catch (_) {
+        assemblyChannel = null;
+    }
+    // Carrega participantes persistidos de outras abas
+    const persisted = loadPersistedParticipants(assemblyId);
+    if (persisted && persisted.length) {
+        const now = Date.now();
+        participants = persisted.filter(p => now - (p.lastSeen || 0) < ASSEMBLY_PARTICIPANT_TTL_MS);
+    }
+    // Carrega chat histórico
+    loadPersistedChatHistory(assemblyId);
+    // Temporizador de limpeza
+    participantCleanupTimer = setInterval(() => {
+        const before = participants.length;
+        const now = Date.now();
+        participants = participants.filter(p => now - (p.lastSeen || 0) < ASSEMBLY_PARTICIPANT_TTL_MS);
+        if (before !== participants.length) {
+            persistParticipantList(assemblyId, participants);
+            renderParticipants();
+        }
+    }, 5000);
+}
+
+function closeAssemblyChannel() {
+    if (assemblyChannel) {
+        try { assemblyChannel.close(); } catch(_) {}
+        assemblyChannel = null;
+    }
+    if (participantHeartbeatTimer) {
+        clearInterval(participantHeartbeatTimer);
+        participantHeartbeatTimer = null;
+    }
+    if (participantCleanupTimer) {
+        clearInterval(participantCleanupTimer);
+        participantCleanupTimer = null;
+    }
+}
+
+function broadcastToAssembly(type, payload) {
+    const msg = { type, ts: Date.now(), data: payload };
+    try {
+        if (assemblyChannel) assemblyChannel.postMessage(msg);
+    } catch (_) {}
+}
+
+function sendParticipantPresence(opts = {}) {
+    if (!currentAssemblyId || !currentUser) return;
+    const p = serializeParticipantFromUser(currentUser, {
+        peerId: getMyPeerId(),
+        micOn: typeof opts.micOn === 'boolean' ? opts.micOn : micOn,
+        cameraOn: typeof opts.cameraOn === 'boolean' ? opts.cameraOn : cameraOn
+    });
+    // Atualiza lista local
+    const idx = participants.findIndex(x => x.peerId === p.peerId);
+    if (idx >= 0) participants[idx] = p;
+    else participants.push(p);
+    persistParticipantList(currentAssemblyId, participants);
+    broadcastToAssembly('participant-presence', p);
+}
+
+function startParticipantHeartbeat() {
+    if (participantHeartbeatTimer) return;
+    sendParticipantPresence({ announce: true });
+    participantHeartbeatTimer = setInterval(() => {
+        sendParticipantPresence();
+    }, PARTICIPANT_HEARTBEAT_MS);
+}
+
+function handleAssemblyMessage(assemblyId, msg) {
+    if (!msg || !msg.type) return;
+    const data = msg.data || msg.payload || null;
+    switch (msg.type) {
+        case 'participant-presence': {
+            if (!data || !data.peerId) return;
+            if (assemblyId !== currentAssemblyId) return;
+            const p = { ...data, lastSeen: msg.ts || Date.now() };
+            const idx = participants.findIndex(x => x.peerId === p.peerId);
+            if (idx >= 0) participants[idx] = p;
+            else participants.push(p);
+            persistParticipantList(assemblyId, participants);
+            renderParticipants();
+            // Se for nova entrada, respondo com minha presença para o novo peer me ver
+            if (msg.data?.announce && p.peerId !== getMyPeerId()) {
+                setTimeout(() => sendParticipantPresence(), 200);
+            }
+            break;
+        }
+        case 'participant-leave': {
+            if (!data?.peerId || assemblyId !== currentAssemblyId) return;
+            const before = participants.length;
+            participants = participants.filter(p => p.peerId !== data.peerId);
+            persistParticipantList(assemblyId, participants);
+            if (before !== participants.length) renderParticipants();
+            break;
+        }
+        case 'chat-message': {
+            if (!data || assemblyId !== currentAssemblyId) return;
+            appendIncomingChatMessage(data);
+            break;
+        }
+        case 'participant-request-roster': {
+            if (assemblyId !== currentAssemblyId) return;
+            sendParticipantPresence();
+            break;
+        }
+    }
+}
+
+function loadPersistedChatHistory(assemblyId) {
+    try {
+        const raw = localStorage.getItem(chatKeyFor(assemblyId));
+        if (!raw) return;
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return;
+        arr.forEach(m => appendIncomingChatMessage(m, { silent: true, history: true }));
+    } catch(_) {}
+}
+
+function appendIncomingChatMessage(msg, opts = {}) {
+    if (!msg) return;
+    const sender = msg.sender || msg.name || 'Usuário';
+    const isMe = msg.peerId && msg.peerId === getMyPeerId();
+    const userType = msg.userType || 'morador';
+    const text = msg.text || '';
+    const imageData = msg.imageData || null;
+    const time = msg.time || getCurrentTime();
+    const ts = msg.ts || Date.now();
+    const messagesDiv = document.getElementById('chat-messages');
+    if (!messagesDiv) return;
+    // Evitar duplicatas
+    if (msg.id) {
+        const already = messagesDiv.querySelector(`[data-msg-id="${String(msg.id).replace(/"/g,'')}"]`);
+        if (already) return;
+    }
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message ' + (isMe ? 'sent' : 'received');
+    if (msg.id) messageDiv.dataset.msgId = String(msg.id);
+    const typeLabel = userType === 'sindico' ? 'Síndico' : 'Morador';
+    let contentHTML = `
+        <div class="message-header">
+            <strong>${escapeHtml(sender)}</strong>
+            <span class="user-type-tag">${typeLabel}</span>
+        </div>
+    `;
+    if (text) contentHTML += `<p>${escapeHtml(text)}</p>`;
+    if (imageData) {
+        contentHTML += `
+            <div class="message-image-wrapper">
+                <img src="${imageData}" alt="Imagem enviada" class="message-image" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: contain;">
+            </div>`;
+    }
+    contentHTML += `<span class="time">${time}</span>`;
+    messageDiv.innerHTML = contentHTML;
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function persistChatMessage(assemblyId, msg) {
+    try {
+        const key = chatKeyFor(assemblyId);
+        const raw = localStorage.getItem(key);
+        let arr = [];
+        if (raw) { try { arr = JSON.parse(raw); } catch(_) { arr = []; } }
+        if (!Array.isArray(arr)) arr = [];
+        arr.push(msg);
+        if (arr.length > 400) arr = arr.slice(-400);
+        localStorage.setItem(key, JSON.stringify(arr));
+    } catch(_) {}
+}
+
+// Demo assembly data
+let scheduledAssemblies = [];
+let pastAssemblies = [];
+
+const assemblyData = {
+    1: {
+        title: 'Assembleia Extraordinária',
+        summary: '<p>Assembleia de exemplo.</p>',
+        comments: []
+    }
+};
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Check if user is logged in (sessionStorage OU localStorage persistent)
+    let storedUser = null;
+    try { storedUser = sessionStorage.getItem('condominiumUser'); } catch(_) {}
+    if (!storedUser) {
+        try {
+            const persistRaw = localStorage.getItem('condominiumPersistentUser');
+            if (persistRaw) {
+                const persist = JSON.parse(persistRaw);
+                if (persist && persist.email && typeof fetchUserByEmail === 'function') {
+                    const fresh = await fetchUserByEmail(persist.email).catch(() => null);
+                    if (fresh) {
+                        const restored = { ...fresh, password: fresh.password || null };
+                        sessionStorage.setItem('condominiumUser', JSON.stringify(restored));
+                        storedUser = sessionStorage.getItem('condominiumUser');
+                        if (typeof syncAllAvatars === 'function') syncAllAvatars(restored);
+                    }
+                }
+            }
+        } catch (_) {}
+    }
+    if (!storedUser) {
+        window.location.href = 'entrar.html';
+        return;
+    }
+    
+    currentUser = JSON.parse(storedUser);
+
+    if (typeof refreshCurrentUserFromDb === 'function') {
+        currentUser = await refreshCurrentUserFromDb();
+    }
+
+    // Se for síndico, verificar se tem plano
+    if (currentUser.type === 'sindico' && !currentUser.plan) {
+        window.location.href = 'checkout.html';
+        return;
+    }
+    
+    updateUserProfile();
+    
+    // Initialize chat as closed
+    const chatSidebar = document.getElementById('chat-sidebar');
+    if (chatSidebar) chatSidebar.classList.add('closed');
+    
+    // Set min date to today on date input
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('assembly-date');
+    if (dateInput) dateInput.setAttribute('min', today);
+    
+    if (typeof syncAllAvatars === 'function' && currentUser) {
+        syncAllAvatars(currentUser);
+    }
+
+    // Message input enter key
+    const messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    }
+    
+    // Image upload
+    const imageUpload = document.getElementById('image-upload');
+    if (imageUpload) {
+        imageUpload.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    selectedImageData = event.target.result;
+                    const previewWrapper = document.getElementById('image-preview-wrapper');
+                    const previewImg = document.getElementById('image-preview');
+                    if (previewImg) previewImg.src = selectedImageData;
+                    if (previewWrapper) previewWrapper.classList.add('active');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    renderScheduleAssemblyInfo();
+
+    // Render initial assemblies from Supabase
+    loadScheduledAssemblies();
+    renderPastAssemblies();
+});
 
 function extractUserCep(user) {
     if (!user) return null;
     if (user.condominium) {
         if (typeof user.condominium === 'string') {
             try {
-                const parsed = JSON.parse(user.condominium);
-                return parsed?.cep || parsed?.condominium_id || null;
-            } catch (_) {
-                return null;
-            }
+                const c = JSON.parse(user.condominium);
+                return c?.cep || c?.condominium_id || null;
+            } catch (_) {}
+        } else if (typeof user.condominium === 'object') {
+            return user.condominium.cep || user.condominium.condominium_id || null;
         }
-        return user.condominium.cep || user.condominium.condominium_id || null;
     }
     return user.cep || user.condominium_cep || null;
-}
-
-function escapeText(value) {
-    return String(value ?? '');
-}
-
-function showToast(message, tone = 'info') {
-    const region = document.getElementById('toast-region');
-    if (!region) return;
-
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${tone}`;
-    toast.textContent = message;
-    region.appendChild(toast);
-
-    window.setTimeout(() => {
-        toast.classList.add('toast-hide');
-        window.setTimeout(() => toast.remove(), 220);
-    }, 3200);
-}
-
-function setConnectionStatus(status) {
-    assemblyState.connectionStatus = status;
-    const label = document.getElementById('connection-status-text');
-    if (label) {
-        label.textContent = status;
-    }
-}
-
-function updateStatusChip(statusText) {
-    const label = document.getElementById('room-status-text');
-    if (label) {
-        label.textContent = statusText;
-    }
-}
-
-function setOverlayVisibility(id, visible) {
-    const element = document.getElementById(id);
-    if (!element) return;
-    element.hidden = !visible;
-    element.setAttribute('aria-hidden', visible ? 'false' : 'true');
-}
-
-function closeAllPanels() {
-    const panel = document.getElementById('assembly-side-panel');
-    if (panel) {
-        panel.hidden = true;
-        panel.setAttribute('aria-hidden', 'true');
-    }
-
-    document.querySelectorAll('.side-panel-section').forEach((section) => {
-        section.hidden = true;
-    });
-
-    assemblyState.activePanel = null;
-
-    const chatCounter = document.getElementById('chat-counter');
-    if (chatCounter) {
-        chatCounter.hidden = assemblyState.unreadChatCount === 0;
-        chatCounter.textContent = String(assemblyState.unreadChatCount);
-    }
-}
-
-function openSidePanel(panelName, triggerButton) {
-    const panel = document.getElementById('assembly-side-panel');
-    const panelTitle = document.getElementById('side-panel-title');
-    if (!panel) return;
-
-    if (assemblyState.activePanel === panelName && !panel.hidden) {
-        closeAllPanels();
-        return;
-    }
-
-    assemblyState.sidePanelLastFocus = triggerButton || document.activeElement;
-    assemblyState.activePanel = panelName;
-    panel.hidden = false;
-    panel.setAttribute('aria-hidden', 'false');
-
-    document.querySelectorAll('.side-panel-section').forEach((section) => {
-        section.hidden = section.id !== `${panelName}-panel`;
-    });
-
-    if (panelTitle) {
-        if (panelName === 'chat') panelTitle.textContent = 'Chat';
-        if (panelName === 'participants') panelTitle.textContent = 'Participantes';
-        if (panelName === 'polls') panelTitle.textContent = 'Votacoes';
-    }
-
-    if (panelName === 'chat') {
-        assemblyState.unreadChatCount = 0;
-        syncUnreadCounters();
-        const input = document.getElementById('message-input');
-        if (input) input.focus();
-    }
-
-    if (panelName === 'participants') {
-        renderParticipantsPanel();
-    }
-
-    if (panelName === 'polls') {
-        assemblyState.unreadPollCount = 0;
-        syncUnreadCounters();
-        renderPollsPanel();
-    }
-}
-
-function syncUnreadCounters() {
-    const chatCounter = document.getElementById('chat-counter');
-    const pollCounter = document.getElementById('poll-counter');
-
-    if (chatCounter) {
-        chatCounter.hidden = assemblyState.unreadChatCount === 0;
-        chatCounter.textContent = String(assemblyState.unreadChatCount);
-    }
-
-    if (pollCounter) {
-        pollCounter.hidden = assemblyState.unreadPollCount === 0;
-        pollCounter.textContent = String(assemblyState.unreadPollCount);
-    }
-}
-
-function openModal(modalId, trigger) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-    if (assemblyState.openModal === modalId && !modal.hidden) return;
-
-    closeModal(assemblyState.openModal);
-    assemblyState.openModal = modalId;
-    assemblyState.modalTrigger = trigger || document.activeElement;
-    modal.hidden = false;
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('modal-open');
-
-    const firstFocusable = modal.querySelector('input, select, textarea, button');
-    if (firstFocusable) firstFocusable.focus();
-}
-
-function closeModal(modalId) {
-    if (!modalId) return;
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-
-    modal.hidden = true;
-    modal.setAttribute('aria-hidden', 'true');
-    if (assemblyState.openModal === modalId) {
-        assemblyState.openModal = null;
-        document.body.classList.remove('modal-open');
-        const trigger = assemblyState.modalTrigger;
-        assemblyState.modalTrigger = null;
-        if (trigger && typeof trigger.focus === 'function') {
-            trigger.focus();
-        }
-    }
-}
-
-function closeAllModals() {
-    document.querySelectorAll('.assembly-modal').forEach((modal) => {
-        modal.hidden = true;
-        modal.setAttribute('aria-hidden', 'true');
-    });
-    assemblyState.openModal = null;
-    document.body.classList.remove('modal-open');
-}
-
-function buildBroadcastEvent(type, data) {
-    return {
-        id: `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        type,
-        ts: Date.now(),
-        data
-    };
-}
-
-function rememberProcessedEvent(eventId) {
-    if (!eventId) return false;
-    if (assemblyState.processedEventIds.has(eventId)) return true;
-    assemblyState.processedEventIds.add(eventId);
-    if (assemblyState.processedEventIds.size > 150) {
-        const values = Array.from(assemblyState.processedEventIds).slice(-80);
-        assemblyState.processedEventIds = new Set(values);
-    }
-    return false;
-}
-
-function getPersistedParticipants() {
-    if (!assemblyState.currentAssemblyId) return [];
-    return readStorageJson(getParticipantsStorageKey(assemblyState.currentAssemblyId), []);
-}
-
-function persistParticipants() {
-    if (!assemblyState.currentAssemblyId) return;
-    writeStorageJson(
-        getParticipantsStorageKey(assemblyState.currentAssemblyId),
-        Array.from(assemblyState.participantMap.values())
-    );
-}
-
-function buildLocalParticipant(overrides = {}) {
-    const name = assemblyState.currentUser?.name || 'Voce';
-    return {
-        peerId: getMyPeerId(),
-        name,
-        email: getCurrentUserEmail(),
-        type: getCurrentUserType(),
-        profilePhoto: assemblyState.currentUser?.profilePhoto || null,
-        initials: getInitials(name),
-        micOn: assemblyState.microphoneEnabled,
-        cameraOn: assemblyState.cameraEnabled,
-        handRaised: assemblyState.handRaised,
-        lastSeen: Date.now(),
-        ...overrides
-    };
-}
-
-function upsertParticipant(participant) {
-    if (!participant?.peerId) return;
-    const normalized = {
-        ...participant,
-        initials: participant.initials || getInitials(participant.name),
-        lastSeen: participant.lastSeen || Date.now()
-    };
-    assemblyState.participantMap.set(normalized.peerId, normalized);
-    persistParticipants();
-    renderParticipants();
-    renderParticipantsPanel();
-}
-
-function removeParticipant(peerId) {
-    if (!peerId) return;
-    assemblyState.participantMap.delete(peerId);
-    persistParticipants();
-    renderParticipants();
-    renderParticipantsPanel();
-}
-
-function broadcast(type, data) {
-    if (!assemblyState.channel) return;
-    const event = buildBroadcastEvent(type, data);
-    rememberProcessedEvent(event.id);
-    try {
-        assemblyState.channel.postMessage(event);
-    } catch (_) {}
-}
-
-function openAssemblyChannel() {
-    closeAssemblyChannel();
-    try {
-        assemblyState.channel = new BroadcastChannel(channelKeyFor(assemblyState.currentAssemblyId));
-        assemblyState.channel.onmessage = (message) => {
-            handleAssemblyEvent(message.data);
-        };
-    } catch (_) {
-        assemblyState.channel = null;
-    }
-
-    const persistedParticipants = getPersistedParticipants();
-    assemblyState.participantMap = new Map();
-    persistedParticipants
-        .filter((participant) => Date.now() - Number(participant.lastSeen || 0) < 45000)
-        .forEach((participant) => {
-            assemblyState.participantMap.set(participant.peerId, participant);
-        });
-
-    renderParticipants();
-    renderParticipantsPanel();
-    loadChatHistory();
-    loadPolls();
-}
-
-function closeAssemblyChannel() {
-    if (assemblyState.channel) {
-        try {
-            assemblyState.channel.close();
-        } catch (_) {}
-    }
-    assemblyState.channel = null;
-
-    if (assemblyState.heartbeatInterval) {
-        clearInterval(assemblyState.heartbeatInterval);
-        assemblyState.heartbeatInterval = null;
-    }
-
-    if (assemblyState.cleanupInterval) {
-        clearInterval(assemblyState.cleanupInterval);
-        assemblyState.cleanupInterval = null;
-    }
-}
-
-function handleAssemblyEvent(event) {
-    if (!event?.type || rememberProcessedEvent(event.id)) return;
-    const data = event.data || {};
-
-    if (String(data.assemblyId || assemblyState.currentAssemblyId) !== String(assemblyState.currentAssemblyId)) {
-        return;
-    }
-
-    switch (event.type) {
-        case 'participant-presence':
-            if (data.peerId !== getMyPeerId()) {
-                upsertParticipant({ ...data, lastSeen: event.ts || Date.now() });
-                updateParticipantCount();
-            }
-            break;
-        case 'participant-leave':
-            removeParticipant(data.peerId);
-            updateParticipantCount();
-            break;
-        case 'participant-request-roster':
-            if (data.peerId !== getMyPeerId()) {
-                sendPresence();
-            }
-            break;
-        case 'chat-message':
-            appendChatMessage(data, { persist: true, fromRealtime: true });
-            break;
-        case 'poll-created':
-        case 'poll-updated':
-        case 'poll-ended':
-            loadPolls();
-            if (event.type === 'poll-created' && data.createdBy !== getCurrentUserEmail()) {
-                assemblyState.unreadPollCount += 1;
-                syncUnreadCounters();
-                showToast('Uma nova votacao foi iniciada.', 'info');
-            }
-            break;
-        case 'hand-raised':
-            if (data.peerId !== getMyPeerId()) {
-                upsertParticipant({ ...assemblyState.participantMap.get(data.peerId), ...data, lastSeen: Date.now() });
-                if (isSindico()) {
-                    showToast(`${data.name || 'Participante'} levantou a mao.`, 'info');
-                }
-            }
-            break;
-        case 'assembly-ended':
-            showToast('A assembleia foi encerrada pelo sindico.', 'warning');
-            performLeaveAssembly(false);
-            break;
-        default:
-            break;
-    }
-}
-
-function appendChatMessage(message, options = {}) {
-    if (!message || !assemblyState.currentAssemblyId) return;
-
-    const messagesContainer = document.getElementById('chat-messages');
-    if (!messagesContainer) return;
-
-    const messageId = String(message.id || '');
-    if (messageId && messagesContainer.querySelector(`[data-message-id="${messageId}"]`)) {
-        return;
-    }
-
-    const wrapper = document.createElement('div');
-    wrapper.className = `safe-message ${message.peerId === getMyPeerId() ? 'is-own' : ''}`;
-    if (messageId) wrapper.dataset.messageId = messageId;
-
-    const header = document.createElement('div');
-    header.className = 'safe-message-header';
-
-    const sender = document.createElement('strong');
-    sender.textContent = message.sender || 'Usuario';
-    header.appendChild(sender);
-
-    const meta = document.createElement('span');
-    meta.textContent = `${message.userType === 'sindico' ? 'Sindico' : message.userType === 'porteiro' ? 'Porteiro' : 'Morador'} • ${message.time || currentTimeLabel()}`;
-    header.appendChild(meta);
-    wrapper.appendChild(header);
-
-    if (message.text) {
-        const body = document.createElement('p');
-        body.textContent = message.text;
-        wrapper.appendChild(body);
-    }
-
-    if (message.imageData) {
-        const image = document.createElement('img');
-        image.src = message.imageData;
-        image.alt = 'Imagem enviada no chat';
-        image.className = 'chat-image-item';
-        wrapper.appendChild(image);
-    }
-
-    messagesContainer.appendChild(wrapper);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-    if (options.persist) {
-        const key = getChatStorageKey(assemblyState.currentAssemblyId);
-        const history = readStorageJson(key, []);
-        history.push(message);
-        writeStorageJson(key, history.slice(-300));
-    }
-
-    if (options.fromRealtime && assemblyState.activePanel !== 'chat' && message.peerId !== getMyPeerId()) {
-        assemblyState.unreadChatCount += 1;
-        syncUnreadCounters();
-    }
-}
-
-function currentTimeLabel() {
-    const now = new Date();
-    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-}
-
-function loadChatHistory() {
-    const container = document.getElementById('chat-messages');
-    if (!container || !assemblyState.currentAssemblyId) return;
-    container.innerHTML = '';
-    const history = readStorageJson(getChatStorageKey(assemblyState.currentAssemblyId), []);
-    history.forEach((message) => appendChatMessage(message, { persist: false }));
-}
-
-function sendChatMessage() {
-    const input = document.getElementById('message-input');
-    const text = String(input?.value || '').trim();
-    if (!text && !selectedImageData) return;
-    if (!assemblyState.connected) {
-        showToast('Entre na assembleia antes de enviar mensagens.', 'warning');
-        return;
-    }
-
-    const message = {
-        id: `msg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        assemblyId: assemblyState.currentAssemblyId,
-        peerId: getMyPeerId(),
-        sender: assemblyState.currentUser?.name || 'Usuario',
-        email: getCurrentUserEmail(),
-        userType: getCurrentUserType(),
-        text,
-        imageData: selectedImageData || null,
-        time: currentTimeLabel()
-    };
-
-    appendChatMessage(message, { persist: true });
-    broadcast('chat-message', message);
-
-    if (input) input.value = '';
-    removeSelectedImage();
-}
-
-function removeSelectedImage() {
-    selectedImageData = null;
-    const input = document.getElementById('image-upload');
-    const wrapper = document.getElementById('image-preview-wrapper');
-    const image = document.getElementById('image-preview');
-    if (input) input.value = '';
-    if (image) image.removeAttribute('src');
-    if (wrapper) wrapper.classList.remove('active');
-}
-
-async function handleImageSelection(event) {
-    const file = event.target?.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-        selectedImageData = reader.result;
-        const wrapper = document.getElementById('image-preview-wrapper');
-        const image = document.getElementById('image-preview');
-        if (image) image.src = selectedImageData;
-        if (wrapper) wrapper.classList.add('active');
-    };
-    reader.readAsDataURL(file);
-}
-
-function getPolls() {
-    if (!assemblyState.currentAssemblyId) return [];
-    return readStorageJson(getPollsStorageKey(assemblyState.currentAssemblyId), []);
-}
-
-function setPolls(polls) {
-    assemblyState.polls = polls;
-    if (assemblyState.currentAssemblyId) {
-        writeStorageJson(getPollsStorageKey(assemblyState.currentAssemblyId), polls);
-    }
-    renderPollsPanel();
-    syncUnreadCounters();
-}
-
-function loadPolls() {
-    assemblyState.polls = getPolls();
-    renderPollsPanel();
-}
-
-function createPollOptionField(value = '') {
-    const row = document.createElement('div');
-    row.className = 'poll-option-row';
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.maxLength = 80;
-    input.required = true;
-    input.value = value;
-    input.placeholder = 'Opcao da votacao';
-    row.appendChild(input);
-
-    const removeButton = document.createElement('button');
-    removeButton.type = 'button';
-    removeButton.className = 'icon-only-btn';
-    removeButton.setAttribute('aria-label', 'Remover opcao');
-    removeButton.innerHTML = '<i class="fas fa-trash"></i>';
-    removeButton.addEventListener('click', () => {
-        const container = document.getElementById('poll-options-container');
-        if (!container) return;
-        if (container.children.length <= 2) {
-            showToast('Uma votacao precisa ter pelo menos duas opcoes.', 'warning');
-            return;
-        }
-        row.remove();
-    });
-    row.appendChild(removeButton);
-
-    return row;
-}
-
-function resetCreatePollForm() {
-    const form = document.getElementById('create-poll-form');
-    const container = document.getElementById('poll-options-container');
-    if (form) form.reset();
-    if (container) {
-        container.innerHTML = '';
-        container.appendChild(createPollOptionField());
-        container.appendChild(createPollOptionField());
-    }
-}
-
-function renderPollsPanel() {
-    const panel = document.getElementById('polls-panel-list');
-    if (!panel) return;
-    panel.innerHTML = '';
-
-    const polls = getPolls();
-    const currentUserEmail = getCurrentUserEmail();
-
-    if (!polls.length) {
-        const empty = document.createElement('p');
-        empty.className = 'panel-empty';
-        empty.textContent = 'Nenhuma votacao disponivel no momento.';
-        panel.appendChild(empty);
-        return;
-    }
-
-    polls
-        .slice()
-        .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0))
-        .forEach((poll) => {
-            const card = document.createElement('article');
-            card.className = 'panel-card';
-
-            const title = document.createElement('h4');
-            title.textContent = poll.title;
-            card.appendChild(title);
-
-            const meta = document.createElement('p');
-            const alreadyVoted = Boolean(poll.votes?.[currentUserEmail]);
-            meta.textContent = `${poll.status === 'closed' ? 'Encerrada' : 'Aberta'} • ${alreadyVoted ? 'Voto registrado' : 'Aguardando voto'}`;
-            card.appendChild(meta);
-
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'btn btn-secondary';
-            button.textContent = 'Ver votacao';
-            button.addEventListener('click', () => {
-                assemblyState.activePollId = poll.id;
-                openPollView(poll.id, button);
-            });
-            card.appendChild(button);
-
-            panel.appendChild(card);
-        });
-}
-
-function openPollView(pollId, trigger) {
-    const poll = getPolls().find((item) => item.id === pollId);
-    if (!poll) {
-        showToast('A votacao nao foi encontrada.', 'warning');
-        return;
-    }
-
-    const content = document.getElementById('poll-view-content');
-    if (!content) return;
-    content.innerHTML = '';
-
-    const title = document.createElement('h4');
-    title.textContent = poll.title;
-    content.appendChild(title);
-
-    if (poll.description) {
-        const description = document.createElement('p');
-        description.textContent = poll.description;
-        content.appendChild(description);
-    }
-
-    const status = document.createElement('p');
-    status.className = 'poll-status-line';
-    status.textContent = `Status: ${poll.status === 'closed' ? 'Encerrada' : 'Aberta'}`;
-    content.appendChild(status);
-
-    const list = document.createElement('div');
-    list.className = 'poll-options-list';
-    const currentUserEmail = getCurrentUserEmail();
-    const selectedOptionId = poll.votes?.[currentUserEmail] || null;
-    const totalVotes = Object.keys(poll.votes || {}).length;
-
-    poll.options.forEach((option) => {
-        const votesForOption = Object.values(poll.votes || {}).filter((value) => value === option.id).length;
-        const row = document.createElement('div');
-        row.className = 'poll-option-vote-row';
-
-        const label = document.createElement('div');
-        label.className = 'poll-option-vote-label';
-        label.textContent = option.text;
-        row.appendChild(label);
-
-        const stats = document.createElement('div');
-        stats.className = 'poll-option-vote-stats';
-        stats.textContent = `${votesForOption} voto(s)`;
-        row.appendChild(stats);
-
-        if (poll.status === 'open' && canCurrentUserVote()) {
-            const voteButton = document.createElement('button');
-            voteButton.type = 'button';
-            voteButton.className = 'btn btn-primary btn-small';
-            voteButton.textContent = selectedOptionId === option.id ? 'Votado' : selectedOptionId ? 'Indisponivel' : 'Votar';
-            voteButton.disabled = Boolean(selectedOptionId);
-            voteButton.addEventListener('click', () => {
-                registerVote(poll.id, option.id);
-            });
-            row.appendChild(voteButton);
-        }
-
-        list.appendChild(row);
-    });
-
-    content.appendChild(list);
-
-    const foot = document.createElement('p');
-    foot.className = 'poll-status-line';
-    foot.textContent = `Total de votos: ${totalVotes}${isPorteiro() ? ' • Porteiros nao podem votar' : ''}`;
-    content.appendChild(foot);
-
-    openModal('poll-view-modal', trigger);
-}
-
-function registerVote(pollId, optionId) {
-    if (!canCurrentUserVote()) {
-        showToast('Porteiros nao podem votar nesta pauta.', 'warning');
-        return;
-    }
-
-    const polls = getPolls();
-    const pollIndex = polls.findIndex((item) => item.id === pollId);
-    if (pollIndex === -1) {
-        showToast('A votacao nao foi encontrada.', 'warning');
-        return;
-    }
-
-    const poll = polls[pollIndex];
-    if (poll.status !== 'open') {
-        showToast('Essa votacao ja foi encerrada.', 'warning');
-        return;
-    }
-
-    const email = getCurrentUserEmail();
-    if (!email) {
-        showToast('Nao foi possivel identificar o usuario atual.', 'warning');
-        return;
-    }
-
-    poll.votes = poll.votes || {};
-    if (poll.votes[email]) {
-        showToast('Seu voto ja foi registrado.', 'warning');
-        return;
-    }
-
-    poll.votes[email] = optionId;
-    polls[pollIndex] = poll;
-    setPolls(polls);
-    broadcast('poll-updated', {
-        assemblyId: assemblyState.currentAssemblyId,
-        pollId,
-        voterEmail: email
-    });
-
-    showToast('Voto registrado com sucesso.', 'success');
-    openPollView(pollId, document.getElementById('room-polls-btn'));
-}
-
-function createPoll(event) {
-    event.preventDefault();
-    if (!isSindico()) {
-        showToast('Somente o sindico pode criar votacoes.', 'warning');
-        return;
-    }
-
-    const title = String(document.getElementById('poll-title-input')?.value || '').trim();
-    const description = String(document.getElementById('poll-description-input')?.value || '').trim();
-    const optionInputs = Array.from(document.querySelectorAll('#poll-options-container input'));
-    const options = optionInputs
-        .map((input) => String(input.value || '').trim())
-        .filter(Boolean);
-
-    const uniqueOptions = Array.from(new Set(options.map((option) => option.toLowerCase())));
-
-    if (!title) {
-        showToast('Informe um titulo para a votacao.', 'warning');
-        return;
-    }
-
-    if (options.length < 2) {
-        showToast('Adicione pelo menos duas opcoes validas.', 'warning');
-        return;
-    }
-
-    if (uniqueOptions.length !== options.length) {
-        showToast('As opcoes da votacao nao podem ser identicas.', 'warning');
-        return;
-    }
-
-    const submitButton = document.getElementById('submit-poll-btn');
-    if (submitButton) submitButton.disabled = true;
-
-    try {
-        const polls = getPolls();
-        const poll = {
-            id: `poll-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-            assemblyId: assemblyState.currentAssemblyId,
-            title,
-            description,
-            createdBy: getCurrentUserEmail(),
-            createdAt: Date.now(),
-            status: 'open',
-            options: options.map((option) => ({
-                id: `option-${Math.random().toString(36).slice(2, 8)}`,
-                text: option
-            })),
-            votes: {}
-        };
-
-        polls.push(poll);
-        setPolls(polls);
-        closeModal('create-poll-modal');
-        resetCreatePollForm();
-        renderPollsPanel();
-
-        broadcast('poll-created', {
-            assemblyId: assemblyState.currentAssemblyId,
-            pollId: poll.id,
-            createdBy: poll.createdBy
-        });
-
-        showToast('Votacao criada com sucesso.', 'success');
-    } finally {
-        if (submitButton) submitButton.disabled = false;
-    }
-}
-
-function updateParticipantCount() {
-    const count = 1 + Array.from(assemblyState.participantMap.values()).filter((participant) => participant.peerId !== getMyPeerId()).length;
-    const label = document.getElementById('participants-count');
-    if (label) {
-        label.textContent = `${count} participante${count === 1 ? '' : 's'}`;
-    }
-}
-
-function createParticipantCard(participant, isLocal) {
-    const card = document.createElement('article');
-    card.className = 'participant-card';
-
-    const media = document.createElement('div');
-    media.className = 'participant-media';
-
-    const canShowLocalVideo = isLocal && assemblyState.cameraEnabled && assemblyState.previewStream?.getVideoTracks().length;
-    if (canShowLocalVideo) {
-        const video = document.createElement('video');
-        video.autoplay = true;
-        video.playsInline = true;
-        video.muted = true;
-        video.srcObject = assemblyState.previewStream;
-        media.appendChild(video);
-    } else {
-        const avatar = document.createElement('div');
-        avatar.className = 'participant-avatar';
-        if (participant.profilePhoto) {
-            const image = document.createElement('img');
-            image.src = participant.profilePhoto;
-            image.alt = participant.name || 'Participante';
-            avatar.appendChild(image);
-        } else {
-            avatar.textContent = participant.initials || getInitials(participant.name);
-        }
-        media.appendChild(avatar);
-    }
-
-    const footer = document.createElement('div');
-    footer.className = 'participant-footer';
-
-    const name = document.createElement('strong');
-    const labels = [];
-    if (isLocal) labels.push('Voce');
-    if (participant.type === 'sindico') labels.push('Sindico');
-    if (participant.handRaised) labels.push('Mao levantada');
-    name.textContent = `${participant.name || 'Participante'}${labels.length ? ` • ${labels.join(' • ')}` : ''}`;
-    footer.appendChild(name);
-
-    const stateLine = document.createElement('span');
-    stateLine.textContent = `${participant.cameraOn ? 'Camera ligada' : 'Camera desligada'} • ${participant.micOn ? 'Microfone ativo' : 'Microfone mudo'}`;
-    footer.appendChild(stateLine);
-
-    card.appendChild(media);
-    card.appendChild(footer);
-    return card;
-}
-
-function renderParticipants() {
-    const grid = document.getElementById('video-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-
-    const localParticipant = buildLocalParticipant();
-    grid.appendChild(createParticipantCard(localParticipant, true));
-
-    Array.from(assemblyState.participantMap.values())
-        .filter((participant) => participant.peerId !== getMyPeerId())
-        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
-        .forEach((participant) => {
-            grid.appendChild(createParticipantCard(participant, false));
-        });
-
-    updateParticipantCount();
-}
-
-function renderParticipantsPanel() {
-    const panel = document.getElementById('participants-panel-list');
-    if (!panel) return;
-    panel.innerHTML = '';
-
-    const everyone = [buildLocalParticipant()].concat(
-        Array.from(assemblyState.participantMap.values()).filter((participant) => participant.peerId !== getMyPeerId())
-    );
-
-    everyone.forEach((participant, index) => {
-        const row = document.createElement('div');
-        row.className = 'participant-row';
-
-        const info = document.createElement('div');
-        info.className = 'participant-row-info';
-
-        const name = document.createElement('strong');
-        name.textContent = `${participant.name}${index === 0 ? ' • Voce' : ''}`;
-        info.appendChild(name);
-
-        const meta = document.createElement('span');
-        meta.textContent = `${participant.type === 'sindico' ? 'Sindico' : participant.type === 'porteiro' ? 'Porteiro' : 'Morador'} • ${participant.handRaised ? 'Mao levantada' : 'Sem pedido de fala'}`;
-        info.appendChild(meta);
-        row.appendChild(info);
-
-        const badges = document.createElement('div');
-        badges.className = 'participant-row-badges';
-        badges.textContent = `${participant.cameraOn ? 'Video on' : 'Video off'} • ${participant.micOn ? 'Audio on' : 'Audio off'}`;
-        row.appendChild(badges);
-
-        panel.appendChild(row);
-    });
-}
-
-function persistLocalPresence() {
-    upsertParticipant(buildLocalParticipant());
-    broadcast('participant-presence', {
-        ...buildLocalParticipant(),
-        assemblyId: assemblyState.currentAssemblyId,
-        announce: true
-    });
-}
-
-function sendPresence() {
-    upsertParticipant(buildLocalParticipant());
-    broadcast('participant-presence', {
-        ...buildLocalParticipant(),
-        assemblyId: assemblyState.currentAssemblyId
-    });
-}
-
-function startPresenceLoops() {
-    if (assemblyState.heartbeatInterval) return;
-
-    persistLocalPresence();
-    broadcast('participant-request-roster', {
-        assemblyId: assemblyState.currentAssemblyId,
-        peerId: getMyPeerId()
-    });
-
-    assemblyState.heartbeatInterval = window.setInterval(() => {
-        sendPresence();
-    }, 12000);
-
-    assemblyState.cleanupInterval = window.setInterval(() => {
-        const now = Date.now();
-        Array.from(assemblyState.participantMap.values()).forEach((participant) => {
-            if (participant.peerId !== getMyPeerId() && now - Number(participant.lastSeen || 0) > 45000) {
-                assemblyState.participantMap.delete(participant.peerId);
-            }
-        });
-        persistParticipants();
-        renderParticipants();
-    }, 5000);
-}
-
-async function stopMediaStream(stream) {
-    if (!stream) return;
-    stream.getTracks().forEach((track) => {
-        try {
-            track.stop();
-        } catch (_) {}
-    });
-}
-
-async function refreshPreviewMedia() {
-    const desiredAudio = assemblyState.microphoneEnabled;
-    const desiredVideo = assemblyState.cameraEnabled;
-    const nextStream = new MediaStream();
-    const permissionMessages = [];
-
-    if (desiredAudio) {
-        try {
-            const audioStream = await navigator.mediaDevices.getUserMedia({
-                audio: assemblyState.activeDevices.audioInputId ? { deviceId: { exact: assemblyState.activeDevices.audioInputId } } : true,
-                video: false
-            });
-            audioStream.getAudioTracks().forEach((track) => nextStream.addTrack(track));
-        } catch (_) {
-            assemblyState.microphoneEnabled = false;
-            permissionMessages.push('Microfone indisponivel. Voce pode entrar como ouvinte.');
-        }
-    }
-
-    if (desiredVideo) {
-        try {
-            const videoStream = await navigator.mediaDevices.getUserMedia({
-                audio: false,
-                video: assemblyState.activeDevices.videoInputId ? { deviceId: { exact: assemblyState.activeDevices.videoInputId } } : true
-            });
-            videoStream.getVideoTracks().forEach((track) => nextStream.addTrack(track));
-        } catch (_) {
-            assemblyState.cameraEnabled = false;
-            permissionMessages.push('Camera indisponivel. Voce pode entrar sem video.');
-        }
-    }
-
-    await stopMediaStream(assemblyState.previewStream);
-    assemblyState.previewStream = nextStream;
-    updatePrejoinMediaUI();
-    renderParticipants();
-    sendPresence();
-
-    if (permissionMessages.length) {
-        showToast(permissionMessages.join(' '), 'warning');
-    }
-}
-
-function updatePrejoinMediaUI() {
-    const video = document.getElementById('prejoin-video');
-    const avatar = document.getElementById('prejoin-avatar');
-    const empty = document.getElementById('prejoin-preview-empty');
-    const summary = document.getElementById('prejoin-media-summary');
-
-    const micButton = document.getElementById('prejoin-mic-btn');
-    const cameraButton = document.getElementById('prejoin-camera-btn');
-    const roomMicButton = document.getElementById('room-mic-btn');
-    const roomCameraButton = document.getElementById('room-camera-btn');
-
-    const hasVideoTrack = assemblyState.previewStream?.getVideoTracks().length;
-
-    if (video) {
-        if (hasVideoTrack) {
-            video.hidden = false;
-            video.srcObject = assemblyState.previewStream;
-        } else {
-            video.hidden = true;
-            video.srcObject = null;
-        }
-    }
-
-    if (avatar) avatar.hidden = Boolean(hasVideoTrack);
-    if (empty) empty.hidden = assemblyState.cameraEnabled || assemblyState.microphoneEnabled;
-
-    if (summary) {
-        if (assemblyState.cameraEnabled && assemblyState.microphoneEnabled) summary.textContent = 'Camera e microfone ativos';
-        else if (assemblyState.cameraEnabled) summary.textContent = 'Somente camera ativa';
-        else if (assemblyState.microphoneEnabled) summary.textContent = 'Somente microfone ativo';
-        else summary.textContent = 'Sem midia ativa';
-    }
-
-    if (micButton) {
-        micButton.setAttribute('aria-pressed', assemblyState.microphoneEnabled ? 'true' : 'false');
-        micButton.innerHTML = `<i class="fas ${assemblyState.microphoneEnabled ? 'fa-microphone' : 'fa-microphone-slash'}"></i><span>${assemblyState.microphoneEnabled ? 'Microfone ligado' : 'Microfone desligado'}</span>`;
-    }
-
-    if (cameraButton) {
-        cameraButton.setAttribute('aria-pressed', assemblyState.cameraEnabled ? 'true' : 'false');
-        cameraButton.innerHTML = `<i class="fas ${assemblyState.cameraEnabled ? 'fa-video' : 'fa-video-slash'}"></i><span>${assemblyState.cameraEnabled ? 'Camera ligada' : 'Camera desligada'}</span>`;
-    }
-
-    if (roomMicButton) {
-        roomMicButton.classList.toggle('off', !assemblyState.microphoneEnabled);
-        roomMicButton.innerHTML = `<i class="fas ${assemblyState.microphoneEnabled ? 'fa-microphone' : 'fa-microphone-slash'}"></i>`;
-    }
-
-    if (roomCameraButton) {
-        roomCameraButton.classList.toggle('off', !assemblyState.cameraEnabled);
-        roomCameraButton.innerHTML = `<i class="fas ${assemblyState.cameraEnabled ? 'fa-video' : 'fa-video-slash'}"></i>`;
-    }
-}
-
-async function populateDeviceSelects() {
-    const cameraSelect = document.getElementById('camera-select');
-    const microphoneSelect = document.getElementById('microphone-select');
-    const settingsCameraSelect = document.getElementById('settings-camera-select');
-    const settingsMicrophoneSelect = document.getElementById('settings-microphone-select');
-
-    const targets = [
-        { element: cameraSelect, type: 'videoinput', placeholder: 'Selecionar camera' },
-        { element: microphoneSelect, type: 'audioinput', placeholder: 'Selecionar microfone' },
-        { element: settingsCameraSelect, type: 'videoinput', placeholder: 'Selecionar camera' },
-        { element: settingsMicrophoneSelect, type: 'audioinput', placeholder: 'Selecionar microfone' }
-    ];
-
-    targets.forEach((target) => {
-        if (target.element) {
-            target.element.innerHTML = `<option value="">${target.placeholder}</option>`;
-        }
-    });
-
-    if (!navigator.mediaDevices?.enumerateDevices) return;
-
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    targets.forEach((target) => {
-        if (!target.element) return;
-        devices
-            .filter((device) => device.kind === target.type)
-            .forEach((device, index) => {
-                const option = document.createElement('option');
-                option.value = device.deviceId;
-                option.textContent = device.label || `${target.type === 'videoinput' ? 'Camera' : 'Microfone'} ${index + 1}`;
-                if (target.type === 'videoinput' && device.deviceId === assemblyState.activeDevices.videoInputId) option.selected = true;
-                if (target.type === 'audioinput' && device.deviceId === assemblyState.activeDevices.audioInputId) option.selected = true;
-                target.element.appendChild(option);
-            });
-    });
-}
-
-async function toggleMicrophone() {
-    assemblyState.microphoneEnabled = !assemblyState.microphoneEnabled;
-    await refreshPreviewMedia();
-}
-
-async function toggleCamera() {
-    assemblyState.cameraEnabled = !assemblyState.cameraEnabled;
-    await refreshPreviewMedia();
-}
-
-async function toggleScreenShare() {
-    if (assemblyState.screenShareEnabled) {
-        stopScreenShare();
-        return;
-    }
-
-    if (!navigator.mediaDevices?.getDisplayMedia) {
-        showToast('Compartilhamento de tela nao disponivel neste navegador.', 'warning');
-        return;
-    }
-
-    try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-        assemblyState.screenStream = stream;
-        assemblyState.screenShareEnabled = true;
-
-        const spotlight = document.getElementById('share-spotlight');
-        const body = document.getElementById('share-spotlight-body');
-        if (spotlight && body) {
-            body.innerHTML = '';
-            const video = document.createElement('video');
-            video.autoplay = true;
-            video.playsInline = true;
-            video.muted = true;
-            video.srcObject = stream;
-            body.appendChild(video);
-            spotlight.hidden = false;
-        }
-
-        const track = stream.getVideoTracks()[0];
-        if (track) {
-            track.addEventListener('ended', () => stopScreenShare(), { once: true });
-        }
-        const button = document.getElementById('room-screen-btn');
-        if (button) button.classList.add('off');
-    } catch (_) {
-        showToast('Nao foi possivel iniciar o compartilhamento de tela.', 'warning');
-    }
-}
-
-function stopScreenShare() {
-    stopMediaStream(assemblyState.screenStream);
-    assemblyState.screenStream = null;
-    assemblyState.screenShareEnabled = false;
-    const button = document.getElementById('room-screen-btn');
-    if (button) button.classList.remove('off');
-    const spotlight = document.getElementById('share-spotlight');
-    const body = document.getElementById('share-spotlight-body');
-    if (body) body.innerHTML = '';
-    if (spotlight) spotlight.hidden = true;
-}
-
-function toggleHandRaise() {
-    if (!assemblyState.connected) {
-        showToast('Entre na assembleia antes de levantar a mao.', 'warning');
-        return;
-    }
-
-    assemblyState.handRaised = !assemblyState.handRaised;
-    sendPresence();
-    broadcast('hand-raised', {
-        assemblyId: assemblyState.currentAssemblyId,
-        peerId: getMyPeerId(),
-        name: assemblyState.currentUser?.name || 'Participante',
-        handRaised: assemblyState.handRaised
-    });
-
-    showToast(assemblyState.handRaised ? 'Pedido de fala enviado.' : 'Pedido de fala removido.', 'info');
-}
-
-function startRoomTimer() {
-    const label = document.getElementById('assembly-timer');
-    if (!label) return;
-    if (assemblyState.timerInterval) clearInterval(assemblyState.timerInterval);
-
-    const tick = () => {
-        if (!assemblyState.roomJoinedAt) {
-            label.textContent = '00:00:00';
-            return;
-        }
-        const diff = Date.now() - assemblyState.roomJoinedAt;
-        const hours = Math.floor(diff / 3600000);
-        const minutes = Math.floor((diff % 3600000) / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-        label.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    };
-
-    tick();
-    assemblyState.timerInterval = window.setInterval(tick, 1000);
-}
-
-function stopRoomTimer() {
-    if (assemblyState.timerInterval) {
-        clearInterval(assemblyState.timerInterval);
-        assemblyState.timerInterval = null;
-    }
-    const label = document.getElementById('assembly-timer');
-    if (label) label.textContent = '00:00:00';
-}
-
-function populateInfoModal() {
-    const container = document.getElementById('assembly-info-content');
-    if (!container || !assemblyState.assembly) return;
-    container.innerHTML = '';
-
-    const entries = [
-        ['Titulo', assemblyState.assembly.title || 'Assembleia'],
-        ['Condominio', getCondoName(assemblyState.currentUser)],
-        ['Data', formatDate(assemblyState.assembly.date)],
-        ['Horario', formatTime(assemblyState.assembly.start_time || assemblyState.assembly.time)],
-        ['Status', assemblyState.connected ? 'Em andamento' : 'Agendada']
-    ];
-
-    entries.forEach(([label, value]) => {
-        const row = document.createElement('div');
-        row.className = 'detail-line';
-        const left = document.createElement('span');
-        left.textContent = label;
-        const right = document.createElement('strong');
-        right.textContent = value;
-        row.appendChild(left);
-        row.appendChild(right);
-        container.appendChild(row);
-    });
-}
-
-function updatePrejoinInfo() {
-    if (!assemblyState.assembly) return;
-
-    const assembly = assemblyState.assembly;
-    const userName = assemblyState.currentUser?.name || 'Voce';
-
-    const mappings = [
-        ['prejoin-assembly-title', assembly.title || 'Assembleia'],
-        ['prejoin-condo-name', getCondoName(assemblyState.currentUser)],
-        ['prejoin-date', formatDate(assembly.date)],
-        ['prejoin-time', formatTime(assembly.start_time || assembly.time)],
-        ['prejoin-status', assembly.status || 'Agendada'],
-        ['prejoin-user-name', userName],
-        ['prejoin-assembly-meta', `${assembly.title || 'Assembleia'} • ${formatDate(assembly.date)} • ${formatTime(assembly.start_time || assembly.time)}`]
-    ];
-
-    mappings.forEach(([id, value]) => {
-        const element = document.getElementById(id);
-        if (element) element.textContent = value;
-    });
-
-    const avatar = document.getElementById('prejoin-avatar');
-    if (avatar) {
-        if (assemblyState.currentUser?.profilePhoto) {
-            avatar.innerHTML = `<img src="${assemblyState.currentUser.profilePhoto}" alt="${escapeText(userName)}">`;
-        } else {
-            avatar.textContent = getInitials(userName);
-        }
-    }
-}
-
-function updateRoomHeader() {
-    const title = document.getElementById('room-assembly-title');
-    const subtitle = document.getElementById('room-assembly-subtitle');
-    if (title) title.textContent = assemblyState.assembly?.title || 'Assembleia';
-    if (subtitle) subtitle.textContent = `${getCondoName(assemblyState.currentUser)} • ${formatDate(assemblyState.assembly?.date)} • ${formatTime(assemblyState.assembly?.start_time || assemblyState.assembly?.time)}`;
-}
-
-function openPrejoin(assemblyId) {
-    const assembly = scheduledAssemblies.find((item) => String(item.id) === String(assemblyId));
-    if (!assembly) {
-        showToast('Assembleia nao encontrada. Atualize a pagina e tente novamente.', 'warning');
-        return;
-    }
-
-    assemblyState.assembly = assembly;
-    assemblyState.currentAssemblyId = String(assembly.id);
-    assemblyState.handRaised = false;
-    updatePrejoinInfo();
-    populateDeviceSelects().catch(() => {});
-    updatePrejoinMediaUI();
-    setOverlayVisibility('prejoin-overlay', true);
-}
-
-function closePrejoin() {
-    setOverlayVisibility('prejoin-overlay', false);
-}
-
-async function enterAssembly() {
-    if (!assemblyState.assembly || assemblyState.joining) return;
-
-    assemblyState.joining = true;
-    const enterButton = document.getElementById('prejoin-enter-btn');
-    if (enterButton) enterButton.disabled = true;
-
-    try {
-        await populateDeviceSelects();
-        closePrejoin();
-        setOverlayVisibility('assembly-room', true);
-        assemblyState.connected = true;
-        assemblyState.roomJoinedAt = Date.now();
-        setConnectionStatus('Conectado');
-        updateStatusChip('Em andamento');
-        updateRoomHeader();
-        openAssemblyChannel();
-        startPresenceLoops();
-        startRoomTimer();
-        renderParticipants();
-        renderPollsPanel();
-        populateInfoModal();
-    } finally {
-        assemblyState.joining = false;
-        if (enterButton) enterButton.disabled = false;
-    }
-}
-
-function resetRoomState() {
-    assemblyState.connected = false;
-    assemblyState.joining = false;
-    assemblyState.leaving = false;
-    assemblyState.handRaised = false;
-    assemblyState.activePanel = null;
-    assemblyState.activePollId = null;
-    assemblyState.roomJoinedAt = null;
-    assemblyState.unreadChatCount = 0;
-    assemblyState.unreadPollCount = 0;
-    syncUnreadCounters();
-    closeAllPanels();
-    closeAllModals();
-    stopRoomTimer();
-    closeAssemblyChannel();
-    stopScreenShare();
-    stopMediaStream(assemblyState.previewStream);
-    assemblyState.previewStream = null;
-    assemblyState.cameraEnabled = false;
-    assemblyState.microphoneEnabled = false;
-    updatePrejoinMediaUI();
-    setConnectionStatus('Desconectado');
-    updateStatusChip('Agendada');
-}
-
-function performLeaveAssembly(showMessage = true) {
-    if (!assemblyState.currentAssemblyId) {
-        setOverlayVisibility('assembly-room', false);
-        return;
-    }
-
-    broadcast('participant-leave', {
-        assemblyId: assemblyState.currentAssemblyId,
-        peerId: getMyPeerId()
-    });
-
-    removeParticipant(getMyPeerId());
-    resetRoomState();
-    setOverlayVisibility('assembly-room', false);
-    if (showMessage) {
-        showToast('Voce saiu da assembleia.', 'info');
-    }
-}
-
-async function scheduleAssembly(event) {
-    event.preventDefault();
-
-    const title = String(document.getElementById('assembly-title-input')?.value || '').trim();
-    const date = document.getElementById('assembly-date')?.value || '';
-    const startTime = document.getElementById('assembly-time')?.value || '';
-
-    if (!title || !date || !startTime) {
-        showToast('Preencha todos os campos da assembleia.', 'warning');
-        return;
-    }
-
-    const cep = extractUserCep(assemblyState.currentUser);
-    if (!cep) {
-        showToast('Nao foi possivel identificar o CEP do condominio.', 'warning');
-        return;
-    }
-
-    try {
-        const saved = await scheduleAssemblyDb({
-            cep,
-            title,
-            description: null,
-            date,
-            start_time: startTime,
-            end_time: startTime,
-            created_by: getCurrentUserEmail()
-        });
-
-        scheduledAssemblies.push(saved);
-        scheduledAssemblies.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.start_time || '').localeCompare(String(b.start_time || '')));
-        renderScheduledAssemblies();
-        event.target.reset();
-        showToast('Assembleia agendada com sucesso.', 'success');
-    } catch (error) {
-        console.error('Erro ao agendar assembleia:', error);
-        showToast('Nao foi possivel agendar a assembleia.', 'warning');
-    }
 }
 
 function renderScheduleAssemblyInfo() {
     const info = document.getElementById('schedule-info');
     if (!info) return;
-    const cep = extractUserCep(assemblyState.currentUser);
-    if (!cep) {
-        info.hidden = false;
-        info.textContent = 'Nao foi possivel identificar o CEP do condominio deste usuario.';
-        return;
+    const cep = extractUserCep(currentUser);
+    if (cep) {
+        info.innerHTML = `<i class="fas fa-map-marker-alt" style="margin-right:6px;"></i>Essa assembleia será associada ao condomínio <strong>CEP ${cep}</strong>.`;
+        info.style.display = 'block';
+    } else {
+        info.innerHTML = `<i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>Não foi possível identificar o CEP do condomínio deste usuário.`;
+        info.style.display = 'block';
+        info.style.background = '#fff7ed';
+        info.style.color = '#92400e';
     }
-    info.hidden = false;
-    info.textContent = `Essa assembleia sera associada ao condominio de CEP ${cep}.`;
 }
 
 async function loadScheduledAssemblies() {
     try {
-        const cep = extractUserCep(assemblyState.currentUser);
-        scheduledAssemblies = cep && typeof getScheduledAssembliesByCep === 'function'
-            ? await getScheduledAssembliesByCep(cep)
-            : await getScheduledAssemblies();
+        const cep = extractUserCep(currentUser);
+        if (cep && typeof getScheduledAssembliesByCep === 'function') {
+            scheduledAssemblies = await getScheduledAssembliesByCep(cep);
+        } else {
+            scheduledAssemblies = await getScheduledAssemblies();
+        }
         renderScheduledAssemblies();
     } catch (error) {
         console.error('Erro ao carregar assembleias:', error);
-        const list = document.getElementById('scheduled-list');
-        if (list) list.textContent = 'Nao foi possivel carregar as assembleias no momento.';
+        const listContainer = document.getElementById('scheduled-list');
+        if (listContainer) {
+            listContainer.innerHTML = '<p>Não foi possível carregar as assembleias no momento.</p>';
+        }
     }
 }
 
-function renderPastAssemblies() {
-    const list = document.getElementById('past-list');
-    if (!list) return;
-    list.innerHTML = '';
+function updateUserProfile() {
+    if (!currentUser) return;
+    
+    const avatar = document.getElementById('user-avatar');
+    const nameEl = document.getElementById('user-name');
+    const typeEl = document.getElementById('user-type');
+    const scheduleSection = document.getElementById('schedule-section');
+    
+    // Garante tipo padronizado (reserva para morador, síndico, porteiro)
+    currentUser.type = getNormalizedUserType(currentUser) || currentUser.type || 'morador';
+    
+    const initials = currentUser.name ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'US';
+    if (avatar) {
+        avatar.textContent = initials;
+    }
+    
+    if (nameEl) nameEl.textContent = currentUser.name || 'Usuário';
+    if (typeEl) typeEl.textContent = currentUser.type === 'sindico' ? 'Síndico' : (currentUser.type === 'porteiro' ? 'Porteiro' : 'Morador');
+    
+    if (currentUser.type === 'sindico') {
+        if (scheduleSection) scheduleSection.style.display = 'block';
+    } else {
+        if (scheduleSection) scheduleSection.style.display = 'none';
+    }
 
-    if (!pastAssemblies.length) {
-        const empty = document.createElement('p');
-        empty.textContent = 'Nenhuma assembleia realizada.';
-        list.appendChild(empty);
+    // Sidebar items: trocar link Início, esconder itens de gestão se não for síndico
+    const nav = document.querySelector('.sidebar-nav');
+    if (nav && currentUser.type !== 'sindico') {
+        // Troca Início para morador
+        const inicioLink = nav.querySelector('a[href="index.html"]');
+        if (inicioLink) {
+            inicioLink.setAttribute('href', 'index-morador.html');
+        }
+        // Esconde itens de Gestão de Moradores
+        nav.querySelectorAll('.nav-section').forEach(section => {
+            const title = section.querySelector('.nav-section-title');
+            if (title && title.textContent && /Gestão de Moradores/.test(title.textContent.trim())) {
+                section.style.display = 'none';
+            }
+        });
+        // Esconde link Atalho "Gestão de Moradores" dentro das seções também
+        nav.querySelectorAll('a.nav-item').forEach(a => {
+            const text = (a.textContent || '').replace(/\s+/g, ' ').trim();
+            if (/Gestão de Moradores/.test(text)) {
+                a.style.display = 'none';
+            }
+        });
+    } else if (nav && currentUser.type === 'sindico') {
+        const inicioLink = nav.querySelector('a[href="index-morador.html"]');
+        if (inicioLink) inicioLink.setAttribute('href', 'index.html');
+        nav.querySelectorAll('.nav-section').forEach(s => s.style.display = '');
+        nav.querySelectorAll('a.nav-item').forEach(a => a.style.display = '');
+    }
+
+    // Sincroniza avatar de perfil se houver foto armazenada
+    if (typeof syncAllAvatars === 'function') {
+        syncAllAvatars(currentUser);
+    }
+
+    // Update sidebar condo name
+    if (currentUser.condominium) {
+        const sidebarCondoNameEl = document.querySelector('.condo-name');
+        if (sidebarCondoNameEl) {
+            const name = typeof currentUser.condominium === 'object'
+                ? (currentUser.condominium.name || currentUser.condominium.condominium_name)
+                : null;
+            if (name) {
+                const words = String(name).split(' ');
+                if (words.length > 2) {
+                    sidebarCondoNameEl.innerHTML = `${words.slice(0, 2).join(' ')}<br>${words.slice(2).join(' ')}`;
+                } else {
+                    sidebarCondoNameEl.textContent = name;
+                }
+            }
+        }
+    }
+}
+
+async function scheduleAssembly(event) {
+    event.preventDefault();
+    
+    const title = document.getElementById('assembly-title-input').value.trim();
+    const date = document.getElementById('assembly-date').value;
+    const startTime = document.getElementById('assembly-time').value;
+    
+    if (!title || !date || !startTime) {
+        alert('Preencha todos os campos da assembleia.');
         return;
+    }
+    const cep = extractUserCep(currentUser);
+    if (!cep) {
+        alert('Não foi possível identificar o CEP do condomínio do usuário. Verifique seu perfil ou contate o síndico.');
+        return;
+    }
+    if (!currentUser || !currentUser.email) {
+        alert('Usuário não autenticado. Faça login novamente.');
+        return;
+    }
+
+    const newAssembly = {
+        cep: cep,
+        title: title,
+        description: null,
+        date: date,
+        start_time: startTime,
+        end_time: startTime,
+        created_by: currentUser.email
+    };
+
+    try {
+        const savedAssembly = await scheduleAssemblyDb(newAssembly);
+        scheduledAssemblies.push(savedAssembly);
+        scheduledAssemblies.sort((a, b) => {
+            if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+            const as = a.start_time || '';
+            const bs = b.start_time || '';
+            return as < bs ? -1 : (as > bs ? 1 : 0);
+        });
+        renderScheduledAssemblies();
+        event.target.reset();
+        alert('Assembleia agendada com sucesso!');
+    } catch (error) {
+        console.error('Erro ao agendar assembleia:', error);
+        alert('Não foi possível agendar a assembleia. Tente novamente.');
     }
 }
 
 function renderScheduledAssemblies() {
-    const list = document.getElementById('scheduled-list');
-    if (!list) return;
-    list.innerHTML = '';
-
-    if (!scheduledAssemblies.length) {
-        const empty = document.createElement('p');
-        empty.textContent = 'Nenhuma assembleia agendada para o condominio atual.';
-        list.appendChild(empty);
+    const listContainer = document.getElementById('scheduled-list');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+    
+    if (scheduledAssemblies.length === 0) {
+        const cep = extractUserCep(currentUser);
+        listContainer.innerHTML = `<p>Nenhuma assembleia agendada para o condomínio ${cep ? 'CEP ' + cep : 'atual'}.</p>`;
         return;
     }
+    
+    const isSindico = currentUser && currentUser.type === 'sindico';
+    
+    scheduledAssemblies.forEach(assembly => {
+        const isOwn = assembly.created_by && currentUser && currentUser.email && assembly.created_by === currentUser.email;
+        const canDelete = isSindico || isOwn;
 
-    scheduledAssemblies.forEach((assembly) => {
-        const item = document.createElement('article');
-        item.className = 'assembly-item';
+        const createdByHTML = assembly.created_by ? `<p><i class="fas fa-user-tie"></i> <strong>Criado por:</strong> ${escapeHtml(assembly.created_by)}</p>` : '';
+        const timeText = assembly.end_time && assembly.end_time !== assembly.start_time
+            ? ` às ${assembly.start_time || '--:--'} até ${assembly.end_time}`
+            : ` às ${assembly.start_time || assembly.time || '--:--'}`;
 
-        const info = document.createElement('div');
-        info.className = 'assembly-info';
+        const deleteBtn = canDelete ? `
+            <button class="btn btn-secondary" style="margin-left:8px;background:#fee2e2;color:#b91c1c;border-color:#fecaca;" onclick="confirmDeleteAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')" title="Excluir assembleia">
+                <i class="fas fa-trash-alt"></i> Excluir
+            </button>` : '';
 
-        const title = document.createElement('h3');
-        title.textContent = assembly.title || 'Assembleia';
-        info.appendChild(title);
-
-        const line = document.createElement('p');
-        line.textContent = `Data: ${formatDate(assembly.date)} • Horario: ${formatTime(assembly.start_time || assembly.time)}`;
-        info.appendChild(line);
-        item.appendChild(info);
-
-        const actions = document.createElement('div');
-        actions.className = 'assembly-item-actions';
-
-        const joinButton = document.createElement('button');
-        joinButton.type = 'button';
-        joinButton.className = 'btn btn-primary';
-        joinButton.innerHTML = '<i class="fas fa-video"></i> Preparar entrada';
-        joinButton.addEventListener('click', () => openPrejoin(assembly.id));
-        actions.appendChild(joinButton);
-
-        item.appendChild(actions);
-        list.appendChild(item);
+        const itemHTML = `
+            <div class="assembly-item" data-assembly-id="${escapeHtml(String(assembly.id))}">
+                <div class="assembly-info">
+                    <h3>${escapeHtml(assembly.title)}</h3>
+                    <p><i class="far fa-calendar-alt"></i> <strong>Data:</strong> ${formatDate(assembly.date)}${timeText}</p>
+                    ${createdByHTML}
+                </div>
+                <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <button class="btn btn-primary" onclick="joinAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')">
+                        <i class="fas fa-video"></i> Entrar na Chamada
+                    </button>
+                    ${deleteBtn}
+                </div>
+            </div>
+        `;
+        listContainer.innerHTML += itemHTML;
     });
 }
 
-function updateUserProfile() {
-    const user = assemblyState.currentUser;
-    if (!user) return;
-
-    const avatar = document.getElementById('user-avatar');
-    const name = document.getElementById('user-name');
-    const type = document.getElementById('user-type');
-    const scheduleSection = document.getElementById('schedule-section');
-    const syndicButtons = document.querySelectorAll('.syndic-only');
-
-    if (avatar) {
-        if (user.profilePhoto) {
-            avatar.innerHTML = `<img src="${user.profilePhoto}" alt="${escapeText(user.name || 'Usuario')}">`;
-        } else {
-            avatar.textContent = getInitials(user.name || 'Usuario');
-        }
-    }
-    if (name) name.textContent = user.name || 'Usuario';
-    if (type) type.textContent = isSindico() ? 'Sindico' : isPorteiro() ? 'Porteiro' : 'Morador';
-    if (scheduleSection) scheduleSection.style.display = isSindico() ? 'block' : 'none';
-    syndicButtons.forEach((button) => {
-        button.hidden = !isSindico();
-    });
-
-    if (typeof syncAllAvatars === 'function') {
-        syncAllAvatars(user);
-    }
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
-async function restoreUser() {
-    let storedUser = null;
+async function confirmDeleteAssembly(id) {
+    if (!id) return;
+    if (!confirm('Tem certeza que deseja excluir esta assembleia agendada?')) return;
     try {
-        storedUser = sessionStorage.getItem('condominiumUser');
-    } catch (_) {}
+        const deleted = await deleteScheduledAssemblyById(id);
+        scheduledAssemblies = scheduledAssemblies.filter(a => String(a.id) !== String(id));
+        renderScheduledAssemblies();
+        if (!deleted) console.warn('Nenhum registro foi deletado para o id ' + id);
+    } catch (error) {
+        console.error('Erro ao excluir assembleia:', error);
+        alert('Não foi possível excluir a assembleia. Tente novamente.');
+    }
+}
 
-    if (!storedUser) {
-        try {
-            const persisted = localStorage.getItem('condominiumPersistentUser');
-            if (persisted) {
-                const parsed = JSON.parse(persisted);
-                if (parsed?.email && typeof fetchUserByEmail === 'function') {
-                    const freshUser = await fetchUserByEmail(parsed.email).catch(() => null);
-                    if (freshUser) {
-                        sessionStorage.setItem('condominiumUser', JSON.stringify(freshUser));
-                        storedUser = sessionStorage.getItem('condominiumUser');
+function renderPastAssemblies() {
+    const listContainer = document.getElementById('past-list');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+    
+    if (pastAssemblies.length === 0) {
+        listContainer.innerHTML = '<p>Nenhuma assembleia realizada.</p>';
+        return;
+    }
+    
+    pastAssemblies.forEach(assembly => {
+        const itemHTML = `
+            <div class="assembly-item">
+                <div class="assembly-info">
+                    <h3>${assembly.title}</h3>
+                    <p><i class="far fa-calendar-alt"></i> <strong>Data:</strong> ${formatDate(assembly.date)}, às ${assembly.time}</p>
+                </div>
+                <button class="btn btn-secondary" onclick="viewPastAssembly(${assembly.id})">
+                    <i class="fas fa-eye"></i> Ver Detalhes
+                </button>
+            </div>
+        `;
+        listContainer.innerHTML += itemHTML;
+    });
+}
+
+function formatDate(dateStr) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+}
+
+function joinAssembly(assemblyId) {
+    const assembly = scheduledAssemblies.find(a => String(a.id) === String(assemblyId));
+    const titleEl = document.getElementById('assembly-title');
+    const roomEl = document.getElementById('assembly-room');
+    if (!assembly) {
+        console.error('Assembleia não encontrada para id=', assemblyId, ' | disponiveis=', scheduledAssemblies.map(a => a.id));
+        if (assemblyId && titleEl && roomEl) {
+            titleEl.textContent = 'Assembleia';
+        } else {
+            alert('Assembleia não encontrada. Atualize a página e tente novamente.');
+            return;
+        }
+    } else if (titleEl) {
+        titleEl.textContent = assembly.title || 'Assembleia';
+    }
+    if (roomEl) {
+        roomEl.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    currentAssemblyId = String(assemblyId);
+    participants = [];
+
+    micOn = true;
+    cameraOn = false;
+    updateControlsUI();
+    renderParticipants();
+
+    openAssemblyChannel(currentAssemblyId);
+    startParticipantHeartbeat();
+    broadcastToAssembly('participant-request-roster', { peerId: getMyPeerId() });
+
+    // Liga o microfone (assim como antes o join abria a camera; agora mantem só mic ligado)
+    try {
+        if (!localStream || !localStream.getAudioTracks().length) {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                .then(audioStream => {
+                    if (localStream && localStream.getVideoTracks().length) {
+                        localStream.getVideoTracks().forEach(t => audioStream.addTrack(t));
+                        localStream = audioStream;
+                    } else {
+                        localStream = audioStream;
                     }
+                    const videoElement = document.getElementById('local-video');
+                    if (videoElement && cameraOn && localStream.getVideoTracks().length) {
+                        videoElement.srcObject = localStream;
+                    }
+                    sendParticipantPresence();
+                })
+                .catch(err => {
+                    console.warn('Não foi possível acessar o microfone:', err);
+                    sendParticipantPresence({ micOn: false });
+                });
+        } else {
+            sendParticipantPresence();
+        }
+    } catch (e) {
+        console.warn('getUserMedia indisponível:', e);
+        sendParticipantPresence({ micOn: false });
+    }
+}
+
+function leaveAssembly() {
+    const leavingId = currentAssemblyId;
+    const roomEl = document.getElementById('assembly-room');
+    const chatEl = document.getElementById('chat-sidebar');
+    if (roomEl) roomEl.classList.remove('active');
+    document.body.style.overflow = 'auto';
+    chatOpen = false;
+    if (chatEl) chatEl.classList.add('closed');
+
+    if (leavingId) {
+        broadcastToAssembly('participant-leave', { peerId: getMyPeerId() });
+    }
+    closeAssemblyChannel();
+    participants = [];
+    currentAssemblyId = null;
+    
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+    renderParticipants();
+}
+
+function renderParticipants() {
+    const grid = document.getElementById('video-grid');
+    grid.innerHTML = '';
+    
+    // Adiciona o usuário atual primeiro (box principal)
+    const userBox = document.createElement('div');
+    userBox.className = 'video-box';
+    
+    const placeholder = document.createElement('div');
+    placeholder.className = 'video-placeholder';
+    
+    const avatar = document.createElement('div');
+    avatar.className = 'user-avatar';
+    avatar.style.position = 'relative';
+    
+    if (currentUser && currentUser.profilePhoto) {
+        avatar.innerHTML = `<img src="${currentUser.profilePhoto}" alt="Avatar" />`;
+        avatar.style.overflow = 'hidden';
+        avatar.style.background = 'none';
+    } else {
+        const initials = currentUser ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'US';
+        avatar.textContent = initials;
+    }
+    
+    placeholder.appendChild(avatar);
+    
+    const nameP = document.createElement('p');
+    nameP.textContent = currentUser ? currentUser.name : 'Você';
+    nameP.style.margin = '0.5rem 0 0.25rem 0';
+    nameP.style.fontWeight = '600';
+    nameP.style.fontSize = '0.95rem';
+    placeholder.appendChild(nameP);
+    
+    // Adiciona tipo de usuário com ênfase em síndico
+    const typeP = document.createElement('p');
+    const userType = currentUser ? (currentUser.type === 'sindico' ? 'Síndico' : 'Morador') : 'Morador';
+    typeP.textContent = userType;
+    typeP.style.margin = '0';
+    typeP.style.fontSize = '0.85rem';
+    typeP.style.fontWeight = currentUser?.type === 'sindico' ? '700' : '500';
+    typeP.style.color = currentUser?.type === 'sindico' ? '#dc2626' : '#6b7280';
+    placeholder.appendChild(typeP);
+    
+    // Adiciona ícone de mic desligado se necessário
+    if (!micOn) {
+        const micOffIcon = document.createElement('div');
+        micOffIcon.className = 'mic-off-icon';
+        micOffIcon.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+        placeholder.appendChild(micOffIcon);
+    }
+    
+    userBox.appendChild(placeholder);
+    grid.appendChild(userBox);
+    
+    participants.forEach(p => {
+        const box = document.createElement('div');
+        box.className = 'video-box';
+        
+        const placeholder = document.createElement('div');
+        placeholder.className = 'video-placeholder';
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'user-avatar';
+        avatar.style.position = 'relative';
+        
+        if (p.profilePhoto) {
+            avatar.innerHTML = `<img src="${p.profilePhoto}" alt="Avatar" />`;
+            avatar.style.overflow = 'hidden';
+            avatar.style.background = 'none';
+        } else {
+            avatar.textContent = p.initials;
+        }
+        
+        placeholder.appendChild(avatar);
+        
+        const nameP = document.createElement('p');
+        nameP.textContent = p.name;
+        nameP.style.margin = '0.5rem 0 0.25rem 0';
+        nameP.style.fontWeight = '600';
+        nameP.style.fontSize = '0.95rem';
+        placeholder.appendChild(nameP);
+        
+        // Adiciona tipo de usuário com ênfase em síndico
+        const typeP = document.createElement('p');
+        const userType = p.type === 'sindico' ? 'Síndico' : 'Morador';
+        typeP.textContent = userType;
+        typeP.style.margin = '0';
+        typeP.style.fontSize = '0.85rem';
+        typeP.style.fontWeight = p.type === 'sindico' ? '700' : '500';
+        typeP.style.color = p.type === 'sindico' ? '#dc2626' : '#6b7280';
+        placeholder.appendChild(typeP);
+        
+        box.appendChild(placeholder);
+        grid.appendChild(box);
+    });
+}
+
+function updateControlsUI() {
+    const micBtn = document.getElementById('mic-btn');
+    const camBtn = document.getElementById('camera-btn');
+    
+    if (micOn) {
+        micBtn.classList.remove('off');
+    } else {
+        micBtn.classList.add('off');
+    }
+    
+    if (cameraOn) {
+        camBtn.classList.remove('off');
+    } else {
+        camBtn.classList.add('off');
+    }
+    
+    // Sincroniza ícone de mic desligado no avatar do usuário
+    updateAvatarMicIcon();
+}
+
+function updateAvatarMicIcon() {
+    const videoBox = document.querySelector('.video-box');
+    if (!videoBox) return;
+    
+    const placeholder = videoBox.querySelector('.video-placeholder');
+    if (!placeholder) return;
+    
+    // Remove ícone anterior se existir
+    const oldIcon = placeholder.querySelector('.mic-off-icon');
+    if (oldIcon) oldIcon.remove();
+    
+    // Adiciona ícone de mic desligado se necessário
+    if (!micOn) {
+        const micOffIcon = document.createElement('div');
+        micOffIcon.className = 'mic-off-icon';
+        micOffIcon.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+        placeholder.appendChild(micOffIcon);
+    }
+}
+
+function toggleMic() {
+    micOn = !micOn;
+    
+    if (micOn) {
+        // Ativa microfone - captura áudio
+        if (!localStream || !localStream.getAudioTracks().length) {
+            navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: true, noiseSuppression: true },
+                video: false
+            }).then(audioStream => {
+                if (localStream && localStream.getVideoTracks().length) {
+                    // Se câmera está ligada, adiciona áudio ao stream existente
+                    audioStream.getAudioTracks().forEach(track => {
+                        localStream.addTrack(track);
+                    });
+                } else {
+                    // Se câmera desligada, cria novo stream apenas com áudio
+                    localStream = audioStream;
+                }
+                sendParticipantPresence({ micOn: true });
+            }).catch(error => {
+                console.error('Erro ao capturar áudio:', error);
+                alert('Não foi possível acessar o microfone. Verifique as permissões.');
+                micOn = false;
+                sendParticipantPresence({ micOn: false });
+            });
+        } else {
+            sendParticipantPresence({ micOn: true });
+        }
+    } else {
+        // Desativa microfone - remove áudio do stream
+        if (localStream && localStream.getAudioTracks().length) {
+            localStream.getAudioTracks().forEach(track => {
+                track.stop();
+                localStream.removeTrack(track);
+            });
+        }
+        sendParticipantPresence({ micOn: false });
+    }
+    
+    updateControlsUI();
+}
+
+async function toggleCamera() {
+    cameraOn = !cameraOn;
+    
+    if (cameraOn) {
+        // Ativa câmera
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user' },
+                audio: false
+            });
+            
+            // Procura ou cria elemento de vídeo
+            let videoElement = document.getElementById('local-video');
+            if (!videoElement) {
+                videoElement = document.createElement('video');
+                videoElement.id = 'local-video';
+                videoElement.autoplay = true;
+                videoElement.playsinline = true;
+                videoElement.muted = true;
+                videoElement.style.width = '100%';
+                videoElement.style.height = '100%';
+                videoElement.style.objectFit = 'cover';
+                const videoBox = document.querySelector('.video-box');
+                if (videoBox) {
+                    videoBox.innerHTML = '';
+                    videoBox.appendChild(videoElement);
                 }
             }
-        } catch (_) {}
+            
+            videoElement.srcObject = localStream;
+            sendParticipantPresence({ cameraOn: true });
+        } catch (error) {
+            console.error('Erro ao acessar câmera:', error);
+            alert('Não foi possível acessar a câmera. Verifique as permissões.');
+            cameraOn = false;
+            sendParticipantPresence({ cameraOn: false });
+        }
+    } else {
+        // Desativa câmera
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+        renderParticipants();
+        sendParticipantPresence({ cameraOn: false });
     }
-
-    if (!storedUser) {
-        location.href = 'entrar.html';
-        return false;
-    }
-
-    assemblyState.currentUser = JSON.parse(storedUser);
-    if (typeof refreshCurrentUserFromDb === 'function') {
-        assemblyState.currentUser = await refreshCurrentUserFromDb();
-    }
-
-    if (isSindico() && !assemblyState.currentUser?.plan) {
-        location.href = 'checkout.html';
-        return false;
-    }
-
-    updateUserProfile();
-    renderScheduleAssemblyInfo();
-    return true;
+    
+    updateControlsUI();
 }
 
-function handleModalBackdropClick(event) {
-    const modal = event.target;
-    if (!modal.classList.contains('assembly-modal')) return;
-    if (modal.id === 'create-poll-modal') return;
-    closeModal(modal.id);
+function toggleChat() {
+    chatOpen = !chatOpen;
+    const chatSidebar = document.getElementById('chat-sidebar');
+    
+    if (chatOpen) {
+        chatSidebar.classList.remove('closed');
+    } else {
+        chatSidebar.classList.add('closed');
+    }
 }
 
-function handleEscape(event) {
-    if (event.key !== 'Escape') return;
-    if (assemblyState.openModal) {
-        closeModal(assemblyState.openModal);
+function sendMessage() {
+    const input = document.getElementById('message-input');
+    const message = input.value.trim();
+    const imageData = selectedImageData;
+
+    if (!message && !imageData) {
         return;
     }
-    if (assemblyState.activePanel) {
-        closeAllPanels();
-        if (assemblyState.sidePanelLastFocus && typeof assemblyState.sidePanelLastFocus.focus === 'function') {
-            assemblyState.sidePanelLastFocus.focus();
-        }
+    if (!currentUser) return;
+    if (!currentAssemblyId) {
+        alert('Entre em uma assembleia antes de enviar mensagens.');
+        return;
+    }
+
+    const msgId = 'msg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    const chatMsg = {
+        id: msgId,
+        peerId: getMyPeerId(),
+        assemblyId: currentAssemblyId,
+        sender: currentUser.name || 'Usuário',
+        email: currentUser.email || null,
+        userType: currentUser.type === 'sindico' ? 'sindico' : 'morador',
+        text: message,
+        imageData: imageData || null,
+        time: getCurrentTime(),
+        ts: Date.now()
+    };
+
+    persistChatMessage(currentAssemblyId, chatMsg);
+    appendIncomingChatMessage(chatMsg);
+    broadcastToAssembly('chat-message', chatMsg);
+
+    input.value = '';
+    removeSelectedImage();
+}
+
+function removeSelectedImage() {
+    selectedImageData = null;
+    const fileInput = document.getElementById('image-upload');
+    if (fileInput) {
+        fileInput.value = '';
+    }
+    document.getElementById('image-preview-wrapper').classList.remove('active');
+}
+
+function addMessage(text, imageData, sender, userType) {
+    const messagesDiv = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message sent`;
+    
+    const typeLabel = userType === 'sindico' ? 'Síndico' : 'Morador';
+
+    let contentHTML = `
+        <div class="message-header">
+            <strong>${sender}</strong>
+            <span class="user-type-tag">${typeLabel}</span>
+        </div>
+    `;
+
+    if (text) {
+        contentHTML += `<p>${text}</p>`;
+    }
+
+    if (imageData) {
+        contentHTML += `
+            <div class="message-image-wrapper">
+                <img src="${imageData}" alt="Imagem enviada" class="message-image" style="max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: contain;">
+            </div>
+        `;
+    }
+
+    contentHTML += `<span class="time">${getCurrentTime()}</span>`;
+    
+    messageDiv.innerHTML = contentHTML;
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function getCurrentTime() {
+    const now = new Date();
+    return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+}
+
+function viewPastAssembly(id) {
+    const assembly = assemblyData[id];
+    if (assembly) {
+        currentAssemblyId = id;
+        document.getElementById('past-assembly-title').textContent = assembly.title;
+        document.getElementById('past-assembly-detail').classList.add('active');
+        document.body.style.overflow = 'hidden';
     }
 }
 
-function attachStaticEvents() {
-    document.getElementById('schedule-form')?.addEventListener('submit', scheduleAssembly);
-    document.getElementById('sidebar-logout-btn')?.addEventListener('click', logout);
+function goBack() {
+    document.getElementById('past-assembly-detail').classList.remove('active');
+    document.body.style.overflow = 'auto';
+}
 
-    document.getElementById('prejoin-close-btn')?.addEventListener('click', closePrejoin);
-    document.getElementById('prejoin-back-btn')?.addEventListener('click', closePrejoin);
-    document.getElementById('prejoin-enter-btn')?.addEventListener('click', enterAssembly);
-    document.getElementById('prejoin-mic-btn')?.addEventListener('click', toggleMicrophone);
-    document.getElementById('prejoin-camera-btn')?.addEventListener('click', toggleCamera);
+function vote(option) {
+    alert('Voto registrado: ' + (option === 'yes' ? 'A Favor' : 'Contra'));
+    document.getElementById('voting-buttons').style.display = 'none';
+    document.getElementById('vote-result').style.display = 'block';
+}
 
-    document.getElementById('camera-select')?.addEventListener('change', async (event) => {
-        assemblyState.activeDevices.videoInputId = event.target.value;
-        if (assemblyState.cameraEnabled) await refreshPreviewMedia();
-        await populateDeviceSelects();
-    });
-    document.getElementById('microphone-select')?.addEventListener('change', async (event) => {
-        assemblyState.activeDevices.audioInputId = event.target.value;
-        if (assemblyState.microphoneEnabled) await refreshPreviewMedia();
-        await populateDeviceSelects();
-    });
-
-    document.getElementById('settings-camera-select')?.addEventListener('change', async (event) => {
-        assemblyState.activeDevices.videoInputId = event.target.value;
-        if (assemblyState.cameraEnabled) await refreshPreviewMedia();
-        await populateDeviceSelects();
-    });
-    document.getElementById('settings-microphone-select')?.addEventListener('change', async (event) => {
-        assemblyState.activeDevices.audioInputId = event.target.value;
-        if (assemblyState.microphoneEnabled) await refreshPreviewMedia();
-        await populateDeviceSelects();
-    });
-
-    document.getElementById('room-mic-btn')?.addEventListener('click', toggleMicrophone);
-    document.getElementById('room-camera-btn')?.addEventListener('click', toggleCamera);
-    document.getElementById('room-screen-btn')?.addEventListener('click', toggleScreenShare);
-    document.getElementById('room-hand-btn')?.addEventListener('click', toggleHandRaise);
-    document.getElementById('room-chat-btn')?.addEventListener('click', (event) => openSidePanel('chat', event.currentTarget));
-    document.getElementById('room-participants-btn')?.addEventListener('click', (event) => openSidePanel('participants', event.currentTarget));
-    document.getElementById('room-polls-btn')?.addEventListener('click', (event) => openSidePanel('polls', event.currentTarget));
-    document.getElementById('room-settings-btn')?.addEventListener('click', async (event) => {
-        await populateDeviceSelects();
-        openModal('settings-modal', event.currentTarget);
-    });
-    document.getElementById('room-info-btn')?.addEventListener('click', (event) => {
-        populateInfoModal();
-        openModal('info-modal', event.currentTarget);
-    });
-    document.getElementById('room-new-poll-btn')?.addEventListener('click', (event) => {
-        if (!isSindico()) return;
-        resetCreatePollForm();
-        openModal('create-poll-modal', event.currentTarget);
-    });
-    document.getElementById('room-end-btn')?.addEventListener('click', (event) => {
-        if (!isSindico()) return;
-        openModal('end-assembly-modal', event.currentTarget);
-    });
-    document.getElementById('room-leave-btn')?.addEventListener('click', (event) => {
-        openModal('leave-modal', event.currentTarget);
-    });
-    document.getElementById('confirm-leave-btn')?.addEventListener('click', () => {
-        closeModal('leave-modal');
-        performLeaveAssembly();
-    });
-    document.getElementById('confirm-end-assembly-btn')?.addEventListener('click', () => {
-        if (!isSindico()) return;
-        broadcast('assembly-ended', { assemblyId: assemblyState.currentAssemblyId });
-        closeModal('end-assembly-modal');
-        performLeaveAssembly(false);
-        showToast('Assembleia encerrada com sucesso.', 'success');
-    });
-    document.getElementById('side-panel-close-btn')?.addEventListener('click', () => {
-        closeAllPanels();
-        if (assemblyState.sidePanelLastFocus && typeof assemblyState.sidePanelLastFocus.focus === 'function') {
-            assemblyState.sidePanelLastFocus.focus();
-        }
-    });
-    document.getElementById('send-message-btn')?.addEventListener('click', sendChatMessage);
-    document.getElementById('message-input')?.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
-            sendChatMessage();
-        }
-    });
-    document.getElementById('chat-image-btn')?.addEventListener('click', () => {
-        document.getElementById('image-upload')?.click();
-    });
-    document.getElementById('image-upload')?.addEventListener('change', handleImageSelection);
-    document.getElementById('remove-image-btn')?.addEventListener('click', removeSelectedImage);
-    document.getElementById('stop-share-btn')?.addEventListener('click', stopScreenShare);
-
-    document.getElementById('create-poll-form')?.addEventListener('submit', createPoll);
-    document.getElementById('add-poll-option-btn')?.addEventListener('click', () => {
-        document.getElementById('poll-options-container')?.appendChild(createPollOptionField());
-    });
-
-    document.querySelectorAll('[data-close-modal]').forEach((button) => {
-        button.addEventListener('click', () => closeModal(button.getAttribute('data-close-modal')));
-    });
-
-    document.querySelectorAll('.assembly-modal').forEach((modal) => {
-        modal.addEventListener('click', handleModalBackdropClick);
-    });
-
-    document.addEventListener('keydown', handleEscape);
+function sendComment() {
+    const commentInput = document.getElementById('comment-input');
+    const text = commentInput.value.trim();
+    
+    if (text && currentAssemblyId && currentUser) {
+        alert('Comentário enviado com sucesso!');
+        commentInput.value = '';
+    }
 }
 
 function logout() {
-    try {
-        sessionStorage.removeItem('condominiumUser');
-    } catch (_) {}
-    try {
-        localStorage.removeItem('condominiumPersistentUser');
-    } catch (_) {}
-    location.href = '../inicio.html';
+    try { sessionStorage.removeItem('condominiumUser'); } catch(_) {}
+    try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
+    window.location.href = '../inicio.html';
 }
 
-window.addEventListener('beforeunload', () => {
-    if (assemblyState.currentAssemblyId && assemblyState.connected) {
-        try {
-            broadcast('participant-leave', {
-                assemblyId: assemblyState.currentAssemblyId,
-                peerId: getMyPeerId()
-            });
-        } catch (_) {}
-    }
-    resetRoomState();
-    stopMediaStream(assemblyState.previewStream);
-});
-
-document.addEventListener('DOMContentLoaded', async () => {
-    attachStaticEvents();
-    resetCreatePollForm();
-    closeAllPanels();
-    closeAllModals();
-    updatePrejoinMediaUI();
-
-    const restored = await restoreUser();
-    if (!restored) return;
-
-    const dateInput = document.getElementById('assembly-date');
-    if (dateInput) {
-        dateInput.min = new Date().toISOString().split('T')[0];
-    }
-
-    await loadScheduledAssemblies();
-    renderPastAssemblies();
-});
+if (typeof window.addEventListener === 'function') {
+    window.addEventListener('beforeunload', () => {
+        if (currentAssemblyId) {
+            try { broadcastToAssembly('participant-leave', { peerId: getMyPeerId() }); } catch(_) {}
+        }
+        try { closeAssemblyChannel(); } catch(_) {}
+    });
+}

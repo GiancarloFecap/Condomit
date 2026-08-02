@@ -11,12 +11,13 @@
 </head>
 <body>
     <div class="dashboard-sindico">
+        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
-                <h2 class="condo-name"></h2>
+                <h2 class="condo-name">
             </div>
-
+            
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <a href="index.html" class="nav-item">
@@ -24,7 +25,7 @@
                         <span>Início</span>
                     </a>
                 </div>
-
+                
                 <div class="nav-section">
                     <div class="nav-section-title">Comunicado e Engajamento</div>
                     <a href="#" class="nav-item">
@@ -57,7 +58,7 @@
                         <span>Market Place</span>
                     </a>
                 </div>
-
+                
                 <div class="nav-section">
                     <a href="assembleia.html" class="nav-item active">
                         <i class="fas fa-calendar-check"></i>
@@ -72,7 +73,7 @@
                         <span>Avisos de Assembleia</span>
                     </a>
                 </div>
-
+                
                 <div class="nav-section">
                     <div class="nav-section-title">Gestão de Moradores</div>
                     <a href="#" class="nav-item">
@@ -80,7 +81,7 @@
                         <span>Gestão de Moradores</span>
                     </a>
                 </div>
-
+                
                 <div class="nav-section">
                     <div class="nav-section-title">Reserva e Manutenção</div>
                     <a href="reservas.html" class="nav-item">
@@ -92,7 +93,7 @@
                         <span>Manutenção Preventiva</span>
                     </a>
                 </div>
-
+                
                 <div class="nav-section">
                     <div class="nav-section-title">IA e Automação</div>
                     <a href="ai-condomit.html" class="nav-item">
@@ -104,7 +105,7 @@
                         <span>IA - Comunicados Automáticos</span>
                     </a>
                 </div>
-
+                
                 <div class="nav-section">
                     <div class="nav-section-title">Configurações</div>
                     <a href="configuracoes.html" class="nav-item">
@@ -113,13 +114,13 @@
                     </a>
                 </div>
             </nav>
-
+            
             <div class="sidebar-footer">
                 <button class="btn-support">
                     <i class="fas fa-headset"></i>
                     <span>Central de Suporte</span>
                 </button>
-                <button class="btn-logout-sidebar" id="sidebar-logout-btn">
+                <button class="btn-logout-sidebar" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Sair</span>
                 </button>
@@ -134,18 +135,10 @@
                 </div>
                 <div class="top-bar-right">
                     <div class="top-icons">
-                        <button class="icon-btn" type="button" aria-label="Abrir mensagens">
-                            <i class="fas fa-comments"></i>
-                        </button>
-                        <button class="icon-btn" type="button" aria-label="Abrir chamadas">
-                            <i class="fas fa-video"></i>
-                        </button>
-                        <button class="icon-btn" type="button" aria-label="Abrir notificações">
-                            <i class="fas fa-bell"></i>
-                        </button>
-                        <button class="icon-btn" type="button" aria-label="Abrir perfil">
-                            <i class="fas fa-user-circle"></i>
-                        </button>
+                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
                     </div>
                     <div class="user-profile-small">
                         <div class="user-info-small">
@@ -160,23 +153,23 @@
             <div id="main-content">
                 <div class="welcome-card card">
                     <h2>Portal de Assembleias</h2>
-                    <p>Seja bem-vindo ao portal oficial de assembleias do condomínio. Participe das decisões com mais clareza, previsibilidade e sem interrupções inesperadas.</p>
+                    <p>Seja bem-vindo ao portal oficial de assembleias do condomínio. Participe ativamente das decisões que envolvem nosso lar.</p>
                 </div>
 
                 <section id="scheduled-section" class="section-block">
                     <div class="card">
                         <h2><i class="fas fa-calendar-check"></i> Assembleias Agendadas</h2>
-                        <p id="schedule-info" class="assembly-inline-info" hidden></p>
-                        <div id="scheduled-list"></div>
+                        <div id="scheduled-list">
+                        </div>
                     </div>
                 </section>
 
-                <section id="schedule-section" class="section-block" style="display:none;">
+                <section id="schedule-section" class="section-block" style="display: none;">
                     <div class="card">
                         <h2><i class="fas fa-calendar-plus"></i> Agendar Nova Assembleia</h2>
-                        <form id="schedule-form" class="schedule-form">
+                        <form id="schedule-form" class="schedule-form" onsubmit="scheduleAssembly(event)">
                             <div class="form-group">
-                                <label for="assembly-title-input">Título da Assembleia</label>
+                                <label for="assembly-title">Título da Assembleia</label>
                                 <input type="text" id="assembly-title-input" placeholder="Ex: Assembleia Geral Ordinária" required>
                             </div>
                             <div class="form-row">
@@ -199,356 +192,119 @@
                 <section id="past-section" class="section-block">
                     <div class="card">
                         <h2><i class="fas fa-history"></i> Assembleias Realizadas</h2>
-                        <div id="past-list"></div>
+                        <div id="past-list">
+                        </div>
                     </div>
                 </section>
             </div>
 
-            <div id="prejoin-overlay" class="fullscreen-overlay" hidden aria-hidden="true">
-                <div class="prejoin-shell" role="dialog" aria-modal="true" aria-labelledby="prejoin-title">
-                    <div class="prejoin-header">
-                        <div>
-                            <span class="prejoin-kicker">Preparação da chamada</span>
-                            <h2 id="prejoin-title">Entrar na assembleia</h2>
-                            <p id="prejoin-assembly-meta">Revise seus dispositivos e escolha como deseja participar.</p>
+            <div id="assembly-room" class="fullscreen-overlay">
+                <div class="assembly-room-container">
+                    <div class="video-area">
+                        <div class="video-header">
+                            <h2 id="assembly-title">Assembleia Geral Ordinária</h2>
                         </div>
-                        <button type="button" class="icon-only-btn" id="prejoin-close-btn" aria-label="Fechar preparação">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-
-                    <div class="prejoin-grid">
-                        <section class="prejoin-preview-card">
-                            <div class="prejoin-preview-header">
-                                <h3>Pré-visualização</h3>
-                                <span id="prejoin-media-summary">Sem mídia ativa</span>
-                            </div>
-                            <div class="prejoin-preview-stage" id="prejoin-preview-stage">
-                                <video id="prejoin-video" autoplay playsinline muted hidden></video>
-                                <div class="prejoin-avatar" id="prejoin-avatar">VC</div>
-                                <div class="prejoin-preview-empty" id="prejoin-preview-empty">
-                                    Clique nos controles abaixo para testar câmera e microfone.
-                                </div>
-                            </div>
-                            <div class="prejoin-toggle-row">
-                                <button type="button" class="prep-toggle-btn" id="prejoin-mic-btn" aria-pressed="false">
-                                    <i class="fas fa-microphone-slash"></i>
-                                    <span>Microfone desligado</span>
-                                </button>
-                                <button type="button" class="prep-toggle-btn" id="prejoin-camera-btn" aria-pressed="false">
-                                    <i class="fas fa-video-slash"></i>
-                                    <span>Câmera desligada</span>
-                                </button>
-                            </div>
-                        </section>
-
-                        <section class="prejoin-details-card">
-                            <div class="prejoin-details-list">
-                                <div class="detail-line">
-                                    <span>Título</span>
-                                    <strong id="prejoin-assembly-title">Assembleia</strong>
-                                </div>
-                                <div class="detail-line">
-                                    <span>Condomínio</span>
-                                    <strong id="prejoin-condo-name">-</strong>
-                                </div>
-                                <div class="detail-line">
-                                    <span>Data</span>
-                                    <strong id="prejoin-date">-</strong>
-                                </div>
-                                <div class="detail-line">
-                                    <span>Horário</span>
-                                    <strong id="prejoin-time">-</strong>
-                                </div>
-                                <div class="detail-line">
-                                    <span>Status</span>
-                                    <strong id="prejoin-status">Agendada</strong>
-                                </div>
-                                <div class="detail-line">
-                                    <span>Participante</span>
-                                    <strong id="prejoin-user-name">Você</strong>
-                                </div>
-                            </div>
-
-                            <div class="prejoin-device-group">
-                                <label for="camera-select">Câmera</label>
-                                <select id="camera-select">
-                                    <option value="">Selecionar câmera</option>
-                                </select>
-                            </div>
-
-                            <div class="prejoin-device-group">
-                                <label for="microphone-select">Microfone</label>
-                                <select id="microphone-select">
-                                    <option value="">Selecionar microfone</option>
-                                </select>
-                            </div>
-
-                            <p class="prejoin-help" id="prejoin-permission-message">
-                                Você pode entrar com câmera, áudio ou sem mídia, conforme sua autorização.
-                            </p>
-
-                            <div class="prejoin-actions">
-                                <button type="button" class="btn btn-secondary" id="prejoin-back-btn">
-                                    <i class="fas fa-arrow-left"></i> Voltar
-                                </button>
-                                <button type="button" class="btn btn-primary" id="prejoin-enter-btn">
-                                    <i class="fas fa-door-open"></i> Entrar na assembleia
-                                </button>
-                            </div>
-                        </section>
-                    </div>
-                </div>
-            </div>
-
-            <div id="assembly-room" class="fullscreen-overlay" hidden aria-hidden="true">
-                <div class="assembly-stage-shell">
-                    <section class="assembly-stage-main">
-                        <header class="assembly-room-header">
-                            <div>
-                                <h2 id="room-assembly-title">Assembleia</h2>
-                                <p id="room-assembly-subtitle">Sala pronta para participação.</p>
-                            </div>
-                            <div class="assembly-room-meta">
-                                <span class="room-chip" id="room-status-chip">
-                                    <i class="fas fa-circle"></i>
-                                    <span id="room-status-text">Em preparação</span>
-                                </span>
-                                <span class="room-chip" id="connection-chip" aria-live="polite">
-                                    <i class="fas fa-wifi"></i>
-                                    <span id="connection-status-text">Desconectado</span>
-                                </span>
-                                <span class="room-chip">
-                                    <i class="fas fa-users"></i>
-                                    <span id="participants-count">0 participantes</span>
-                                </span>
-                                <span class="room-chip">
-                                    <i class="fas fa-stopwatch"></i>
-                                    <span id="assembly-timer">00:00:00</span>
-                                </span>
-                            </div>
-                        </header>
-
-                        <div class="share-spotlight" id="share-spotlight" hidden>
-                            <div class="share-spotlight-header">
-                                <strong>Compartilhamento de tela</strong>
-                                <button type="button" class="icon-only-btn" id="stop-share-btn" aria-label="Encerrar compartilhamento">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="share-spotlight-body" id="share-spotlight-body"></div>
+                        <div class="video-grid" id="video-grid">
+                            <!-- Participantes serão adicionados dinamicamente via JS -->
                         </div>
-
-                        <div class="video-grid modern-grid" id="video-grid" aria-live="polite"></div>
-
-                        <footer class="room-controls-bar">
-                            <button class="control-btn" id="room-mic-btn" type="button" aria-label="Ativar ou desativar microfone">
+                        <div class="controls">
+                            <button class="control-btn" id="mic-btn" onclick="toggleMic()">
                                 <i class="fas fa-microphone"></i>
                             </button>
-                            <button class="control-btn" id="room-camera-btn" type="button" aria-label="Ativar ou desativar câmera">
+                            <button class="control-btn" id="camera-btn" onclick="toggleCamera()">
                                 <i class="fas fa-video"></i>
                             </button>
-                            <button class="control-btn" id="room-screen-btn" type="button" aria-label="Compartilhar tela">
-                                <i class="fas fa-display"></i>
-                            </button>
-                            <button class="control-btn" id="room-hand-btn" type="button" aria-label="Levantar a mão">
-                                <i class="fas fa-hand"></i>
-                            </button>
-                            <button class="control-btn" id="room-chat-btn" type="button" aria-label="Abrir chat">
+                            <button class="control-btn" id="chat-toggle-btn" onclick="toggleChat()">
                                 <i class="fas fa-comments"></i>
-                                <span class="control-counter" id="chat-counter" hidden>0</span>
                             </button>
-                            <button class="control-btn" id="room-participants-btn" type="button" aria-label="Abrir painel de participantes">
-                                <i class="fas fa-users"></i>
-                            </button>
-                            <button class="control-btn" id="room-polls-btn" type="button" aria-label="Abrir votações">
-                                <i class="fas fa-square-poll-vertical"></i>
-                                <span class="control-counter" id="poll-counter" hidden>0</span>
-                            </button>
-                            <button class="control-btn" id="room-settings-btn" type="button" aria-label="Abrir configurações de dispositivos">
-                                <i class="fas fa-sliders"></i>
-                            </button>
-                            <button class="control-btn" id="room-info-btn" type="button" aria-label="Abrir informações da assembleia">
-                                <i class="fas fa-circle-info"></i>
-                            </button>
-                            <button class="control-btn syndic-only" id="room-new-poll-btn" type="button" aria-label="Criar nova votação" hidden>
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button class="control-btn syndic-only" id="room-end-btn" type="button" aria-label="Encerrar assembleia" hidden>
-                                <i class="fas fa-flag-checkered"></i>
-                            </button>
-                            <button class="control-btn leave-btn" id="room-leave-btn" type="button" aria-label="Sair da assembleia">
+                            <button class="control-btn leave-btn" id="leave-btn" onclick="leaveAssembly()" title="Sair da Chamada">
                                 <i class="fas fa-sign-out-alt"></i>
                             </button>
-                        </footer>
-                    </section>
-
-                    <aside class="assembly-side-panel" id="assembly-side-panel" hidden aria-hidden="true">
-                        <div class="side-panel-header">
-                            <div>
-                                <span class="side-panel-kicker">Painel lateral</span>
-                                <h3 id="side-panel-title">Chat</h3>
-                            </div>
-                            <button type="button" class="icon-only-btn" id="side-panel-close-btn" aria-label="Fechar painel lateral">
+                        </div>
+                    </div>
+                    <div class="chat-sidebar" id="chat-sidebar">
+                        <div class="chat-header">
+                            <h3><i class="fas fa-comments"></i> Chat da Assembleia</h3>
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                            <!-- Mensagens serão adicionadas dinamicamente -->
+                        </div>
+                        <div id="image-preview-wrapper" class="image-preview-wrapper">
+                            <img id="image-preview" class="image-preview">
+                            <button class="remove-image-btn" onclick="removeSelectedImage()">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
-
-                        <div class="side-panel-body">
-                            <section id="chat-panel" class="side-panel-section" hidden>
-                                <div class="chat-messages safe-chat" id="chat-messages"></div>
-                                <div id="image-preview-wrapper" class="image-preview-wrapper">
-                                    <img id="image-preview" class="image-preview" alt="Pré-visualização da imagem selecionada">
-                                    <button class="remove-image-btn" id="remove-image-btn" type="button" aria-label="Remover imagem selecionada">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                                <div class="chat-input">
-                                    <input type="file" id="image-upload" accept="image/*" hidden>
-                                    <button class="image-btn" id="chat-image-btn" type="button" title="Enviar imagem" aria-label="Selecionar imagem">
-                                        <i class="fas fa-image"></i>
-                                    </button>
-                                    <input type="text" id="message-input" maxlength="500" placeholder="Digite sua mensagem..." aria-label="Digite sua mensagem">
-                                    <button class="send-btn" id="send-message-btn" type="button" title="Enviar" aria-label="Enviar mensagem">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
-                                </div>
-                            </section>
-
-                            <section id="participants-panel" class="side-panel-section" hidden>
-                                <div class="participants-list" id="participants-panel-list"></div>
-                            </section>
-
-                            <section id="polls-panel" class="side-panel-section" hidden>
-                                <div class="polls-list" id="polls-panel-list"></div>
-                            </section>
+                        <div class="chat-input">
+                            <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                            <button class="image-btn" onclick="document.getElementById('image-upload').click()" title="Enviar imagem">
+                                <i class="fas fa-image"></i>
+                            </button>
+                            <input type="text" id="message-input" placeholder="Digite sua mensagem...">
+                            <button class="send-btn" onclick="sendMessage()" title="Enviar">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
                         </div>
-                    </aside>
+                    </div>
                 </div>
             </div>
 
-            <div id="create-poll-modal" class="assembly-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="create-poll-title">
-                <div class="assembly-modal-card">
-                    <div class="assembly-modal-header">
-                        <h3 id="create-poll-title">Nova votação</h3>
-                        <button type="button" class="icon-only-btn modal-close-btn" data-close-modal="create-poll-modal" aria-label="Fechar nova votação">
-                            <i class="fas fa-times"></i>
+            <div id="past-assembly-detail" class="fullscreen-overlay">
+                <div class="detail-container">
+                    <div class="detail-header">
+                        <button class="btn btn-back" onclick="goBack()">
+                            <i class="fas fa-arrow-left"></i> Voltar
                         </button>
+                        <h2 id="past-assembly-title">Assembleia Extraordinária - Reforma do Hall Principal</h2>
                     </div>
-                    <form id="create-poll-form" class="modal-form">
-                        <div class="form-group">
-                            <label for="poll-title-input">Título</label>
-                            <input type="text" id="poll-title-input" maxlength="120" required>
+                    <div class="card detail-card">
+                        <p class="detail-meta"><i class="far fa-calendar-alt"></i> 15 de maio de 2026, às 18h00</p>
+                        
+                        <div class="summary-container">
+                            <h3><i class="fas fa-robot"></i> Resumo da Assembleia</h3>
+                            <div class="summary-box">
+                                <p>Resumo da assembleia será exibido aqui.</p>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="poll-description-input">Descrição</label>
-                            <textarea id="poll-description-input" rows="3" maxlength="280" placeholder="Opcional"></textarea>
-                        </div>
-                        <div class="poll-options-block">
-                            <div class="poll-options-header">
-                                <strong>Opções</strong>
-                                <button type="button" class="btn btn-secondary btn-small" id="add-poll-option-btn">
-                                    <i class="fas fa-plus"></i> Adicionar opção
+
+                        <div class="voting-section">
+                            <h3><i class="fas fa-vote-yea"></i> Votação</h3>
+                            <p class="voting-question">Você aprova o projeto?</p>
+                            <div class="voting-buttons" id="voting-buttons">
+                                <button class="btn vote-btn yes-btn" onclick="vote('yes')">
+                                    <i class="fas fa-thumbs-up"></i> A Favor
+                                </button>
+                                <button class="btn vote-btn no-btn" onclick="vote('no')">
+                                    <i class="fas fa-thumbs-down"></i> Contra
                                 </button>
                             </div>
-                            <div id="poll-options-container"></div>
+                            <div id="vote-result" class="vote-result" style="display: none;">
+                                <div class="result-header">
+                                    <p><i class="fas fa-check-circle"></i> <strong>Voto registrado com sucesso!</strong></p>
+                                </div>
+                                <div class="result-stats">
+                                    <div class="stat-item">
+                                        <div class="stat-label">Total de Votos</div>
+                                        <div class="stat-value" id="total-votes">0</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="modal-actions">
-                            <button type="button" class="btn btn-secondary modal-cancel-btn" data-close-modal="create-poll-modal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary" id="submit-poll-btn">Criar votação</button>
+
+                        <div class="comments-section">
+                            <h3><i class="fas fa-comments"></i> Comentários da Assembleia</h3>
+                            <div class="comments-list" id="comments-list">
+                            </div>
+                            <div class="comment-input-section">
+                                <textarea id="comment-input" placeholder="Escreva seu comentário..."></textarea>
+                                <button class="btn btn-primary" onclick="sendComment()">
+                                    <i class="fas fa-paper-plane"></i> Enviar Comentário
+                                </button>
+                            </div>
                         </div>
-                    </form>
-                </div>
-            </div>
-
-            <div id="poll-view-modal" class="assembly-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="poll-view-title">
-                <div class="assembly-modal-card">
-                    <div class="assembly-modal-header">
-                        <h3 id="poll-view-title">Votação em andamento</h3>
-                        <button type="button" class="icon-only-btn modal-close-btn" data-close-modal="poll-view-modal" aria-label="Fechar votação">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div id="poll-view-content" class="poll-view-content"></div>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary modal-cancel-btn" data-close-modal="poll-view-modal">Fechar</button>
                     </div>
                 </div>
             </div>
-
-            <div id="settings-modal" class="assembly-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-                <div class="assembly-modal-card">
-                    <div class="assembly-modal-header">
-                        <h3 id="settings-title">Configurações de dispositivos</h3>
-                        <button type="button" class="icon-only-btn modal-close-btn" data-close-modal="settings-modal" aria-label="Fechar configurações">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="modal-form">
-                        <div class="form-group">
-                            <label for="settings-camera-select">Câmera</label>
-                            <select id="settings-camera-select"></select>
-                        </div>
-                        <div class="form-group">
-                            <label for="settings-microphone-select">Microfone</label>
-                            <select id="settings-microphone-select"></select>
-                        </div>
-                        <p class="prejoin-help">As alterações são aplicadas sem abrir outros painéis nem roubar seu foco.</p>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary modal-cancel-btn" data-close-modal="settings-modal">Fechar</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="info-modal" class="assembly-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="info-title">
-                <div class="assembly-modal-card">
-                    <div class="assembly-modal-header">
-                        <h3 id="info-title">Informações da assembleia</h3>
-                        <button type="button" class="icon-only-btn modal-close-btn" data-close-modal="info-modal" aria-label="Fechar informações">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="modal-info-list" id="assembly-info-content"></div>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary modal-cancel-btn" data-close-modal="info-modal">Fechar</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="leave-modal" class="assembly-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="leave-title">
-                <div class="assembly-modal-card modal-compact">
-                    <div class="assembly-modal-header">
-                        <h3 id="leave-title">Sair da assembleia</h3>
-                        <button type="button" class="icon-only-btn modal-close-btn" data-close-modal="leave-modal" aria-label="Fechar saída">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <p>Você deseja sair da assembleia agora? Sua participação atual será encerrada.</p>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary modal-cancel-btn" data-close-modal="leave-modal">Cancelar</button>
-                        <button type="button" class="btn btn-danger" id="confirm-leave-btn">Sair</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="end-assembly-modal" class="assembly-modal" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="end-assembly-title">
-                <div class="assembly-modal-card modal-compact">
-                    <div class="assembly-modal-header">
-                        <h3 id="end-assembly-title">Encerrar assembleia</h3>
-                        <button type="button" class="icon-only-btn modal-close-btn" data-close-modal="end-assembly-modal" aria-label="Fechar encerramento">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <p>Ao encerrar, novos participantes não poderão entrar e as votações abertas serão finalizadas.</p>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary modal-cancel-btn" data-close-modal="end-assembly-modal">Cancelar</button>
-                        <button type="button" class="btn btn-danger" id="confirm-end-assembly-btn">Encerrar</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
         </main>
     </div>
 

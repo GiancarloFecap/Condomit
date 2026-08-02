@@ -162,16 +162,6 @@
                         throw new Error(data.error || 'Não foi possível validar o pagamento aprovado.');
                     }
 
-                    if (!data.approved) {
-                        if (data.paymentStatus === 'pendente') {
-                            window.location.href = `pagamento-pendente.html?payment_id=${encodeURIComponent(pid)}&status=pending`;
-                            return;
-                        }
-
-                        window.location.href = `pagamento-falha.html?payment_id=${encodeURIComponent(pid)}&status=${encodeURIComponent(data.paymentStatus || 'failure')}`;
-                        return;
-                    }
-
                     if (data.planName) {
                         document.getElementById('info-plan-row').style.display = 'flex';
                         document.getElementById('plan-value').textContent = data.planName;

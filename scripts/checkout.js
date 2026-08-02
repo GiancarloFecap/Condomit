@@ -160,15 +160,12 @@ async function createPreference(pendingPaymentId) {
         console.error('[Checkout] Usuário não autenticado ou sem email');
         throw new Error('Usuário não autenticado. Por favor, faça login novamente.');
     }
-
-    if (!selectedPlan?.id) {
-        throw new Error('Plano inválido. Selecione um plano novamente.');
-    }
-
-    if (!pendingPaymentId) {
-        throw new Error('Não foi possível preparar o pagamento. Tente novamente.');
-    }
     
+    console.log('[Checkout] Criando preferência com:', {
+        amount: selectedPrice,
+        planName: selectedPlan.nome,
+        payerEmail: currentUser.email
+    });
     try {
         const response = await fetch('/api/mercadopago/preference', {
             method: 'POST',
@@ -176,20 +173,20 @@ async function createPreference(pendingPaymentId) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                planId: selectedPlan.id,
+                amount: selectedPrice,
+                planName: selectedPlan.nome,
+                payerEmail: currentUser.email,
                 pendingPaymentId
             })
         });
 
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            throw new Error(data.error || 'Não foi possível iniciar o pagamento.');
+        console.log('[Checkout] Status da resposta:', response.status);
+        const data = await response.json();
+        console.log('[Checkout] Dados da resposta:', data);
+        
+        if (data.error) {
+            throw new Error(data.error);
         }
-
-        if (!data.checkoutUrl) {
-            throw new Error('O Mercado Pago não retornou a URL do checkout.');
-        }
-
         return data;
     } catch (error) {
         console.error('[Checkout] Erro detalhado ao criar preferência:', error);
@@ -205,23 +202,6 @@ function getMercadoPagoPaymentId(dados = {}) {
         dados.collectionId ||
         null
     );
-}
-
-async function confirmMercadoPagoPayment(paymentId) {
-    if (!paymentId) return null;
-
-    const response = await fetch('/api/mercadopago/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentId })
-    });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-        throw new Error(data.error || 'Não foi possível confirmar o pagamento.');
-    }
-
-    return data;
 }
 
 // Função para criar registro de pagamento PENDENTE antes de abrir checkout
@@ -290,28 +270,10 @@ function addMercadoPagoReturnListener() {
                 search.set('status', 'approved');
                 window.location.href = `pagamento-sucesso.html?${search.toString()}`;
             } else if (status === 'pending') {
-                const paymentId = getMercadoPagoPaymentId(dados);
-
-                if (paymentId) {
-                    const confirmation = await confirmMercadoPagoPayment(paymentId).catch((error) => {
-                        console.warn('[Checkout] Não foi possível reconciliar o status pendente com o backend:', error);
-                        return null;
-                    });
-
-                    if (confirmation?.approved) {
-                        const search = new URLSearchParams();
-                        search.set('payment_id', paymentId);
-                        search.set('status', 'approved');
-                        if (dados.externalReference) search.set('external_reference', dados.externalReference);
-                        if (dados.preferenceId) search.set('preference_id', dados.preferenceId);
-                        window.location.href = `pagamento-sucesso.html?${search.toString()}`;
-                        return;
-                    }
-                }
-
                 if (currentPagamentoId) {
                     await updatePaymentStatus(currentPagamentoId, 'pendente');
                 }
+                const paymentId = getMercadoPagoPaymentId(dados);
                 window.location.href = paymentId
                     ? `pagamento-pendente.html?payment_id=${encodeURIComponent(paymentId)}&status=pending`
                     : 'pagamento-pendente.html';
@@ -411,10 +373,14 @@ async function initCheckoutButton() {
                 mpReturnHandled = false;
 
                 // Cria pagamento PENDENTE no banco antes de abrir popup
-                await createPendingPayment();
+                try {
+                    await createPendingPayment();
+                } catch (paymentErr) {
+                    console.warn('[Checkout] Aviso: não criou pagamento pendente:', paymentErr);
+                }
 
                 const preferenceData = await createPreference(currentPagamentoId);
-                currentInitPoint = preferenceData.checkoutUrl;
+                currentInitPoint = preferenceData.initPoint;
                 console.log('[Checkout] Preference created with init_point:', currentInitPoint);
                 
                 // Open Mercado Pago in a popup

@@ -112,80 +112,45 @@
     </main>
     <script>
         (function () {
-            const params = new URLSearchParams(location.search);
-            const paymentId = params.get('payment_id') || params.get('collection_id');
-            const titleEl = document.querySelector('.resultado-pagamento h1');
-            const messageEl = document.querySelector('.resultado-pagamento p');
-            let confirmTimer = null;
-
-            async function confirmarPagamentoSeAprovado() {
-                if (!paymentId) return false;
-
-                const resp = await fetch('/api/mercadopago/confirm', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paymentId })
-                });
-
-                const data = await resp.json().catch(() => ({}));
-                if (!resp.ok) {
-                    throw new Error(data.error || 'Não foi possível consultar o pagamento.');
-                }
-
-                if (data.approved) {
-                    const search = new URLSearchParams();
-                    search.set('payment_id', paymentId);
-                    search.set('status', 'approved');
-                    location.href = `pagamento-sucesso.html?${search.toString()}`;
-                    return true;
-                }
-
-                if (data.paymentStatus && data.paymentStatus !== 'pendente') {
-                    if (data.paymentStatus === 'recusado' || data.paymentStatus === 'cancelado' || data.paymentStatus === 'estornado' || data.paymentStatus === 'contestado') {
-                        const search = new URLSearchParams();
-                        search.set('payment_id', paymentId);
-                        search.set('status', data.paymentStatus);
-                        location.href = `pagamento-falha.html?${search.toString()}`;
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-
-            async function iniciarMonitoramentoPagamento() {
+            async function finalizarPagamentoPendente() {
                 try {
-                    const resultado = await confirmarPagamentoSeAprovado();
-                    if (resultado) return;
-                } catch (error) {
-                    console.warn('Erro ao reconciliar pagamento pendente:', error);
-                }
+                    const cached = sessionStorage.getItem('condominiumUser');
+                    if (!cached) return;
+                    const user = JSON.parse(cached);
+                    if (!user || !user.email) return;
 
-                if (!paymentId) return;
-
-                titleEl.textContent = 'Pagamento em análise';
-                messageEl.textContent = 'Estamos acompanhando a confirmação do Mercado Pago. Assim que o pagamento for aprovado, seu plano será ativado automaticamente.';
-
-                confirmTimer = window.setInterval(async () => {
-                    try {
-                        const aprovado = await confirmarPagamentoSeAprovado();
-                        if (aprovado && confirmTimer) {
-                            clearInterval(confirmTimer);
+                    const resp = await fetch(`/api/pagamento?email=${encodeURIComponent(user.email)}`);
+                    if (resp.ok) {
+                        const pagamentos = await resp.json();
+                        if (Array.isArray(pagamentos) && pagamentos.length) {
+                            pagamentos.sort((a, b) => {
+                                const da = new Date(a.data_pagamento || 0).getTime();
+                                const db = new Date(b.data_pagamento || 0).getTime();
+                                return db - da;
+                            });
+                            const ultimo = pagamentos[0];
+                            if (ultimo && !['aprovado', 'pendente'].includes(ultimo.status_pagamento)) {
+                                try {
+                                    await fetch(`/api/pagamento?id=${encodeURIComponent(ultimo.id)}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            status_pagamento: 'pendente'
+                                        })
+                                    });
+                                } catch (_) {}
+                            }
                         }
-                    } catch (error) {
-                        console.warn('Erro ao verificar atualização do pagamento:', error);
                     }
-                }, 5000);
+                } catch (e) {
+                    console.warn('Erro ao marcar pagamento pendente:', e);
+                }
             }
-
-            iniciarMonitoramentoPagamento();
+            finalizarPagamentoPendente();
 
             const btn = document.getElementById('btn-continuar');
             if (btn) {
                 btn.addEventListener('click', function() {
-                    if (confirmTimer) {
-                        clearInterval(confirmTimer);
-                    }
                     if (typeof window.fecharRetornoMercadoPago === 'function') {
                         fecharRetornoMercadoPago();
                     } else {

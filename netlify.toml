@@ -55,11 +55,6 @@
   status = 200
 
 [[headers]]
-  for = "/pages/assembleia.html"
-  [headers.values]
-    Permissions-Policy = "geolocation=(), microphone=(self), camera=(self), display-capture=(self)"
-
-[[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
