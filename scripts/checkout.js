@@ -10,9 +10,16 @@ let paymentReturnHandled = false;
 let checkoutInFlight = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    renderBootState();
+
     const loggedInUser = sessionStorage.getItem('condominiumUser');
     if (!loggedInUser) {
-        window.location.href = 'entrar.html';
+        renderBlockedState(
+            'Faça login para continuar',
+            'Não encontramos uma sessão ativa para carregar o checkout.',
+            'Ir para login',
+            'entrar.html'
+        );
         return;
     }
 
@@ -20,14 +27,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     currentUser.type = normalizeUserType(currentUser);
 
     if (currentUser.type !== 'sindico') {
-        window.location.href = 'assembleia.html';
+        renderBlockedState(
+            'Checkout indisponível para este perfil',
+            'A contratação do plano está disponível apenas para o perfil de síndico.',
+            'Ir para assembleia',
+            'assembleia.html'
+        );
         return;
     }
 
     try {
         const approvedPayment = await fetchApprovedPayment(currentUser.email);
         if (approvedPayment) {
-            window.location.href = 'index.html';
+            renderBlockedState(
+                'Plano já ativo',
+                'Este condomínio já possui um pagamento aprovado. Você pode seguir para o painel principal.',
+                'Ir para o painel',
+                'index.html'
+            );
             return;
         }
     } catch (error) {
@@ -39,11 +56,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         plans = await fetchPlans();
+        if (!plans.length) {
+            plans = getFallbackPlans();
+        }
         renderPlans();
         renderCheckoutButton();
     } catch (error) {
         console.error('[Checkout] Falha ao carregar planos:', error);
-        renderErrorState('Não foi possível carregar os planos agora. Tente novamente em instantes.');
+        plans = getFallbackPlans();
+        renderPlans();
+        renderErrorState('Não foi possível conectar à API agora. Os planos exibidos são apenas de referência até a conexão voltar.');
     }
 });
 
@@ -65,6 +87,109 @@ function bindLogoutButton() {
         } catch (_) {}
         window.location.href = 'entrar.html';
     });
+}
+
+function renderBootState() {
+    const plansContainer = document.getElementById('plans-list-container');
+    const paymentContainer = document.getElementById('payment-brick_container');
+    const summaryPlanName = document.getElementById('summary-plan-name');
+    const summaryTotalPrice = document.getElementById('summary-total-price');
+
+    if (plansContainer) {
+        plansContainer.innerHTML = `
+            <div class="empty-state">
+                <strong>Carregando checkout...</strong>
+                <span>Estamos preparando os planos e o pagamento.</span>
+            </div>
+        `;
+    }
+
+    if (paymentContainer) {
+        paymentContainer.innerHTML = `
+            <div style="text-align:center;padding:18px;color:#475569;">
+                <i class="fas fa-spinner fa-spin"></i> Preparando pagamento...
+            </div>
+        `;
+    }
+
+    if (summaryPlanName) {
+        summaryPlanName.textContent = 'Carregando...';
+    }
+
+    if (summaryTotalPrice) {
+        summaryTotalPrice.textContent = 'R$ 0,00';
+    }
+}
+
+function renderBlockedState(title, description, buttonLabel, href) {
+    const plansContainer = document.getElementById('plans-list-container');
+    const paymentContainer = document.getElementById('payment-brick_container');
+    const summaryPlanName = document.getElementById('summary-plan-name');
+    const summaryTotalPrice = document.getElementById('summary-total-price');
+
+    if (plansContainer) {
+        plansContainer.innerHTML = `
+            <div class="empty-state">
+                <strong>${title}</strong>
+                <span>${description}</span>
+            </div>
+        `;
+    }
+
+    if (paymentContainer) {
+        paymentContainer.innerHTML = `
+            <div style="text-align:center;padding:18px;">
+                <a href="${href}" style="
+                    display:inline-flex;
+                    align-items:center;
+                    justify-content:center;
+                    gap:8px;
+                    background:#1e40af;
+                    color:white;
+                    text-decoration:none;
+                    border-radius:8px;
+                    padding:14px 22px;
+                    font-weight:700;
+                ">
+                    <i class="fas fa-arrow-right"></i> ${buttonLabel}
+                </a>
+            </div>
+        `;
+    }
+
+    if (summaryPlanName) {
+        summaryPlanName.textContent = '-';
+    }
+
+    if (summaryTotalPrice) {
+        summaryTotalPrice.textContent = 'R$ 0,00';
+    }
+}
+
+function getFallbackPlans() {
+    return [
+        {
+            id: 'essencial',
+            nome: 'Plano Essencial',
+            descricao: 'Ideal para condomínios pequenos começarem a organizar a gestão.',
+            valor_minimo: 79,
+            valor_por_unidade: 0
+        },
+        {
+            id: 'pro',
+            nome: 'Plano Pro',
+            descricao: 'Mais automação, comunicação e recursos financeiros para o condomínio.',
+            valor_minimo: 149,
+            valor_por_unidade: 0
+        },
+        {
+            id: 'premium',
+            nome: 'Plano Premium',
+            descricao: 'Operação completa com recursos avançados e atendimento prioritário.',
+            valor_minimo: 249,
+            valor_por_unidade: 0
+        }
+    ];
 }
 
 async function fetchPlans() {
