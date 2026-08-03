@@ -15,6 +15,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const externalReference = query.get('external_reference');
     const fallbackStatus = query.get('status') || query.get('collection_status') || defaultStatus;
 
+    //#region debug-point mp-return-context
+    const debugContext = {
+        href: window.location.href,
+        query: Object.fromEntries(query.entries())
+    };
+    //#endregion debug-point mp-return-context
+
     renderStatus(defaultStatus, {
         titleEl,
         descriptionEl,
@@ -42,11 +49,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (externalReference) params.set('external_reference', externalReference);
         if (fallbackStatus) params.set('status', fallbackStatus);
 
-        const response = await fetch(`/api/mercadopago/confirm?${params.toString()}`);
-        const payload = await response.json().catch(() => ({}));
+        const confirmUrl = `/api/mercadopago/confirm?${params.toString()}`;
+
+        //#region debug-point mp-return-request
+        debugContext.confirmUrl = confirmUrl;
+        //#endregion debug-point mp-return-request
+
+        const response = await fetch(confirmUrl);
+
+        const contentType = response.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        const payload = isJson
+            ? await response.json().catch(() => ({}))
+            : {};
+        const rawBody = !isJson
+            ? await response.text().catch(() => '')
+            : '';
 
         if (!response.ok) {
-            throw new Error(payload.error || 'Nao foi possivel confirmar o pagamento.');
+            //#region debug-point mp-return-response
+            debugContext.response = {
+                ok: response.ok,
+                status: response.status,
+                statusText: response.statusText,
+                contentType,
+                payload,
+                rawBody: rawBody ? rawBody.slice(0, 800) : ''
+            };
+            //#endregion debug-point mp-return-response
+
+            const msg = payload.error || (rawBody ? rawBody.slice(0, 200) : '') || 'Nao foi possivel confirmar o pagamento.';
+            throw new Error(msg);
         }
 
         const resolvedStatus = normalizeStatus(payload.status || fallbackStatus);
@@ -76,12 +109,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (resolvedStatus === 'pending') {
             updateStatusBox(statusBox, `${referenceText} Ainda estamos aguardando a confirmacao final.`);
+
+            //#region debug-point mp-return-pending
+            if (!debugContext.response) {
+                debugContext.response = {
+                    ok: response.ok,
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType,
+                    payload
+                };
+            }
+            appendDebug(statusBox, debugContext);
+            //#endregion debug-point mp-return-pending
             return;
         }
 
         updateStatusBox(statusBox, `${referenceText} Voce pode tentar novamente pelo checkout.`);
+        //#region debug-point mp-return-final
+        if (!debugContext.response) {
+            debugContext.response = {
+                ok: response.ok,
+                status: response.status,
+                statusText: response.statusText,
+                contentType,
+                payload
+            };
+        }
+        appendDebug(statusBox, debugContext);
+        //#endregion debug-point mp-return-final
     } catch (error) {
-        console.error('[Mercado Pago Return] Erro ao confirmar pagamento:', error);
         const errorStatus = normalizeStatus(fallbackStatus || defaultStatus);
         renderStatus(errorStatus, {
             titleEl,
@@ -91,6 +148,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             secondaryAction
         });
         updateStatusBox(statusBox, error.message || 'Nao foi possivel validar o pagamento agora.');
+        //#region debug-point mp-return-error
+        debugContext.error = {
+            message: String(error?.message || error),
+            name: String(error?.name || '')
+        };
+        appendDebug(statusBox, debugContext);
+        //#endregion debug-point mp-return-error
     }
 });
 
@@ -171,6 +235,24 @@ function updateStatusBox(element, message) {
     element.innerHTML = `<strong>Status atual</strong><span>${message}</span>`;
 }
 
+function appendDebug(element, context) {
+    if (!element) return;
+    const pre = JSON.stringify(context, null, 2);
+    element.insertAdjacentHTML(
+        'beforeend',
+        `<details style="margin-top:10px;"><summary>Debug</summary><pre style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(pre)}</pre></details>`
+    );
+}
+
+function escapeHtml(text) {
+    return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
 function persistApprovedPlan(planId) {
     const rawUser = sessionStorage.getItem('condominiumUser');
     if (!rawUser || !planId) return;
@@ -180,6 +262,6 @@ function persistApprovedPlan(planId) {
         user.plan = planId;
         sessionStorage.setItem('condominiumUser', JSON.stringify(user));
     } catch (error) {
-        console.warn('[Mercado Pago Return] Falha ao atualizar sessionStorage:', error);
+        return;
     }
 }
