@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         const name = document.getElementById('name').value.trim();
-        const email = document.getElementById('email').value.trim();
+        const email = document.getElementById('email').value.trim().toLowerCase();
         const phone = document.getElementById('phone').value.trim();
         const cpf = document.getElementById('cpf').value.trim();
         const password = document.getElementById('password').value.trim();
