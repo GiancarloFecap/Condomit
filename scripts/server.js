@@ -344,6 +344,13 @@ async function createMercadoPagoPreference(req, res) {
     try {
       const data = JSON.parse(body);
       const { amount, planName, payerEmail, pendingPaymentId } = data;
+      const isSandboxToken = /^TEST-/i.test(String(MERCADO_PAGO_ACCESS_TOKEN || '').trim());
+      const normalizedPlanName = normalizePlanName(planName);
+      const normalizedAmount = parseMercadoPagoAmount(amount);
+
+      if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+        throw new Error('Valor do plano invalido para gerar o pagamento.');
+      }
 
       const protocol = (req.headers['x-forwarded-proto'] || 'http');
       const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`;
@@ -353,35 +360,44 @@ async function createMercadoPagoPreference(req, res) {
       const pendingUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-pendente.html' : '/pages/pagamento-pendente.html');
       const failureUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-falha.html' : '/pages/pagamento-falha.html');
       const webhookUrl = `${baseUrl}/api/mercadopago/webhook`;
+      const externalReference = pendingPaymentId
+        ? String(pendingPaymentId)
+        : `CONDOMIT-${normalizedPlanName.toLowerCase()}-${Date.now()}`;
 
       const preferenceData = {
         items: [
           {
-            title: `Plano ${planName} - Condomit`,
-            unit_price: parseFloat(amount),
+            id: pendingPaymentId ? String(pendingPaymentId) : normalizedPlanName.toLowerCase(),
+            title: `Plano ${normalizedPlanName} - Condomit`,
+            description: 'Assinatura Condomit',
+            unit_price: normalizedAmount,
             quantity: 1,
             currency_id: 'BRL'
           }
         ],
-        payer: {
-          email: payerEmail
-        },
         back_urls: {
           success: successUrl,
           pending: pendingUrl,
           failure: failureUrl
         },
         auto_return: 'approved',
+        binary_mode: true,
         notification_url: webhookUrl,
-        external_reference: pendingPaymentId ? String(pendingPaymentId) : undefined,
+        external_reference: externalReference,
         metadata: {
           pending_payment_id: pendingPaymentId ? String(pendingPaymentId) : '',
           payer_email: payerEmail,
-          plan_name: normalizePlanName(planName)
+          plan_name: normalizedPlanName
         }
       };
 
-      console.log('[MercadoPago] Creating preference for:', payerEmail, 'amount:', amount, 'plan:', planName);
+      if (!isSandboxToken && payerEmail) {
+        preferenceData.payer = {
+          email: payerEmail
+        };
+      }
+
+      console.log('[MercadoPago] Creating preference for:', payerEmail, 'amount:', normalizedAmount, 'plan:', normalizedPlanName, 'sandbox:', isSandboxToken);
       console.log('[MercadoPago] Back URLs:', { successUrl, pendingUrl, failureUrl });
       const result = await preference.create({ body: preferenceData });
       console.log('[MercadoPago] Full preference response:', JSON.stringify(result, null, 2));
@@ -523,6 +539,28 @@ function normalizePlanName(planName) {
   if (normalized.includes('pro')) return 'Pro';
 
   return raw || 'Plano Condomit';
+}
+
+function parseMercadoPagoAmount(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : NaN;
+  }
+
+  const raw = String(value ?? '').trim();
+  if (!raw) return NaN;
+
+  const cleaned = raw.replace(/[^\d,.-]/g, '');
+  const lastComma = cleaned.lastIndexOf(',');
+  const lastDot = cleaned.lastIndexOf('.');
+  const decimalIndex = Math.max(lastComma, lastDot);
+
+  if (decimalIndex >= 0) {
+    const integerPart = cleaned.slice(0, decimalIndex).replace(/[.,]/g, '');
+    const decimalPart = cleaned.slice(decimalIndex + 1).replace(/[.,]/g, '');
+    return Number(`${integerPart}.${decimalPart}`);
+  }
+
+  return Number(cleaned.replace(/[.,]/g, ''));
 }
 
 function normalizePaymentStatus(status) {
