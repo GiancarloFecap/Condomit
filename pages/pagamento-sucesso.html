@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-pagamento-status="approved">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,210 +7,25 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/theme.css">
     <link rel="stylesheet" href="../styles/checkout.css">
-    <style>
-        .resultado-pagamento {
-            min-height: calc(100vh - 80px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 24px;
-            max-width: 600px;
-            margin: 0 auto;
-            text-align: center;
-        }
-        .resultado-pagamento .icon-box {
-            width: 96px;
-            height: 96px;
-            border-radius: 50%;
-            background: #dcfce7;
-            color: #16a34a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            margin-bottom: 32px;
-            box-shadow: 0 10px 25px rgba(22, 163, 74, 0.15);
-        }
-        .resultado-pagamento h1 {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--text-main);
-            margin-bottom: 12px;
-        }
-        .resultado-pagamento p {
-            font-size: 1.05rem;
-            color: var(--text-muted);
-            margin-bottom: 32px;
-            line-height: 1.6;
-        }
-        .resultado-pagamento button {
-            background: var(--primary-blue);
-            color: white;
-            border: none;
-            padding: 15px 48px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
-        }
-        .resultado-pagamento button:hover {
-            background: var(--secondary-blue);
-            transform: translateY(-1px);
-        }
-        .pagamento-info {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 32px;
-            border: 1px solid var(--border);
-            width: 100%;
-            text-align: left;
-        }
-        .pagamento-info h3 {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            margin-bottom: 16px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .pagamento-info .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            font-size: 0.95rem;
-        }
-        .pagamento-info .info-row .label {
-            color: var(--text-muted);
-        }
-        .pagamento-info .info-row .value {
-            font-weight: 600;
-            color: var(--text-main);
-        }
-    </style>
 </head>
-<body>
-    <main class="resultado-pagamento">
-        <div class="icon-box">
-            <i class="fas fa-check-circle"></i>
+<body class="payment-result-page">
+    <main class="payment-result-card success" data-payment-result data-status="approved">
+        <div class="payment-result-icon">
+            <i class="fas fa-check"></i>
         </div>
-        <h1>Pagamento aprovado</h1>
-        <p>Seu pagamento foi processado com sucesso. Estamos confirmando a ativação do seu plano.</p>
-        <div class="pagamento-info">
-            <h3>Detalhes do pagamento</h3>
-            <div class="info-row" id="info-plan-row" style="display:none;">
-                <span class="label">Plano</span>
-                <span class="value" id="plan-value">-</span>
-            </div>
-            <div class="info-row">
-                <span class="label">Status</span>
-                <span class="value" style="color:#16a34a;">Aprovado</span>
-            </div>
-            <div class="info-row" id="info-payment-id" style="display:none;">
-                <span class="label">Pagamento</span>
-                <span class="value" id="payment-id-value">-</span>
-            </div>
-            <div class="info-row" id="info-date-row" style="display:none;">
-                <span class="label">Data</span>
-                <span class="value" id="payment-date-value">-</span>
-            </div>
-            <div class="info-row" id="info-amount-row" style="display:none;">
-                <span class="label">Valor</span>
-                <span class="value" id="payment-amount-value">-</span>
-            </div>
+        <h1 id="payment-result-title">Pagamento aprovado</h1>
+        <p id="payment-result-description">Estamos confirmando os dados finais do seu pagamento.</p>
+        <div class="payment-result-status" id="payment-result-status">
+            <strong>Status atual</strong>
+            <span>Sincronizando retorno do Mercado Pago...</span>
         </div>
-        <button type="button" id="btn-continuar">
-            Continuar
-        </button>
+        <div class="payment-result-actions">
+            <a class="primary" id="payment-result-primary" href="index.html">Ir para o painel</a>
+            <a class="secondary" id="payment-result-secondary" href="checkout.html">Voltar ao checkout</a>
+            <button class="secondary" id="payment-result-refresh" type="button">Atualizar status</button>
+        </div>
     </main>
-    <script>
-        (function () {
-            const p = new URLSearchParams(location.search);
-            const pid = p.get("payment_id") || p.get("collection_id");
-            const titleEl = document.querySelector('.resultado-pagamento h1');
-            const messageEl = document.querySelector('.resultado-pagamento p');
-            const continueButton = document.getElementById('btn-continuar');
 
-            if (pid) {
-                document.getElementById("info-payment-id").style.display = "flex";
-                document.getElementById("payment-id-value").textContent = pid;
-            }
-
-            async function finalizarPagamentoAprovado() {
-                try {
-                    if (!pid) {
-                        messageEl.textContent = 'Seu pagamento foi aprovado, mas o identificador da transação não foi encontrado para concluir a validação automática.';
-                        return;
-                    }
-
-                    continueButton.disabled = true;
-                    continueButton.textContent = 'Confirmando...';
-
-                    const resp = await fetch('/api/mercadopago/confirm', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            paymentId: pid,
-                            status: p.get('status') || 'approved'
-                        })
-                    });
-
-                    const data = await resp.json().catch(() => ({}));
-                    if (!resp.ok) {
-                        throw new Error(data.error || 'Não foi possível validar o pagamento aprovado.');
-                    }
-
-                    if (data.planName) {
-                        document.getElementById('info-plan-row').style.display = 'flex';
-                        document.getElementById('plan-value').textContent = data.planName;
-                    }
-
-                    if (data.approvedAtFormatted) {
-                        document.getElementById('info-date-row').style.display = 'flex';
-                        document.getElementById('payment-date-value').textContent = data.approvedAtFormatted;
-                    }
-
-                    if (data.amountFormatted) {
-                        document.getElementById('info-amount-row').style.display = 'flex';
-                        document.getElementById('payment-amount-value').textContent = data.amountFormatted;
-                    }
-
-                    try {
-                        const cached = sessionStorage.getItem('condominiumUser');
-                        if (cached) {
-                            const user = JSON.parse(cached);
-                            if (user) {
-                                if (data.planId) user.plan = data.planId;
-                                else if (data.planName) user.plan = data.planName;
-                                sessionStorage.setItem('condominiumUser', JSON.stringify(user));
-                            }
-                        }
-                    } catch (_) {}
-
-                    titleEl.textContent = data.alreadyProcessed ? 'Pagamento já confirmado' : 'Pagamento aprovado';
-                    messageEl.textContent = 'Seu plano foi validado com sucesso e seu acesso já está disponível para uso.';
-                } catch (error) {
-                    console.warn('Erro ao validar pagamento aprovado:', error);
-                    messageEl.textContent = error.message || 'Não foi possível validar o pagamento agora. Tente continuar em instantes.';
-                } finally {
-                    continueButton.disabled = false;
-                    continueButton.textContent = 'Continuar';
-                }
-            }
-
-            // Executa ao carregar
-            finalizarPagamentoAprovado();
-
-            const btn = document.getElementById('btn-continuar');
-            if (btn) {
-                btn.addEventListener('click', function() {
-                    location.href = 'index.html';
-                });
-            }
-        })();
-    </script>
     <script src="../assets/js/retorno-mercado-pago.js"></script>
 </body>
 </html>

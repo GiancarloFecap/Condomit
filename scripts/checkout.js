@@ -1,16 +1,13 @@
 
 let currentUser = null;
-let selectedPlan = null; // will hold the full plano object from DB
-let selectedPrice = null; // inicializa null, será definido ao carregar os planos
-let currentInitPoint = null;
+let selectedPlan = null;
+let selectedPrice = null;
 let plans = [];
-let currentPagamentoId = null; // armazena o ID do pagamento pendente criado
-let mpPopup = null;
-let paymentListenerAdded = false;
-let mpReturnHandled = false;
+let mercadoPagoConfig = null;
+let mercadoPagoInstance = null;
+let walletBrickController = null;
 
-document.addEventListener('DOMContentLoaded', async function() {
-    // 1. Verificar autenticação
+document.addEventListener('DOMContentLoaded', async function () {
     const loggedInUser = sessionStorage.getItem('condominiumUser');
     if (!loggedInUser) {
         window.location.href = 'entrar.html';
@@ -19,49 +16,54 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     currentUser = JSON.parse(loggedInUser);
 
-    // Se não for síndico, redireciona
     if (currentUser.type !== 'sindico') {
         window.location.href = 'assembleia.html';
         return;
     }
 
-    // Check if user already has an approved payment
     try {
         const approvedPayment = await fetchApprovedPayment(currentUser.email);
         if (approvedPayment) {
+            persistApprovedPlan(approvedPayment);
             window.location.href = 'index.html';
             return;
         }
     } catch (error) {
-        console.error('[Checkout] Error checking payment status:', error);
+        console.error('[Checkout] Erro ao consultar pagamento aprovado:', error);
     }
 
-    // Fetch plans from DB
-    try {
-        plans = await fetchPlans();
-        renderPlans();
-    } catch (error) {
-        console.error('[Checkout] Error fetching plans:', error);
-        alert('Erro ao carregar planos. Tente novamente.');
-        return;
-    }
-
-    await initCheckoutButton();
-
-    // Configurar o link de voltar com logout
     const logoutBtn = document.getElementById('btn-logout-checkout');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', function(e) {
-            e.preventDefault();
+        logoutBtn.addEventListener('click', function (event) {
+            event.preventDefault();
             sessionStorage.removeItem('condominiumUser');
             window.location.href = 'entrar.html';
         });
+    }
+
+    bindReturnListeners();
+
+    try {
+        const [loadedPlans, config] = await Promise.all([
+            fetchPlans(),
+            fetchMercadoPagoConfig()
+        ]);
+
+        plans = Array.isArray(loadedPlans) ? loadedPlans : [];
+        mercadoPagoConfig = config;
+
+        renderPlans();
+        await initCheckoutButton();
+    } catch (error) {
+        console.error('[Checkout] Erro ao inicializar checkout:', error);
+        showPaymentFeedback('error', error.message || 'Nao foi possivel carregar o checkout agora.');
+        renderPaymentPlaceholder('Nao foi possivel preparar o checkout do Mercado Pago agora.');
     }
 });
 
 async function fetchPlans() {
     const response = await fetch('/api/plano');
-    if (!response.ok) throw new Error('Failed to fetch plans');
+    if (!response.ok) throw new Error('Falha ao buscar planos');
     return await response.json();
 }
 
@@ -69,46 +71,47 @@ async function fetchApprovedPayment(email) {
     const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
     if (!response.ok) return null;
     const payments = await response.json();
-    return payments.find(p => p.status_pagamento === 'aprovado');
+    return Array.isArray(payments)
+        ? payments.find((payment) => payment.status_pagamento === 'aprovado')
+        : null;
 }
 
-async function createPayment(paymentData) {
-    const response = await fetch('/api/pagamento', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paymentData)
-    });
-    if (!response.ok) throw new Error('Failed to create payment');
-    return await response.json();
+async function fetchMercadoPagoConfig() {
+    const response = await fetch('/api/mercadopago/config');
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.publicKey) {
+        throw new Error(payload.error || 'Mercado Pago nao configurado para este ambiente.');
+    }
+    return payload;
 }
 
 function renderPlans() {
     const container = document.getElementById('plans-list-container');
+    if (!container) return;
+
     container.innerHTML = '';
 
     plans.forEach((plan, index) => {
         const planCard = document.createElement('div');
-        planCard.className = `plan-card-option ${index === 1 ? 'selected' : ''}`;
+        const isDefault = index === 1 || (index === 0 && plans.length === 1);
+        const planName = String(plan.nome || '');
+
+        planCard.className = `plan-card-option ${isDefault ? 'selected' : ''}`;
         planCard.dataset.planId = plan.id;
-        planCard.dataset.planName = plan.nome;
-        planCard.dataset.price = plan.valor_minimo;
-        planCard.dataset.valorPorUnidade = plan.valor_por_unidade;
-        planCard.dataset.valorMinimo = plan.valor_minimo;
 
         let icon = 'fa-leaf';
-        let features = [];
-        if (plan.nome.includes('Pro')) {
+        let features = ['Mural de avisos', 'Reservas simples'];
+
+        if (planName.includes('Pro')) {
             icon = 'fa-rocket';
-            features = ['Tudo do Essencial', 'Módulo Financeiro', 'Controle de Acesso'];
-        } else if (plan.nome.includes('Premium')) {
+            features = ['Tudo do Essencial', 'Modulo Financeiro', 'Controle de Acesso'];
+        } else if (planName.includes('Premium')) {
             icon = 'fa-crown';
-            features = ['Tudo do Pro', 'APIs e White-label', 'Suporte Prioritário'];
-        } else {
-            features = ['Mural de avisos', 'Reservas simples'];
+            features = ['Tudo do Pro', 'APIs e White-label', 'Suporte Prioritario'];
         }
 
         planCard.innerHTML = `
-            ${index === 1 ? '<div class="featured-badge">MAIS RECOMENDADO</div>' : ''}
+            ${isDefault && plans.length > 1 ? '<div class="featured-badge">MAIS RECOMENDADO</div>' : ''}
             <div class="plan-card-header">
                 <div class="plan-icon"><i class="fas ${icon}"></i></div>
                 <div class="plan-meta">
@@ -117,323 +120,236 @@ function renderPlans() {
                 </div>
                 <div class="plan-card-price">
                     <span class="currency">R$</span>
-                    <span class="amount">${Number(plan.valor_minimo).toFixed(0)}</span>
-                    <span class="period">/mês</span>
+                    <span class="amount">${Number(plan.valor_minimo || 0).toFixed(0)}</span>
+                    <span class="period">/mes</span>
                 </div>
             </div>
             <ul class="plan-mini-features">
-                ${features.map(f => `<li><i class="fas fa-check"></i> ${f}</li>`).join('')}
+                ${features.map((feature) => `<li><i class="fas fa-check"></i> ${feature}</li>`).join('')}
             </ul>
         `;
 
-        planCard.addEventListener('click', async () => selectPlan(planCard, plan));
+        planCard.addEventListener('click', async () => {
+            await selectPlan(planCard, plan);
+        });
+
         container.appendChild(planCard);
+
+        if (isDefault) {
+            selectedPlan = plan;
+            selectedPrice = plan.valor_minimo;
+        }
     });
 
-    // Set default selected plan
-    if (plans.length >= 2) {
-        selectedPlan = plans[1];
-        selectedPrice = selectedPlan.valor_minimo;
-        updateSummary();
-    }
+    updateSummary();
 }
 
-function selectPlan(card, plan) {
-    document.querySelectorAll('.plan-card-option').forEach(opt => opt.classList.remove('selected'));
+async function selectPlan(card, plan) {
+    document.querySelectorAll('.plan-card-option').forEach((option) => option.classList.remove('selected'));
     card.classList.add('selected');
     selectedPlan = plan;
     selectedPrice = plan.valor_minimo;
     updateSummary();
-    initCheckoutButton();
+    await initCheckoutButton();
 }
 
 function updateSummary() {
     const summaryPlanName = document.getElementById('summary-plan-name');
     const summaryTotalPrice = document.getElementById('summary-total-price');
-    if (!selectedPlan) return;
+
+    if (!selectedPlan || !summaryPlanName || !summaryTotalPrice) return;
+
     summaryPlanName.textContent = selectedPlan.nome;
-    summaryTotalPrice.textContent = `R$ ${Number(selectedPrice).toFixed(2).replace('.', ',')}`;
-}
-
-async function createPreference(pendingPaymentId) {
-    if (!currentUser || !currentUser.email) {
-        console.error('[Checkout] Usuário não autenticado ou sem email');
-        throw new Error('Usuário não autenticado. Por favor, faça login novamente.');
-    }
-    
-    console.log('[Checkout] Criando preferência com:', {
-        amount: selectedPrice,
-        planName: selectedPlan.nome,
-        payerEmail: currentUser.email
-    });
-    try {
-        const response = await fetch('/api/mercadopago/preference', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                amount: selectedPrice,
-                planName: selectedPlan.nome,
-                payerEmail: currentUser.email,
-                pendingPaymentId
-            })
-        });
-
-        console.log('[Checkout] Status da resposta:', response.status);
-        const data = await response.json();
-        console.log('[Checkout] Dados da resposta:', data);
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Nao foi possivel iniciar o checkout do Mercado Pago.');
-        }
-
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        return data;
-    } catch (error) {
-        console.error('[Checkout] Erro detalhado ao criar preferência:', error);
-        throw error;
-    }
-}
-
-function getMercadoPagoPaymentId(dados = {}) {
-    return (
-        dados.paymentId ||
-        dados.payment_id ||
-        dados.collection_id ||
-        dados.collectionId ||
-        null
-    );
-}
-
-// Função para criar registro de pagamento PENDENTE antes de abrir checkout
-async function createPendingPayment() {
-    const pagamentoData = {
-        email: currentUser.email,
-        cep: currentUser.condominium?.cep || '',
-        plano_id: selectedPlan.id,
-        total_apartamentos: currentUser.condominium?.totalApartments || 0,
-        valor_por_unidade: selectedPlan.valor_por_unidade,
-        valor_minimo: selectedPlan.valor_minimo,
-        valor_pago: selectedPrice,
-        status_pagamento: 'pendente',
-        codigo_transacao: `TXN-${Date.now()}`,
-        data_pagamento: new Date().toISOString()
-    };
-
-    const result = await createPayment(pagamentoData);
-    if (result && result.id) {
-        currentPagamentoId = result.id;
-    } else if (Array.isArray(result) && result.length && result[0].id) {
-        currentPagamentoId = result[0].id;
-    }
-    return result;
-}
-
-// Atualiza status do pagamento no banco
-async function updatePaymentStatus(id, status) {
-    const response = await fetch(`/api/pagamento?id=${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            status_pagamento: status,
-            data_pagamento: new Date().toISOString()
-        })
-    });
-    if (!response.ok) throw new Error('Failed to update payment');
-    return await response.json();
-}
-
-// Listener para receber retorno real do Mercado Pago
-function addMercadoPagoReturnListener() {
-    if (paymentListenerAdded) return;
-    paymentListenerAdded = true;
-
-    window.addEventListener('message', async (event) => {
-        if (event.origin !== location.origin) return;
-        if (event.data?.tipo !== 'RETORNO_MERCADO_PAGO') return;
-
-        const status = event.data.status;
-        const dados = event.data.dados || {};
-        mpReturnHandled = true;
-
-        hideLoadingOverlay();
-        if (mpPopup && !mpPopup.closed) {
-            try { mpPopup.close(); } catch (_) {}
-        }
-
-        try {
-            if (status === 'approved') {
-                const paymentId = getMercadoPagoPaymentId(dados);
-                const search = new URLSearchParams();
-                if (paymentId) search.set('payment_id', paymentId);
-                if (dados.externalReference) search.set('external_reference', dados.externalReference);
-                if (dados.preferenceId) search.set('preference_id', dados.preferenceId);
-                search.set('status', 'approved');
-                window.location.href = `pagamento-sucesso.html?${search.toString()}`;
-            } else if (status === 'pending') {
-                if (currentPagamentoId) {
-                    await updatePaymentStatus(currentPagamentoId, 'pendente');
-                }
-                const paymentId = getMercadoPagoPaymentId(dados);
-                window.location.href = paymentId
-                    ? `pagamento-pendente.html?payment_id=${encodeURIComponent(paymentId)}&status=pending`
-                    : 'pagamento-pendente.html';
-            } else {
-                if (currentPagamentoId) {
-                    await updatePaymentStatus(currentPagamentoId, 'falhou');
-                }
-                const paymentId = getMercadoPagoPaymentId(dados);
-                window.location.href = paymentId
-                    ? `pagamento-falha.html?payment_id=${encodeURIComponent(paymentId)}&status=${encodeURIComponent(status || 'failure')}`
-                    : 'pagamento-falha.html';
-            }
-        } catch (err) {
-            console.error('[Checkout] Erro ao processar retorno MP:', err);
-            alert('Erro ao confirmar status do pagamento. Tente novamente.');
-        }
-    });
-}
-
-// Function to show loading overlay
-function showLoadingOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'checkout-loading-overlay';
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.6);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 99999;
-        flex-direction: column;
-    `;
-    overlay.innerHTML = `
-        <div style="text-align:center; color:white;">
-            <i class="fas fa-spinner fa-spin fa-5x"></i>
-            <p style="margin-top:20px; font-size:20px;">Aguardando pagamento...</p>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-}
-
-// Function to hide loading overlay
-function hideLoadingOverlay() {
-    const overlay = document.getElementById('checkout-loading-overlay');
-    if (overlay) {
-        overlay.remove();
-    }
+    summaryTotalPrice.textContent = formatCurrency(selectedPrice);
+    sessionStorage.setItem('selectedPlan', selectedPlan.nome);
+    sessionStorage.setItem('selectedPlanId', selectedPlan.id);
 }
 
 async function initCheckoutButton() {
-    const container = document.getElementById('payment-brick_container');
-    container.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;"><i class="fas fa-spinner fa-spin"></i> Preparando pagamento...</div>';
-
     if (!selectedPlan || selectedPrice == null) {
-        container.innerHTML = `<div style="text-align:center;padding:20px;color:#f59e0b;"><i class="fas fa-exclamation-triangle"></i> Selecione um plano para continuar.</div>`;
+        renderPaymentPlaceholder('Selecione um plano para liberar o pagamento.');
         return;
     }
 
+    if (!mercadoPagoConfig?.publicKey) {
+        renderPaymentPlaceholder('Mercado Pago indisponivel neste ambiente.');
+        return;
+    }
+
+    if (!window.MercadoPago) {
+        renderPaymentPlaceholder('Nao foi possivel carregar o SDK do Mercado Pago.');
+        return;
+    }
+
+    if (!mercadoPagoInstance) {
+        mercadoPagoInstance = new window.MercadoPago(mercadoPagoConfig.publicKey, {
+            locale: 'pt-BR'
+        });
+    }
+
+    if (walletBrickController?.unmount) {
+        try {
+            await walletBrickController.unmount();
+        } catch (error) {
+            console.warn('[Checkout] Falha ao desmontar Wallet Brick anterior:', error);
+        }
+    }
+
+    showPaymentFeedback('info', `Plano ${selectedPlan.nome} pronto para pagamento.`);
+
+    const container = document.getElementById('payment-brick_container');
+    if (!container) return;
+    container.innerHTML = '';
+
     try {
-        console.log('[Checkout] initCheckoutButton starting...');
-        
-        // Garante listener de retorno do MP
-        addMercadoPagoReturnListener();
-        
-        container.innerHTML = `
-            <div style="text-align:center;">
-                <button id="checkout-btn" style="
-                    background-color: #009ee3;
-                    color: white;
-                    border: none;
-                    padding: 15px 40px;
-                    font-size: 18px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-weight: bold;
-                    transition: background-color 0.3s;
-                ">
-                    <i class="fas fa-credit-card"></i> Pagar com Mercado Pago
-                </button>
-            </div>
-        `;
-        
-        // Store selected plan in sessionStorage
-        sessionStorage.setItem('selectedPlan', selectedPlan.nome);
-        
-        const btn = document.getElementById('checkout-btn');
-        btn.addEventListener('click', async () => {
-            try {
-                // Show loading overlay first
-                showLoadingOverlay();
-
-                currentPagamentoId = null;
-                mpReturnHandled = false;
-
-                // Cria pagamento PENDENTE no banco antes de abrir popup
-                try {
-                    await createPendingPayment();
-                } catch (paymentErr) {
-                    console.warn('[Checkout] Aviso: não criou pagamento pendente:', paymentErr);
+        walletBrickController = await mercadoPagoInstance.bricks().create('wallet', 'payment-brick_container', {
+            initialization: {
+                redirectMode: 'modal'
+            },
+            customization: {
+                visual: {
+                    buttonBackground: 'blue',
+                    borderRadius: '12px',
+                    buttonHeight: '52px'
                 }
+            },
+            callbacks: {
+                onReady: () => {
+                    showPaymentFeedback('info', 'Clique no botao para abrir o popup do Mercado Pago.');
+                },
+                onSubmit: async () => {
+                    showPaymentFeedback('info', 'Criando seu pagamento no Mercado Pago...');
+                    const pendingPayment = await createPendingPayment(selectedPlan);
+                    const preference = await createPaymentPreference(selectedPlan, pendingPayment);
 
-                const preferenceData = await createPreference(currentPagamentoId);
-                currentInitPoint = preferenceData.initPoint;
-                console.log('[Checkout] Preference created with init_point:', currentInitPoint, 'environment:', preferenceData.checkoutEnvironment);
-                
-                // Open Mercado Pago in a popup
-                mpPopup = window.open(currentInitPoint, 'MercadoPago', 'width=800,height=800');
-                
-                // Check if popup is closed every 500ms (fallback)
-                const checkPopup = setInterval(async () => {
-                    if (mpPopup && mpPopup.closed) {
-                        clearInterval(checkPopup);
-                        if (mpReturnHandled) {
-                            return;
-                        }
-                        // Se o popup foi fechado sem retorno (aprovado/pendente/falha), consideramos como cancelado/falha
-                        hideLoadingOverlay();
-                        alert('Janela de pagamento foi fechada. Tente novamente.');
-                        try {
-                            if (currentPagamentoId) {
-                                await updatePaymentStatus(currentPagamentoId, 'falhou');
-                            }
-                        } catch (_) {}
-                    }
-                }, 500);
-            } catch (error) {
-                console.error('Erro ao processar pagamento:', error);
-                hideLoadingOverlay();
-                alert(error?.message || 'Erro ao processar pagamento. Tente novamente.');
+                    sessionStorage.setItem('lastPendingPaymentId', String(preference.paymentId || pendingPayment.id || ''));
+                    sessionStorage.setItem('lastMercadoPagoPreferenceId', String(preference.preferenceId || ''));
+
+                    return preference.preferenceId;
+                },
+                onError: (error) => {
+                    console.error('[Checkout] Wallet Brick error:', error);
+                    showPaymentFeedback('error', 'Nao foi possivel abrir o popup do Mercado Pago. Tente novamente.');
+                }
             }
         });
-        
-        console.log('[Checkout] Checkout button created');
     } catch (error) {
-        console.error('[Checkout] initCheckoutButton ERROR:', error);
-        container.innerHTML = `<div style="text-align:center;padding:20px;color:#ef4444;"><i class="fas fa-exclamation-circle"></i> Erro ao carregar pagamento. Tente novamente.<br><small style="color:#9ca3af;">${error.message}</small></div>`;
+        console.error('[Checkout] Falha ao renderizar Wallet Brick:', error);
+        showPaymentFeedback('error', 'Nao foi possivel carregar o botao do Mercado Pago.');
+        renderPaymentPlaceholder('Nao foi possivel carregar o checkout do Mercado Pago agora.');
     }
 }
 
-async function updateUserByEmail(email, updates) {
-    try {
-        const response = await fetch(`/api/users?email=${encodeURIComponent(email)}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updates)
-        });
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Erro ao atualizar usuário:', error);
-        throw error;
+async function createPendingPayment(plan) {
+    const response = await fetch('/api/pagamento', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            email: currentUser.email,
+            cep: extractUserCep(currentUser),
+            plano_id: plan.id,
+            status_pagamento: 'pendente',
+            data_pagamento: new Date().toISOString()
+        })
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload.error || 'Falha ao criar pagamento pendente.');
     }
+
+    return Array.isArray(payload) ? payload[0] : payload;
+}
+
+async function createPaymentPreference(plan, pendingPayment) {
+    const response = await fetch('/api/mercadopago/preference', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            email: currentUser.email,
+            cep: extractUserCep(currentUser),
+            planId: plan.id,
+            pendingPaymentId: pendingPayment?.id || null,
+            user: currentUser
+        })
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.preferenceId) {
+        throw new Error(payload.error || 'Falha ao criar preferencia no Mercado Pago.');
+    }
+
+    return payload;
+}
+
+function bindReturnListeners() {
+    window.addEventListener('focus', () => {
+        refreshApprovedPaymentStatus();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            refreshApprovedPaymentStatus();
+        }
+    });
+}
+
+async function refreshApprovedPaymentStatus() {
+    if (!currentUser?.email) return;
+
+    try {
+        const approvedPayment = await fetchApprovedPayment(currentUser.email);
+        if (approvedPayment) {
+            persistApprovedPlan(approvedPayment);
+            window.location.href = 'index.html';
+        }
+    } catch (error) {
+        console.warn('[Checkout] Nao foi possivel revalidar pagamento aprovado:', error);
+    }
+}
+
+function persistApprovedPlan(payment) {
+    if (!payment?.plano_id || !currentUser) return;
+    currentUser.plan = payment.plano_id;
+    sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
+}
+
+function renderPaymentPlaceholder(message) {
+    const container = document.getElementById('payment-brick_container');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="payment-placeholder">
+            <i class="fas fa-credit-card"></i>
+            <p>${message}</p>
+        </div>
+    `;
+}
+
+function showPaymentFeedback(type, message) {
+    const feedback = document.getElementById('payment-feedback');
+    if (!feedback) return;
+
+    feedback.className = `payment-feedback ${type || 'info'}`;
+    feedback.textContent = message || '';
+}
+
+function extractUserCep(user) {
+    return user?.condominium?.cep ||
+        user?.condominium?.condominium_id ||
+        user?.condominium_cep ||
+        user?.cep ||
+        '';
+}
+
+function formatCurrency(value) {
+    const amount = Number(value || 0);
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(amount);
 }

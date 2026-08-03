@@ -4,7 +4,6 @@
     "@supabase/supabase-js": "^2.111.0",
     "livekit-client": "^2.21.0",
     "livekit-server-sdk": "^2.17.0",
-    "mercadopago": "^3.1.0",
     "nodemailer": "^9.0.1"
   }
 }

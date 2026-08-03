@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-pagamento-status="pending">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,166 +7,25 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/theme.css">
     <link rel="stylesheet" href="../styles/checkout.css">
-    <style>
-        .resultado-pagamento {
-            min-height: calc(100vh - 80px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 24px;
-            max-width: 600px;
-            margin: 0 auto;
-            text-align: center;
-        }
-        .resultado-pagamento .icon-box {
-            width: 96px;
-            height: 96px;
-            border-radius: 50%;
-            background: #fef3c7;
-            color: #d97706;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            margin-bottom: 32px;
-            box-shadow: 0 10px 25px rgba(217, 119, 6, 0.15);
-            position: relative;
-        }
-        .resultado-pagamento .icon-box i {
-            animation: pulse 2s ease-in-out infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.08); opacity: 0.85; }
-        }
-        .resultado-pagamento h1 {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--text-main);
-            margin-bottom: 12px;
-        }
-        .resultado-pagamento p {
-            font-size: 1.05rem;
-            color: var(--text-muted);
-            margin-bottom: 32px;
-            line-height: 1.6;
-        }
-        .resultado-pagamento button {
-            background: var(--primary-blue);
-            color: white;
-            border: none;
-            padding: 15px 48px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
-        }
-        .resultado-pagamento button:hover {
-            background: var(--secondary-blue);
-            transform: translateY(-1px);
-        }
-        .aviso-box {
-            background: var(--white);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 32px;
-            border: 1px solid #fde68a;
-            background-color: #fffbeb;
-            width: 100%;
-            text-align: left;
-        }
-        .aviso-box h3 {
-            color: #92400e;
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .aviso-box p {
-            color: #78350f;
-            font-size: 0.95rem;
-            margin-bottom: 0;
-            line-height: 1.5;
-        }
-    </style>
 </head>
-<body>
-    <main class="resultado-pagamento">
-        <div class="icon-box">
+<body class="payment-result-page">
+    <main class="payment-result-card pending" data-payment-result data-status="pending">
+        <div class="payment-result-icon">
             <i class="fas fa-clock"></i>
         </div>
-        <h1>Pagamento pendente</h1>
-        <p>O Mercado Pago ainda está processando o pagamento. O plano será ativado após a confirmação.</p>
-        <div class="aviso-box">
-            <h3><i class="fas fa-hourglass-half"></i> Aguarde a confirmação</h3>
-            <p>Pagamentos via boleto ou Pix podem levar até 1 dia útil para serem confirmados. Assim que o pagamento for aprovado, enviaremos uma confirmação por e-mail e seu plano será ativado automaticamente.</p>
+        <h1 id="payment-result-title">Pagamento em analise</h1>
+        <p id="payment-result-description">Estamos consultando o retorno do Mercado Pago para atualizar sua assinatura.</p>
+        <div class="payment-result-status" id="payment-result-status">
+            <strong>Status atual</strong>
+            <span>Aguardando a confirmacao final do pagamento.</span>
         </div>
-        <button type="button" id="btn-continuar">
-            Continuar
-        </button>
+        <div class="payment-result-actions">
+            <a class="primary" id="payment-result-primary" href="checkout.html">Voltar ao checkout</a>
+            <a class="secondary" id="payment-result-secondary" href="entrar.html">Ir para o login</a>
+            <button class="secondary" id="payment-result-refresh" type="button">Atualizar status</button>
+        </div>
     </main>
-    <script>
-        (function () {
-            async function finalizarPagamentoPendente() {
-                try {
-                    const cached = sessionStorage.getItem('condominiumUser');
-                    if (!cached) return;
-                    const user = JSON.parse(cached);
-                    if (!user || !user.email) return;
 
-                    const resp = await fetch(`/api/pagamento?email=${encodeURIComponent(user.email)}`);
-                    if (resp.ok) {
-                        const pagamentos = await resp.json();
-                        if (Array.isArray(pagamentos) && pagamentos.length) {
-                            pagamentos.sort((a, b) => {
-                                const da = new Date(a.data_pagamento || 0).getTime();
-                                const db = new Date(b.data_pagamento || 0).getTime();
-                                return db - da;
-                            });
-                            const ultimo = pagamentos[0];
-                            if (ultimo && !['aprovado', 'pendente'].includes(ultimo.status_pagamento)) {
-                                try {
-                                    await fetch(`/api/pagamento?id=${encodeURIComponent(ultimo.id)}`, {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            status_pagamento: 'pendente'
-                                        })
-                                    });
-                                } catch (_) {}
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Erro ao marcar pagamento pendente:', e);
-                }
-            }
-            finalizarPagamentoPendente();
-
-            const btn = document.getElementById('btn-continuar');
-            if (btn) {
-                btn.addEventListener('click', function() {
-                    if (typeof window.fecharRetornoMercadoPago === 'function') {
-                        fecharRetornoMercadoPago();
-                    } else {
-                        const cached = sessionStorage.getItem('condominiumUser');
-                        if (cached) {
-                            const u = JSON.parse(cached);
-                            if (u.type === 'morador') location.href = 'index-morador.html';
-                            else location.href = 'checkout.html';
-                        } else {
-                            location.href = 'entrar.html';
-                        }
-                    }
-                });
-            }
-        })();
-    </script>
     <script src="../assets/js/retorno-mercado-pago.js"></script>
 </body>
 </html>

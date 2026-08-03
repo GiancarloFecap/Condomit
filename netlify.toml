@@ -5,7 +5,7 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["@getbrevo/brevo", "mercadopago"]
+  external_node_modules = ["@getbrevo/brevo"]
 
 [[redirects]]
   from = "/esqueceu-senha"
