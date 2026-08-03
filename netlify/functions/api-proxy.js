@@ -335,13 +335,25 @@ function extractMercadoPagoNotificationData(query, body) {
 }
 
 async function handleMercadoPagoConfig() {
+  //#region debug-point mp-config-token-mode
+  const rawToken = String(MERCADO_PAGO_ACCESS_TOKEN || '');
+  const accessTokenMode = rawToken.startsWith('TEST-')
+    ? 'test'
+    : rawToken.startsWith('APP_USR-')
+      ? 'production'
+      : rawToken
+        ? 'unknown'
+        : 'missing';
+  //#endregion debug-point mp-config-token-mode
+
   return {
     statusCode: isMercadoPagoConfigured() ? 200 : 503,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       configured: isMercadoPagoConfigured(),
       publicKey: MERCADO_PAGO_PUBLIC_KEY || null,
-      environment: MERCADO_PAGO_ENV
+      environment: MERCADO_PAGO_ENV,
+      accessTokenMode
     })
   };
 }
