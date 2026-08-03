@@ -270,26 +270,45 @@ async function initCheckoutButton() {
                     });
                     // #endregion
                     showPaymentFeedback('info', 'Criando seu pagamento no Mercado Pago...');
-                    const pendingPayment = await createPendingPayment(selectedPlan, traceId);
-                    const preference = await createPaymentPreference(selectedPlan, pendingPayment, traceId);
+                    try {
+                        const pendingPayment = await createPendingPayment(selectedPlan, traceId);
+                        const preference = await createPaymentPreference(selectedPlan, pendingPayment, traceId);
 
-                    sessionStorage.setItem('lastPendingPaymentId', String(preference.paymentId || pendingPayment.id || ''));
-                    sessionStorage.setItem('lastMercadoPagoPreferenceId', String(preference.preferenceId || ''));
+                        sessionStorage.setItem('lastPendingPaymentId', String(preference.paymentId || pendingPayment.id || ''));
+                        sessionStorage.setItem('lastMercadoPagoPreferenceId', String(preference.preferenceId || ''));
 
-                    // #region debug-point A:onSubmit-success
-                    reportDebugEvent({
-                        runId: 'pre-fix',
-                        hypothesisId: 'A',
-                        location: 'scripts/checkout.js:onSubmit',
-                        msg: '[DEBUG] Wallet Brick onSubmit resolved preference',
-                        data: {
-                            preferenceId: preference?.preferenceId || null,
-                            paymentId: preference?.paymentId || pendingPayment?.id || null
-                        },
-                        traceId
-                    });
-                    // #endregion
-                    return preference.preferenceId;
+                        // #region debug-point A:onSubmit-success
+                        reportDebugEvent({
+                            runId: 'pre-fix',
+                            hypothesisId: 'A',
+                            location: 'scripts/checkout.js:onSubmit',
+                            msg: '[DEBUG] Wallet Brick onSubmit resolved preference',
+                            data: {
+                                preferenceId: preference?.preferenceId || null,
+                                paymentId: preference?.paymentId || pendingPayment?.id || null
+                            },
+                            traceId
+                        });
+                        // #endregion
+
+                        return preference.preferenceId;
+                    } catch (error) {
+                        // #region debug-point A:onSubmit-failed
+                        reportDebugEvent({
+                            runId: 'pre-fix',
+                            hypothesisId: 'A',
+                            location: 'scripts/checkout.js:onSubmit',
+                            msg: '[DEBUG] Wallet Brick onSubmit failed',
+                            data: {
+                                message: error?.message || String(error),
+                                stack: error?.stack || null
+                            },
+                            traceId
+                        });
+                        // #endregion
+                        showPaymentFeedback('error', error?.message || 'Nao foi possivel criar o pagamento.');
+                        throw error;
+                    }
                 },
                 onError: (error) => {
                     // #region debug-point E:brick-error
@@ -368,11 +387,17 @@ async function createPendingPayment(plan, traceId) {
     });
     // #endregion
 
+    const resolved = Array.isArray(payload) ? payload[0] : payload;
+
     if (!response.ok) {
-        throw new Error(payload.error || 'Falha ao criar pagamento pendente.');
+        throw new Error(payload.error || payload.message || `[api/pagamento ${response.status}] Falha ao criar pagamento pendente.`);
     }
 
-    return Array.isArray(payload) ? payload[0] : payload;
+    if (!resolved || !resolved.id) {
+        throw new Error('[api/pagamento] Resposta invalida ao criar pagamento pendente.');
+    }
+
+    return resolved;
 }
 
 async function createPaymentPreference(plan, pendingPayment, traceId) {
@@ -427,8 +452,12 @@ async function createPaymentPreference(plan, pendingPayment, traceId) {
     });
     // #endregion
 
-    if (!response.ok || !payload.preferenceId) {
-        throw new Error(payload.error || 'Falha ao criar preferencia no Mercado Pago.');
+    if (!response.ok) {
+        throw new Error(payload.error || payload.message || `[api/mercadopago/preference ${response.status}] Falha ao criar preferencia no Mercado Pago.`);
+    }
+
+    if (!payload.preferenceId) {
+        throw new Error('[api/mercadopago/preference] Resposta invalida: preferenceId ausente.');
     }
 
     return payload;
