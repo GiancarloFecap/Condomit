@@ -6,6 +6,38 @@ function safeText(value) {
   return String(value ?? '').trim();
 }
 
+function isLoopbackHost(hostname) {
+  const value = safeText(hostname).toLowerCase();
+  return value === 'localhost'
+    || value === '127.0.0.1'
+    || value === '0.0.0.0'
+    || value === '::1'
+    || value === '[::1]';
+}
+
+function getValidatedLivekitUrl(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch (_) {
+    throw new Error('URL do LiveKit inválida.');
+  }
+
+  if (parsed.protocol === 'http:') parsed.protocol = 'ws:';
+  if (parsed.protocol === 'https:') parsed.protocol = 'wss:';
+
+  if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') {
+    throw new Error('A URL do LiveKit deve usar ws:// ou wss://.');
+  }
+
+  const pageHost = safeText(window.location.hostname).toLowerCase();
+  if (isLoopbackHost(parsed.hostname) && !isLoopbackHost(pageHost)) {
+    throw new Error('O servidor de vídeo foi configurado com localhost. Use uma URL pública do LiveKit para conectar dispositivos diferentes.');
+  }
+
+  return parsed.toString().replace(/\/$/, '');
+}
+
 function getTileMedia(identity) {
   const tile = document.querySelector(`.call-tile[data-identity="${CSS.escape(identity)}"]`);
   return tile?.querySelector('.tile-media') || null;
@@ -108,6 +140,7 @@ export async function connectToRoom(tokenInfo) {
   if (!tokenInfo?.url || !tokenInfo?.token) throw new Error('Token inválido');
   setConnectionConnecting();
   showBanner('', 'info');
+  const livekitUrl = getValidatedLivekitUrl(tokenInfo.url);
 
   const room = new Room({
     adaptiveStream: true,
@@ -202,20 +235,20 @@ export async function connectToRoom(tokenInfo) {
     });
 
   // #region debug-point C:before-connect
-  fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"C",location:"scripts/assembly/room/livekit.js:before-connect",msg:"[DEBUG] connecting room with token info",data:{url:tokenInfo?.url||null,room:tokenInfo?.room||null,identity:tokenInfo?.identity||null},ts:Date.now()})}).catch(()=>{});
+  fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"C",location:"scripts/assembly/room/livekit.js:before-connect",msg:"[DEBUG] connecting room with token info",data:{url:livekitUrl,room:tokenInfo?.room||null,identity:tokenInfo?.identity||null},ts:Date.now()})}).catch(()=>{});
   // #endregion
 
   try {
-    await room.connect(tokenInfo.url, tokenInfo.token, { autoSubscribe: true });
+    await room.connect(livekitUrl, tokenInfo.token, { autoSubscribe: true });
   } catch (error) {
     // #region debug-point C:connect-error
-    fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"C",location:"scripts/assembly/room/livekit.js:connect-error",msg:"[DEBUG] room connect failed",data:{url:tokenInfo?.url||null,room:tokenInfo?.room||null,identity:tokenInfo?.identity||null,errorName:error?.name||null,errorMessage:error?.message||String(error)},ts:Date.now()})}).catch(()=>{});
+    fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"C",location:"scripts/assembly/room/livekit.js:connect-error",msg:"[DEBUG] room connect failed",data:{url:livekitUrl,room:tokenInfo?.room||null,identity:tokenInfo?.identity||null,errorName:error?.name||null,errorMessage:error?.message||String(error)},ts:Date.now()})}).catch(()=>{});
     // #endregion
     throw error;
   }
 
   // #region debug-point C:after-connect
-  fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"C",location:"scripts/assembly/room/livekit.js:after-connect",msg:"[DEBUG] room connected",data:{url:tokenInfo?.url||null,room:tokenInfo?.room||null,localIdentity:room.localParticipant?.identity||null,remoteCount:room.remoteParticipants?.size||0,connectionState:room.state||null},ts:Date.now()})}).catch(()=>{});
+  fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"post-fix",hypothesisId:"C",location:"scripts/assembly/room/livekit.js:after-connect",msg:"[DEBUG] room connected",data:{url:livekitUrl,room:tokenInfo?.room||null,localIdentity:room.localParticipant?.identity||null,remoteCount:room.remoteParticipants?.size||0,connectionState:room.state||null},ts:Date.now()})}).catch(()=>{});
   // #endregion
 
   state.connected = true;

@@ -12,11 +12,11 @@
 ## Hypotheses & Verification
 | ID | Hypothesis | Likelihood | Effort | Evidence |
 |----|------------|------------|--------|----------|
-| A | Clientes em maquinas diferentes usam URLs LiveKit diferentes | High | Low | Pending |
-| B | O backend gera nomes de sala diferentes para a mesma assembleia | High | Low | Pending |
-| C | O token sai valido, mas `room.connect` falha ou conecta sem participants remotos | High | Medium | Pending |
-| D | Os eventos de participant/tracks do LiveKit nao estao sendo tratados corretamente | Medium | Medium | Pending |
-| E | A UI depende de sincronizacao local e por isso so funciona no mesmo computador | High | Low | Pending |
+| A | Clientes em maquinas diferentes usam URLs LiveKit diferentes | High | Low | Confirmed by code path: backend returned raw `LIVEKIT_URL` and frontend connected directly with it, sem validacao contra localhost |
+| B | O backend gera nomes de sala diferentes para a mesma assembleia | High | Low | Rejected by code inspection: `assembleia-${assembly.id}-${assembly.cep}` e persistencia em `livekit_room_name` |
+| C | O token sai valido, mas `room.connect` falha ou conecta sem participants remotos | High | Medium | Partially confirmed: fluxo dependia da URL recebida; guardas adicionados no backend/frontend para validar a URL antes do connect |
+| D | Os eventos de participant/tracks do LiveKit nao estao sendo tratados corretamente | Medium | Medium | Inconclusive before logs; instrumentado para verificacao pos-fix |
+| E | A UI depende de sincronizacao local e por isso so funciona no mesmo computador | High | Low | Rejected for a nova sala: `assembleia-sala.html` usa LiveKit e nao `BroadcastChannel`/`localStorage` para participantes |
 
 ## Log Evidence
 - Instrumentation added in:
@@ -26,4 +26,8 @@
 - Waiting for cross-device reproduction logs.
 
 ## Verification Conclusion
-- Pending
+- Root cause principal identificado por analise do codigo e do sintoma: `livekit-token.js` retornava `LIVEKIT_URL` sem normalizacao/validacao, e `room.connect` consumia essa URL diretamente. Se a variavel estivesse em `localhost`/`127.0.0.1`, cada navegador poderia conectar no proprio host local em vez do mesmo servidor LiveKit.
+- Fix aplicado:
+  - backend normaliza `http/https` para `ws/wss`;
+  - backend bloqueia `localhost` sem host publico e, quando possivel, resolve usando o host real da requisicao;
+  - frontend rejeita `localhost` fora do ambiente local para evitar falso positivo de "Sala conectada".
