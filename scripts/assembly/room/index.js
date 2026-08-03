@@ -143,10 +143,6 @@ async function init() {
     state.tokenInfo = tokenInfo;
     state.permissions = tokenInfo.permissions || {};
 
-    // #region debug-point A:token-info-frontend
-    fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"A",location:"scripts/assembly/room/index.js:tokenInfo",msg:"[DEBUG] frontend received token info",data:{assemblyId:state.assemblyId,url:tokenInfo?.url||null,room:tokenInfo?.room||null,identity:tokenInfo?.identity||null,assemblyStatus:state.assembly?.status||null},ts:Date.now()})}).catch(()=>{});
-    // #endregion
-
     if (state.assembly?.status !== 'em_andamento') {
       showBanner('A assembleia ainda não está em andamento. Aguarde o organizador iniciar.', 'warning');
     }

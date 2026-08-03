@@ -1128,11 +1128,6 @@ function clearRoomChatUI() {
 }
 
 function openPreJoin(assembly) {
-    if (assembly && assembly.id) {
-        window.location.href = `assembleia-preparacao.html?id=${encodeURIComponent(String(assembly.id))}`;
-        return;
-    }
-
     assemblyState.preJoinAssembly = assembly || null;
     assemblyState.preJoinAssemblyId = assembly ? String(assembly.id) : null;
     assemblyState.preJoinOpen = true;

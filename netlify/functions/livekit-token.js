@@ -43,72 +43,6 @@ function getUserCondominiumCEP(user) {
   return cep;
 }
 
-function isLoopbackHost(hostname) {
-  const value = String(hostname || '').trim().toLowerCase();
-  return value === 'localhost'
-    || value === '127.0.0.1'
-    || value === '0.0.0.0'
-    || value === '::1'
-    || value === '[::1]';
-}
-
-function parseHostHeader(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return { hostname: '', port: '' };
-  if (raw.startsWith('[')) {
-    const end = raw.indexOf(']');
-    return {
-      hostname: end >= 0 ? raw.slice(1, end) : raw,
-      port: end >= 0 && raw[end + 1] === ':' ? raw.slice(end + 2) : '',
-    };
-  }
-  const lastColon = raw.lastIndexOf(':');
-  if (lastColon > -1 && raw.indexOf(':') === lastColon) {
-    return { hostname: raw.slice(0, lastColon), port: raw.slice(lastColon + 1) };
-  }
-  return { hostname: raw, port: '' };
-}
-
-function resolveLivekitUrl(event) {
-  if (!LIVEKIT_URL) {
-    return { error: 'Servidor de vídeo não configurado. Contate o administrador.' };
-  }
-
-  let parsed;
-  try {
-    parsed = new URL(LIVEKIT_URL);
-  } catch (error) {
-    return { error: 'LIVEKIT_URL inválida no ambiente do servidor.' };
-  }
-
-  if (parsed.protocol === 'http:') parsed.protocol = 'ws:';
-  if (parsed.protocol === 'https:') parsed.protocol = 'wss:';
-
-  if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') {
-    return { error: 'LIVEKIT_URL deve usar ws:// ou wss://.' };
-  }
-
-  if (isLoopbackHost(parsed.hostname)) {
-    const forwardedHost = event.headers['x-forwarded-host'] || event.headers['X-Forwarded-Host'] || event.headers.host || event.headers.Host || '';
-    const forwardedProto = String(event.headers['x-forwarded-proto'] || event.headers['X-Forwarded-Proto'] || '').trim().toLowerCase();
-    const requestHost = parseHostHeader(forwardedHost);
-
-    if (!requestHost.hostname || isLoopbackHost(requestHost.hostname)) {
-      return {
-        error: 'LIVEKIT_URL aponta para localhost e não pode ser usada entre dispositivos. Configure uma URL pública do LiveKit.',
-      };
-    }
-
-    parsed.hostname = requestHost.hostname;
-    if (!parsed.port) {
-      parsed.port = requestHost.port || (forwardedProto === 'https' ? '443' : '80');
-    }
-    parsed.protocol = forwardedProto === 'https' ? 'wss:' : 'ws:';
-  }
-
-  return { url: parsed.toString().replace(/\/$/, '') };
-}
-
 exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -129,12 +63,6 @@ exports.handler = async (event, context) => {
   if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
     return httpError(500, 'Servidor de vídeo não configurado. Contate o administrador.');
   }
-
-  const resolvedLivekit = resolveLivekitUrl(event);
-  if (resolvedLivekit.error) {
-    return httpError(500, resolvedLivekit.error);
-  }
-  const livekitUrl = resolvedLivekit.url;
 
   let body;
   try {
@@ -211,10 +139,6 @@ exports.handler = async (event, context) => {
     return httpError(403, 'Esta assembleia pertence a outro condomínio.');
   }
 
-  // #region debug-point B:assembly-validation
-  fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"B",location:"netlify/functions/livekit-token.js:assembly-validation",msg:"[DEBUG] validated assembly and user for token generation",data:{assemblyId:assembly.id,assemblyCep:assembly.cep,userCep:userCEP,status:assembly.status,userEmail:userEmail},ts:Date.now()})}).catch(()=>{});
-  // #endregion
-
   const validStatuses = ['agendada', 'em_andamento'];
   if (!validStatuses.includes(assembly.status)) {
     if (assembly.status === 'encerrada') {
@@ -261,10 +185,6 @@ exports.handler = async (event, context) => {
       return httpError(500, 'Erro ao configurar sala da assembleia.');
     }
   }
-
-  // #region debug-point A:livekit-config
-  fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"A",location:"netlify/functions/livekit-token.js:room-config",msg:"[DEBUG] resolved livekit url and room name",data:{assemblyId:assembly.id,livekitUrl:livekitUrl,roomName:roomName,usedPersistedRoom:Boolean(assembly.livekit_room_name)},ts:Date.now()})}).catch(()=>{});
-  // #endregion
 
   const ttlMinutes = 8 * 60;
   let at;
@@ -316,10 +236,6 @@ exports.handler = async (event, context) => {
     return httpError(500, 'Erro ao assinar credencial de acesso.');
   }
 
-  // #region debug-point C:token-issued
-  fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/livekit-token.js:token-issued",msg:"[DEBUG] issued livekit token",data:{assemblyId:assembly.id,identity:participantIdentity,participantName:participantName,roomName:roomName,livekitUrl:livekitUrl,canPublishSources:canPublishSources},ts:Date.now()})}).catch(()=>{});
-  // #endregion
-
   try {
     await supabase.from('assembly_event_logs').insert({
       assembly_id: assembly.id,
@@ -346,7 +262,7 @@ exports.handler = async (event, context) => {
     },
     body: JSON.stringify({
       token: signedToken,
-      url: livekitUrl,
+      url: LIVEKIT_URL,
       room: roomName,
       identity: participantIdentity,
       user: {

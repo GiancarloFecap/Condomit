@@ -23,26 +23,6 @@
     }
     if (!user) {
       try {
-        const condoUserStr = sessionStorage.getItem('condominiumUser') || localStorage.getItem('condominiumUser');
-        if (condoUserStr) {
-          user = JSON.parse(condoUserStr);
-        }
-      } catch (e) {
-        user = null;
-      }
-    }
-    if (!user) {
-      try {
-        const persistentCondoUser = localStorage.getItem('condominiumPersistentUser');
-        if (persistentCondoUser) {
-          user = JSON.parse(persistentCondoUser);
-        }
-      } catch (e) {
-        user = null;
-      }
-    }
-    if (!user) {
-      try {
         const userStr = sessionStorage.getItem('currentUser') || localStorage.getItem('currentUser');
         if (userStr) {
           user = JSON.parse(userStr);
@@ -99,7 +79,6 @@
     user = user || getCurrentUser();
     if (!user) return false;
     if (user.role === 'sindico' || user.role === 'admin') return true;
-    if (user.user_type === 'sindico') return true;
     if (user.app_metadata && (user.app_metadata.role === 'sindico' || user.app_metadata.role === 'admin')) return true;
     if (user.user_metadata && (user.user_metadata.role === 'sindico' || user.user_metadata.role === 'admin')) return true;
     if (user.condominium) {
