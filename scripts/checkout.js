@@ -184,6 +184,10 @@ async function createPreference(pendingPaymentId) {
         const data = await response.json();
         console.log('[Checkout] Dados da resposta:', data);
         
+        if (!response.ok) {
+            throw new Error(data.error || 'Nao foi possivel iniciar o checkout do Mercado Pago.');
+        }
+
         if (data.error) {
             throw new Error(data.error);
         }
@@ -381,7 +385,7 @@ async function initCheckoutButton() {
 
                 const preferenceData = await createPreference(currentPagamentoId);
                 currentInitPoint = preferenceData.initPoint;
-                console.log('[Checkout] Preference created with init_point:', currentInitPoint);
+                console.log('[Checkout] Preference created with init_point:', currentInitPoint, 'environment:', preferenceData.checkoutEnvironment);
                 
                 // Open Mercado Pago in a popup
                 mpPopup = window.open(currentInitPoint, 'MercadoPago', 'width=800,height=800');
@@ -406,7 +410,7 @@ async function initCheckoutButton() {
             } catch (error) {
                 console.error('Erro ao processar pagamento:', error);
                 hideLoadingOverlay();
-                alert('Erro ao processar pagamento. Tente novamente.');
+                alert(error?.message || 'Erro ao processar pagamento. Tente novamente.');
             }
         });
         

@@ -13,7 +13,7 @@ const port = process.env.PORT ? Number(process.env.PORT) : 8081;
 const env = loadEnv(path.join(root, '.env'));
 const SUPABASE_URL = env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTUwNjQsImV4cCI6MjA5NTk5MTA2NH0.WTk0rZaTsPvs30uEWDfylc-z6L3G8IUb_J73oYtjuWU';
-const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || 'TEST-436110510599548-061020-84789bd457ac44b96a90600d82aceed2-3165703884';
+const MERCADO_PAGO_ACCESS_TOKEN = env.MERCADO_PAGO_ACCESS_TOKEN || '';
 const APP_BASE_URL = env.APP_BASE_URL || 'https://condomit.netlify.app';
 const BREVO_API_KEY = env.BREVO_API_KEY || process.env.BREVO_API_KEY || '';
 const BREVO_SENDER_EMAIL = env.BREVO_SENDER_EMAIL || process.env.BREVO_SENDER_EMAIL || '';
@@ -25,12 +25,44 @@ const KEYCLOAK_CLIENT_SECRET = env.KEYCLOAK_CLIENT_SECRET || '';
 const KEYCLOAK_ADMIN_USERNAME = env.KEYCLOAK_ADMIN_USERNAME || '';
 const KEYCLOAK_ADMIN_PASSWORD = env.KEYCLOAK_ADMIN_PASSWORD || '';
 
-const mpClient = new MercadoPagoConfig({ accessToken: MERCADO_PAGO_ACCESS_TOKEN });
-const preference = new Preference(mpClient);
+const mpClient = MERCADO_PAGO_ACCESS_TOKEN ? new MercadoPagoConfig({ accessToken: MERCADO_PAGO_ACCESS_TOKEN }) : null;
+const preference = mpClient ? new Preference(mpClient) : null;
 const brevoClient = BREVO_API_KEY ? new BrevoClient({
   apiKey: BREVO_API_KEY,
   environment: BrevoEnvironment.Production
 }) : null;
+
+function hasMercadoPagoAccessToken() {
+  return Boolean(String(MERCADO_PAGO_ACCESS_TOKEN || '').trim());
+}
+
+function isSandboxMercadoPagoToken() {
+  return /^TEST-/i.test(String(MERCADO_PAGO_ACCESS_TOKEN || '').trim());
+}
+
+function ensureMercadoPagoConfigured() {
+  if (!hasMercadoPagoAccessToken()) {
+    throw new Error('Mercado Pago nao configurado. Defina MERCADO_PAGO_ACCESS_TOKEN no servidor.');
+  }
+}
+
+function validateMercadoPagoEnvironment(baseUrl) {
+  if (isSandboxMercadoPagoToken() && /^https:\/\/condomit\.netlify\.app/i.test(String(baseUrl || ''))) {
+    throw new Error('O checkout publicado esta em modo de teste. Configure um access token APP_USR- do Mercado Pago para aceitar cartoes reais.');
+  }
+}
+
+function resolveMercadoPagoInitPoint(result) {
+  const preferredUrl = isSandboxMercadoPagoToken()
+    ? (result?.sandbox_init_point || result?.init_point)
+    : (result?.init_point || result?.sandbox_init_point);
+
+  if (!preferredUrl) {
+    throw new Error('Mercado Pago nao retornou uma URL valida para o checkout.');
+  }
+
+  return preferredUrl;
+}
 
 function loadEnv(filePath) {
   const env = {};
@@ -342,9 +374,11 @@ async function createMercadoPagoPreference(req, res) {
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
     try {
+      ensureMercadoPagoConfigured();
+
       const data = JSON.parse(body);
       const { amount, planName, payerEmail, pendingPaymentId } = data;
-      const isSandboxToken = /^TEST-/i.test(String(MERCADO_PAGO_ACCESS_TOKEN || '').trim());
+      const isSandboxToken = isSandboxMercadoPagoToken();
       const normalizedPlanName = normalizePlanName(planName);
       const normalizedAmount = parseMercadoPagoAmount(amount);
 
@@ -355,6 +389,8 @@ async function createMercadoPagoPreference(req, res) {
       const protocol = (req.headers['x-forwarded-proto'] || 'http');
       const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`;
       const baseUrl = `${protocol}://${host}`;
+
+      validateMercadoPagoEnvironment(baseUrl);
 
       const successUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-sucesso.html' : '/pages/pagamento-sucesso.html');
       const pendingUrl = baseUrl + (baseUrl.includes('localhost') ? '/pages/pagamento-pendente.html' : '/pages/pagamento-pendente.html');
@@ -404,7 +440,11 @@ async function createMercadoPagoPreference(req, res) {
       console.log('[MercadoPago] Preference created:', result.id, 'init_point:', result.init_point, 'back_urls:', result.back_urls);
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ preferenceId: result.id, initPoint: result.init_point }));
+      res.end(JSON.stringify({
+        preferenceId: result.id,
+        initPoint: resolveMercadoPagoInitPoint(result),
+        checkoutEnvironment: isSandboxToken ? 'sandbox' : 'production'
+      }));
     } catch (error) {
       console.error('[MercadoPago Error]', error.message);
       res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -1008,6 +1048,8 @@ async function patchSupabaseUserPlan(email, planId) {
 }
 
 async function fetchMercadoPagoPayment(paymentId) {
+  ensureMercadoPagoConfigured();
+
   const response = await fetch(`${MERCADO_PAGO_API_BASE}/v1/payments/${encodeURIComponent(paymentId)}`, {
     headers: {
       Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
