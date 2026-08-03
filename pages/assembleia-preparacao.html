@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preparação | Condomit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/assembleia-v2.css">
+    <style>
+        .prep-page {
+            min-height: 100vh;
+            background: linear-gradient(180deg, var(--gray-50) 0%, var(--gray-100) 100%);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .prep-header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .prep-header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 0;
+        }
+
+        .prep-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .prep-logo img {
+            height: 40px;
+            width: auto;
+        }
+
+        .prep-logo-text {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary-blue);
+            letter-spacing: -0.02em;
+        }
+
+        .prep-header-divider {
+            width: 1px;
+            height: 32px;
+            background: var(--gray-200);
+            flex-shrink: 0;
+        }
+
+        .prep-assembly-info {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .prep-assembly-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--gray-900);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 400px;
+        }
+
+        .prep-assembly-meta {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .prep-header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        .prep-user-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px 6px 6px;
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 999px;
+        }
+
+        .prep-user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .prep-user-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-800);
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .prep-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--gray-300);
+            background: var(--white);
+            color: var(--gray-700);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .prep-back-btn:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+            color: var(--gray-900);
+        }
+
+        .prep-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+            width: 100%;
+            flex: 1;
+        }
+
+        .prep-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .prep-video-container {
+            background: var(--gray-900);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+        }
+
+        .video-wrapper {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-900) 100%);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #localVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        #localVideo.mirrored {
+            transform: scaleX(-1);
+        }
+
+        .video-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            z-index: 2;
+        }
+
+        .video-placeholder.hidden {
+            display: none;
+        }
+
+        .placeholder-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-light));
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(11, 94, 215, 0.4);
+        }
+
+        .placeholder-text {
+            color: var(--gray-400);
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .video-overlay-info {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            z-index: 3;
+        }
+
+        .video-badges {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .video-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            color: var(--white);
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .video-badge.camera-on {
+            background: rgba(25, 135, 84, 0.7);
+        }
+
+        .video-badge.camera-off {
+            background: rgba(108, 117, 125, 0.8);
+        }
+
+        .video-badge.mic-on {
+            background: rgba(25, 135, 84, 0.7);
+        }
+
+        .video-badge.mic-off {
+            background: rgba(220, 53, 69, 0.8);
+        }
+
+        .video-display-name {
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            color: var(--white);
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            max-width: 240px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .prep-controls {
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .prep-controls-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+
+        .prep-controls-header p {
+            font-size: 13px;
+            color: var(--gray-600);
+            line-height: 1.5;
+        }
+
+        .device-selects {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .device-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .device-field label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-700);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .device-field label i {
+            font-size: 11px;
+            color: var(--gray-500);
+        }
+
+        .device-field select {
+            padding: 10px 12px;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            color: var(--gray-900);
+            background: var(--white);
+            transition: all var(--transition-fast);
+            cursor: pointer;
+        }
+
+        .device-field select:hover {
+            border-color: var(--gray-400);
+        }
+
+        .device-field select:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(11, 94, 215, 0.1);
+            outline: none;
+        }
+
+        .device-field select:disabled {
+            background: var(--gray-100);
+            color: var(--gray-500);
+            cursor: not-allowed;
+        }
+
+        .toggle-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--gray-200);
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .toggle-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .toggle-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .toggle-icon.camera {
+            background: rgba(11, 94, 215, 0.1);
+            color: var(--primary-blue);
+        }
+
+        .toggle-icon.mic {
+            background: rgba(25, 135, 84, 0.1);
+            color: var(--success);
+        }
+
+        .toggle-text {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+        }
+
+        .toggle-text strong {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .toggle-text span {
+            font-size: 11px;
+            color: var(--gray-500);
+        }
+
+        .switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: var(--gray-300);
+            transition: var(--transition-fast);
+            border-radius: 26px;
+        }
+
+        .slider::before {
+            content: '';
+            position: absolute;
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: var(--white);
+            transition: var(--transition-fast);
+            border-radius: 50%;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .switch input:checked + .slider {
+            background: var(--success);
+        }
+
+        .switch input:checked + .slider::before {
+            transform: translateX(22px);
+        }
+
+        .audio-meter-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .audio-meter-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .audio-meter-label span {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-700);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .audio-meter-level {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--gray-500);
+        }
+
+        .audio-meter {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 4px;
+            height: 50px;
+            padding: 8px 12px;
+            background: var(--gray-900);
+            border-radius: var(--radius-md);
+        }
+
+        .audio-meter .bar {
+            width: 8px;
+            background: var(--gray-600);
+            border-radius: 3px;
+            transition: all 80ms ease-out;
+            opacity: 0.4;
+        }
+
+        .audio-meter .bar.active {
+            opacity: 1;
+        }
+
+        .audio-meter .bar:nth-child(1) { height: 15%; }
+        .audio-meter .bar:nth-child(2) { height: 25%; }
+        .audio-meter .bar:nth-child(3) { height: 38%; }
+        .audio-meter .bar:nth-child(4) { height: 50%; }
+        .audio-meter .bar:nth-child(5) { height: 62%; }
+        .audio-meter .bar:nth-child(6) { height: 74%; }
+        .audio-meter .bar:nth-child(7) { height: 82%; }
+        .audio-meter .bar:nth-child(8) { height: 88%; }
+        .audio-meter .bar:nth-child(9) { height: 94%; }
+        .audio-meter .bar:nth-child(10) { height: 100%; }
+
+        .audio-meter .bar.active.low {
+            background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+        }
+
+        .audio-meter .bar.active.mid {
+            background: linear-gradient(180deg, #eab308 0%, #ca8a04 100%);
+        }
+
+        .audio-meter .bar.active.high {
+            background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .mic-test-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border: 2px dashed var(--gray-300);
+            border-radius: var(--radius-md);
+            background: var(--gray-50);
+            color: var(--gray-700);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .mic-test-btn:hover {
+            border-color: var(--primary-blue-light);
+            background: rgba(11, 94, 215, 0.05);
+            color: var(--primary-blue);
+        }
+
+        .mic-test-btn.recording {
+            border-color: var(--danger);
+            border-style: solid;
+            background: rgba(220, 53, 69, 0.05);
+            color: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+
+        .mic-test-btn.playing {
+            border-color: var(--success);
+            border-style: solid;
+            background: rgba(25, 135, 84, 0.05);
+            color: var(--success);
+        }
+
+        .extra-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--gray-200);
+        }
+
+        .extra-options-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--gray-700);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 1px;
+            accent-color: var(--primary-blue);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .checkbox-row .cb-label {
+            font-size: 13px;
+            color: var(--gray-800);
+            line-height: 1.4;
+        }
+
+        .checkbox-row .cb-label small {
+            display: block;
+            color: var(--gray-500);
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .prep-status {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .prep-status-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--gray-700);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .prep-status-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+        }
+
+        .prep-status-item.ok {
+            border-color: var(--success);
+            background: rgba(25, 135, 84, 0.03);
+        }
+
+        .prep-status-item.warning {
+            border-color: var(--warning);
+            background: rgba(255, 193, 7, 0.03);
+        }
+
+        .prep-status-item.error {
+            border-color: var(--danger);
+            background: rgba(220, 53, 69, 0.03);
+        }
+
+        .prep-status-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .prep-status-item.ok .prep-status-icon {
+            background: rgba(25, 135, 84, 0.1);
+            color: var(--success);
+        }
+
+        .prep-status-item.warning .prep-status-icon {
+            background: rgba(255, 193, 7, 0.15);
+            color: #d39e00;
+        }
+
+        .prep-status-item.error .prep-status-icon {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--danger);
+        }
+
+        .prep-status-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .prep-status-text .st-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 2px;
+        }
+
+        .prep-status-text .st-desc {
+            font-size: 11px;
+            color: var(--gray-600);
+            line-height: 1.4;
+        }
+
+        .prep-summary {
+            background: linear-gradient(135deg, rgba(11, 94, 215, 0.04) 0%, rgba(11, 94, 215, 0.08) 100%);
+            border: 1px solid rgba(11, 94, 215, 0.15);
+            border-radius: var(--radius-md);
+            padding: 16px;
+        }
+
+        .prep-summary-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+
+        .prep-summary-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .prep-summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 12px;
+        }
+
+        .prep-summary-row .sr-label {
+            color: var(--gray-600);
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .prep-summary-row .sr-value {
+            color: var(--gray-900);
+            font-weight: 600;
+            text-align: right;
+            line-height: 1.4;
+        }
+
+        .prep-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .prep-footer-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .prep-footer-buttons .btn-outline,
+        .prep-footer-buttons .btn-primary {
+            flex: 1;
+            padding: 14px 20px;
+            font-size: 14px;
+        }
+
+        .prep-footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: var(--gray-500);
+            line-height: 1.5;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .modal-root {
+            position: fixed;
+            inset: 0;
+            z-index: 9998;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-root.active {
+            display: flex;
+        }
+
+        .error-fullscreen {
+            position: fixed;
+            inset: 0;
+            background: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 32px;
+        }
+
+        .error-card {
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            padding: 40px;
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .error-icon {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+
+        .error-card h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .error-card p {
+            font-size: 14px;
+            color: var(--gray-600);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .loading-fullscreen {
+            position: fixed;
+            inset: 0;
+            background: var(--white);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            z-index: 10000;
+        }
+
+        .loading-fullscreen .loader {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--gray-200);
+            border-top-color: var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-fullscreen span {
+            font-size: 14px;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1024px) {
+            .prep-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .prep-header {
+                padding: 12px 16px;
+                flex-wrap: wrap;
+            }
+
+            .prep-header-divider {
+                display: none;
+            }
+
+            .prep-assembly-info {
+                display: none;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .prep-content {
+                padding: 20px 16px;
+            }
+
+            .prep-controls {
+                padding: 18px;
+            }
+
+            .prep-footer-buttons {
+                flex-direction: column;
+            }
+
+            .prep-user-chip .prep-user-name {
+                display: none;
+            }
+
+            .prep-logo-text {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen" class="loading-fullscreen">
+        <div class="loader"></div>
+        <span>Carregando sala de preparação...</span>
+    </div>
+
+    <div id="error-screen" class="error-fullscreen" style="display: none;">
+        <div class="error-card">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h1 id="error-title">Não foi possível acessar</h1>
+            <p id="error-message">Ocorreu um erro ao carregar as informações da assembleia.</p>
+            <button class="btn btn-primary btn-lg" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </button>
+        </div>
+    </div>
+
+    <div id="main-app" class="prep-page" style="display: none;">
+        <header class="prep-header">
+            <div class="prep-header-left">
+                <div class="prep-logo">
+                    <img src="../assets/logo-icon.png" alt="Condomit">
+                    <span class="prep-logo-text">Condomit</span>
+                </div>
+                <div class="prep-header-divider"></div>
+                <div class="prep-assembly-info">
+                    <div class="prep-assembly-name" id="header-assembly-name">Assembleia Geral Ordinária</div>
+                    <div class="prep-assembly-meta" id="header-assembly-meta">
+                        <i class="far fa-calendar-alt"></i> <span id="header-assembly-date">--/--/----</span>
+                        <span style="margin: 0 6px;">•</span>
+                        <i class="far fa-clock"></i> <span id="header-assembly-time">--:--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="prep-header-right">
+                <div class="prep-user-chip">
+                    <div class="prep-user-avatar" id="header-user-avatar">--</div>
+                    <span class="prep-user-name" id="header-user-name">Usuário</span>
+                </div>
+                <button class="prep-back-btn" id="btn-back">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </button>
+            </div>
+        </header>
+
+        <main class="prep-content">
+            <div class="prep-grid">
+                <div class="prep-video-container">
+                    <div class="video-wrapper">
+                        <video id="localVideo" autoplay muted playsinline></video>
+                        <div class="video-placeholder" id="videoPlaceholder">
+                            <div class="placeholder-avatar" id="placeholder-avatar">--</div>
+                            <div class="placeholder-text">
+                                <i class="fas fa-video-slash"></i> Câmera desligada
+                            </div>
+                        </div>
+                        <div class="video-overlay-info">
+                            <div class="video-badges">
+                                <div class="video-badge camera-off" id="badge-camera">
+                                    <i class="fas fa-video-slash"></i>
+                                    <span id="badge-camera-text">Câmera</span>
+                                </div>
+                                <div class="video-badge mic-off" id="badge-mic">
+                                    <i class="fas fa-microphone-slash"></i>
+                                    <span id="badge-mic-text">Mic</span>
+                                </div>
+                            </div>
+                            <div class="video-display-name" id="video-display-name">Usuário</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="prep-controls">
+                    <div class="prep-controls-header">
+                        <h2><i class="fas fa-sliders-h" style="color: var(--primary-blue); margin-right: 8px;"></i>Configurar dispositivos</h2>
+                        <p>Verifique sua câmera, microfone e saída de áudio antes de entrar na assembleia. Você pode alterar essas configurações a qualquer momento durante a chamada.</p>
+                    </div>
+
+                    <div class="device-selects">
+                        <div class="device-field">
+                            <label for="camera-select">
+                                <i class="fas fa-video"></i> Câmera
+                            </label>
+                            <select id="camera-select">
+                                <option value="">Carregando dispositivos...</option>
+                            </select>
+                        </div>
+                        <div class="device-field">
+                            <label for="mic-select">
+                                <i class="fas fa-microphone"></i> Microfone
+                            </label>
+                            <select id="mic-select">
+                                <option value="">Carregando dispositivos...</option>
+                            </select>
+                        </div>
+                        <div class="device-field" id="audio-output-field" style="display: none;">
+                            <label for="audio-output-select">
+                                <i class="fas fa-volume-up"></i> Saída de áudio
+                            </label>
+                            <select id="audio-output-select">
+                                <option value="">Padrão do sistema</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="toggle-group">
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <div class="toggle-icon camera">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <div class="toggle-text">
+                                    <strong>Ligar câmera</strong>
+                                    <span>Ative para compartilhar seu vídeo</span>
+                                </div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="camera-toggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <div class="toggle-icon mic">
+                                    <i class="fas fa-microphone"></i>
+                                </div>
+                                <div class="toggle-text">
+                                    <strong>Ligar microfone</strong>
+                                    <span>Ative para falar na assembleia</span>
+                                </div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="mic-toggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="audio-meter-section">
+                        <div class="audio-meter-label">
+                            <span>Teste de microfone</span>
+                            <span class="audio-meter-level" id="audio-meter-level">0 dB</span>
+                        </div>
+                        <div class="audio-meter" id="audio-meter">
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                        </div>
+                        <button class="mic-test-btn" id="mic-test-btn">
+                            <i class="fas fa-play-circle"></i>
+                            <span id="mic-test-btn-text">Iniciar teste do microfone</span>
+                        </button>
+                    </div>
+
+                    <div class="extra-options">
+                        <div class="extra-options-title">Opções de entrada</div>
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="audio-only-check">
+                            <div class="cb-label">
+                                Entrar só com áudio
+                                <small>Desliga a câmera automaticamente ao entrar</small>
+                            </div>
+                        </label>
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="devices-off-check">
+                            <div class="cb-label">
+                                Entrar com câmera e microfone desligados
+                                <small>Modo silencioso para ouvir primeiro</small>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="prep-status">
+                        <div class="prep-status-title">Status dos dispositivos</div>
+                        <div class="prep-status-item warning" id="status-camera">
+                            <div class="prep-status-icon">
+                                <i class="fas fa-video" id="status-camera-icon"></i>
+                            </div>
+                            <div class="prep-status-text">
+                                <div class="st-title" id="status-camera-title">Câmera</div>
+                                <div class="st-desc" id="status-camera-desc">Verificando permissão...</div>
+                            </div>
+                        </div>
+                        <div class="prep-status-item warning" id="status-mic">
+                            <div class="prep-status-icon">
+                                <i class="fas fa-microphone" id="status-mic-icon"></i>
+                            </div>
+                            <div class="prep-status-text">
+                                <div class="st-title" id="status-mic-title">Microfone</div>
+                                <div class="st-desc" id="status-mic-desc">Verificando permissão...</div>
+                            </div>
+                        </div>
+                        <div class="prep-status-item warning" id="status-permissions">
+                            <div class="prep-status-icon">
+                                <i class="fas fa-shield-alt" id="status-perm-icon"></i>
+                            </div>
+                            <div class="prep-status-text">
+                                <div class="st-title" id="status-perm-title">Permissões do navegador</div>
+                                <div class="st-desc" id="status-perm-desc">Aguardando autorização...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prep-summary">
+                        <div class="prep-summary-title">
+                            <i class="fas fa-info-circle"></i> Resumo da assembleia
+                        </div>
+                        <div class="prep-summary-list">
+                            <div class="prep-summary-row">
+                                <span class="sr-label">Assembleia</span>
+                                <span class="sr-value" id="summary-name">--</span>
+                            </div>
+                            <div class="prep-summary-row">
+                                <span class="sr-label">Data</span>
+                                <span class="sr-value" id="summary-date">--/--/----</span>
+                            </div>
+                            <div class="prep-summary-row">
+                                <span class="sr-label">Horário</span>
+                                <span class="sr-value" id="summary-time">--:--</span>
+                            </div>
+                            <div class="prep-summary-row">
+                                <span class="sr-label">Condomínio</span>
+                                <span class="sr-value" id="summary-condo">--</span>
+                            </div>
+                            <div class="prep-summary-row">
+                                <span class="sr-label">Participante</span>
+                                <span class="sr-value" id="summary-user">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prep-footer">
+                        <div class="prep-footer-buttons">
+                            <button class="btn btn-outline" id="btn-back-footer">
+                                <i class="fas fa-arrow-left"></i> Voltar
+                            </button>
+                            <button class="btn btn-primary btn-lg" id="btn-enter" disabled>
+                                <i class="fas fa-sign-in-alt"></i> Entrar na assembleia
+                            </button>
+                        </div>
+                        <p class="prep-footer-note">
+                            <i class="fas fa-lock"></i> Sua chamada é segura e criptografada. Ao entrar, você concorda com os termos de uso.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+    <div class="modal-root" id="modal-root"></div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script type="module" src="../scripts/supabase-auth.js"></script>
+    <script src="../scripts/assembly/utils.js"></script>
+    <script src="../scripts/assembly/auth.js"></script>
+    <script src="../scripts/assembly/api.js"></script>
+    <script src="../scripts/assembly/permissions.js"></script>
+    <script src="../scripts/assembly/assembly-prep.js"></script>
+</body>
+</html>

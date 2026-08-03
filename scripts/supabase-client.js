@@ -9,11 +9,35 @@ const SUPABASE_HEADERS = {
   'Content-Type': 'application/json'
 };
 
+function getSupabaseAccessToken() {
+  try {
+    const t = sessionStorage.getItem('sb-access-token') || localStorage.getItem('sb-access-token');
+    if (t) return t;
+  } catch (_) {}
+  try {
+    const s = sessionStorage.getItem('sb-session') || localStorage.getItem('sb-session');
+    if (s) {
+      const session = JSON.parse(s);
+      if (session?.access_token) return session.access_token;
+    }
+  } catch (_) {}
+  try {
+    const u = sessionStorage.getItem('condominiumUser');
+    if (u) {
+      const user = JSON.parse(u);
+      if (user?.token) return user.token;
+    }
+  } catch (_) {}
+  return null;
+}
+
 async function supabaseFetch(path, options = {}) {
+  const accessToken = getSupabaseAccessToken();
   const response = await fetch(`${SUPABASE_REST_URL}${path}`, {
     ...options,
     headers: {
       ...SUPABASE_HEADERS,
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...(options.headers || {})
     }
   });

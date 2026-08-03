@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assembleia ao vivo | Condomit</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../styles/index.css">
+  <link rel="stylesheet" href="../styles/theme.css">
+  <link rel="stylesheet" href="../styles/assembleia-room.css">
+</head>
+<body>
+  <div class="call-page">
+    <header class="call-header">
+      <div class="call-header-left">
+        <a class="call-brand" href="assembleia.html" aria-label="Voltar para assembleias">
+          <img src="../assets/logo-icon.png" alt="Condomit" />
+          <span>Assembleia</span>
+        </a>
+        <div class="call-header-divider"></div>
+        <div class="call-assembly">
+          <div class="call-assembly-title" id="call-assembly-title">Assembleia</div>
+          <div class="call-assembly-meta" id="call-assembly-meta">Carregando...</div>
+        </div>
+      </div>
+      <div class="call-header-right">
+        <div class="call-connection" id="call-connection">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="call-connection-text">Conectando...</span>
+        </div>
+        <button class="btn btn-outline btn-sm" id="call-open-details" type="button">
+          <i class="fas fa-info-circle"></i>
+          Detalhes
+        </button>
+      </div>
+    </header>
+
+    <div class="call-body">
+      <main class="call-stage" aria-label="Sala de chamada">
+        <div class="call-banner" id="call-banner" style="display:none;"></div>
+        <div class="call-screen-share" id="call-screen-share" style="display:none;">
+          <div class="screen-share-header">
+            <div class="screen-share-title" id="screen-share-title">Compartilhamento de tela</div>
+            <button class="btn btn-ghost btn-sm" id="btn-stop-screen-share" type="button">
+              <i class="fas fa-stop-circle"></i>
+              Parar
+            </button>
+          </div>
+          <div class="screen-share-surface" id="screen-share-surface"></div>
+        </div>
+
+        <div class="call-grid" id="call-grid"></div>
+      </main>
+
+      <aside class="call-panel" id="call-panel" aria-label="Painel lateral">
+        <div class="panel-tabs" role="tablist" aria-label="Abas">
+          <button class="panel-tab active" type="button" data-tab="participants" role="tab" aria-selected="true">
+            <i class="fas fa-users"></i>
+            Participantes
+          </button>
+          <button class="panel-tab" type="button" data-tab="chat" role="tab" aria-selected="false">
+            <i class="fas fa-comments"></i>
+            Chat
+          </button>
+          <button class="panel-tab" type="button" data-tab="agenda" role="tab" aria-selected="false">
+            <i class="fas fa-list-ol"></i>
+            Pautas
+          </button>
+          <button class="panel-tab" type="button" data-tab="polls" role="tab" aria-selected="false">
+            <i class="fas fa-vote-yea"></i>
+            Votações
+          </button>
+          <button class="panel-tab" type="button" data-tab="docs" role="tab" aria-selected="false">
+            <i class="fas fa-folder-open"></i>
+            Docs
+          </button>
+        </div>
+
+        <div class="panel-content">
+          <section class="panel-section active" data-panel="participants" role="tabpanel">
+            <div class="panel-section-header">
+              <div class="panel-section-title">Participantes</div>
+              <div class="panel-section-badge" id="participants-count">0</div>
+            </div>
+            <div class="panel-list" id="participants-list"></div>
+          </section>
+
+          <section class="panel-section" data-panel="chat" role="tabpanel">
+            <div class="panel-section-header">
+              <div class="panel-section-title">Chat</div>
+              <div class="panel-section-badge" id="chat-count">0</div>
+            </div>
+            <div class="panel-chat-messages" id="chat-messages"></div>
+            <form class="panel-chat-form" id="chat-form">
+              <input class="panel-chat-input" id="chat-input" type="text" maxlength="800" placeholder="Digite sua mensagem..." aria-label="Mensagem do chat" />
+              <button class="btn btn-primary btn-sm" type="submit" id="chat-send">
+                <i class="fas fa-paper-plane"></i>
+                Enviar
+              </button>
+            </form>
+          </section>
+
+          <section class="panel-section" data-panel="agenda" role="tabpanel">
+            <div class="panel-section-header">
+              <div class="panel-section-title">Pautas</div>
+              <div class="panel-section-badge" id="agenda-count">0</div>
+            </div>
+            <div class="panel-list" id="agenda-list"></div>
+          </section>
+
+          <section class="panel-section" data-panel="polls" role="tabpanel">
+            <div class="panel-section-header">
+              <div class="panel-section-title">Votações</div>
+              <div class="panel-section-badge" id="polls-count">0</div>
+            </div>
+            <div class="panel-list" id="polls-list"></div>
+          </section>
+
+          <section class="panel-section" data-panel="docs" role="tabpanel">
+            <div class="panel-section-header">
+              <div class="panel-section-title">Documentos</div>
+              <div class="panel-section-badge" id="docs-count">0</div>
+            </div>
+            <div class="panel-list" id="docs-list"></div>
+          </section>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="call-controls" aria-label="Controles da chamada">
+      <button class="control-btn" id="btn-mic" type="button" aria-label="Microfone">
+        <i class="fas fa-microphone"></i>
+        <span>Mic</span>
+      </button>
+      <button class="control-btn" id="btn-camera" type="button" aria-label="Câmera">
+        <i class="fas fa-video"></i>
+        <span>Câmera</span>
+      </button>
+      <button class="control-btn" id="btn-screen" type="button" aria-label="Compartilhar tela">
+        <i class="fas fa-desktop"></i>
+        <span>Tela</span>
+      </button>
+      <button class="control-btn" id="btn-hand" type="button" aria-label="Levantar mão">
+        <i class="fas fa-hand-paper"></i>
+        <span>Mão</span>
+      </button>
+      <button class="control-btn" id="btn-toggle-panel" type="button" aria-label="Mostrar ou ocultar painel">
+        <i class="fas fa-columns"></i>
+        <span>Painel</span>
+      </button>
+      <button class="control-btn danger" id="btn-leave" type="button" aria-label="Sair da assembleia">
+        <i class="fas fa-phone-slash"></i>
+        <span>Sair</span>
+      </button>
+    </footer>
+  </div>
+
+  <div class="modal-root" id="modal-root"></div>
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="../scripts/supabase-client.js"></script>
+  <script type="module" src="../scripts/supabase-auth.js"></script>
+  <script src="../scripts/assembly/utils.js"></script>
+  <script src="../scripts/assembly/auth.js"></script>
+  <script src="../scripts/assembly/api.js"></script>
+  <script src="../scripts/assembly/permissions.js"></script>
+  <script type="module" src="../scripts/assembly/room/index.js"></script>
+</body>
+</html>
+

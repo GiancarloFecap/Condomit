@@ -1,0 +1,21 @@
+export const state = {
+  assemblyId: null,
+  assembly: null,
+  tokenInfo: null,
+  room: null,
+  user: null,
+  permissions: null,
+  connected: false,
+  activeSpeakers: new Set(),
+  cameraTracks: new Map(),
+  screenShareTrack: null,
+  screenShareOwner: null,
+  raisedHands: new Map(),
+  panelOpen: true,
+  chatSubscription: null,
+  handSubscription: null,
+  agendaSubscription: null,
+  pollsSubscription: null,
+  docsSubscription: null,
+  heartbeatTimer: null
+};
