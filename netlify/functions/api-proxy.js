@@ -374,10 +374,19 @@ async function handleMercadoPagoPreference(event, body) {
   }
 
   if (!paymentRecord) {
+    const totalApartamentos =
+      Number(body?.total_apartamentos) ||
+      Number(body?.totalApartments) ||
+      Number(body?.user?.condominium?.totalApartments) ||
+      Number(body?.user?.condominium?.total_apartments) ||
+      Number(body?.user?.condominium?.total_apartamentos) ||
+      0;
+
     paymentRecord = await createSupabasePayment({
       email,
       cep: body?.cep || body?.condominiumCep || extractUserCep(body?.user),
       plano_id: planRecord.id,
+      total_apartamentos: totalApartamentos || undefined,
       status_pagamento: 'pendente',
       data_pagamento: new Date().toISOString()
     });

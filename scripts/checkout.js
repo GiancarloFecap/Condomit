@@ -336,10 +336,18 @@ async function initCheckoutButton() {
 }
 
 async function createPendingPayment(plan, traceId) {
+    const totalApartments =
+        Number(currentUser?.condominium?.totalApartments) ||
+        Number(currentUser?.condominium?.total_apartments) ||
+        Number(currentUser?.condominium?.total_apartamentos) ||
+        Number(currentUser?.totalApartments) ||
+        0;
+
     const requestBody = {
         email: currentUser.email,
         cep: extractUserCep(currentUser),
         plano_id: plan.id,
+        total_apartamentos: totalApartments,
         status_pagamento: 'pendente',
         data_pagamento: new Date().toISOString()
     };
@@ -355,6 +363,7 @@ async function createPendingPayment(plan, traceId) {
                 email: requestBody.email,
                 cep: requestBody.cep,
                 plano_id: requestBody.plano_id,
+                total_apartamentos: requestBody.total_apartamentos,
                 status_pagamento: requestBody.status_pagamento
             }
         },
@@ -401,11 +410,19 @@ async function createPendingPayment(plan, traceId) {
 }
 
 async function createPaymentPreference(plan, pendingPayment, traceId) {
+    const totalApartments =
+        Number(currentUser?.condominium?.totalApartments) ||
+        Number(currentUser?.condominium?.total_apartments) ||
+        Number(currentUser?.condominium?.total_apartamentos) ||
+        Number(currentUser?.totalApartments) ||
+        0;
+
     const requestBody = {
         email: currentUser.email,
         cep: extractUserCep(currentUser),
         planId: plan.id,
         pendingPaymentId: pendingPayment?.id || null,
+        total_apartamentos: totalApartments,
         user: currentUser
     };
 
@@ -420,7 +437,8 @@ async function createPaymentPreference(plan, pendingPayment, traceId) {
                 email: requestBody.email,
                 cep: requestBody.cep,
                 planId: requestBody.planId,
-                pendingPaymentId: requestBody.pendingPaymentId
+                pendingPaymentId: requestBody.pendingPaymentId,
+                total_apartamentos: requestBody.total_apartamentos
             }
         },
         traceId

@@ -20,7 +20,7 @@
 | E | Falha no Wallet Brick (SDK/DOM) antes do onSubmit (erro de renderização/config) | Low | Low | Pending |
 
 ## Log Evidence
-[Pending]
+- Evidência do usuário (produção): `null value in column "total_apartamentos" of relation "pagamento" violates not-null constraint`
 
 ## Verification Conclusion
 [Pending]
