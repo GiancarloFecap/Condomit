@@ -153,7 +153,7 @@ async function createSupabasePayment(paymentPayload) {
 }
 
 async function createMercadoPagoPreference({ event, userRecord, planRecord, paymentRecord }) {
-  const amount = Number(planRecord?.valor_minimo ?? planRecord?.valor ?? 0);
+  const amount = Number(paymentRecord?.valor_pago ?? planRecord?.valor_minimo ?? planRecord?.valor ?? 0);
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error('Valor do plano invalido para criar a preferencia');
   }
@@ -382,11 +382,36 @@ async function handleMercadoPagoPreference(event, body) {
       Number(body?.user?.condominium?.total_apartamentos) ||
       0;
 
+    const valorPorUnidade = Number(body?.valor_por_unidade) || Number(planRecord?.valor_por_unidade) || 0;
+    const valorMinimo = Number(body?.valor_minimo) || Number(planRecord?.valor_minimo) || 0;
+    const valorPagoBody = Number(body?.valor_pago);
+    const valorCalculado = totalApartamentos > 0 && valorPorUnidade > 0 ? totalApartamentos * valorPorUnidade : 0;
+    const valorPago = Number.isFinite(valorPagoBody) && valorPagoBody > 0
+      ? valorPagoBody
+      : valorCalculado > 0 && valorMinimo > 0
+        ? Math.max(valorMinimo, valorCalculado)
+        : valorMinimo;
+
+    if (!Number.isFinite(valorPorUnidade) || valorPorUnidade <= 0) {
+      return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Plano sem valor_por_unidade valido para iniciar o pagamento' }) };
+    }
+
+    if (!Number.isFinite(valorMinimo) || valorMinimo <= 0) {
+      return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Plano sem valor_minimo valido para iniciar o pagamento' }) };
+    }
+
+    if (!Number.isFinite(valorPago) || valorPago <= 0) {
+      return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Nao foi possivel calcular o valor do pagamento' }) };
+    }
+
     paymentRecord = await createSupabasePayment({
       email,
       cep: body?.cep || body?.condominiumCep || extractUserCep(body?.user),
       plano_id: planRecord.id,
-      total_apartamentos: totalApartamentos || undefined,
+      total_apartamentos: totalApartamentos > 0 ? totalApartamentos : 1,
+      valor_por_unidade: valorPorUnidade,
+      valor_minimo: valorMinimo,
+      valor_pago: valorPago,
       status_pagamento: 'pendente',
       data_pagamento: new Date().toISOString()
     });

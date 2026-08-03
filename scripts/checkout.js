@@ -343,11 +343,16 @@ async function createPendingPayment(plan, traceId) {
         Number(currentUser?.totalApartments) ||
         0;
 
+    const computed = computePaymentAmount({ totalApartments, plan });
+
     const requestBody = {
         email: currentUser.email,
         cep: extractUserCep(currentUser),
         plano_id: plan.id,
-        total_apartamentos: totalApartments,
+        total_apartamentos: computed.totalApartments,
+        valor_por_unidade: computed.valorPorUnidade,
+        valor_minimo: computed.valorMinimo,
+        valor_pago: computed.valorPago,
         status_pagamento: 'pendente',
         data_pagamento: new Date().toISOString()
     };
@@ -364,6 +369,9 @@ async function createPendingPayment(plan, traceId) {
                 cep: requestBody.cep,
                 plano_id: requestBody.plano_id,
                 total_apartamentos: requestBody.total_apartamentos,
+                valor_por_unidade: requestBody.valor_por_unidade,
+                valor_minimo: requestBody.valor_minimo,
+                valor_pago: requestBody.valor_pago,
                 status_pagamento: requestBody.status_pagamento
             }
         },
@@ -417,12 +425,17 @@ async function createPaymentPreference(plan, pendingPayment, traceId) {
         Number(currentUser?.totalApartments) ||
         0;
 
+    const computed = computePaymentAmount({ totalApartments, plan });
+
     const requestBody = {
         email: currentUser.email,
         cep: extractUserCep(currentUser),
         planId: plan.id,
         pendingPaymentId: pendingPayment?.id || null,
-        total_apartamentos: totalApartments,
+        total_apartamentos: computed.totalApartments,
+        valor_por_unidade: computed.valorPorUnidade,
+        valor_minimo: computed.valorMinimo,
+        valor_pago: computed.valorPago,
         user: currentUser
     };
 
@@ -438,7 +451,10 @@ async function createPaymentPreference(plan, pendingPayment, traceId) {
                 cep: requestBody.cep,
                 planId: requestBody.planId,
                 pendingPaymentId: requestBody.pendingPaymentId,
-                total_apartamentos: requestBody.total_apartamentos
+                total_apartamentos: requestBody.total_apartamentos,
+                valor_por_unidade: requestBody.valor_por_unidade,
+                valor_minimo: requestBody.valor_minimo,
+                valor_pago: requestBody.valor_pago
             }
         },
         traceId
@@ -547,4 +563,32 @@ function formatCurrency(value) {
         style: 'currency',
         currency: 'BRL'
     }).format(amount);
+}
+
+function computePaymentAmount({ totalApartments, plan }) {
+    const apartments = Number(totalApartments);
+    const unitPrice = Number(plan?.valor_por_unidade);
+    const minimum = Number(plan?.valor_minimo);
+
+    if (!Number.isFinite(apartments) || apartments <= 0) {
+        throw new Error('Nao foi possivel identificar o total de apartamentos do condominio.');
+    }
+
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+        throw new Error('Plano selecionado sem valor_por_unidade valido.');
+    }
+
+    if (!Number.isFinite(minimum) || minimum <= 0) {
+        throw new Error('Plano selecionado sem valor_minimo valido.');
+    }
+
+    const calculated = apartments * unitPrice;
+    const total = calculated >= minimum ? calculated : minimum;
+
+    return {
+        totalApartments: apartments,
+        valorPorUnidade: unitPrice,
+        valorMinimo: minimum,
+        valorPago: total
+    };
 }

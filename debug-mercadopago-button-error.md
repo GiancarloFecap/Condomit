@@ -21,6 +21,7 @@
 
 ## Log Evidence
 - Evidência do usuário (produção): `null value in column "total_apartamentos" of relation "pagamento" violates not-null constraint`
+- Evidência do usuário (produção): `null value in column "valor_por_unidade" of relation "pagamento" violates not-null constraint`
 
 ## Verification Conclusion
 [Pending]
