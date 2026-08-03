@@ -139,6 +139,10 @@ exports.handler = async (event, context) => {
     return httpError(403, 'Esta assembleia pertence a outro condomínio.');
   }
 
+  // #region debug-point B:assembly-validation
+  fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"B",location:"netlify/functions/livekit-token.js:assembly-validation",msg:"[DEBUG] validated assembly and user for token generation",data:{assemblyId:assembly.id,assemblyCep:assembly.cep,userCep:userCEP,status:assembly.status,userEmail:userEmail},ts:Date.now()})}).catch(()=>{});
+  // #endregion
+
   const validStatuses = ['agendada', 'em_andamento'];
   if (!validStatuses.includes(assembly.status)) {
     if (assembly.status === 'encerrada') {
@@ -185,6 +189,10 @@ exports.handler = async (event, context) => {
       return httpError(500, 'Erro ao configurar sala da assembleia.');
     }
   }
+
+  // #region debug-point A:livekit-config
+  fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"A",location:"netlify/functions/livekit-token.js:room-config",msg:"[DEBUG] resolved livekit url and room name",data:{assemblyId:assembly.id,livekitUrl:LIVEKIT_URL,roomName:roomName,usedPersistedRoom:Boolean(assembly.livekit_room_name)},ts:Date.now()})}).catch(()=>{});
+  // #endregion
 
   const ttlMinutes = 8 * 60;
   let at;
@@ -235,6 +243,10 @@ exports.handler = async (event, context) => {
   } catch (e) {
     return httpError(500, 'Erro ao assinar credencial de acesso.');
   }
+
+  // #region debug-point C:token-issued
+  fetch("http://10.1.32.166:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"livekit-cross-device",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/livekit-token.js:token-issued",msg:"[DEBUG] issued livekit token",data:{assemblyId:assembly.id,identity:participantIdentity,participantName:participantName,roomName:roomName,livekitUrl:LIVEKIT_URL,canPublishSources:canPublishSources},ts:Date.now()})}).catch(()=>{});
+  // #endregion
 
   try {
     await supabase.from('assembly_event_logs').insert({
