@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assembleias | Condomit</title>
+    <title>Assembleia de Condominio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/assembleia.css">
     <link rel="stylesheet" href="../styles/theme.css">
-    <link rel="stylesheet" href="../styles/assembleia-v2.css">
 </head>
 <body>
     <div class="dashboard-sindico">
         <aside class="sidebar">
             <div class="sidebar-header">
                 <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
-                <h2 class="condo-name"></h2>
+                <h2 class="condo-name">
             </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <a href="index.html" class="nav-item">
                         <i class="fas fa-home"></i>
-                        <span>Início</span>
+                        <span>Inicio</span>
                     </a>
                 </div>
 
@@ -33,13 +33,13 @@
                     </a>
                     <a href="#" class="nav-item">
                         <i class="fas fa-lightbulb"></i>
-                        <span>Canal de Sugestões</span>
+                        <span>Canal de Sugestoes</span>
                     </a>
                     <a href="#" class="nav-item">
                         <i class="fas fa-flag"></i>
-                        <span>Indicações</span>
+                        <span>Indicacoes</span>
                     </a>
-                    <div class="nav-section-title">Comunicação e Relacionamento</div>
+                    <div class="nav-section-title">Comunicacao e Relacionamento</div>
                     <a href="#" class="nav-item">
                         <i class="fas fa-comments"></i>
                         <span>Chat com Moradores</span>
@@ -74,42 +74,42 @@
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-section-title">Gestão de Moradores</div>
+                    <div class="nav-section-title">Gestao de Moradores</div>
                     <a href="#" class="nav-item">
                         <i class="fas fa-users-cog"></i>
-                        <span>Gestão de Moradores</span>
+                        <span>Gestao de Moradores</span>
                     </a>
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-section-title">Reserva e Manutenção</div>
+                    <div class="nav-section-title">Reserva e Manutencao</div>
                     <a href="reservas.html" class="nav-item">
                         <i class="fas fa-calendar-alt"></i>
                         <span>Reserva de Locais</span>
                     </a>
                     <a href="#" class="nav-item">
                         <i class="fas fa-tools"></i>
-                        <span>Manutenção Preventiva</span>
+                        <span>Manutencao Preventiva</span>
                     </a>
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-section-title">IA e Automação</div>
+                    <div class="nav-section-title">IA e Automacao</div>
                     <a href="ai-condomit.html" class="nav-item">
                         <i class="fas fa-robot"></i>
-                        <span>IA - Dúvidas do Condomínio</span>
+                        <span>IA - Duvidas do Condominio</span>
                     </a>
                     <a href="#" class="nav-item">
                         <i class="fas fa-bell"></i>
-                        <span>IA - Comunicados Automáticos</span>
+                        <span>IA - Comunicados Automaticos</span>
                     </a>
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-section-title">Configurações</div>
+                    <div class="nav-section-title">Configuracoes</div>
                     <a href="configuracoes.html" class="nav-item">
                         <i class="fas fa-cog"></i>
-                        <span>Configurações</span>
+                        <span>Configuracoes</span>
                     </a>
                 </div>
             </nav>
@@ -129,8 +129,8 @@
         <main class="main-content">
             <header class="top-bar">
                 <div class="top-bar-left">
-                    <h1><i class="fas fa-building"></i> Assembleias</h1>
-                    <p>Gerencie assembleias online do seu condomínio com preparação, entrada segura e acompanhamento em tempo real.</p>
+                    <h1><i class="fas fa-building"></i> Assembleia</h1>
+                    <p>Bem-vindo ao painel de gestao do condominio</p>
                 </div>
                 <div class="top-bar-right">
                     <div class="top-icons">
@@ -141,7 +141,7 @@
                     </div>
                     <div class="user-profile-small">
                         <div class="user-info-small">
-                            <div class="name" id="user-name">Você</div>
+                            <div class="name" id="user-name">Voce</div>
                             <div class="type" id="user-type">Morador</div>
                         </div>
                         <div class="avatar" id="user-avatar">VM</div>
@@ -149,227 +149,227 @@
                 </div>
             </header>
 
-            <div class="assemblies-page">
-                <div class="page-header">
-                    <div>
-                        <h1>Assembleias do condomínio</h1>
-                        <p>Acompanhe a próxima assembleia, filtre o histórico e entre no fluxo completo de detalhes, preparação e sala ao vivo.</p>
-                    </div>
-                    <div class="header-actions">
-                        <a href="assembleia-sala.html" class="btn btn-outline">
-                            <i class="fas fa-arrow-up-right-from-square"></i> Abrir sala
-                        </a>
-                        <button class="btn btn-primary" id="btn-agendar" style="display:none;">
-                            <i class="fas fa-calendar-plus"></i> Agendar assembleia
-                        </button>
-                    </div>
+            <div id="main-content">
+                <div class="welcome-card card">
+                    <h2>Portal de Assembleias</h2>
+                    <p>Seja bem-vindo ao portal oficial de assembleias do condominio. Participe ativamente das decisoes que envolvem nosso lar.</p>
                 </div>
 
-                <section class="assembly-overview-card">
-                    <div class="overview-copy">
-                        <span class="overview-badge">
-                            <i class="fas fa-shield-alt"></i>
-                            Acesso restrito por condomínio
-                        </span>
-                        <h2 id="next-assembly-summary">Carregando a próxima assembleia...</h2>
-                        <p id="next-assembly-description">Estamos buscando as assembleias vinculadas ao seu condomínio para montar a visão principal.</p>
-                        <div class="overview-meta">
-                            <div class="overview-meta-item">
-                                <span class="label">Status</span>
-                                <span class="value" id="next-assembly-status">Aguardando dados</span>
-                            </div>
-                            <div class="overview-meta-item">
-                                <span class="label">Quando</span>
-                                <span class="value" id="next-assembly-date">--/--/----</span>
-                            </div>
-                            <div class="overview-meta-item">
-                                <span class="label">Condomínio</span>
-                                <span class="value" id="scope-condo-name">Meu condomínio</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="overview-aside">
-                        <div class="overview-aside-card">
-                            <div class="title">Fluxo da assembleia</div>
-                            <ul class="overview-steps">
-                                <li><i class="fas fa-check-circle"></i> Lista com filtros por status, mês, ano e tipo</li>
-                                <li><i class="fas fa-check-circle"></i> Detalhes com presença, pautas e contagem regressiva</li>
-                                <li><i class="fas fa-check-circle"></i> Preparação antes da conexão com câmera e microfone</li>
-                                <li><i class="fas fa-check-circle"></i> Sala LiveKit com chat, participantes, mão levantada e votações</li>
-                            </ul>
+                <section id="scheduled-section" class="section-block">
+                    <div class="card">
+                        <h2><i class="fas fa-calendar-check"></i> Assembleias Agendadas</h2>
+                        <div id="scheduled-list">
                         </div>
                     </div>
                 </section>
 
-                <div class="stats-cards">
-                    <div class="stat-card agendadas">
-                        <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
-                        <div class="stat-label">Agendadas</div>
-                        <div class="stat-value" id="stat-agendadas">0</div>
+                <section id="schedule-section" class="section-block" style="display: none;">
+                    <div class="card">
+                        <h2><i class="fas fa-calendar-plus"></i> Agendar Nova Assembleia</h2>
+                        <div id="schedule-info" class="schedule-info" style="display: none;"></div>
+                        <form id="schedule-form" class="schedule-form" onsubmit="scheduleAssembly(event)">
+                            <div class="form-group">
+                                <label for="assembly-title">Titulo da Assembleia</label>
+                                <input type="text" id="assembly-title-input" placeholder="Ex: Assembleia Geral Ordinaria" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="assembly-date">Data</label>
+                                    <input type="date" id="assembly-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="assembly-time">Horario de Inicio</label>
+                                    <input type="time" id="assembly-time" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Agendar Assembleia
+                            </button>
+                        </form>
                     </div>
-                    <div class="stat-card andamento">
-                        <div class="stat-icon"><i class="fas fa-play-circle"></i></div>
-                        <div class="stat-label">Em andamento</div>
-                        <div class="stat-value" id="stat-andamento">0</div>
-                    </div>
-                    <div class="stat-card encerradas">
-                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                        <div class="stat-label">Encerradas</div>
-                        <div class="stat-value" id="stat-encerradas">0</div>
-                    </div>
-                    <div class="stat-card canceladas">
-                        <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
-                        <div class="stat-label">Canceladas</div>
-                        <div class="stat-value" id="stat-canceladas">0</div>
-                    </div>
-                    <div class="stat-card participacoes">
-                        <div class="stat-icon"><i class="fas fa-user-check"></i></div>
-                        <div class="stat-label">Minhas participações</div>
-                        <div class="stat-value" id="stat-participacoes">0</div>
-                    </div>
-                </div>
+                </section>
 
-                <div class="filters-bar">
-                    <div class="filter-group">
-                        <label for="filter-titulo">Título</label>
-                        <input type="text" id="filter-titulo" placeholder="Buscar por título ou descrição">
+                <section id="past-section" class="section-block">
+                    <div class="card">
+                        <h2><i class="fas fa-history"></i> Assembleias Realizadas</h2>
+                        <div id="past-list">
+                        </div>
                     </div>
-                    <div class="filter-group">
-                        <label for="filter-status">Status</label>
-                        <select id="filter-status">
-                            <option value="">Todos</option>
-                            <option value="agendada">Agendada</option>
-                            <option value="em_andamento">Em andamento</option>
-                            <option value="encerrada">Encerrada</option>
-                            <option value="cancelada">Cancelada</option>
-                        </select>
+                </section>
+            </div>
+
+            <div id="prejoin-overlay" class="fullscreen-overlay prejoin-overlay" aria-hidden="true">
+                <div class="prejoin-card">
+                    <button class="prejoin-close" type="button" onclick="closePreJoin()" aria-label="Fechar preparacao">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="prejoin-copy">
+                        <span class="prejoin-eyebrow">Preparar entrada</span>
+                        <h2 id="prejoin-title">Assembleia</h2>
+                        <p id="prejoin-subtitle">Revise microfone e camera antes de entrar na sala.</p>
                     </div>
-                    <div class="filter-group">
-                        <label for="filter-mes">Mês</label>
-                        <select id="filter-mes">
-                            <option value="">Todos</option>
-                            <option value="1">Janeiro</option>
-                            <option value="2">Fevereiro</option>
-                            <option value="3">Março</option>
-                            <option value="4">Abril</option>
-                            <option value="5">Maio</option>
-                            <option value="6">Junho</option>
-                            <option value="7">Julho</option>
-                            <option value="8">Agosto</option>
-                            <option value="9">Setembro</option>
-                            <option value="10">Outubro</option>
-                            <option value="11">Novembro</option>
-                            <option value="12">Dezembro</option>
-                        </select>
+
+                    <div class="prejoin-preview" id="prejoin-preview">
+                        <video id="prejoin-video" autoplay playsinline muted></video>
+                        <div class="prejoin-avatar" id="prejoin-avatar">US</div>
+                        <div class="prejoin-preview-empty" id="prejoin-preview-empty">
+                            <i class="fas fa-video-slash"></i>
+                            <span>Sua camera esta desligada no momento.</span>
+                        </div>
                     </div>
-                    <div class="filter-group">
-                        <label for="filter-ano">Ano</label>
-                        <select id="filter-ano">
-                            <option value="">Todos os anos</option>
-                        </select>
+
+                    <div class="prejoin-device-status">
+                        <div class="device-pill" id="prejoin-mic-status">
+                            <i class="fas fa-microphone-slash"></i>
+                            <span>Microfone desligado</span>
+                        </div>
+                        <div class="device-pill" id="prejoin-camera-status">
+                            <i class="fas fa-video-slash"></i>
+                            <span>Camera desligada</span>
+                        </div>
                     </div>
-                    <div class="filter-group">
-                        <label for="filter-tipo">Tipo</label>
-                        <select id="filter-tipo">
-                            <option value="">Todos</option>
-                            <option value="ordinaria">Ordinária</option>
-                            <option value="extraordinaria">Extraordinária</option>
-                            <option value="virtual">Virtual</option>
-                        </select>
+
+                    <div class="prejoin-actions">
+                        <button class="btn btn-secondary" type="button" onclick="toggleMic()">
+                            <i class="fas fa-microphone"></i> Alternar microfone
+                        </button>
+                        <button class="btn btn-secondary" type="button" onclick="toggleCamera()">
+                            <i class="fas fa-video"></i> Alternar camera
+                        </button>
                     </div>
-                    <div class="filter-actions">
-                        <button class="btn btn-outline" id="btn-limpar-filtros">
-                            <i class="fas fa-eraser"></i> Limpar
+
+                    <div class="prejoin-footer">
+                        <button class="btn btn-secondary" type="button" onclick="closePreJoin()">Cancelar</button>
+                        <button class="btn btn-primary" id="confirm-join-btn" type="button" onclick="confirmJoinAssembly()">
+                            <i class="fas fa-right-to-bracket"></i> Entrar na assembleia
                         </button>
                     </div>
                 </div>
+            </div>
 
-                <div id="sections-container">
-                    <div class="empty-state">
-                        <div class="empty-icon"><i class="fas fa-spinner fa-spin"></i></div>
-                        <h3>Carregando assembleias</h3>
-                        <p>Estamos montando a página com base nas assembleias do seu condomínio.</p>
+            <div id="assembly-room" class="fullscreen-overlay">
+                <div class="assembly-room-container">
+                    <div class="video-area">
+                        <div class="video-header">
+                            <div>
+                                <h2 id="assembly-title">Assembleia Geral Ordinaria</h2>
+                                <p id="assembly-subtitle" class="assembly-subtitle">Sala pronta para participacao.</p>
+                            </div>
+                            <div class="room-status-badges">
+                                <span class="room-status-pill" id="assembly-connection-status">Conectando sala</span>
+                                <span class="room-status-pill" id="assembly-participants-summary">1 participante</span>
+                            </div>
+                        </div>
+                        <div class="video-grid" id="video-grid">
+                        </div>
+                        <div class="controls">
+                            <button class="control-btn" id="mic-btn" onclick="toggleMic()">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                            <button class="control-btn" id="camera-btn" onclick="toggleCamera()">
+                                <i class="fas fa-video"></i>
+                            </button>
+                            <button class="control-btn" id="chat-toggle-btn" onclick="toggleChat()">
+                                <i class="fas fa-comments"></i>
+                            </button>
+                            <button class="control-btn leave-btn" id="leave-btn" onclick="leaveAssembly()" title="Sair da Chamada">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chat-sidebar" id="chat-sidebar">
+                        <div class="chat-header">
+                            <h3><i class="fas fa-comments"></i> Chat da Assembleia</h3>
+                            <button class="chat-close-btn" type="button" onclick="toggleChat(false)" aria-label="Fechar chat">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                        </div>
+                        <div id="image-preview-wrapper" class="image-preview-wrapper">
+                            <img id="image-preview" class="image-preview" alt="Preview da imagem">
+                            <button class="remove-image-btn" onclick="removeSelectedImage()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="chat-input">
+                            <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                            <button class="image-btn" onclick="document.getElementById('image-upload').click()" title="Enviar imagem">
+                                <i class="fas fa-image"></i>
+                            </button>
+                            <input type="text" id="message-input" placeholder="Digite sua mensagem...">
+                            <button class="send-btn" onclick="sendMessage()" title="Enviar">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div id="past-assembly-detail" class="fullscreen-overlay">
+                <div class="detail-container">
+                    <div class="detail-header">
+                        <button class="btn btn-back" onclick="goBack()">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </button>
+                        <h2 id="past-assembly-title">Assembleia Extraordinaria - Reforma do Hall Principal</h2>
+                    </div>
+                    <div class="card detail-card">
+                        <p class="detail-meta"><i class="far fa-calendar-alt"></i> 15 de maio de 2026, as 18h00</p>
+
+                        <div class="summary-container">
+                            <h3><i class="fas fa-robot"></i> Resumo da Assembleia</h3>
+                            <div class="summary-box">
+                                <p>Resumo da assembleia sera exibido aqui.</p>
+                            </div>
+                        </div>
+
+                        <div class="voting-section">
+                            <h3><i class="fas fa-vote-yea"></i> Votacao</h3>
+                            <p class="voting-question">Voce aprova o projeto?</p>
+                            <div class="voting-buttons" id="voting-buttons">
+                                <button class="btn vote-btn yes-btn" onclick="vote('yes')">
+                                    <i class="fas fa-thumbs-up"></i> A Favor
+                                </button>
+                                <button class="btn vote-btn no-btn" onclick="vote('no')">
+                                    <i class="fas fa-thumbs-down"></i> Contra
+                                </button>
+                            </div>
+                            <div id="vote-result" class="vote-result" style="display: none;">
+                                <div class="result-header">
+                                    <p><i class="fas fa-check-circle"></i> <strong>Voto registrado com sucesso!</strong></p>
+                                </div>
+                                <div class="result-stats">
+                                    <div class="stat-item">
+                                        <div class="stat-label">Total de Votos</div>
+                                        <div class="stat-value" id="total-votes">0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="comments-section">
+                            <h3><i class="fas fa-comments"></i> Comentarios da Assembleia</h3>
+                            <div class="comments-list" id="comments-list">
+                            </div>
+                            <div class="comment-input-section">
+                                <textarea id="comment-input" placeholder="Escreva seu comentario..."></textarea>
+                                <button class="btn btn-primary" onclick="sendComment()">
+                                    <i class="fas fa-paper-plane"></i> Enviar Comentario
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
         </main>
     </div>
 
-    <div class="assembly-modal" id="schedule-modal" hidden aria-hidden="true">
-        <div class="assembly-modal-backdrop" data-close-schedule></div>
-        <div class="assembly-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title">
-            <div class="assembly-modal-header">
-                <div>
-                    <span class="overview-badge"><i class="fas fa-calendar-plus"></i> Nova assembleia</span>
-                    <h2 id="schedule-modal-title">Agendar assembleia</h2>
-                    <p>Crie uma assembleia vinculada ao condomínio atual. O token e a sala continuam sendo definidos apenas no backend.</p>
-                </div>
-                <button class="modal-close-btn" type="button" data-close-schedule aria-label="Fechar formulário de agendamento">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-
-            <form class="schedule-form-v2" id="schedule-form-v2">
-                <div class="modal-grid">
-                    <div class="field">
-                        <label for="schedule-title">Título</label>
-                        <input type="text" id="schedule-title" maxlength="120" required>
-                    </div>
-                    <div class="field">
-                        <label for="schedule-type">Tipo</label>
-                        <select id="schedule-type">
-                            <option value="ordinaria">Ordinária</option>
-                            <option value="extraordinaria">Extraordinária</option>
-                            <option value="virtual">Virtual</option>
-                        </select>
-                    </div>
-                    <div class="field field-full">
-                        <label for="schedule-description">Descrição resumida</label>
-                        <textarea id="schedule-description" rows="4" maxlength="500" placeholder="Explique brevemente o objetivo da assembleia."></textarea>
-                    </div>
-                    <div class="field">
-                        <label for="schedule-date">Data</label>
-                        <input type="date" id="schedule-date" required>
-                    </div>
-                    <div class="field">
-                        <label for="schedule-start-time">Horário de início</label>
-                        <input type="time" id="schedule-start-time" required>
-                    </div>
-                    <div class="field">
-                        <label for="schedule-end-time">Horário previsto de término</label>
-                        <input type="time" id="schedule-end-time" required>
-                    </div>
-                    <div class="field">
-                        <label for="schedule-main-topic">Pauta principal</label>
-                        <input type="text" id="schedule-main-topic" maxlength="120" placeholder="Ex: Aprovação do orçamento">
-                    </div>
-                    <div class="field field-full">
-                        <label for="schedule-rules">Regras e observações</label>
-                        <textarea id="schedule-rules" rows="3" maxlength="500" placeholder="Ex: entrada liberada 15 minutos antes, votações abertas apenas durante a pauta ativa."></textarea>
-                    </div>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-outline" data-close-schedule>
-                        <i class="fas fa-arrow-left"></i> Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-primary" id="schedule-submit-btn">
-                        <i class="fas fa-save"></i> Salvar assembleia
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="toast-container" id="toast-container"></div>
-
     <script src="../scripts/supabase-client.js"></script>
-    <script type="module" src="../scripts/supabase-auth.js"></script>
-    <script src="../scripts/assembly/utils.js"></script>
-    <script src="../scripts/assembly/auth.js"></script>
-    <script src="../scripts/assembly/api.js"></script>
-    <script src="../scripts/assembly/permissions.js"></script>
-    <script src="../scripts/assembly/assembly-list.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/i18n.js"></script>
+    <script src="../scripts/assembleia.js"></script>
 </body>
 </html>

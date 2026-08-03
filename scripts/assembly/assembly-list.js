@@ -10,7 +10,6 @@
     filtered: [],
     user: null,
     userCep: null,
-    participationCount: 0,
     filters: {
       titulo: '',
       status: '',
@@ -112,21 +111,6 @@
       case 'virtual': return 'Virtual';
       default: return t || 'Ordinária';
     }
-  }
-
-  function populateUserBadge() {
-    const user = state.user || {};
-    const displayName = user.name || user.full_name || user.email || 'Você';
-    const role = user.user_type || user.type || user.role || 'Morador';
-    const initials = getInitials ? getInitials(displayName) : String(displayName).slice(0, 2).toUpperCase();
-
-    const nameEl = document.getElementById('user-name');
-    const typeEl = document.getElementById('user-type');
-    const avatarEl = document.getElementById('user-avatar');
-
-    if (nameEl) nameEl.textContent = displayName;
-    if (typeEl) typeEl.textContent = role;
-    if (avatarEl) avatarEl.textContent = initials;
   }
 
   function checkAuth() {
@@ -267,78 +251,6 @@
     el('stat-andamento', stats.em_andamento);
     el('stat-encerradas', stats.encerrada);
     el('stat-canceladas', stats.cancelada);
-    el('stat-participacoes', state.participationCount);
-  }
-
-  function updateOverviewCard() {
-    const summary = document.getElementById('next-assembly-summary');
-    const description = document.getElementById('next-assembly-description');
-    const status = document.getElementById('next-assembly-status');
-    const date = document.getElementById('next-assembly-date');
-    const condo = document.getElementById('scope-condo-name');
-
-    if (condo) {
-      const currentCondo = state.assemblies[0] ? getAssemblyCondo(state.assemblies[0]) : (state.userCep ? `CEP ${state.userCep}` : 'Meu condomínio');
-      condo.textContent = currentCondo;
-    }
-
-    const next = state.assemblies
-      .filter(a => normalizeStatus(a.status) === 'agendada' || normalizeStatus(a.status) === 'em_andamento')
-      .slice()
-      .sort((x, y) => {
-        const dx = getAssemblyDateTime(x); const dy = getAssemblyDateTime(y);
-        return (dx ? dx.getTime() : Infinity) - (dy ? dy.getTime() : Infinity);
-      })[0];
-
-    if (!next) {
-      if (summary) summary.textContent = 'Nenhuma assembleia futura encontrada';
-      if (description) description.textContent = 'Quando uma nova assembleia for agendada para o seu condomínio, ela aparecerá aqui com acesso rápido.';
-      if (status) status.textContent = 'Sem agenda ativa';
-      if (date) date.textContent = '--/--/----';
-      return;
-    }
-
-    const dt = getAssemblyDateTime(next);
-    const when = dt && !isNaN(dt.getTime())
-      ? `${formatDateBR(dt)}${formatTime(dt) ? ` às ${formatTime(dt)}` : ''}`
-      : (getAssemblyDate(next) || '--/--/----');
-
-    if (summary) summary.textContent = getAssemblyTitle(next);
-    if (description) {
-      const base = getAssemblyDescription(next) || 'Assembleia pronta para acompanhamento de pautas, presença, chat e entrada segura.';
-      description.textContent = `${base}${base.endsWith('.') ? '' : '.'} Organizador: ${getAssemblyOrganizer(next)}.`;
-    }
-    if (status) status.textContent = statusLabel(normalizeStatus(next.status));
-    if (date) date.textContent = when;
-    if (condo) condo.textContent = getAssemblyCondo(next);
-  }
-
-  async function loadUserParticipationCount() {
-    const user = state.user || {};
-    const email = user.email || user.user_email || null;
-    if (!email || typeof supabaseFetch !== 'function') return 0;
-
-    const uniqueIds = new Set();
-
-    try {
-      const attendance = await supabaseFetch(`/assembly_attendance?select=assembly_id&user_email=eq.${encodeURIComponent(email)}`);
-      if (Array.isArray(attendance)) {
-        attendance.forEach(row => {
-          if (row && row.assembly_id) uniqueIds.add(String(row.assembly_id));
-        });
-      }
-    } catch (e) {}
-
-    try {
-      const confirmations = await supabaseFetch(`/assembly_participant_confirmations?select=assembly_id&user_email=eq.${encodeURIComponent(email)}`);
-      if (Array.isArray(confirmations)) {
-        confirmations.forEach(row => {
-          if (row && row.assembly_id) uniqueIds.add(String(row.assembly_id));
-        });
-      }
-    } catch (e) {}
-
-    return uniqueIds.size;
   }
 
   function populateAnoOptions() {
@@ -617,95 +529,7 @@
   }
 
   function onScheduleClick() {
-    openScheduleModal();
-  }
-
-  function openScheduleModal() {
-    const modal = document.getElementById('schedule-modal');
-    if (!modal) return;
-    modal.hidden = false;
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeScheduleModal() {
-    const modal = document.getElementById('schedule-modal');
-    const form = document.getElementById('schedule-form-v2');
-    if (!modal) return;
-    modal.hidden = true;
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-    if (form) form.reset();
-  }
-
-  function buildSchedulePayload(form) {
-    const title = document.getElementById('schedule-title')?.value?.trim();
-    const description = document.getElementById('schedule-description')?.value?.trim() || null;
-    const date = document.getElementById('schedule-date')?.value;
-    const startTime = document.getElementById('schedule-start-time')?.value;
-    const endTime = document.getElementById('schedule-end-time')?.value || startTime;
-    const type = document.getElementById('schedule-type')?.value || 'ordinaria';
-    const mainTopic = document.getElementById('schedule-main-topic')?.value?.trim() || null;
-    const rules = document.getElementById('schedule-rules')?.value?.trim() || null;
-
-    if (!title || !date || !startTime || !endTime) {
-      throw new Error('Preencha título, data e horários para agendar.');
-    }
-
-    return {
-      cep: state.userCep,
-      title,
-      description,
-      date,
-      start_time: startTime,
-      end_time: endTime,
-      type,
-      assembly_type: type,
-      pauta_principal: mainTopic,
-      rules,
-      created_by: state.user?.email || state.user?.id || 'usuario',
-      organizer_name: state.user?.name || state.user?.full_name || state.user?.email || 'Condomínio'
-    };
-  }
-
-  async function submitScheduleForm(event) {
-    event.preventDefault();
-    if (!state.userCep) {
-      showToast('Não foi possível identificar o condomínio do usuário.', 'error');
-      return;
-    }
-    if (!canScheduleNow()) {
-      showToast('Você não possui permissão para agendar assembleias.', 'warning');
-      return;
-    }
-    if (typeof scheduleAssemblyDb !== 'function') {
-      showToast('O serviço de agendamento não está disponível nesta página.', 'error');
-      return;
-    }
-
-    const submitBtn = document.getElementById('schedule-submit-btn');
-    try {
-      if (submitBtn) submitBtn.disabled = true;
-      const payload = buildSchedulePayload(event.currentTarget);
-      const saved = await scheduleAssemblyDb(payload);
-      if (saved) {
-        state.assemblies.unshift({ ...saved, status: normalizeStatus(saved.status || 'agendada') });
-      }
-      populateAnoOptions();
-      state.attendanceCounts = await loadAttendanceCounts(state.assemblies);
-      state.participationCount = await loadUserParticipationCount();
-      applyFilters();
-      renderStats(computeStats(state.assemblies));
-      updateOverviewCard();
-      renderSections();
-      closeScheduleModal();
-      showToast('Assembleia agendada com sucesso.', 'success');
-    } catch (e) {
-      console.error('Erro ao agendar assembleia:', e);
-      showToast(e.message || 'Não foi possível agendar a assembleia.', 'error');
-    } finally {
-      if (submitBtn) submitBtn.disabled = false;
-    }
+    showToast('Funcionalidade de agendamento em desenvolvimento', 'info');
   }
 
   function updateScheduleButton() {
@@ -713,31 +537,10 @@
     if (!btn) return;
     if (canScheduleNow()) {
       btn.style.display = '';
-      if (!btn.dataset.bound) {
-        btn.addEventListener('click', onScheduleClick);
-        btn.dataset.bound = '1';
-      }
+      btn.addEventListener('click', onScheduleClick);
     } else {
       btn.style.display = 'none';
     }
-  }
-
-  function bindScheduleModal() {
-    const form = document.getElementById('schedule-form-v2');
-    if (form && !form.dataset.bound) {
-      form.addEventListener('submit', submitScheduleForm);
-      form.dataset.bound = '1';
-    }
-
-    document.querySelectorAll('[data-close-schedule]').forEach(btn => {
-      if (btn.dataset.bound) return;
-      btn.addEventListener('click', closeScheduleModal);
-      btn.dataset.bound = '1';
-    });
-
-    document.addEventListener('keydown', event => {
-      if (event.key === 'Escape') closeScheduleModal();
-    }, { once: false });
   }
 
   async function init() {
@@ -752,7 +555,6 @@
         if (showToast) showToast('Usuário não autenticado', 'warning');
       }
       state.userCep = await resolveUserCep(state.user);
-      populateUserBadge();
       updateScheduleButton();
       const assemblies = await loadAssemblies();
       state.assemblies = assemblies.map(a => ({ ...a, status: normalizeStatus(a.status) }));
@@ -766,11 +568,9 @@
       }
       populateAnoOptions();
       state.attendanceCounts = await loadAttendanceCounts(state.assemblies);
-      state.participationCount = await loadUserParticipationCount();
       state.loaded = true;
       const stats = computeStats(state.assemblies);
       renderStats(stats);
-      updateOverviewCard();
       applyFilters();
       renderSections();
     } catch (e) {
@@ -796,7 +596,6 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     bindFilterEvents();
-    bindScheduleModal();
     init();
   });
 })();
