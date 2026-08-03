@@ -199,48 +199,120 @@
             </div>
 
             <div id="prejoin-overlay" class="fullscreen-overlay prejoin-overlay" aria-hidden="true">
-                <div class="prejoin-card">
-                    <button class="prejoin-close" type="button" onclick="closePreJoin()" aria-label="Fechar preparacao">
+                <div class="prejoin-card" role="dialog" aria-modal="true" aria-labelledby="prejoin-title">
+                    <button class="prejoin-close" id="prejoin-close-btn" type="button" aria-label="Fechar preparacao">
                         <i class="fas fa-times"></i>
                     </button>
-                    <div class="prejoin-copy">
-                        <span class="prejoin-eyebrow">Preparar entrada</span>
-                        <h2 id="prejoin-title">Assembleia</h2>
-                        <p id="prejoin-subtitle">Revise microfone e camera antes de entrar na sala.</p>
-                    </div>
 
-                    <div class="prejoin-preview" id="prejoin-preview">
-                        <video id="prejoin-video" autoplay playsinline muted></video>
-                        <div class="prejoin-avatar" id="prejoin-avatar">US</div>
-                        <div class="prejoin-preview-empty" id="prejoin-preview-empty">
-                            <i class="fas fa-video-slash"></i>
-                            <span>Sua camera esta desligada no momento.</span>
+                    <div class="prejoin-header">
+                        <div class="prejoin-copy">
+                            <span class="prejoin-eyebrow">Preparar entrada</span>
+                            <h2 id="prejoin-title">Assembleia</h2>
+                            <p id="prejoin-subtitle">Revise microfone e camera antes de entrar na sala.</p>
+                        </div>
+                        <div class="prejoin-user-card">
+                            <div class="prejoin-user-avatar" id="prejoin-user-avatar">US</div>
+                            <div class="prejoin-user-copy">
+                                <strong id="prejoin-user-name">Usuario</strong>
+                                <span id="prejoin-user-role">Morador</span>
+                                <small id="prejoin-condo-name">Condominio atual</small>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="prejoin-device-status">
-                        <div class="device-pill" id="prejoin-mic-status">
-                            <i class="fas fa-microphone-slash"></i>
-                            <span>Microfone desligado</span>
-                        </div>
-                        <div class="device-pill" id="prejoin-camera-status">
-                            <i class="fas fa-video-slash"></i>
-                            <span>Camera desligada</span>
-                        </div>
-                    </div>
+                    <div class="prejoin-layout">
+                        <section class="prejoin-preview-panel">
+                            <div class="prejoin-preview" id="prejoin-preview">
+                                <video id="prejoin-video" autoplay playsinline muted></video>
+                                <div class="prejoin-avatar" id="prejoin-avatar">US</div>
+                                <div class="prejoin-preview-empty" id="prejoin-preview-empty">
+                                    <i class="fas fa-video-slash"></i>
+                                    <span>Sua camera esta desligada no momento.</span>
+                                </div>
+                                <div class="prejoin-preview-meta">
+                                    <span class="preview-badge" id="prejoin-connection-badge">
+                                        <i class="fas fa-shield-alt"></i> Pronto para revisar
+                                    </span>
+                                    <span class="preview-badge" id="prejoin-mode-badge">
+                                        <i class="fas fa-user-check"></i> Entrada personalizada
+                                    </span>
+                                </div>
+                            </div>
 
-                    <div class="prejoin-actions">
-                        <button class="btn btn-secondary" type="button" onclick="toggleMic()">
-                            <i class="fas fa-microphone"></i> Alternar microfone
-                        </button>
-                        <button class="btn btn-secondary" type="button" onclick="toggleCamera()">
-                            <i class="fas fa-video"></i> Alternar camera
-                        </button>
+                            <div class="prejoin-toolbar">
+                                <button class="prejoin-toggle-btn" id="prejoin-mic-toggle" type="button" aria-label="Alternar microfone">
+                                    <i class="fas fa-microphone"></i>
+                                    <span>Microfone</span>
+                                </button>
+                                <button class="prejoin-toggle-btn" id="prejoin-camera-toggle" type="button" aria-label="Alternar camera">
+                                    <i class="fas fa-video"></i>
+                                    <span>Camera</span>
+                                </button>
+                                <button class="prejoin-toggle-btn" id="prejoin-audio-only-btn" type="button" aria-label="Entrar so com audio">
+                                    <i class="fas fa-headphones"></i>
+                                    <span>So audio</span>
+                                </button>
+                                <button class="prejoin-toggle-btn" id="prejoin-silent-btn" type="button" aria-label="Entrar com tudo desligado">
+                                    <i class="fas fa-user-slash"></i>
+                                    <span>Entrar em silencio</span>
+                                </button>
+                            </div>
+                        </section>
+
+                        <section class="prejoin-settings-panel">
+                            <div class="prejoin-status-grid">
+                                <div class="device-pill" id="prejoin-mic-status">
+                                    <i class="fas fa-microphone-slash"></i>
+                                    <span>Microfone desligado</span>
+                                </div>
+                                <div class="device-pill" id="prejoin-camera-status">
+                                    <i class="fas fa-video-slash"></i>
+                                    <span>Camera desligada</span>
+                                </div>
+                                <div class="device-pill" id="prejoin-permission-status">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <span>Permissoes pendentes</span>
+                                </div>
+                            </div>
+
+                            <div class="prejoin-audio-meter" aria-label="Nivel do microfone">
+                                <div class="prejoin-meter-header">
+                                    <span>Teste de microfone</span>
+                                    <strong id="prejoin-audio-meter-label">Sem captura</strong>
+                                </div>
+                                <div class="prejoin-meter-track">
+                                    <div class="prejoin-meter-bar" id="prejoin-audio-meter-bar"></div>
+                                </div>
+                            </div>
+
+                            <div class="prejoin-form">
+                                <label class="prejoin-field">
+                                    <span>Microfone</span>
+                                    <select id="prejoin-audio-input">
+                                        <option value="">Carregando dispositivos...</option>
+                                    </select>
+                                </label>
+                                <label class="prejoin-field">
+                                    <span>Camera</span>
+                                    <select id="prejoin-video-input">
+                                        <option value="">Carregando dispositivos...</option>
+                                    </select>
+                                </label>
+                                <label class="prejoin-field">
+                                    <span>Saida de audio</span>
+                                    <select id="prejoin-audio-output">
+                                        <option value="">Padrao do sistema</option>
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div class="prejoin-messages" id="prejoin-messages" aria-live="polite"></div>
+                        </section>
                     </div>
 
                     <div class="prejoin-footer">
-                        <button class="btn btn-secondary" type="button" onclick="closePreJoin()">Cancelar</button>
-                        <button class="btn btn-primary" id="confirm-join-btn" type="button" onclick="confirmJoinAssembly()">
+                        <button class="btn btn-secondary" id="prejoin-cancel-btn" type="button">Cancelar</button>
+                        <button class="btn btn-primary" id="confirm-join-btn" type="button">
                             <i class="fas fa-right-to-bracket"></i> Entrar na assembleia
                         </button>
                     </div>

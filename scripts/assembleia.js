@@ -32,6 +32,23 @@ const assemblyState = {
     participantHeartbeatTimer: null,
     participantCleanupTimer: null,
     myPeerId: null,
+    preJoinDevices: {
+        audioInputs: [],
+        videoInputs: [],
+        audioOutputs: []
+    },
+    preJoinSelections: {
+        audioInput: '',
+        videoInput: '',
+        audioOutput: ''
+    },
+    preJoinPermissions: {
+        microphone: 'prompt',
+        camera: 'prompt'
+    },
+    preJoinLastError: '',
+    preJoinAudioContext: null,
+    preJoinAudioMeterTimer: null,
     localAudioTrack: null,
     localVideoTrack: null
 };
@@ -530,14 +547,289 @@ function updateLocalVideoTargets() {
     }
 }
 
+function getUserTypeLabel(user) {
+    const type = typeof getNormalizedUserType === 'function'
+        ? getNormalizedUserType(user || assemblyState.currentUser || {})
+        : ((user && (user.type || user.user_type)) || 'morador');
+
+    if (type === 'sindico') return 'Sindico';
+    if (type === 'porteiro') return 'Porteiro';
+    return 'Morador';
+}
+
+function getCondominiumLabel(user) {
+    if (!user) return 'Condominio atual';
+
+    if (user.condominium && typeof user.condominium === 'object') {
+        return user.condominium.name
+            || user.condominium.condominium_name
+            || user.condominium.cep
+            || 'Condominio atual';
+    }
+
+    if (typeof user.condominium === 'string') {
+        try {
+            const parsed = JSON.parse(user.condominium);
+            return parsed?.name || parsed?.condominium_name || parsed?.cep || 'Condominio atual';
+        } catch (_) {
+            return user.condominium;
+        }
+    }
+
+    return user.cep || user.condominium_cep || 'Condominio atual';
+}
+
+function stopPreJoinAudioMeter() {
+    if (assemblyState.preJoinAudioMeterTimer) {
+        clearInterval(assemblyState.preJoinAudioMeterTimer);
+        assemblyState.preJoinAudioMeterTimer = null;
+    }
+
+    if (assemblyState.preJoinAudioContext) {
+        try {
+            assemblyState.preJoinAudioContext.close();
+        } catch (_) {}
+        assemblyState.preJoinAudioContext = null;
+    }
+
+    const meterBar = $('prejoin-audio-meter-bar');
+    const meterLabel = $('prejoin-audio-meter-label');
+
+    if (meterBar) meterBar.style.width = '0%';
+    if (meterLabel) meterLabel.textContent = assemblyState.micOn ? 'Aguardando sinal' : 'Sem captura';
+}
+
+function startPreJoinAudioMeter(track) {
+    stopPreJoinAudioMeter();
+
+    if (!track) return;
+
+    try {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return;
+
+        const context = new AudioContextCtor();
+        const analyser = context.createAnalyser();
+        analyser.fftSize = 256;
+
+        const stream = new MediaStream([track]);
+        const source = context.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const meterBar = $('prejoin-audio-meter-bar');
+        const meterLabel = $('prejoin-audio-meter-label');
+
+        assemblyState.preJoinAudioContext = context;
+        assemblyState.preJoinAudioMeterTimer = setInterval(() => {
+            analyser.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((sum, value) => sum + value, 0) / (dataArray.length || 1);
+            const percent = Math.max(4, Math.min(100, Math.round((average / 180) * 100)));
+
+            if (meterBar) meterBar.style.width = `${assemblyState.micOn ? percent : 0}%`;
+
+            if (meterLabel) {
+                meterLabel.textContent = !assemblyState.micOn
+                    ? 'Sem captura'
+                    : average > 45
+                        ? 'Microfone detectando voz'
+                        : 'Fale para testar';
+            }
+        }, 120);
+    } catch (_) {
+        stopPreJoinAudioMeter();
+    }
+}
+
+async function getPermissionState(name) {
+    try {
+        if (!navigator.permissions || !navigator.permissions.query) return 'unsupported';
+        const status = await navigator.permissions.query({ name });
+        return status && status.state ? status.state : 'prompt';
+    } catch (_) {
+        return 'unsupported';
+    }
+}
+
+async function refreshPreJoinPermissions() {
+    const [microphone, camera] = await Promise.all([
+        getPermissionState('microphone'),
+        getPermissionState('camera')
+    ]);
+
+    if (!assemblyState.micOn && microphone !== 'unsupported') {
+        assemblyState.preJoinPermissions.microphone = microphone;
+    } else if (assemblyState.micOn) {
+        assemblyState.preJoinPermissions.microphone = 'granted';
+    }
+
+    if (!assemblyState.cameraOn && camera !== 'unsupported') {
+        assemblyState.preJoinPermissions.camera = camera;
+    } else if (assemblyState.cameraOn) {
+        assemblyState.preJoinPermissions.camera = 'granted';
+    }
+}
+
+function populateDeviceSelect(selectId, devices, selectedValue, emptyLabel) {
+    const select = $(selectId);
+    if (!select) return;
+
+    const safeDevices = Array.isArray(devices) ? devices : [];
+    select.innerHTML = '';
+
+    if (!safeDevices.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = emptyLabel;
+        select.appendChild(option);
+        select.value = '';
+        return;
+    }
+
+    safeDevices.forEach((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId || '';
+        option.textContent = device.label || `${emptyLabel} ${index + 1}`;
+        select.appendChild(option);
+    });
+
+    const resolved = safeDevices.some((device) => device.deviceId === selectedValue)
+        ? selectedValue
+        : (safeDevices[0].deviceId || '');
+
+    select.value = resolved;
+
+    if (selectId === 'prejoin-audio-input') {
+        assemblyState.preJoinSelections.audioInput = resolved;
+    } else if (selectId === 'prejoin-video-input') {
+        assemblyState.preJoinSelections.videoInput = resolved;
+    } else if (selectId === 'prejoin-audio-output') {
+        assemblyState.preJoinSelections.audioOutput = resolved;
+    }
+}
+
+async function refreshPreJoinDevices() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        assemblyState.preJoinDevices = { audioInputs: [], videoInputs: [], audioOutputs: [] };
+        return;
+    }
+
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter((device) => device.kind === 'audioinput');
+        const videoInputs = devices.filter((device) => device.kind === 'videoinput');
+        const audioOutputs = devices.filter((device) => device.kind === 'audiooutput');
+
+        assemblyState.preJoinDevices = { audioInputs, videoInputs, audioOutputs };
+
+        if (!assemblyState.preJoinSelections.audioInput && audioInputs[0]) {
+            assemblyState.preJoinSelections.audioInput = audioInputs[0].deviceId || '';
+        }
+
+        if (!assemblyState.preJoinSelections.videoInput && videoInputs[0]) {
+            assemblyState.preJoinSelections.videoInput = videoInputs[0].deviceId || '';
+        }
+
+        if (!assemblyState.preJoinSelections.audioOutput && audioOutputs[0]) {
+            assemblyState.preJoinSelections.audioOutput = audioOutputs[0].deviceId || '';
+        }
+
+        populateDeviceSelect('prejoin-audio-input', audioInputs, assemblyState.preJoinSelections.audioInput, 'Microfone indisponivel');
+        populateDeviceSelect('prejoin-video-input', videoInputs, assemblyState.preJoinSelections.videoInput, 'Camera indisponivel');
+        populateDeviceSelect('prejoin-audio-output', audioOutputs, assemblyState.preJoinSelections.audioOutput, 'Saida padrao do sistema');
+    } catch (_) {
+        assemblyState.preJoinDevices = { audioInputs: [], videoInputs: [], audioOutputs: [] };
+    }
+}
+
+async function applySelectedAudioOutput() {
+    const previewVideo = $('prejoin-video');
+    if (!previewVideo) return;
+
+    const deviceId = assemblyState.preJoinSelections.audioOutput || '';
+    if (!deviceId) return;
+    if (typeof previewVideo.setSinkId !== 'function') return;
+
+    try {
+        await previewVideo.setSinkId(deviceId);
+    } catch (_) {}
+}
+
+function renderPreJoinMessages() {
+    const container = $('prejoin-messages');
+    if (!container) return;
+
+    const messages = [];
+    const hasMic = assemblyState.preJoinDevices.audioInputs.length > 0;
+    const hasCamera = assemblyState.preJoinDevices.videoInputs.length > 0;
+    const micDenied = assemblyState.preJoinPermissions.microphone === 'denied';
+    const cameraDenied = assemblyState.preJoinPermissions.camera === 'denied';
+
+    if (assemblyState.preJoinLastError) {
+        messages.push({ type: 'error', text: assemblyState.preJoinLastError });
+    }
+
+    if (!hasMic) {
+        messages.push({ type: 'warning', text: 'Nenhum microfone foi encontrado neste dispositivo.' });
+    } else if (micDenied) {
+        messages.push({ type: 'warning', text: 'O navegador bloqueou o microfone. Libere a permissao para usar audio.' });
+    }
+
+    if (!hasCamera) {
+        messages.push({ type: 'warning', text: 'Nenhuma camera foi encontrada neste dispositivo.' });
+    } else if (cameraDenied) {
+        messages.push({ type: 'warning', text: 'O navegador bloqueou a camera. Libere a permissao para usar video.' });
+    }
+
+    if (!messages.length) {
+        messages.push({
+            type: 'info',
+            text: 'Revise seus dispositivos e escolha como deseja entrar. Voce tambem pode entrar so com audio ou com tudo desligado.'
+        });
+    }
+
+    container.innerHTML = messages.map((message) => `
+        <div class="prejoin-message prejoin-message-${message.type}">
+            <i class="fas ${message.type === 'error' ? 'fa-circle-exclamation' : message.type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info'}"></i>
+            <span>${escapeHtml(message.text)}</span>
+        </div>
+    `).join('');
+}
+
 function updatePreJoinPreviewAvatar() {
     const avatar = $('prejoin-avatar');
-    if (!avatar) return;
+    const compactAvatar = $('prejoin-user-avatar');
+    const userName = $('prejoin-user-name');
+    const userRole = $('prejoin-user-role');
+    const condoName = $('prejoin-condo-name');
+    const initials = getInitials(assemblyState.currentUser ? assemblyState.currentUser.name : 'Usuario');
 
-    if (assemblyState.currentUser && assemblyState.currentUser.profilePhoto) {
-        avatar.innerHTML = `<img src="${escapeHtml(assemblyState.currentUser.profilePhoto)}" alt="Avatar">`;
-    } else {
-        avatar.textContent = getInitials(assemblyState.currentUser ? assemblyState.currentUser.name : 'Usuario');
+    if (avatar) {
+        if (assemblyState.currentUser && assemblyState.currentUser.profilePhoto) {
+            avatar.innerHTML = `<img src="${escapeHtml(assemblyState.currentUser.profilePhoto)}" alt="Avatar">`;
+        } else {
+            avatar.textContent = initials;
+        }
+    }
+
+    if (compactAvatar) {
+        if (assemblyState.currentUser && assemblyState.currentUser.profilePhoto) {
+            compactAvatar.innerHTML = `<img src="${escapeHtml(assemblyState.currentUser.profilePhoto)}" alt="Avatar">`;
+        } else {
+            compactAvatar.textContent = initials;
+        }
+    }
+
+    if (userName) {
+        userName.textContent = assemblyState.currentUser?.name || 'Usuario';
+    }
+
+    if (userRole) {
+        userRole.textContent = getUserTypeLabel(assemblyState.currentUser);
+    }
+
+    if (condoName) {
+        condoName.textContent = getCondominiumLabel(assemblyState.currentUser);
     }
 }
 
@@ -579,6 +871,12 @@ function updateControlsUI() {
     const cameraButton = $('camera-btn');
     const micStatus = $('prejoin-mic-status');
     const cameraStatus = $('prejoin-camera-status');
+    const permissionStatus = $('prejoin-permission-status');
+    const micToggle = $('prejoin-mic-toggle');
+    const cameraToggle = $('prejoin-camera-toggle');
+    const connectionBadge = $('prejoin-connection-badge');
+    const modeBadge = $('prejoin-mode-badge');
+    const confirmJoinBtn = $('confirm-join-btn');
 
     if (micButton) {
         micButton.classList.toggle('off', !assemblyState.micOn);
@@ -604,7 +902,62 @@ function updateControlsUI() {
             : '<i class="fas fa-video-slash"></i><span>Camera desligada</span>';
     }
 
+    if (permissionStatus) {
+        const denied = assemblyState.preJoinPermissions.microphone === 'denied'
+            || assemblyState.preJoinPermissions.camera === 'denied';
+        const granted = assemblyState.micOn
+            || assemblyState.cameraOn
+            || (assemblyState.preJoinPermissions.microphone === 'granted' && assemblyState.preJoinPermissions.camera === 'granted');
+
+        permissionStatus.classList.toggle('active', granted && !denied);
+        permissionStatus.classList.toggle('warning', denied);
+        permissionStatus.innerHTML = denied
+            ? '<i class="fas fa-shield-virus"></i><span>Permissoes bloqueadas</span>'
+            : granted
+                ? '<i class="fas fa-shield-check"></i><span>Permissoes ok</span>'
+                : '<i class="fas fa-shield-alt"></i><span>Permissoes pendentes</span>';
+    }
+
+    if (micToggle) {
+        micToggle.classList.toggle('active', assemblyState.micOn);
+        micToggle.classList.toggle('inactive', !assemblyState.micOn);
+    }
+
+    if (cameraToggle) {
+        cameraToggle.classList.toggle('active', assemblyState.cameraOn);
+        cameraToggle.classList.toggle('inactive', !assemblyState.cameraOn);
+    }
+
+    if (connectionBadge) {
+        connectionBadge.innerHTML = assemblyState.preJoinLastError
+            ? '<i class="fas fa-circle-exclamation"></i> Revisar dispositivo'
+            : '<i class="fas fa-shield-alt"></i> Pronto para entrar';
+    }
+
+    if (modeBadge) {
+        let label = 'Entrada personalizada';
+        let icon = 'fa-user-check';
+
+        if (assemblyState.micOn && assemblyState.cameraOn) {
+            label = 'Audio e camera';
+            icon = 'fa-video';
+        } else if (assemblyState.micOn) {
+            label = 'Somente audio';
+            icon = 'fa-headphones';
+        } else if (!assemblyState.micOn && !assemblyState.cameraOn) {
+            label = 'Entrar em silencio';
+            icon = 'fa-user-slash';
+        }
+
+        modeBadge.innerHTML = `<i class="fas ${icon}"></i> ${label}`;
+    }
+
+    if (confirmJoinBtn) {
+        confirmJoinBtn.disabled = assemblyState.joining;
+    }
+
     updateLocalVideoTargets();
+    renderPreJoinMessages();
     renderParticipants();
 }
 
@@ -780,8 +1133,9 @@ function openPreJoin(assembly) {
     assemblyState.preJoinOpen = true;
     assemblyState.roomOpen = false;
     assemblyState.chatOpen = false;
-
+    assemblyState.preJoinLastError = '';
     stopAllLocalMedia();
+    stopPreJoinAudioMeter();
     assemblyState.micOn = false;
     assemblyState.cameraOn = false;
 
@@ -796,19 +1150,29 @@ function openPreJoin(assembly) {
     }
 
     updatePreJoinPreviewAvatar();
-    updateControlsUI();
-    updateChatUI();
     setOverlayOpen($('prejoin-overlay'), true);
     setPageScrollLocked(true);
+
+    refreshPreJoinPermissions()
+        .then(() => refreshPreJoinDevices())
+        .then(() => {
+            applySelectedAudioOutput();
+            updateControlsUI();
+        });
+
+    updateChatUI();
+    updateControlsUI();
 }
 
 function closePreJoin() {
     assemblyState.preJoinOpen = false;
     assemblyState.preJoinAssembly = null;
     assemblyState.preJoinAssemblyId = null;
+    assemblyState.preJoinLastError = '';
 
     if (!assemblyState.roomOpen) {
         stopAllLocalMedia();
+        stopPreJoinAudioMeter();
         assemblyState.micOn = false;
         assemblyState.cameraOn = false;
         setPageScrollLocked(false);
@@ -820,7 +1184,14 @@ function closePreJoin() {
 
 async function ensureAudioEnabled() {
     const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true },
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            ...(assemblyState.preJoinSelections.audioInput
+                ? { deviceId: { exact: assemblyState.preJoinSelections.audioInput } }
+                : {})
+        },
         video: false
     });
 
@@ -833,7 +1204,14 @@ async function ensureAudioEnabled() {
 
 async function ensureVideoEnabled() {
     const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
+        video: {
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            ...(assemblyState.preJoinSelections.videoInput
+                ? { deviceId: { exact: assemblyState.preJoinSelections.videoInput } }
+                : {})
+        },
         audio: false
     });
 
@@ -851,17 +1229,28 @@ async function toggleMic(forceValue) {
         if (nextState) {
             await ensureAudioEnabled();
             assemblyState.micOn = true;
+            assemblyState.preJoinPermissions.microphone = 'granted';
+            assemblyState.preJoinLastError = '';
+            startPreJoinAudioMeter(assemblyState.localAudioTrack);
             showToast('Microfone pronto para uso.', 'success');
         } else {
             stopLocalTrack('audio');
+            stopPreJoinAudioMeter();
             assemblyState.micOn = false;
         }
     } catch (error) {
         console.error('Erro ao acessar microfone:', error);
         assemblyState.micOn = false;
+        assemblyState.preJoinLastError = 'Nao foi possivel acessar o microfone. Verifique as permissoes do navegador e o dispositivo selecionado.';
+        assemblyState.preJoinPermissions.microphone = /denied|NotAllowedError/i.test(String(error && error.name || error))
+            ? 'denied'
+            : assemblyState.preJoinPermissions.microphone;
+        stopPreJoinAudioMeter();
         showToast('Nao foi possivel acessar o microfone. Verifique as permissoes.', 'error');
     }
 
+    await refreshPreJoinPermissions();
+    await refreshPreJoinDevices();
     updateControlsUI();
 
     if (assemblyState.currentAssemblyId) {
@@ -876,6 +1265,8 @@ async function toggleCamera(forceValue) {
         if (nextState) {
             await ensureVideoEnabled();
             assemblyState.cameraOn = true;
+            assemblyState.preJoinPermissions.camera = 'granted';
+            assemblyState.preJoinLastError = '';
             showToast('Camera pronta para uso.', 'success');
         } else {
             stopLocalTrack('video');
@@ -884,9 +1275,15 @@ async function toggleCamera(forceValue) {
     } catch (error) {
         console.error('Erro ao acessar camera:', error);
         assemblyState.cameraOn = false;
+        assemblyState.preJoinLastError = 'Nao foi possivel acessar a camera. Verifique as permissoes do navegador e o dispositivo selecionado.';
+        assemblyState.preJoinPermissions.camera = /denied|NotAllowedError/i.test(String(error && error.name || error))
+            ? 'denied'
+            : assemblyState.preJoinPermissions.camera;
         showToast('Nao foi possivel acessar a camera. Verifique as permissoes.', 'error');
     }
 
+    await refreshPreJoinPermissions();
+    await refreshPreJoinDevices();
     updateControlsUI();
 
     if (assemblyState.currentAssemblyId) {
@@ -945,6 +1342,7 @@ function confirmJoinAssembly() {
     assemblyState.preJoinAssemblyId = null;
     assemblyState.joining = true;
     assemblyState.participants = [];
+    stopPreJoinAudioMeter();
 
     setOverlayOpen($('prejoin-overlay'), false);
     openRoom();
@@ -971,6 +1369,7 @@ function leaveAssembly() {
 
     closeAssemblyChannel();
     stopAllLocalMedia();
+    stopPreJoinAudioMeter();
     closeRoom();
 
     assemblyState.currentAssembly = null;
@@ -1415,6 +1814,88 @@ function bindStaticEvents() {
         });
     }
 
+    const prejoinCloseBtn = $('prejoin-close-btn');
+    if (prejoinCloseBtn) {
+        prejoinCloseBtn.addEventListener('click', closePreJoin);
+    }
+
+    const prejoinCancelBtn = $('prejoin-cancel-btn');
+    if (prejoinCancelBtn) {
+        prejoinCancelBtn.addEventListener('click', closePreJoin);
+    }
+
+    const prejoinMicToggle = $('prejoin-mic-toggle');
+    if (prejoinMicToggle) {
+        prejoinMicToggle.addEventListener('click', () => {
+            toggleMic();
+        });
+    }
+
+    const prejoinCameraToggle = $('prejoin-camera-toggle');
+    if (prejoinCameraToggle) {
+        prejoinCameraToggle.addEventListener('click', () => {
+            toggleCamera();
+        });
+    }
+
+    const prejoinAudioOnlyBtn = $('prejoin-audio-only-btn');
+    if (prejoinAudioOnlyBtn) {
+        prejoinAudioOnlyBtn.addEventListener('click', async () => {
+            await toggleCamera(false);
+            await toggleMic(true);
+        });
+    }
+
+    const prejoinSilentBtn = $('prejoin-silent-btn');
+    if (prejoinSilentBtn) {
+        prejoinSilentBtn.addEventListener('click', async () => {
+            await toggleMic(false);
+            await toggleCamera(false);
+        });
+    }
+
+    const audioInputSelect = $('prejoin-audio-input');
+    if (audioInputSelect) {
+        audioInputSelect.addEventListener('change', async (event) => {
+            assemblyState.preJoinSelections.audioInput = event.target.value || '';
+            assemblyState.preJoinLastError = '';
+            if (assemblyState.micOn) {
+                await toggleMic(true);
+            } else {
+                await refreshPreJoinDevices();
+                updateControlsUI();
+            }
+        });
+    }
+
+    const videoInputSelect = $('prejoin-video-input');
+    if (videoInputSelect) {
+        videoInputSelect.addEventListener('change', async (event) => {
+            assemblyState.preJoinSelections.videoInput = event.target.value || '';
+            assemblyState.preJoinLastError = '';
+            if (assemblyState.cameraOn) {
+                await toggleCamera(true);
+            } else {
+                await refreshPreJoinDevices();
+                updateControlsUI();
+            }
+        });
+    }
+
+    const audioOutputSelect = $('prejoin-audio-output');
+    if (audioOutputSelect) {
+        audioOutputSelect.addEventListener('change', async (event) => {
+            assemblyState.preJoinSelections.audioOutput = event.target.value || '';
+            await applySelectedAudioOutput();
+            updateControlsUI();
+        });
+    }
+
+    const confirmJoinBtn = $('confirm-join-btn');
+    if (confirmJoinBtn) {
+        confirmJoinBtn.addEventListener('click', confirmJoinAssembly);
+    }
+
     const pastDetailOverlay = $('past-assembly-detail');
     if (pastDetailOverlay) {
         pastDetailOverlay.addEventListener('click', (event) => {
@@ -1524,5 +2005,9 @@ window.addEventListener('beforeunload', () => {
 
     try {
         stopAllLocalMedia();
+    } catch (_) {}
+
+    try {
+        stopPreJoinAudioMeter();
     } catch (_) {}
 });
