@@ -950,11 +950,7 @@ function normalizePaymentStatus(status) {
 
   if (['approved', 'aprovado'].includes(normalized)) return 'aprovado';
   if (['pending', 'in_process', 'pendente', 'em_processo'].includes(normalized)) return 'pendente';
-  if (['cancelled', 'canceled', 'cancelado'].includes(normalized)) return 'cancelado';
-  if (['refunded', 'charged_back', 'estornado'].includes(normalized)) return 'estornado';
-  if (['rejected', 'recusado', 'falhou', 'failure'].includes(normalized)) return 'recusado';
-
-  return normalized || 'desconhecido';
+  return 'recusado';
 }
 
 function isApprovedPaymentStatus(status) {
