@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout - CondoSmart</title>
+    <title>Checkout - Condomit</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/theme.css">
     <link rel="stylesheet" href="../styles/checkout.css">
-    <script src="https://sdk.mercadopago.com/js/v2"></script>
 </head>
 <body>
     <div class="checkout-wrapper">
@@ -18,8 +17,8 @@
                     <a href="#" class="back-link" id="btn-logout-checkout"><i class="fas fa-arrow-left"></i> Voltar para Login</a>
                 </div>
                 <div class="header-content">
-                    <h1>Finalize sua Assinatura</h1>
-                    <p>Escolha o plano ideal para transformar a gestão do seu condomínio</p>
+                    <h1>Escolha seu plano e conclua o pagamento</h1>
+                    <p>Abra o popup do Mercado Pago para finalizar sua assinatura com seguranca.</p>
                 </div>
             </div>
         </header>
@@ -58,7 +57,10 @@
                             </div>
 
                             <div class="payment-section">
-                                <p class="payment-hint">Finalize seu pagamento de forma segura via Mercado Pago</p>
+                                <p class="payment-hint">O pagamento abre em um popup seguro do Mercado Pago.</p>
+                                <div id="payment-feedback" class="payment-feedback info" aria-live="polite">
+                                    Carregando checkout...
+                                </div>
                                 <div id="payment-brick_container"></div>
                             </div>
 
@@ -74,6 +76,7 @@
     </div>
 
     <script src="../scripts/supabase-client.js"></script>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
     <script src="../scripts/checkout.js"></script>
 </body>
 </html>

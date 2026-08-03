@@ -5,7 +5,7 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["@getbrevo/brevo", "mercadopago"]
+  external_node_modules = ["@getbrevo/brevo"]
 
 [[redirects]]
   from = "/esqueceu-senha"
@@ -15,7 +15,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/api-proxy"
+  to = "/.netlify/functions/api-proxy/api/:splat"
   status = 200
   force = true
 
@@ -60,7 +60,7 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+    Permissions-Policy = "geolocation=(), microphone=(self), camera=(self), display-capture=(self)"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PATCH, PUT, DELETE, OPTIONS"

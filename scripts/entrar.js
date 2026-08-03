@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     loginForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        const email = document.getElementById('email').value.trim();
+        const email = document.getElementById('email').value.trim().toLowerCase();
         const password = document.getElementById('password').value.trim();
 
         if (!email || !password) {
@@ -106,8 +106,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         try {
             const rawUser = await fetchUserByEmail(email);
-            if (!rawUser || rawUser.password !== password) {
-                alert('E-mail ou senha incorretos.');
+            if (!rawUser) {
+                alert('Usuário não encontrado. Faça o cadastro.');
+                return;
+            }
+            if (rawUser.password !== password) {
+                alert('Senha incorreta.');
                 return;
             }
 

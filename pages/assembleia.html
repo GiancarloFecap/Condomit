@@ -155,10 +155,165 @@
                         <h1>Assembleias</h1>
                         <p>Gerencie e participe das assembleias do seu condomínio</p>
                     </div>
+
                     <div class="header-actions">
                         <button id="btn-agendar" class="btn-primary btn-lg" style="display: none;">
                             <i class="fas fa-calendar-plus"></i>
                             Agendar assembleia
+
+                </section>
+
+                <section id="schedule-section" class="section-block" style="display: none;">
+                    <div class="card">
+                        <h2><i class="fas fa-calendar-plus"></i> Agendar Nova Assembleia</h2>
+                        <div id="schedule-info" class="schedule-info" style="display: none;"></div>
+                        <form id="schedule-form" class="schedule-form" onsubmit="scheduleAssembly(event)">
+                            <div class="form-group">
+                                <label for="assembly-title">Título da Assembleia</label>
+                                <input type="text" id="assembly-title-input" placeholder="Ex: Assembleia Geral Ordinária" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="assembly-date">Data</label>
+                                    <input type="date" id="assembly-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="assembly-time">Horário de Início</label>
+                                    <input type="time" id="assembly-time" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Agendar Assembleia
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <section id="past-section" class="section-block">
+                    <div class="card">
+                        <h2><i class="fas fa-history"></i> Assembleias Realizadas</h2>
+                        <div id="past-list">
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="prejoin-overlay" class="fullscreen-overlay prejoin-overlay" aria-hidden="true">
+                <div class="prejoin-card">
+                    <button class="prejoin-close" type="button" onclick="closePreJoin()" aria-label="Fechar preparação">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="prejoin-copy">
+                        <span class="prejoin-eyebrow">Preparar entrada</span>
+                        <h2 id="prejoin-title">Assembleia</h2>
+                        <p id="prejoin-subtitle">Revise microfone e camera antes de entrar na sala.</p>
+                    </div>
+
+                    <div class="prejoin-preview" id="prejoin-preview">
+                        <video id="prejoin-video" autoplay playsinline muted></video>
+                        <div class="prejoin-avatar" id="prejoin-avatar">US</div>
+                        <div class="prejoin-preview-empty" id="prejoin-preview-empty">
+                            <i class="fas fa-video-slash"></i>
+                            <span>Sua camera esta desligada no momento.</span>
+                        </div>
+                    </div>
+
+                    <div class="prejoin-device-status">
+                        <div class="device-pill" id="prejoin-mic-status">
+                            <i class="fas fa-microphone-slash"></i>
+                            <span>Microfone desligado</span>
+                        </div>
+                        <div class="device-pill" id="prejoin-camera-status">
+                            <i class="fas fa-video-slash"></i>
+                            <span>Camera desligada</span>
+                        </div>
+                    </div>
+
+                    <div class="prejoin-actions">
+                        <button class="btn btn-secondary" type="button" onclick="toggleMic()">
+                            <i class="fas fa-microphone"></i> Alternar microfone
+                        </button>
+                        <button class="btn btn-secondary" type="button" onclick="toggleCamera()">
+                            <i class="fas fa-video"></i> Alternar camera
+                        </button>
+                    </div>
+
+                    <div class="prejoin-footer">
+                        <button class="btn btn-secondary" type="button" onclick="closePreJoin()">Cancelar</button>
+                        <button class="btn btn-primary" id="confirm-join-btn" type="button" onclick="confirmJoinAssembly()">
+                            <i class="fas fa-right-to-bracket"></i> Entrar na assembleia
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="assembly-room" class="fullscreen-overlay">
+                <div class="assembly-room-container">
+                    <div class="video-area">
+                        <div class="video-header">
+                            <div>
+                                <h2 id="assembly-title">Assembleia Geral Ordinária</h2>
+                                <p id="assembly-subtitle" class="assembly-subtitle">Sala pronta para participacao.</p>
+                            </div>
+                            <div class="room-status-badges">
+                                <span class="room-status-pill" id="assembly-connection-status">Conectando sala</span>
+                                <span class="room-status-pill" id="assembly-participants-summary">1 participante</span>
+                            </div>
+                        </div>
+                        <div class="video-grid" id="video-grid">
+                            <!-- Participantes serão adicionados dinamicamente via JS -->
+                        </div>
+                        <div class="controls">
+                            <button class="control-btn" id="mic-btn" onclick="toggleMic()">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                            <button class="control-btn" id="camera-btn" onclick="toggleCamera()">
+                                <i class="fas fa-video"></i>
+                            </button>
+                            <button class="control-btn" id="chat-toggle-btn" onclick="toggleChat()">
+                                <i class="fas fa-comments"></i>
+                            </button>
+                            <button class="control-btn leave-btn" id="leave-btn" onclick="leaveAssembly()" title="Sair da Chamada">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chat-sidebar" id="chat-sidebar">
+                        <div class="chat-header">
+                            <h3><i class="fas fa-comments"></i> Chat da Assembleia</h3>
+                            <button class="chat-close-btn" type="button" onclick="toggleChat(false)" aria-label="Fechar chat">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                            <!-- Mensagens serão adicionadas dinamicamente -->
+                        </div>
+                        <div id="image-preview-wrapper" class="image-preview-wrapper">
+                            <img id="image-preview" class="image-preview">
+                            <button class="remove-image-btn" onclick="removeSelectedImage()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="chat-input">
+                            <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                            <button class="image-btn" onclick="document.getElementById('image-upload').click()" title="Enviar imagem">
+                                <i class="fas fa-image"></i>
+                            </button>
+                            <input type="text" id="message-input" placeholder="Digite sua mensagem...">
+                            <button class="send-btn" onclick="sendMessage()" title="Enviar">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="past-assembly-detail" class="fullscreen-overlay">
+                <div class="detail-container">
+                    <div class="detail-header">
+                        <button class="btn btn-back" onclick="goBack()">
+                            <i class="fas fa-arrow-left"></i> Voltar
+>>>>>>> 21b05a32c1bbe4a30eca0cf3f16895e4b3743a4b
                         </button>
                     </div>
                 </div>
@@ -258,6 +413,8 @@
                     </div>
                 </div>
             </div>
+
+            <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
         </main>
     </div>
 
