@@ -65,6 +65,10 @@ function getUserCondominiumCEP(user) {
   return cep;
 }
 
+function normalizeCep(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
 async function logEvent(assemblyId, cep, eventType, payload, createdBy) {
   try {
     await supabase.from('assembly_event_logs').insert({
@@ -142,7 +146,7 @@ async function fetchAssembly(assemblyId) {
 }
 
 function checkAssemblyOwnershipAndPermission(assembly, userCEP, user, userEmail) {
-  if (assembly.cep !== userCEP) {
+  if (normalizeCep(assembly.cep) !== normalizeCep(userCEP)) {
     return httpError(403, 'Esta assembleia pertence a outro condomínio.');
   }
 

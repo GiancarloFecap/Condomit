@@ -105,39 +105,74 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
 
         try {
-            const rawUser = await fetchUserByEmail(email);
-            if (!rawUser) {
-                alert('Usuário não encontrado. Faça o cadastro.');
-                return;
-            }
-            if (rawUser.password !== password) {
-                alert('Senha incorreta.');
-                return;
-            }
+            if (!window.supabase?.auth) {
+    throw new Error('Supabase Auth ainda não foi carregado.');
+}
 
-            // Garante que campos opcionais do banco (profilePhoto, phone, etc.) sejam sempre copiados
-            const user = {
-                ...rawUser,
-                password: password
-            };
-            if (rawUser.profilePhoto && !user.profilePhoto) user.profilePhoto = rawUser.profilePhoto;
-            if (rawUser.phone && !user.phone) user.phone = rawUser.phone;
-            if (rawUser.name && !user.name) user.name = rawUser.name;
+const { data: authData, error: authError } =
+    await window.supabase.auth.signInWithPassword({
+        email,
+        password
+    });
 
-            const normalizedType = getNormalizedUserType(user);
-            user.type = normalizedType;
-            // Ensure user_type is mapped to type for consistency
-            if (user.user_type && !user.type) {
-                user.type = getNormalizedUserType(user);
-            }
-            sessionStorage.setItem('condominiumUser', JSON.stringify(user));
-            try {
-                const persistent = { email: user.email, name: user.name || null, type: user.type || null, t: Date.now() };
-                localStorage.setItem('condominiumPersistentUser', JSON.stringify(persistent));
-            } catch(_) {}
-            if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
+if (authError) {
+    alert('E-mail ou senha incorretos.');
+    return;
+}
 
-            redirectByUserType(user);
+if (!authData?.session || !authData?.user) {
+    throw new Error('O Supabase não retornou uma sessão válida.');
+}
+
+sessionStorage.setItem(
+    'sb-session',
+    JSON.stringify(authData.session)
+);
+
+sessionStorage.setItem(
+    'sb-access-token',
+    authData.session.access_token
+);
+
+const rawUser = await fetchUserByEmail(authData.user.email);
+
+if (!rawUser) {
+    await window.supabase.auth.signOut();
+    sessionStorage.removeItem('sb-session');
+    sessionStorage.removeItem('sb-access-token');
+
+    alert('Perfil do usuário não encontrado.');
+    return;
+}
+
+const user = {
+    ...rawUser,
+    id: authData.user.id,
+    type: getNormalizedUserType(rawUser)
+};
+
+sessionStorage.setItem(
+    'condominiumUser',
+    JSON.stringify(user)
+);
+
+try {
+    localStorage.setItem(
+        'condominiumPersistentUser',
+        JSON.stringify({
+            email: user.email,
+            name: user.name || null,
+            type: user.type || null,
+            t: Date.now()
+        })
+    );
+} catch (_) {}
+
+if (typeof syncAllAvatars === 'function') {
+    syncAllAvatars(user);
+}
+
+await redirectByUserType(user);
         } catch (error) {
             console.error('Erro ao fazer login:', error);
             alert('Erro ao fazer login. Tente novamente.');

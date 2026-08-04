@@ -63,6 +63,10 @@ async function validateAuth(event) {
   return { user, userEmail, userCEP };
 }
 
+function normalizeCep(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
 async function fetchAssembly(assemblyId) {
   const { data: assembly, error: assemblyError } = await supabase
     .from('scheduled_assemblies')
@@ -109,7 +113,7 @@ exports.handler = async (event) => {
   if (fetched.error) return fetched.error;
   const assembly = fetched.assembly;
 
-  if (assembly.cep !== auth.userCEP) {
+  if (normalizeCep(assembly.cep) !== normalizeCep(auth.userCEP)) {
     return httpError(403, 'Esta assembleia pertence a outro condomínio.');
   }
 

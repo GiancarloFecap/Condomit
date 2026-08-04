@@ -1670,22 +1670,13 @@ async function confirmDeleteAssembly(id) {
 }
 
 function joinAssembly(assemblyId) {
-    const assembly = scheduledAssemblies.find((entry) => String(entry.id) === String(assemblyId));
-
-    if (!assembly) {
-        showToast('Assembleia nao encontrada. Atualize a pagina e tente novamente.', 'error');
+    if (!assemblyId) {
+        showToast('ID da assembleia não encontrado.', 'error');
         return;
     }
 
-    if (assemblyState.roomOpen) {
-        leaveAssembly();
-    }
-
-    if (assemblyState.preJoinOpen) {
-        closePreJoin();
-    }
-
-    openPreJoin(assembly);
+    window.location.href =
+        `assembleia-preparacao.html?id=${encodeURIComponent(String(assemblyId))}`;
 }
 
 function sendMessage() {

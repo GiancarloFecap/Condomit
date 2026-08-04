@@ -43,6 +43,10 @@ function getUserCondominiumCEP(user) {
   return cep;
 }
 
+function normalizeCep(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
 exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -135,7 +139,7 @@ exports.handler = async (event, context) => {
     return httpError(404, 'Assembleia não encontrada.');
   }
 
-  if (assembly.cep !== userCEP) {
+  if (normalizeCep(assembly.cep) !== normalizeCep(userCEP)) {
     return httpError(403, 'Esta assembleia pertence a outro condomínio.');
   }
 
@@ -171,7 +175,8 @@ exports.handler = async (event, context) => {
   }
   const canManage = isOrganizer || isSindico;
 
-  const participantIdentity = `${userEmail}-${assembly.id}`;
+  const participantIdentity =
+    `user-${supabaseUser.id}-assembly-${assembly.id}`;
   const participantName = user.name || userEmail;
 
   let roomName = assembly.livekit_room_name;
