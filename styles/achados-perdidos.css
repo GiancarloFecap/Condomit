@@ -327,10 +327,11 @@
     inset: 0;
     background: rgba(15, 23, 42, 0.5);
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 20px;
     z-index: 1000;
+    overflow-y: auto;
 }
 
 .modal-backdrop.open {
@@ -342,6 +343,9 @@
     background: #fff;
     border-radius: 22px;
     padding: 24px;
+    margin: auto 0;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
 }
 
 .modal-header,
@@ -445,6 +449,17 @@
 @media (max-width: 768px) {
     .lost-found-page {
         padding: 20px;
+    }
+
+    .modal-backdrop {
+        padding: 12px;
+    }
+
+    .modal-card {
+        width: 100%;
+        max-height: calc(100vh - 24px);
+        padding: 18px;
+        border-radius: 18px;
     }
 
     .top-bar-right {

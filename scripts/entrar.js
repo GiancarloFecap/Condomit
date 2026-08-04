@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 window.location.href = 'entrar-condominio.html';
             }
         } else if (type === 'porteiro') {
-            window.location.href = 'porteiro.html';
+            window.location.href = 'index-porteiro.html';
         } else {
             window.location.href = 'assembleia.html';
         }

@@ -206,7 +206,7 @@ function updateUIWithUserData(currentUser) {
         const userType = (currentUser.type || '').toLowerCase();
         const targetPage = userType === 'morador'
             ? 'index-morador.html'
-            : (userType === 'porteiro' ? 'porteiro.html' : 'index.html');
+            : (userType === 'porteiro' ? 'index-porteiro.html' : 'index.html');
         inicioLink.href = targetPage;
         inicioLink.addEventListener('click', function(event) {
             event.preventDefault();
@@ -216,7 +216,7 @@ function updateUIWithUserData(currentUser) {
 }
 
 function logout() {
-    if (confirm('Tem certeza que deseja sair da conta?')) {
+    if (confirm(cfgT('confirm_logout'))) {
         sessionStorage.removeItem('condominiumUser');
         try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
         window.location.href = '../inicio.html';
@@ -243,7 +243,7 @@ function openConfigSection(sectionKey) {
             }
             break;
         case 'alterar-senha':
-            if (confirm('Deseja alterar a sua senha agora?')) {
+            if (confirm(cfgT('confirm_change_password'))) {
                 window.location.href = 'redefinir-senha.html?source=configuracoes';
             }
             break;
@@ -297,20 +297,20 @@ function openEditProfileModal() {
         modal.innerHTML = `
             <div class="edit-profile-modal-content" style="position:relative;background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
                 <div style="flex-shrink:0;padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
-                    <h3 style="margin:0;font-size:1.15rem;color:#111827;">Editar perfil</h3>
+                    <h3 style="margin:0;font-size:1.15rem;color:#111827;">${cfgT('edit_profile_title')}</h3>
                     <button type="button" id="ep-close" style="background:transparent;border:none;font-size:1.25rem;cursor:pointer;color:#6b7280;padding:4px 8px;border-radius:6px;">✕</button>
                 </div>
                 <div class="ep-body" style="flex:1 1 auto;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:18px;">
                     <div style="display:flex;align-items:center;gap:16px;">
                         <div id="ep-avatar-preview" class="ep-avatar-preview" style="width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.5rem;overflow:hidden;flex-shrink:0;"></div>
                         <div style="display:flex;flex-direction:column;gap:8px;">
-                            <button type="button" id="ep-choose-photo" class="btn-edit-profile" style="margin:0;padding:8px 14px;font-size:0.9rem;">Alterar foto</button>
-                            <span style="font-size:0.8rem;color:#6b7280;">Use JPG, PNG ou WebP (até 10 MB)</span>
+                            <button type="button" id="ep-choose-photo" class="btn-edit-profile" style="margin:0;padding:8px 14px;font-size:0.9rem;">${cfgT('change_photo')}</button>
+                            <span style="font-size:0.8rem;color:#6b7280;">${cfgT('photo_hint')}</span>
                             <input type="file" id="ep-photo-input" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none;" />
                         </div>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:6px;">
-                        <label for="ep-name" style="font-size:0.85rem;font-weight:600;color:#374151;">Nome completo</label>
+                        <label for="ep-name" style="font-size:0.85rem;font-weight:600;color:#374151;">${cfgT('full_name')}</label>
                         <input type="text" id="ep-name" style="padding:12px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:1rem;outline:none;" />
                     </div>
                     <div style="display:flex;flex-direction:column;gap:6px;">
@@ -318,14 +318,14 @@ function openEditProfileModal() {
                         <input type="email" id="ep-email" style="padding:12px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:1rem;outline:none;" />
                     </div>
                     <div style="display:flex;flex-direction:column;gap:6px;">
-                        <label for="ep-phone" style="font-size:0.85rem;font-weight:600;color:#374151;">Telefone / Celular</label>
+                        <label for="ep-phone" style="font-size:0.85rem;font-weight:600;color:#374151;">${cfgT('phone_mobile')}</label>
                         <input type="tel" id="ep-phone" placeholder="(11) 90000-0000" style="padding:12px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:1rem;outline:none;" />
                     </div>
                     <p id="ep-message" style="margin:0;font-size:0.85rem;display:none;padding:10px 12px;border-radius:8px;"></p>
                 </div>
                 <div style="flex-shrink:0;padding:16px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:12px;">
-                    <button type="button" id="ep-cancel" class="btn-edit-profile" style="margin:0;padding:10px 18px;">Cancelar</button>
-                    <button type="button" id="ep-save" class="btn-edit-profile" style="margin:0;padding:10px 22px;background:#1d4ed8 !important;color:#fff !important;border-color:#1d4ed8 !important;">Salvar</button>
+                    <button type="button" id="ep-cancel" class="btn-edit-profile" style="margin:0;padding:10px 18px;">${cfgT('cancel')}</button>
+                    <button type="button" id="ep-save" class="btn-edit-profile" style="margin:0;padding:10px 22px;background:#1d4ed8 !important;color:#fff !important;border-color:#1d4ed8 !important;">${cfgT('save')}</button>
                 </div>
             </div>
         `;
@@ -559,6 +559,15 @@ function setLanguage(lang) {
     applyTranslations(lang);
 }
 
+function getConfigLocale() {
+    return localStorage.getItem('app-language') || 'pt';
+}
+
+function cfgT(key) {
+    const lang = getConfigLocale();
+    return translations[lang]?.[key] ?? translations.pt?.[key] ?? key;
+}
+
 async function fetchCurrentUserReservations() {
     const currentUser = getCurrentUser();
     if (!currentUser?.email) return [];
@@ -611,7 +620,7 @@ async function openReservationsModal() {
     body.innerHTML = `
         <div class="reservas-empty-state">
             <i class="fas fa-spinner fa-spin"></i>
-            <p>Carregando suas reservas...</p>
+            <p>${escapeReservationHtml(cfgT('reservations_loading'))}</p>
         </div>
     `;
     modal.classList.add('open');
@@ -623,7 +632,7 @@ async function openReservationsModal() {
         body.innerHTML = `
             <div class="reservas-empty-state">
                 <i class="fas fa-circle-exclamation"></i>
-                <p>Não foi possível carregar suas reservas agora.</p>
+                <p>${escapeReservationHtml(cfgT('reservations_error'))}</p>
             </div>
         `;
     }
@@ -641,7 +650,7 @@ function renderReservationsModal(reservations) {
         body.innerHTML = `
             <div class="reservas-empty-state">
                 <i class="fas fa-calendar-xmark"></i>
-                <p>Você ainda não fez nenhuma reserva.</p>
+                <p>${escapeReservationHtml(cfgT('reservations_empty'))}</p>
             </div>
         `;
         return;
@@ -729,7 +738,7 @@ async function openCondominiumInfoModal() {
     body.innerHTML = `
         <div class="reservas-empty-state">
             <i class="fas fa-spinner fa-spin"></i>
-            <p>Carregando informações do condomínio...</p>
+            <p>${escapeReservationHtml(cfgT('condo_loading'))}</p>
         </div>
     `;
     modal.classList.add('open');
@@ -742,7 +751,7 @@ async function openCondominiumInfoModal() {
         body.innerHTML = `
             <div class="reservas-empty-state">
                 <i class="fas fa-circle-exclamation"></i>
-                <p>Não foi possível carregar as informações do condomínio.</p>
+                <p>${escapeReservationHtml(cfgT('condo_error'))}</p>
             </div>
         `;
     }
@@ -777,14 +786,14 @@ function renderCondominiumInfoModal(condominium) {
     if (!body) return;
 
     const items = [
-        ['Nome do condomínio', condominium?.condominium_name || condominium?.name || 'Não informado'],
-        ['CEP / Identificador', condominium?.cep || condominium?.condominium_id || condominium?.condominiumId || 'Não informado'],
-        ['Endereço', condominium?.address || condominium?.logradouro || 'Não informado'],
-        ['Cidade / Estado', buildCityStateLabel(condominium)],
-        ['Bloco', condominium?.block || 'Não informado'],
-        ['Apartamento', condominium?.apartment || 'Não informado'],
-        ['Síndico responsável', condominium?.manager_name || condominium?.syndic_name || 'Não informado'],
-        ['Contato', condominium?.phone || condominium?.contact_phone || condominium?.email || 'Não informado']
+        [cfgT('condo_name'), condominium?.condominium_name || condominium?.name || cfgT('not_informed')],
+        [cfgT('condo_identifier'), condominium?.cep || condominium?.condominium_id || condominium?.condominiumId || cfgT('not_informed')],
+        [cfgT('condo_address'), condominium?.address || condominium?.logradouro || cfgT('not_informed')],
+        [cfgT('condo_city_state'), buildCityStateLabel(condominium)],
+        [cfgT('condo_block'), condominium?.block || cfgT('not_informed')],
+        [cfgT('condo_apartment'), condominium?.apartment || cfgT('not_informed')],
+        [cfgT('condo_manager'), condominium?.manager_name || condominium?.syndic_name || cfgT('not_informed')],
+        [cfgT('condo_contact'), condominium?.phone || condominium?.contact_phone || condominium?.email || cfgT('not_informed')]
     ];
 
     body.innerHTML = `
@@ -803,46 +812,274 @@ function buildCityStateLabel(condominium) {
     const city = condominium?.city || condominium?.cidade || '';
     const state = condominium?.state || condominium?.estado || condominium?.uf || '';
     const label = [city, state].filter(Boolean).join(' / ');
-    return label || 'Não informado';
+    return label || cfgT('not_informed');
 }
 
 const translations = {
     pt: {
         config_title: 'Configurações',
         config_subtitle: 'Personalize e gerencie as configurações do sistema',
-        theme_label: 'Tema',
-        font_size_label: 'Tamanho da fonte',
-        language_label: 'Idioma',
         user_profile: 'Perfil do usuário',
-        account_profile: 'Conta e Perfil',
-        security: 'Segurança e acesso',
-        notifications: 'Notificações',
-        about: 'Sobre',
+        edit: 'Editar',
         logout: 'Sair da Conta',
+        delete_account: 'Excluir Conta',
+        account_profile: 'Conta e Perfil',
+        personal_data: 'Dados pessoais',
+        my_unit: 'Minha unidade',
+        my_housemates: 'Meus condôminos',
+        profile_photo: 'Foto de perfil',
+        security: 'Segurança e acesso',
+        change_password: 'Alterar senha',
+        two_factor_auth: 'Autenticação de dois fatores',
+        access_control: 'Controle de acesso',
+        notifications: 'Notificações',
+        syndic_messages: 'Comunicados do síndico',
+        general_notices: 'Avisos gerais do condomínio',
+        common_areas_reservation: 'Reserva de áreas comuns',
+        packages_mail: 'Encomendas e correspondências',
+        reservations_title: 'Reserva e áreas comuns',
+        my_reservations: 'Minhas reservas',
+        reservation_reminders: 'Lembretes da reserva',
+        cancel_confirmation: 'Confirmação/lembrete cancelamento',
+        reserve_common_area: 'Reserva da área comum',
+        privacy: 'Privacidade',
+        privacy_policy: 'Política de privacidade',
+        terms_of_use: 'Termos de uso',
+        manage_consents: 'Gerenciar consentimentos',
+        condominium: 'Condomínio',
+        condominium_info: 'Informações do condomínio',
+        useful_contacts: 'Contato úteis',
+        service_providers: 'Prestadores de serviços',
+        appearance_accessibility: 'Aparência e acessibilidade',
+        theme_label: 'Tema',
+        theme_light: 'Claro',
+        theme_dark: 'Escuro',
+        font_size_label: 'Tamanho da fonte',
+        font_medium: 'médio',
+        language_label: 'Idioma',
+        about: 'Sobre',
+        about_company: 'Sobre a empresa',
+        app_version: 'Versão do app: 1.0.0',
+        updates: 'Verifique novas atualizações',
+        footer_condo: '© 2026 condomínio tal.',
+        footer_rights: 'Todos os direitos reservados',
+        reservations_modal_title: 'Minhas reservas',
+        reservations_modal_subtitle: 'Veja todas as reservas feitas na sua conta.',
+        reservations_modal_action: 'Ir para reservas',
+        condo_modal_title: 'Informações do condomínio',
+        condo_modal_subtitle: 'Veja os dados cadastrados do seu condomínio.',
+        modal_close: 'Fechar',
+        confirm_logout: 'Tem certeza que deseja sair da conta?',
+        confirm_change_password: 'Deseja alterar a sua senha agora?',
+        edit_profile_title: 'Editar perfil',
+        change_photo: 'Alterar foto',
+        photo_hint: 'Use JPG, PNG ou WebP (até 10 MB)',
+        full_name: 'Nome completo',
+        phone_mobile: 'Telefone / Celular',
+        cancel: 'Cancelar',
+        save: 'Salvar',
+        delete_modal_title: 'Excluir minha conta',
+        delete_modal_subtitle: 'Esta ação é irreversível. Leia com atenção antes de continuar.',
+        delete_modal_label: 'Para confirmar, digite abaixo:',
+        delete_keyword: 'EXCLUIR',
+        delete_permanent: 'Excluir permanentemente',
+        delete_warning_account: 'Sua conta será permanentemente removida e não pode ser recuperada.',
+        delete_warning_condo: 'O condomínio cadastrado por você também será excluído permanentemente.',
+        delete_warning_residents: 'Dados de moradores e configurações do condomínio serão removidos.',
+        delete_warning_link: 'Seu vínculo com o condomínio será desfeito imediatamente.',
+        delete_warning_history: 'Pagamentos e histórico não serão reembolsados automaticamente.',
+        language_option_pt: 'Português',
+        language_option_en: 'English',
+        reservations_loading: 'Carregando suas reservas...',
+        reservations_error: 'Não foi possível carregar suas reservas agora.',
+        reservations_empty: 'Você ainda não fez nenhuma reserva.',
+        condo_loading: 'Carregando informações do condomínio...',
+        condo_error: 'Não foi possível carregar as informações do condomínio.',
+        condo_name: 'Nome do condomínio',
+        condo_identifier: 'CEP / Identificador',
+        condo_address: 'Endereço',
+        condo_city_state: 'Cidade / Estado',
+        condo_block: 'Bloco',
+        condo_apartment: 'Apartamento',
+        condo_manager: 'Síndico responsável',
+        condo_contact: 'Contato',
+        not_informed: 'Não informado'
     },
     en: {
         config_title: 'Settings',
-        config_subtitle: 'Personalize and manage system settings',
-        theme_label: 'Theme',
-        font_size_label: 'Font size',
-        language_label: 'Language',
+        config_subtitle: 'Customize and manage system settings',
         user_profile: 'User Profile',
-        account_profile: 'Account and Profile',
-        security: 'Security and Access',
-        notifications: 'Notifications',
-        about: 'About',
+        edit: 'Edit',
         logout: 'Sign Out',
+        delete_account: 'Delete Account',
+        account_profile: 'Account and Profile',
+        personal_data: 'Personal Data',
+        my_unit: 'My Unit',
+        my_housemates: 'My Housemates',
+        profile_photo: 'Profile Photo',
+        security: 'Security and Access',
+        change_password: 'Change Password',
+        two_factor_auth: 'Two-Factor Authentication',
+        access_control: 'Access Control',
+        notifications: 'Notifications',
+        syndic_messages: 'Syndic Messages',
+        general_notices: 'General Condominium Notices',
+        common_areas_reservation: 'Common Area Reservations',
+        packages_mail: 'Packages and Mail',
+        reservations_title: 'Reservations and Common Areas',
+        my_reservations: 'My Reservations',
+        reservation_reminders: 'Reservation Reminders',
+        cancel_confirmation: 'Cancellation Reminder/Confirmation',
+        reserve_common_area: 'Reserve Common Area',
+        privacy: 'Privacy',
+        privacy_policy: 'Privacy Policy',
+        terms_of_use: 'Terms of Use',
+        manage_consents: 'Manage Consents',
+        condominium: 'Condominium',
+        condominium_info: 'Condominium Information',
+        useful_contacts: 'Useful Contacts',
+        service_providers: 'Service Providers',
+        appearance_accessibility: 'Appearance and Accessibility',
+        theme_label: 'Theme',
+        theme_light: 'Light',
+        theme_dark: 'Dark',
+        font_size_label: 'Font Size',
+        font_medium: 'medium',
+        language_label: 'Language',
+        about: 'About',
+        about_company: 'About the Company',
+        app_version: 'App version: 1.0.0',
+        updates: 'Check for updates',
+        footer_condo: '© 2026 sample condominium.',
+        footer_rights: 'All rights reserved',
+        reservations_modal_title: 'My Reservations',
+        reservations_modal_subtitle: 'See all reservations made on your account.',
+        reservations_modal_action: 'Go to reservations',
+        condo_modal_title: 'Condominium Information',
+        condo_modal_subtitle: 'See all registered condominium details.',
+        modal_close: 'Close',
+        confirm_logout: 'Are you sure you want to sign out?',
+        confirm_change_password: 'Do you want to change your password now?',
+        edit_profile_title: 'Edit Profile',
+        change_photo: 'Change Photo',
+        photo_hint: 'Use JPG, PNG or WebP (up to 10 MB)',
+        full_name: 'Full Name',
+        phone_mobile: 'Phone / Mobile',
+        cancel: 'Cancel',
+        save: 'Save',
+        delete_modal_title: 'Delete My Account',
+        delete_modal_subtitle: 'This action cannot be undone. Read carefully before continuing.',
+        delete_modal_label: 'To confirm, type below:',
+        delete_keyword: 'DELETE',
+        delete_permanent: 'Delete permanently',
+        delete_warning_account: 'Your account will be permanently removed and cannot be recovered.',
+        delete_warning_condo: 'The condominium you registered will also be permanently deleted.',
+        delete_warning_residents: 'Resident data and condominium settings will be removed.',
+        delete_warning_link: 'Your association with the condominium will be removed immediately.',
+        delete_warning_history: 'Payments and history will not be automatically refunded.',
+        language_option_pt: 'Portuguese',
+        language_option_en: 'English',
+        reservations_loading: 'Loading your reservations...',
+        reservations_error: 'We could not load your reservations right now.',
+        reservations_empty: 'You have not made any reservations yet.',
+        condo_loading: 'Loading condominium details...',
+        condo_error: 'We could not load the condominium information.',
+        condo_name: 'Condominium Name',
+        condo_identifier: 'ZIP / Identifier',
+        condo_address: 'Address',
+        condo_city_state: 'City / State',
+        condo_block: 'Block',
+        condo_apartment: 'Apartment',
+        condo_manager: 'Responsible Manager',
+        condo_contact: 'Contact',
+        not_informed: 'Not informed'
     }
 };
 
+function applyText(selector, value) {
+    const element = document.querySelector(selector);
+    if (element) element.textContent = value;
+}
+
 function applyTranslations(lang) {
-    const elements = document.querySelectorAll('[data-i18n]');
-    elements.forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (translations[lang] && translations[lang][key]) {
-            el.textContent = translations[lang][key];
-        }
+    document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
+
+    applyText('.top-bar-left h1', translations[lang].config_title);
+    applyText('.top-bar-left p', translations[lang].config_subtitle);
+
+    const cardTitles = document.querySelectorAll('.config-card > h3');
+    const titleKeys = [
+        'user_profile',
+        'account_profile',
+        'security',
+        'notifications',
+        'reservations_title',
+        'privacy',
+        'condominium',
+        'appearance_accessibility',
+        'about'
+    ];
+    cardTitles.forEach((title, index) => {
+        const key = titleKeys[index];
+        if (key && translations[lang][key]) title.textContent = translations[lang][key];
     });
+
+    applyText('.profile-card-actions .btn-edit-profile', translations[lang].edit);
+    applyText('#btn-logout-main', translations[lang].logout);
+    applyText('.btn-delete-account', translations[lang].delete_account);
+
+    const selectorMap = {
+        '[onclick="openConfigSection(\'dados-pessoais\')"] span': 'personal_data',
+        '[onclick="openConfigSection(\'minha-unidade\')"] span': 'my_unit',
+        '[onclick="openConfigSection(\'meus-condominos\')"] span': 'my_housemates',
+        '[onclick="openConfigSection(\'foto-de-perfil\')"] span': 'profile_photo',
+        '[onclick="openConfigSection(\'alterar-senha\')"] span': 'change_password',
+        '[onclick="openConfigSection(\'autenticacao-2fa\')"] span': 'two_factor_auth',
+        '[onclick="openConfigSection(\'controle-acesso\')"] span': 'access_control',
+        '[onclick="openConfigSection(\'comunicados-sindico\')"] span': 'syndic_messages',
+        '[onclick="openConfigSection(\'avisos-gerais\')"] span': 'general_notices',
+        '[onclick="openConfigSection(\'reserva-areas\')"] span': 'common_areas_reservation',
+        '[onclick="openConfigSection(\'encomendas\')"] span': 'packages_mail',
+        '[onclick="openConfigSection(\'minhas-reservas\')"] span': 'my_reservations',
+        '[onclick="openConfigSection(\'lembretes-reserva\')"] span': 'reservation_reminders',
+        '[onclick="openConfigSection(\'confirmacao-cancelamento\')"] span': 'cancel_confirmation',
+        '[onclick="openConfigSection(\'reserva-area-comum\')"] span': 'reserve_common_area',
+        '[onclick="openConfigSection(\'politica-privacidade\')"] span': 'privacy_policy',
+        '[onclick="openConfigSection(\'termos-uso\')"] span': 'terms_of_use',
+        '[onclick="openConfigSection(\'consentimentos\')"] span': 'manage_consents',
+        '[onclick="openConfigSection(\'info-condominio\')"] span': 'condominium_info',
+        '[onclick="openConfigSection(\'contato-uteis\')"] span': 'useful_contacts',
+        '[onclick="openConfigSection(\'prestadores-servicos\')"] span': 'service_providers',
+        '[onclick="openConfigSection(\'sobre-empresa\')"] span': 'about_company',
+        '[onclick="openConfigSection(\'versao-app\')"] span': 'app_version',
+        '[onclick="openConfigSection(\'novas-atualizacoes\')"] span': 'updates',
+        '.theme-selector label': 'theme_label',
+        '.font-size-selector label': 'font_size_label',
+        '.language-selector label': 'language_label'
+    };
+
+    Object.entries(selectorMap).forEach(([selector, key]) => {
+        applyText(selector, translations[lang][key]);
+    });
+
+    applyText('#theme-light', translations[lang].theme_light);
+    applyText('#theme-dark', translations[lang].theme_dark);
+    applyText('#font-medium', translations[lang].font_medium);
+
+    const languageSelect = document.getElementById('language-select');
+    if (languageSelect?.options[0]) languageSelect.options[0].textContent = translations[lang].language_option_pt;
+    if (languageSelect?.options[1]) languageSelect.options[1].textContent = translations[lang].language_option_en;
+
+    const footerItems = document.querySelectorAll('.config-footer div');
+    if (footerItems[0]) footerItems[0].textContent = translations[lang].footer_condo;
+    if (footerItems[1]) footerItems[1].textContent = translations[lang].footer_rights;
+
+    applyText('#reservasModal .reservas-modal-header h3', translations[lang].reservations_modal_title);
+    applyText('#reservasModal .reservas-modal-header p', translations[lang].reservations_modal_subtitle);
+    applyText('#reservasModalAction', translations[lang].reservations_modal_action);
+    applyText('#condominioModal .reservas-modal-header h3', translations[lang].condo_modal_title);
+    applyText('#condominioModal .reservas-modal-header p', translations[lang].condo_modal_subtitle);
+    applyText('#condominioModalAction', translations[lang].modal_close);
 }
 
 function updateControlButtons(type, value) {
@@ -887,23 +1124,23 @@ function ensureDeleteAccountModal() {
         <div class="delete-account-box">
             <div class="dam-header">
                 <div class="dam-icon-circle"><i class="fas fa-triangle-exclamation"></i></div>
-                <h3>Excluir minha conta</h3>
-                <p>Esta ação é irreversível. Leia com atenção antes de continuar.</p>
+                <h3>${cfgT('delete_modal_title')}</h3>
+                <p>${cfgT('delete_modal_subtitle')}</p>
             </div>
             <div class="dam-body">
                 <ul class="dam-warning-list" id="dam-warning-list">
                     <!-- Populado dinamicamente -->
                 </ul>
                 <div class="dam-confirm-input">
-                    <label for="dam-confirm-text">Para confirmar, digite abaixo: <strong id="dam-confirm-expected">EXCLUIR</strong></label>
+                    <label for="dam-confirm-text">${cfgT('delete_modal_label')} <strong id="dam-confirm-expected">${cfgT('delete_keyword')}</strong></label>
                     <input type="text" id="dam-confirm-text" autocomplete="off" spellcheck="false" />
                 </div>
                 <div class="dam-message" id="dam-message">&nbsp;</div>
             </div>
             <div class="dam-footer">
-                <button type="button" class="dam-btn dam-btn-cancel" id="dam-cancel">Cancelar</button>
+                <button type="button" class="dam-btn dam-btn-cancel" id="dam-cancel">${cfgT('cancel')}</button>
                 <button type="button" class="dam-btn dam-btn-confirm" id="dam-confirm" disabled>
-                    <i class="fas fa-trash-alt" style="margin-right:6px;"></i>Excluir permanentemente
+                    <i class="fas fa-trash-alt" style="margin-right:6px;"></i>${cfgT('delete_permanent')}
                 </button>
             </div>
         </div>
@@ -927,14 +1164,14 @@ function openDeleteAccountModal() {
     if (!user) return;
     const modal = ensureDeleteAccountModal();
     const warnings = [];
-    warnings.push({ icon: 'fa-user-slash', text: 'Sua conta será permanentemente removida e não pode ser recuperada.' });
+    warnings.push({ icon: 'fa-user-slash', text: cfgT('delete_warning_account') });
     if (user.type === 'sindico') {
-        warnings.push({ icon: 'fa-building', text: 'O condomínio cadastrado por você também será excluído permanentemente.' });
-        warnings.push({ icon: 'fa-users', text: 'Dados de moradores e configurações do condomínio serão removidos.' });
+        warnings.push({ icon: 'fa-building', text: cfgT('delete_warning_condo') });
+        warnings.push({ icon: 'fa-users', text: cfgT('delete_warning_residents') });
     } else {
-        warnings.push({ icon: 'fa-house', text: 'Seu vínculo com o condomínio será desfeito imediatamente.' });
+        warnings.push({ icon: 'fa-house', text: cfgT('delete_warning_link') });
     }
-    warnings.push({ icon: 'fa-receipt', text: 'Pagamentos e histórico não serão reembolsados automaticamente.' });
+    warnings.push({ icon: 'fa-receipt', text: cfgT('delete_warning_history') });
 
     const list = modal.querySelector('#dam-warning-list');
     list.innerHTML = warnings.map(w => `<li><i class="fas ${w.icon}"></i><span>${w.text}</span></li>`).join('');
@@ -961,7 +1198,7 @@ function validateDeleteConfirmation() {
     if (!modal) return;
     const val = (modal.querySelector('#dam-confirm-text').value || '').trim().toUpperCase();
     const btn = modal.querySelector('#dam-confirm');
-    btn.disabled = val !== 'EXCLUIR';
+    btn.disabled = val !== cfgT('delete_keyword');
 }
 
 async function executeDeleteAccount() {

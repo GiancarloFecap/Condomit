@@ -488,7 +488,7 @@ async function redirectToHome() {
   if (user.type === 'morador') {
     window.location.href = 'index-morador.html';
   } else if (user.type === 'porteiro') {
-    window.location.href = 'porteiro.html';
+    window.location.href = 'index-porteiro.html';
   } else if (user.type === 'sindico') {
     // Verificar se o síndico tem pagamento aprovado NO BANCO (não confiar em sessionStorage)
     const approvedPayment = await fetchApprovedPayment(user.email);

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Gestão de Moradores</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/gestao-moradores.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Gestão de Moradores</h1>
+                    <p>Gerencie os moradores do seu condomínio de forma prática e segura.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                    </div>
+                    <button class="ghost-btn" type="button">
+                        <i class="fas fa-file-import"></i>
+                        Importar moradores
+                    </button>
+                    <button class="primary-action" type="button">
+                        <i class="fas fa-plus"></i>
+                        Adicionar morador
+                    </button>
+                </div>
+            </header>
+
+            <section class="residents-page">
+                <div class="residents-layout">
+                    <section class="residents-main">
+                        <div class="toolbar card-shell">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input id="residentSearch" type="search" placeholder="Buscar por nome, apartamento ou bloco...">
+                            </div>
+                            <div class="toolbar-actions">
+                                <select id="residentBlockFilter">
+                                    <option value="todos">Todos os blocos</option>
+                                </select>
+                                <select id="residentStatusFilter">
+                                    <option value="todos">Todos os status</option>
+                                    <option value="ativo">Ativos</option>
+                                    <option value="inativo">Inativos</option>
+                                    <option value="dependente">Dependentes</option>
+                                </select>
+                                <button class="ghost-btn" type="button">
+                                    <i class="fas fa-sliders"></i>
+                                    Filtros
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="stats-grid">
+                            <article class="stat-card card-shell">
+                                <div class="stat-icon aqua"><i class="fas fa-users"></i></div>
+                                <div>
+                                    <span>Total de moradores</span>
+                                    <strong id="totalResidents">0</strong>
+                                    <small>Ativos</small>
+                                </div>
+                            </article>
+                            <article class="stat-card card-shell">
+                                <div class="stat-icon blue"><i class="fas fa-building"></i></div>
+                                <div>
+                                    <span>Total de unidades</span>
+                                    <strong id="totalUnits">0</strong>
+                                    <small>Unidades</small>
+                                </div>
+                            </article>
+                            <article class="stat-card card-shell">
+                                <div class="stat-icon green"><i class="fas fa-user-plus"></i></div>
+                                <div>
+                                    <span>Novos este mês</span>
+                                    <strong id="newResidents">0</strong>
+                                    <small>Cadastros</small>
+                                </div>
+                            </article>
+                            <article class="stat-card card-shell">
+                                <div class="stat-icon purple"><i class="fas fa-id-card"></i></div>
+                                <div>
+                                    <span>Dependentes</span>
+                                    <strong id="dependentResidents">0</strong>
+                                    <small>Cadastrados</small>
+                                </div>
+                            </article>
+                        </div>
+
+                        <div class="table-card card-shell">
+                            <div class="section-head">
+                                <div>
+                                    <h2>Lista de moradores</h2>
+                                    <p id="residentCounter">0 moradores encontrados</p>
+                                </div>
+                                <button class="ghost-btn" type="button">
+                                    <i class="fas fa-download"></i>
+                                    Exportar lista
+                                </button>
+                            </div>
+
+                            <div class="table-wrap">
+                                <table class="residents-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Morador</th>
+                                            <th>Unidade</th>
+                                            <th>Bloco</th>
+                                            <th>Contato</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="residentsTableBody">
+                                        <tr>
+                                            <td colspan="6" class="table-empty">Carregando moradores...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside class="residents-sidebar">
+                        <div class="card-shell side-card">
+                            <h3>Distribuição por bloco</h3>
+                            <div class="chart-row">
+                                <div class="donut-chart" id="blockDonut"></div>
+                                <div class="chart-legend" id="blockLegend"></div>
+                            </div>
+                        </div>
+
+                        <div class="card-shell side-card">
+                            <h3>Status dos moradores</h3>
+                            <div class="chart-row">
+                                <div class="donut-chart status-donut" id="statusDonut"></div>
+                                <div class="chart-legend" id="statusLegend"></div>
+                            </div>
+                        </div>
+
+                        <div class="card-shell side-card">
+                            <h3>Ações rápidas</h3>
+                            <div class="quick-links">
+                                <button type="button"><i class="fas fa-user-plus"></i><span>Adicionar novo morador</span></button>
+                                <button type="button"><i class="fas fa-users"></i><span>Gerenciar dependentes</span></button>
+                                <button type="button"><i class="fas fa-paper-plane"></i><span>Enviar comunicado</span></button>
+                                <button type="button"><i class="fas fa-file-export"></i><span>Exportar contatos</span></button>
+                            </div>
+                        </div>
+
+                        <div class="card-shell side-card tip-card">
+                            <h3>Dica</h3>
+                            <p>Mantenha os dados dos moradores sempre atualizados para uma comunicação mais eficiente e segura.</p>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/gestao-moradores.js"></script>
+</body>
+</html>
