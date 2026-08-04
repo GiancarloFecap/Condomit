@@ -1024,8 +1024,18 @@
     renderAll();
   }
 
+  function bindSupportButton() {
+    var buttons = document.querySelectorAll('.btn-support');
+    buttons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        window.location.href = 'mailto:contato.condomit@gmail.com?subject=Contato%20Condomit';
+      });
+    });
+  }
+
   async function init() {
     try {
+      bindSupportButton();
       await loadAll();
     } catch (e) {
       console.error('Falha na inicialização:', e);

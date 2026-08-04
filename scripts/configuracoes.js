@@ -255,7 +255,6 @@ function openConfigSection(sectionKey) {
         case 'avisos-gerais':
         case 'reserva-areas':
         case 'encomendas':
-        case 'minhas-reservas':
         case 'lembretes-reserva':
         case 'confirmacao-cancelamento':
         case 'reserva-area-comum':
@@ -269,6 +268,12 @@ function openConfigSection(sectionKey) {
         case 'versao-app':
         case 'novas-atualizacoes':
             alert(`Funcionalidade ainda não implementada: ${sectionKey.replace(/-/g, ' ')}`);
+            break;
+        case 'minhas-reservas':
+            openReservationsModal();
+            break;
+        case 'info-condominio':
+            openCondominiumInfoModal();
             break;
         default:
             console.warn('Seção desconhecida de configurações:', sectionKey);
@@ -554,6 +559,253 @@ function setLanguage(lang) {
     applyTranslations(lang);
 }
 
+async function fetchCurrentUserReservations() {
+    const currentUser = getCurrentUser();
+    if (!currentUser?.email) return [];
+
+    try {
+        const response = await fetch('/api/reserva');
+        if (!response.ok) {
+            throw new Error('Não foi possível carregar as reservas.');
+        }
+
+        const reservations = await response.json();
+        return (Array.isArray(reservations) ? reservations : [])
+            .filter((reservation) => String(reservation.email || '').toLowerCase() === String(currentUser.email).toLowerCase())
+            .sort((a, b) => {
+                const aDate = new Date(`${a.data_reserva || ''}T${a.horario_inicio || '00:00:00'}`).getTime();
+                const bDate = new Date(`${b.data_reserva || ''}T${b.horario_inicio || '00:00:00'}`).getTime();
+                return bDate - aDate;
+            });
+    } catch (error) {
+        console.error('Erro ao carregar reservas do usuário:', error);
+        throw error;
+    }
+}
+
+function ensureReservationsModal() {
+    const modal = document.getElementById('reservasModal');
+    if (!modal || modal.dataset.bound === 'true') return modal;
+
+    document.getElementById('reservasModalClose')?.addEventListener('click', closeReservationsModal);
+    document.getElementById('reservasModalAction')?.addEventListener('click', () => {
+        window.location.href = 'reservas.html';
+    });
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeReservationsModal();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('open')) {
+            closeReservationsModal();
+        }
+    });
+    modal.dataset.bound = 'true';
+    return modal;
+}
+
+async function openReservationsModal() {
+    const modal = ensureReservationsModal();
+    const body = document.getElementById('reservasModalBody');
+    if (!modal || !body) return;
+
+    body.innerHTML = `
+        <div class="reservas-empty-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Carregando suas reservas...</p>
+        </div>
+    `;
+    modal.classList.add('open');
+
+    try {
+        const reservations = await fetchCurrentUserReservations();
+        renderReservationsModal(reservations);
+    } catch (error) {
+        body.innerHTML = `
+            <div class="reservas-empty-state">
+                <i class="fas fa-circle-exclamation"></i>
+                <p>Não foi possível carregar suas reservas agora.</p>
+            </div>
+        `;
+    }
+}
+
+function closeReservationsModal() {
+    document.getElementById('reservasModal')?.classList.remove('open');
+}
+
+function renderReservationsModal(reservations) {
+    const body = document.getElementById('reservasModalBody');
+    if (!body) return;
+
+    if (!reservations.length) {
+        body.innerHTML = `
+            <div class="reservas-empty-state">
+                <i class="fas fa-calendar-xmark"></i>
+                <p>Você ainda não fez nenhuma reserva.</p>
+            </div>
+        `;
+        return;
+    }
+
+    body.innerHTML = reservations.map((reservation) => {
+        const date = formatReservationDate(reservation.data_reserva);
+        const time = `${formatReservationTime(reservation.horario_inicio)} - ${formatReservationTime(reservation.horario_fim)}`;
+        const statusClass = String(reservation.status || '').toLowerCase();
+        const statusLabel = getReservationStatusLabel(reservation.status);
+
+        return `
+            <article class="reserva-item-card">
+                <div class="reserva-item-top">
+                    <div>
+                        <h4>${escapeReservationHtml(reservation.nome_local || 'Área comum')}</h4>
+                        <p>Reserva feita com a conta ${escapeReservationHtml(reservation.email || '')}</p>
+                    </div>
+                    <span class="reserva-status-badge ${statusClass}">
+                        <i class="fas fa-circle"></i>
+                        ${statusLabel}
+                    </span>
+                </div>
+                <div class="reserva-item-meta">
+                    <span><i class="fas fa-calendar-day"></i>${date}</span>
+                    <span><i class="fas fa-clock"></i>${time}</span>
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
+function formatReservationDate(value) {
+    if (!value) return 'Data não informada';
+    const date = new Date(`${value}T00:00:00`);
+    return isNaN(date.getTime())
+        ? 'Data não informada'
+        : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function formatReservationTime(value) {
+    if (!value) return '--:--';
+    return String(value).slice(0, 5);
+}
+
+function getReservationStatusLabel(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'indisponivel') return 'Confirmada';
+    if (normalized === 'disponivel') return 'Disponível';
+    return status || 'Em processamento';
+}
+
+function escapeReservationHtml(text) {
+    return String(text || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function ensureCondominiumModal() {
+    const modal = document.getElementById('condominioModal');
+    if (!modal || modal.dataset.bound === 'true') return modal;
+
+    document.getElementById('condominioModalClose')?.addEventListener('click', closeCondominiumInfoModal);
+    document.getElementById('condominioModalAction')?.addEventListener('click', closeCondominiumInfoModal);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeCondominiumInfoModal();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('open')) {
+            closeCondominiumInfoModal();
+        }
+    });
+    modal.dataset.bound = 'true';
+    return modal;
+}
+
+async function openCondominiumInfoModal() {
+    const modal = ensureCondominiumModal();
+    const body = document.getElementById('condominioModalBody');
+    if (!modal || !body) return;
+
+    body.innerHTML = `
+        <div class="reservas-empty-state">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Carregando informações do condomínio...</p>
+        </div>
+    `;
+    modal.classList.add('open');
+
+    try {
+        const condominium = await fetchCurrentCondominiumInfo();
+        renderCondominiumInfoModal(condominium);
+    } catch (error) {
+        console.error('Erro ao carregar informações do condomínio:', error);
+        body.innerHTML = `
+            <div class="reservas-empty-state">
+                <i class="fas fa-circle-exclamation"></i>
+                <p>Não foi possível carregar as informações do condomínio.</p>
+            </div>
+        `;
+    }
+}
+
+function closeCondominiumInfoModal() {
+    document.getElementById('condominioModal')?.classList.remove('open');
+}
+
+async function fetchCurrentCondominiumInfo() {
+    const currentUser = getCurrentUser();
+    const localCondo = currentUser?.condominium && typeof currentUser.condominium === 'object'
+        ? currentUser.condominium
+        : {};
+    const cep = localCondo.cep || localCondo.condominium_id || localCondo.condominiumId || currentUser?.cep || '';
+
+    if (!cep) return localCondo;
+
+    try {
+        const response = await fetch(`/api/condominiums?cep=eq.${encodeURIComponent(cep)}`);
+        if (!response.ok) throw new Error('Falha ao consultar condomínio.');
+        const data = await response.json();
+        const fromApi = Array.isArray(data) ? data[0] : data;
+        return { ...localCondo, ...(fromApi || {}), cep };
+    } catch (_) {
+        return { ...localCondo, cep };
+    }
+}
+
+function renderCondominiumInfoModal(condominium) {
+    const body = document.getElementById('condominioModalBody');
+    if (!body) return;
+
+    const items = [
+        ['Nome do condomínio', condominium?.condominium_name || condominium?.name || 'Não informado'],
+        ['CEP / Identificador', condominium?.cep || condominium?.condominium_id || condominium?.condominiumId || 'Não informado'],
+        ['Endereço', condominium?.address || condominium?.logradouro || 'Não informado'],
+        ['Cidade / Estado', buildCityStateLabel(condominium)],
+        ['Bloco', condominium?.block || 'Não informado'],
+        ['Apartamento', condominium?.apartment || 'Não informado'],
+        ['Síndico responsável', condominium?.manager_name || condominium?.syndic_name || 'Não informado'],
+        ['Contato', condominium?.phone || condominium?.contact_phone || condominium?.email || 'Não informado']
+    ];
+
+    body.innerHTML = `
+        <div class="condominio-info-grid">
+            ${items.map(([label, value]) => `
+                <article class="condominio-info-item">
+                    <span>${escapeReservationHtml(label)}</span>
+                    <strong>${escapeReservationHtml(value)}</strong>
+                </article>
+            `).join('')}
+        </div>
+    `;
+}
+
+function buildCityStateLabel(condominium) {
+    const city = condominium?.city || condominium?.cidade || '';
+    const state = condominium?.state || condominium?.estado || condominium?.uf || '';
+    const label = [city, state].filter(Boolean).join(' / ');
+    return label || 'Não informado';
+}
+
 const translations = {
     pt: {
         config_title: 'Configurações',
@@ -618,6 +870,8 @@ function initPreferences() {
     if (languageSelect) {
         languageSelect.value = language;
     }
+    ensureReservationsModal();
+    ensureCondominiumModal();
 }
 
 /* ============ EXCLUIR CONTA ============ */
@@ -765,4 +1019,3 @@ async function executeDeleteAccount() {
         msg.textContent = 'Erro ao excluir conta: ' + (err.message || 'Tente novamente.');
     }
 }
-

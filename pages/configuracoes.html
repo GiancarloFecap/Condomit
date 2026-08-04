@@ -342,10 +342,14 @@
                         </div>
                         <div class="language-selector">
                             <label>Idioma</label>
-                            <select id="language-select" onchange="setLanguage(this.value)">
-                                <option value="pt">Português</option>
-                                <option value="en">English</option>
-                            </select>
+                            <div class="language-select-wrap">
+                                <i class="fas fa-globe"></i>
+                                <select id="language-select" class="language-select" onchange="setLanguage(this.value)">
+                                    <option value="pt">Português</option>
+                                    <option value="en">English</option>
+                                </select>
+                                <i class="fas fa-chevron-down language-select-arrow"></i>
+                            </div>
                         </div>
                     </div>
 
@@ -383,5 +387,51 @@
     <script src="../scripts/sidebar-links.js"></script>
     <script src="../scripts/configuracoes.js"></script>
     <script src="../scripts/profile-photo-editor.js"></script>
+
+    <div class="reservas-modal-overlay" id="reservasModal">
+        <div class="reservas-modal-card">
+            <div class="reservas-modal-header">
+                <div>
+                    <h3>Minhas reservas</h3>
+                    <p>Veja todas as reservas feitas na sua conta.</p>
+                </div>
+                <button type="button" class="reservas-modal-close" id="reservasModalClose" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="reservas-modal-body" id="reservasModalBody">
+                <div class="reservas-empty-state">
+                    <i class="fas fa-calendar-days"></i>
+                    <p>Carregando reservas...</p>
+                </div>
+            </div>
+            <div class="reservas-modal-footer">
+                <button type="button" class="btn-edit-profile" id="reservasModalAction">Ir para reservas</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="reservas-modal-overlay" id="condominioModal">
+        <div class="reservas-modal-card condo-modal-card">
+            <div class="reservas-modal-header">
+                <div>
+                    <h3>Informações do condomínio</h3>
+                    <p>Veja os dados cadastrados do seu condomínio.</p>
+                </div>
+                <button type="button" class="reservas-modal-close" id="condominioModalClose" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="reservas-modal-body" id="condominioModalBody">
+                <div class="reservas-empty-state">
+                    <i class="fas fa-building"></i>
+                    <p>Carregando informações do condomínio...</p>
+                </div>
+            </div>
+            <div class="reservas-modal-footer">
+                <button type="button" class="btn-edit-profile" id="condominioModalAction">Fechar</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

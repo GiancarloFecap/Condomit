@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    document.querySelectorAll('.btn-support').forEach((button) => {
+        button.addEventListener('click', () => {
+            window.location.href = 'mailto:contato.condomit@gmail.com?subject=Contato%20Condomit';
+        });
+    });
+
     let currentUser = null;
 
     try {

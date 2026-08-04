@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const currentPage = window.location.pathname.split('/').pop() || '';
+    const supportMailto = 'mailto:contato.condomit@gmail.com?subject=Contato%20Condomit';
     const rawUser = sessionStorage.getItem('condominiumUser');
     let currentUserType = 'sindico';
 
@@ -21,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'Chat com Síndico': 'ai-condomit.html',
         'Chat com Porteiro': 'porteiro.html',
         'Chat com Portaria': 'porteiro.html',
-        'Achados e Perdidos': 'notificacoes.html',
+        'Achados e Perdidos': 'achados-perdidos.html',
         'Market Place': 'marketplace.html',
         'Marketplace': 'marketplace.html',
         'Assembleia': 'assembleia.html',
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'chat-sindico': 'ai-condomit.html',
         'chat-moradores': 'ai-condomit.html',
         'chat-portaria': 'porteiro.html',
-        'achados-perdidos': 'notificacoes.html',
+        'achados-perdidos': 'achados-perdidos.html',
         marketplace: 'marketplace.html',
         assembleias: 'assembleia.html',
         chamadas: 'assembleia.html',
@@ -96,6 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.classList.add('active');
                 }
             }
+        });
+    });
+
+    document.querySelectorAll('.btn-support').forEach((button) => {
+        button.addEventListener('click', () => {
+            window.location.href = supportMailto;
         });
     });
 });

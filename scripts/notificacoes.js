@@ -1,6 +1,7 @@
 const notificationState = {
     currentUser: null,
-    activeCategory: 'Todas'
+    activeCategory: 'Todas',
+    selectedNotificationId: null
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -71,6 +72,13 @@ function setupNotificationActions() {
             closeNotificationModal();
         }
     });
+    document.getElementById('notificationDetailModal')?.addEventListener('click', (event) => {
+        if (event.target.id === 'notificationDetailModal') {
+            closeNotificationDetailModal();
+        }
+    });
+    document.getElementById('closeNotificationDetailModal')?.addEventListener('click', closeNotificationDetailModal);
+    document.getElementById('closeNotificationDetailAction')?.addEventListener('click', closeNotificationDetailModal);
 
     document.getElementById('notificationForm')?.addEventListener('submit', (event) => {
         event.preventDefault();
@@ -80,7 +88,12 @@ function setupNotificationActions() {
 
         if (!title || !message) return;
 
-        window.communityHub.createNotification({ category, title, message }, notificationState.currentUser);
+        window.communityHub.createNotification({
+            category,
+            title,
+            message,
+            details: message
+        }, notificationState.currentUser);
         closeNotificationModal();
         event.target.reset();
         notificationState.activeCategory = 'Todas';
@@ -113,7 +126,8 @@ function renderCategoryTabs(notifications) {
         const active = category === notificationState.activeCategory ? 'active' : '';
         return `
             <button class="category-pill ${active}" type="button" data-category="${category}">
-                ${category} <strong>${count}</strong>
+                <span>${category}</span>
+                <strong>${count}</strong>
             </button>
         `;
     }).join('');
@@ -143,7 +157,7 @@ function renderNotificationsList(notifications) {
     list.innerHTML = notifications.map((notification) => {
         const read = window.communityHub.isNotificationRead(notification.id, notificationState.currentUser);
         return `
-            <article class="notification-item" data-id="${notification.id}" data-category="${notification.category}">
+            <article class="notification-item ${read ? 'read' : 'unread'}" data-id="${notification.id}" data-category="${notification.category}" tabindex="0" role="button" aria-label="Abrir notificação ${escapeHtml(notification.title)}">
                 <div class="notification-icon">
                     <i class="${iconForCategory(notification.category)}"></i>
                 </div>
@@ -167,9 +181,12 @@ function renderNotificationsList(notifications) {
     }).join('');
 
     list.querySelectorAll('.notification-item').forEach((item) => {
-        item.addEventListener('click', () => {
-            window.communityHub.markNotificationAsRead(item.dataset.id, notificationState.currentUser);
-            renderNotificationsPage();
+        item.addEventListener('click', () => openNotificationDetail(item.dataset.id));
+        item.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openNotificationDetail(item.dataset.id);
+            }
         });
     });
 }
@@ -220,6 +237,54 @@ function openNotificationModal() {
 
 function closeNotificationModal() {
     document.getElementById('notificationModal')?.classList.remove('open');
+}
+
+function openNotificationDetail(notificationId) {
+    if (!notificationId) return;
+
+    const notification = window.communityHub.getNotificationById(notificationId, notificationState.currentUser);
+    if (!notification) return;
+
+    notificationState.selectedNotificationId = notificationId;
+    window.communityHub.markNotificationAsRead(notificationId, notificationState.currentUser);
+
+    const title = document.getElementById('notificationDetailTitle');
+    const subtitle = document.getElementById('notificationDetailSubtitle');
+    const category = document.getElementById('notificationDetailCategory');
+    const status = document.getElementById('notificationDetailStatus');
+    const author = document.getElementById('notificationDetailAuthor');
+    const date = document.getElementById('notificationDetailDate');
+    const message = document.getElementById('notificationDetailMessage');
+    const fullText = document.getElementById('notificationDetailFullText');
+
+    if (title) title.textContent = notification.title || 'Detalhes da notificação';
+    if (subtitle) subtitle.textContent = 'Confira todos os dados desta notificação do condomínio.';
+    if (category) category.textContent = notification.category || 'Avisos';
+    if (status) status.textContent = 'Lida';
+    if (author) author.textContent = notification.author || 'Sistema';
+    if (date) date.textContent = formatNotificationDate(notification.createdAt);
+    if (message) message.textContent = notification.message || '--';
+    if (fullText) fullText.textContent = notification.details || notification.message || '--';
+
+    document.getElementById('notificationDetailModal')?.classList.add('open');
+    renderNotificationsPage();
+}
+
+function closeNotificationDetailModal() {
+    notificationState.selectedNotificationId = null;
+    document.getElementById('notificationDetailModal')?.classList.remove('open');
+}
+
+function formatNotificationDate(value) {
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return '--';
+    return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
 function escapeHtml(text) {

@@ -147,13 +147,40 @@
             category: data.category || 'Avisos',
             title: String(data.title || '').trim(),
             message: String(data.message || '').trim(),
+            details: String(data.details || data.message || '').trim(),
             createdAt: new Date().toISOString(),
             author: user?.name || 'Síndico',
-            createdByType: getUserType(user)
+            createdByType: getUserType(user),
+            metadata: data.metadata && typeof data.metadata === 'object' ? data.metadata : null
         };
         notifications.unshift(notification);
         setStorageJson(getNotificationsKey(user), notifications);
         return notification;
+    }
+
+    function createAssemblyNotification(assembly, user = getCurrentUser()) {
+        if (!assembly) return null;
+
+        const dateLabel = formatDate(assembly.date || new Date().toISOString());
+        const startTime = String(assembly.start_time || assembly.time || '--:--').slice(0, 5);
+        const endTime = String(assembly.end_time || assembly.start_time || assembly.time || '').slice(0, 5);
+        const timeLabel = endTime && endTime !== startTime
+            ? `${startTime} às ${endTime}`
+            : startTime;
+
+        return createNotification({
+            category: 'Assembleias',
+            title: assembly.title || 'Nova assembleia agendada',
+            message: `Uma assembleia foi agendada para ${dateLabel} às ${timeLabel}.`,
+            details: `A assembleia "${assembly.title || 'Sem título'}" foi agendada para ${dateLabel} às ${timeLabel}. Acesse a área de assembleias para revisar os detalhes e preparar sua entrada.`,
+            metadata: {
+                assemblyId: assembly.id || null,
+                date: assembly.date || null,
+                startTime: assembly.start_time || assembly.time || null,
+                endTime: assembly.end_time || null,
+                createdBy: assembly.created_by || user?.email || null
+            }
+        }, user);
     }
 
     function getReadNotifications(user = getCurrentUser()) {
@@ -173,6 +200,10 @@
 
     function isNotificationRead(id, user = getCurrentUser()) {
         return getReadNotifications(user).includes(id);
+    }
+
+    function getNotificationById(id, user = getCurrentUser()) {
+        return getNotifications(user).find((notification) => String(notification.id) === String(id)) || null;
     }
 
     function getMarketplaceKey(user) {
@@ -364,6 +395,7 @@
         CATEGORY_IMAGES,
         buildUnitLabel,
         createMarketplaceItem,
+        createAssemblyNotification,
         createNotification,
         formatCondoName,
         formatCurrency,
@@ -376,6 +408,7 @@
         getFavoriteMarketplaceItems,
         getInitials,
         getMarketplaceItems,
+        getNotificationById,
         getNotifications,
         getReadNotifications,
         getUserType,

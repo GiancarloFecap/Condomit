@@ -23,6 +23,16 @@
     }
     if (!user) {
       try {
+        const condoUserStr = sessionStorage.getItem('condominiumUser') || localStorage.getItem('condominiumUser');
+        if (condoUserStr) {
+          user = JSON.parse(condoUserStr);
+        }
+      } catch (e) {
+        user = null;
+      }
+    }
+    if (!user) {
+      try {
         const userStr = sessionStorage.getItem('currentUser') || localStorage.getItem('currentUser');
         if (userStr) {
           user = JSON.parse(userStr);
@@ -37,32 +47,64 @@
   async function getUserCep(user) {
     user = user || getCurrentUser();
     if (!user) return null;
+    const parseCep = (value) => {
+      if (!value) return null;
+      return (window.AssemblyUtils && window.AssemblyUtils.parseCep) ? window.AssemblyUtils.parseCep(value) : value;
+    };
+    const parseCondo = (condo) => {
+      if (!condo) return null;
+      const parsed = typeof condo === 'string' ? JSON.parse(condo) : condo;
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    };
     try {
-      if (user.condominium) {
-        const condo = typeof user.condominium === 'string' ? JSON.parse(user.condominium) : user.condominium;
-        if (condo && condo.cep) {
-          return (window.AssemblyUtils && window.AssemblyUtils.parseCep) ? window.AssemblyUtils.parseCep(condo.cep) : condo.cep;
-        }
+      const condo = parseCondo(user.condominium);
+      if (condo) {
+        const cep = condo.cep || condo.condominium_id || condo.condominiumId;
+        if (cep) return parseCep(cep);
       }
     } catch (e) {
     }
     try {
       if (user.app_metadata && user.app_metadata.condominium && user.app_metadata.condominium.cep) {
-        const cep = user.app_metadata.condominium.cep;
-        return (window.AssemblyUtils && window.AssemblyUtils.parseCep) ? window.AssemblyUtils.parseCep(cep) : cep;
+        return parseCep(user.app_metadata.condominium.cep);
       }
+    } catch (e) {
+    }
+    try {
+      if (user.user_metadata && user.user_metadata.condominium) {
+        const condo = parseCondo(user.user_metadata.condominium);
+        const cep = condo && (condo.cep || condo.condominium_id || condo.condominiumId);
+        if (cep) return parseCep(cep);
+      }
+    } catch (e) {
+    }
+    try {
+      const directCep = user.cep || user.condominium_cep || user.condominiumCep || user.condominium_id || user.condominiumId;
+      if (directCep) return parseCep(directCep);
     } catch (e) {
     }
     if (window.supabase) {
       try {
-        const { data, error } = await window.supabase
+        let query = window.supabase
           .from('user_condominiums')
-          .select('condominiums(cep)')
-          .eq('user_id', user.id)
+          .select('condominium_id, condominiums(cep)');
+        if (user.id && user.email) {
+          query = query.or(`user_id.eq.${user.id},user_email.eq.${user.email}`);
+        } else if (user.id) {
+          query = query.eq('user_id', user.id);
+        } else if (user.email) {
+          query = query.eq('user_email', user.email);
+        }
+        const { data, error } = await query
           .limit(1)
           .maybeSingle();
-        if (!error && data && data.condominiums && data.condominiums.cep) {
-          return (window.AssemblyUtils && window.AssemblyUtils.parseCep) ? window.AssemblyUtils.parseCep(data.condominiums.cep) : data.condominiums.cep;
+        if (!error && data) {
+          if (data.condominiums && data.condominiums.cep) {
+            return parseCep(data.condominiums.cep);
+          }
+          if (data.condominium_id) {
+            return parseCep(data.condominium_id);
+          }
         }
       } catch (e) {
       }
@@ -78,6 +120,7 @@
   function isSindico(user) {
     user = user || getCurrentUser();
     if (!user) return false;
+    if (user.type === 'sindico' || user.user_type === 'sindico') return true;
     if (user.role === 'sindico' || user.role === 'admin') return true;
     if (user.app_metadata && (user.app_metadata.role === 'sindico' || user.app_metadata.role === 'admin')) return true;
     if (user.user_metadata && (user.user_metadata.role === 'sindico' || user.user_metadata.role === 'admin')) return true;

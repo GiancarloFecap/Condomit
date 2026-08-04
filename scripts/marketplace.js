@@ -3,7 +3,8 @@ const marketplaceState = {
     search: '',
     category: 'todos',
     favoritesOnly: false,
-    selectedItemId: null
+    selectedItemId: null,
+    draftImage: ''
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -67,6 +68,7 @@ function setupMarketplaceActions() {
     document.getElementById('createItemBtn')?.addEventListener('click', openMarketplaceModal);
     document.getElementById('closeMarketplaceModal')?.addEventListener('click', closeMarketplaceModal);
     document.getElementById('cancelMarketplaceModal')?.addEventListener('click', closeMarketplaceModal);
+    document.getElementById('itemImage')?.addEventListener('change', handleMarketplaceImageChange);
     document.getElementById('marketplaceModal')?.addEventListener('click', (event) => {
         if (event.target.id === 'marketplaceModal') {
             closeMarketplaceModal();
@@ -80,6 +82,7 @@ function setupMarketplaceActions() {
         const title = document.getElementById('itemTitle').value.trim();
         const price = document.getElementById('itemPrice').value;
         const description = document.getElementById('itemDescription').value.trim();
+        const image = marketplaceState.draftImage;
 
         if (!title || !description) return;
 
@@ -88,12 +91,14 @@ function setupMarketplaceActions() {
             category,
             categoryLabel,
             price,
-            description
+            description,
+            image
         }, marketplaceState.currentUser);
 
         marketplaceState.selectedItemId = item.id;
         closeMarketplaceModal();
         event.target.reset();
+        resetMarketplaceImagePreview();
         renderMarketplacePage();
     });
 }
@@ -253,6 +258,59 @@ function openMarketplaceModal() {
 
 function closeMarketplaceModal() {
     document.getElementById('marketplaceModal')?.classList.remove('open');
+    document.getElementById('marketplaceForm')?.reset();
+    resetMarketplaceImagePreview();
+}
+
+function handleMarketplaceImageChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+        resetMarketplaceImagePreview();
+        return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+        resetMarketplaceImagePreview();
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        marketplaceState.draftImage = typeof reader.result === 'string' ? reader.result : '';
+        renderMarketplaceImagePreview();
+    };
+    reader.readAsDataURL(file);
+}
+
+function renderMarketplaceImagePreview() {
+    const card = document.getElementById('itemImagePreviewCard');
+    const preview = document.getElementById('itemImagePreview');
+    if (!card || !preview) return;
+
+    if (!marketplaceState.draftImage) {
+        resetMarketplaceImagePreview();
+        return;
+    }
+
+    preview.src = marketplaceState.draftImage;
+    preview.style.display = 'block';
+    card.classList.add('has-image');
+}
+
+function resetMarketplaceImagePreview() {
+    marketplaceState.draftImage = '';
+    const input = document.getElementById('itemImage');
+    const card = document.getElementById('itemImagePreviewCard');
+    const preview = document.getElementById('itemImagePreview');
+
+    if (input) input.value = '';
+    if (preview) {
+        preview.removeAttribute('src');
+        preview.style.display = 'none';
+    }
+    if (card) {
+        card.classList.remove('has-image');
+    }
 }
 
 function escapeHtml(text) {

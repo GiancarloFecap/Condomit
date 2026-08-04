@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Condomit - Notificações</title>
+    <title>Condomit - Achados e Perdidos</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css">
     <link rel="stylesheet" href="../styles/theme.css">
-    <link rel="stylesheet" href="../styles/notificacoes.css">
+    <link rel="stylesheet" href="../styles/achados-perdidos.css">
 </head>
 <body>
     <div class="dashboard-sindico">
@@ -24,10 +24,9 @@
                         <span>Início</span>
                     </a>
                 </div>
-
                 <div class="nav-section">
                     <div class="nav-section-title">Comunicado e Engajamento</div>
-                    <a href="notificacoes.html" class="nav-item active">
+                    <a href="notificacoes.html" class="nav-item">
                         <i class="fas fa-bullhorn"></i>
                         <span>Mural de Avisos</span>
                     </a>
@@ -48,12 +47,15 @@
                         <i class="fas fa-door-open"></i>
                         <span>Chat com Porteiro</span>
                     </a>
+                    <a href="achados-perdidos.html" class="nav-item active">
+                        <i class="fas fa-search"></i>
+                        <span>Achados e Perdidos</span>
+                    </a>
                     <a href="marketplace.html" class="nav-item">
                         <i class="fas fa-shopping-bag"></i>
                         <span>Market Place</span>
                     </a>
                 </div>
-
                 <div class="nav-section">
                     <a href="assembleia.html" class="nav-item">
                         <i class="fas fa-calendar-check"></i>
@@ -68,7 +70,6 @@
                         <span>Avisos de Assembleia</span>
                     </a>
                 </div>
-
                 <div class="nav-section">
                     <div class="nav-section-title">Gestão de Moradores</div>
                     <a href="#" class="nav-item">
@@ -76,7 +77,6 @@
                         <span>Gestão de Moradores</span>
                     </a>
                 </div>
-
                 <div class="nav-section">
                     <div class="nav-section-title">Reserva e Manutenção</div>
                     <a href="reservas.html" class="nav-item">
@@ -88,7 +88,6 @@
                         <span>Manutenção Preventiva</span>
                     </a>
                 </div>
-
                 <div class="nav-section">
                     <div class="nav-section-title">IA e Automação</div>
                     <a href="ai-condomit.html" class="nav-item">
@@ -100,7 +99,6 @@
                         <span>IA - Comunicados Automáticos</span>
                     </a>
                 </div>
-
                 <div class="nav-section">
                     <div class="nav-section-title">Configurações</div>
                     <a href="configuracoes.html" class="nav-item">
@@ -119,7 +117,7 @@
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">Avisos e Comunicações</div>
-                    <a href="notificacoes.html" class="nav-item active">
+                    <a href="notificacoes.html" class="nav-item">
                         <i class="fas fa-bullhorn"></i>
                         <span>Mural de Avisos</span>
                     </a>
@@ -127,9 +125,13 @@
                         <i class="fas fa-lightbulb"></i>
                         <span>Canal de Sugestões</span>
                     </a>
-                    <a href="notificacoes.html" class="nav-item active">
+                    <a href="notificacoes.html" class="nav-item">
                         <i class="fas fa-bell"></i>
                         <span>Notificações</span>
+                    </a>
+                    <a href="achados-perdidos.html" class="nav-item active">
+                        <i class="fas fa-search"></i>
+                        <span>Achados e Perdidos</span>
                     </a>
                     <a href="porteiro.html" class="nav-item">
                         <i class="fas fa-door-open"></i>
@@ -179,84 +181,110 @@
         <main class="main-content">
             <header class="top-bar">
                 <div class="top-bar-left">
-                    <h1>Central de Notificações</h1>
-                    <p>Fique por dentro do que acontece no seu condomínio.</p>
+                    <h1>Achados e Perdidos</h1>
+                    <p>Encontre objetos perdidos ou veja o que foi encontrado no condomínio.</p>
                 </div>
                 <div class="top-bar-right">
                     <div class="top-icons">
-                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
-                        <button class="icon-btn"><i class="fas fa-video"></i></button>
                         <button class="icon-btn"><i class="fas fa-bell"></i></button>
-                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
                     </div>
-                    <div class="user-profile-small">
-                        <div class="user-info-small">
-                            <div class="name" id="profileNameTop">Usuário</div>
-                            <div class="type" id="profileTypeTop">Morador</div>
-                        </div>
-                        <div class="avatar" id="profileAvatarTop">US</div>
-                    </div>
+                    <button class="primary-action" id="createLostFoundBtn" type="button">
+                        <i class="fas fa-plus"></i>
+                        Registrar achado
+                    </button>
                 </div>
             </header>
 
-            <section class="notifications-page">
-                <div class="page-head">
-                    <div>
-                        <h2>Notificações</h2>
-                        <p id="notificationsSubtitle">Veja os avisos mais recentes do condomínio.</p>
-                    </div>
-                    <div class="page-actions">
-                        <button class="ghost-btn" id="markAllReadBtn" type="button">
-                            <i class="fas fa-check-circle"></i>
-                            Marcar todas como lidas
-                        </button>
-                        <button class="primary-action" id="createNotificationBtn" type="button" style="display:none;">
-                            <i class="fas fa-plus"></i>
-                            Criar notificação
-                        </button>
-                    </div>
-                </div>
-
-                <div class="filter-tabs" id="categoryTabs"></div>
-
-                <div class="notifications-layout">
-                    <section class="notifications-feed card-shell">
-                        <div class="section-head">
-                            <h3>Feed do condomínio</h3>
-                            <span class="muted" id="feedCounter">0 itens</span>
+            <section class="lost-found-page">
+                <div class="lost-found-layout">
+                    <section class="lost-found-main">
+                        <div class="toolbar card-shell">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input id="lostFoundSearch" type="search" placeholder="Buscar por item, local ou data...">
+                            </div>
+                            <div class="toolbar-actions">
+                                <select id="lostFoundTypeFilter">
+                                    <option value="todos">Todos os tipos</option>
+                                    <option value="encontrado">Itens encontrados</option>
+                                    <option value="perdido">Itens perdidos</option>
+                                </select>
+                                <select id="lostFoundStatusFilter">
+                                    <option value="todos">Todos os status</option>
+                                    <option value="disponivel">Disponível</option>
+                                    <option value="devolvido">Devolvido</option>
+                                    <option value="em-analise">Em análise</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="notifications-list" id="notificationsList"></div>
+
+                        <div class="type-switcher">
+                            <button class="type-card active" type="button" data-type="encontrado">
+                                <span class="type-icon"><i class="fas fa-box-open"></i></span>
+                                <span>
+                                    <strong>Itens encontrados</strong>
+                                    <small>Veja itens que foram encontrados</small>
+                                </span>
+                            </button>
+                            <button class="type-card" type="button" data-type="perdido">
+                                <span class="type-icon"><i class="fas fa-magnifying-glass"></i></span>
+                                <span>
+                                    <strong>Itens perdidos</strong>
+                                    <small>Veja itens que foram perdidos</small>
+                                </span>
+                            </button>
+                        </div>
+
+                        <div class="section-head">
+                            <h2 id="lostFoundSectionTitle">Itens encontrados</h2>
+                            <span class="muted" id="lostFoundCount">0 resultados</span>
+                        </div>
+
+                        <div class="items-grid" id="lostFoundGrid"></div>
                     </section>
 
-                    <aside class="notifications-sidebar">
-                        <div class="card-shell summary-card">
-                            <h3>Resumo</h3>
-                            <div class="summary-stats">
-                                <div class="summary-stat">
-                                    <span>Total</span>
-                                    <strong id="totalNotifications">0</strong>
+                    <aside class="lost-found-sidebar">
+                        <div class="card-shell info-card">
+                            <h3>Como funciona?</h3>
+                            <div class="info-list">
+                                <div class="info-item">
+                                    <span class="info-badge"><i class="fas fa-box-open"></i></span>
+                                    <div>
+                                        <strong>Encontrou algo?</strong>
+                                        <p>Registre o item encontrado com o máximo de detalhes possível.</p>
+                                    </div>
                                 </div>
-                                <div class="summary-stat">
-                                    <span>Não lidas</span>
-                                    <strong id="unreadNotifications">0</strong>
+                                <div class="info-item">
+                                    <span class="info-badge"><i class="fas fa-bullhorn"></i></span>
+                                    <div>
+                                        <strong>Publicamos para todos</strong>
+                                        <p>Seu registro ajuda o proprietário a localizar o objeto mais rápido.</p>
+                                    </div>
                                 </div>
-                                <div class="summary-stat">
-                                    <span>Lidas</span>
-                                    <strong id="readNotifications">0</strong>
+                                <div class="info-item">
+                                    <span class="info-badge"><i class="fas fa-handshake"></i></span>
+                                    <div>
+                                        <strong>Devolução segura</strong>
+                                        <p>Combine a entrega pela portaria ou com a administração.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="card-shell categories-card">
-                            <h3>Filtrar por categoria</h3>
-                            <div class="categories-list" id="categoriesSummary"></div>
+                        <div class="card-shell tips-card">
+                            <h3>Dicas importantes</h3>
+                            <ul>
+                                <li>Verifique sempre fotos e local do item antes do contato.</li>
+                                <li>Combine a devolução na portaria sempre que possível.</li>
+                                <li>Em caso de dúvida, fale com o síndico ou administração.</li>
+                            </ul>
                         </div>
 
-                        <div class="card-shell help-card">
-                            <div class="help-icon"><i class="fas fa-life-ring"></i></div>
+                        <div class="card-shell support-card">
+                            <div class="support-icon"><i class="fas fa-headset"></i></div>
                             <div>
                                 <h3>Precisa de ajuda?</h3>
-                                <p>Fale com o suporte quando precisar.</p>
+                                <p>Fale com o apoio do condomínio.</p>
                             </div>
                         </div>
                     </aside>
@@ -265,87 +293,63 @@
         </main>
     </div>
 
-    <div class="modal-backdrop" id="notificationModal" aria-hidden="true">
+    <div class="modal-backdrop" id="lostFoundModal" aria-hidden="true">
         <div class="modal-card">
             <div class="modal-header">
                 <div>
-                    <h3>Nova notificação</h3>
-                    <p>Crie um aviso para todos os moradores.</p>
+                    <h3>Novo registro</h3>
+                    <p>Cadastre um item perdido ou encontrado.</p>
                 </div>
-                <button class="modal-close" id="closeNotificationModal" type="button" aria-label="Fechar">
+                <button class="modal-close" id="closeLostFoundModal" type="button" aria-label="Fechar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <form class="modal-form" id="notificationForm">
+            <form class="modal-form" id="lostFoundForm">
                 <label>
-                    Categoria
-                    <select id="notificationCategory" required>
-                        <option value="Avisos">Avisos</option>
-                        <option value="Reservas">Reservas</option>
-                        <option value="Assembleias">Assembleias</option>
-                        <option value="Entregas">Entregas</option>
+                    Tipo
+                    <select id="lostFoundTypeInput" required>
+                        <option value="encontrado">Encontrado</option>
+                        <option value="perdido">Perdido</option>
                     </select>
                 </label>
                 <label>
-                    Título
-                    <input id="notificationTitle" type="text" maxlength="100" required>
+                    Nome do item
+                    <input id="lostFoundTitle" type="text" maxlength="80" required>
                 </label>
                 <label>
-                    Mensagem
-                    <textarea id="notificationMessage" rows="5" maxlength="400" required></textarea>
+                    Local
+                    <input id="lostFoundLocation" type="text" maxlength="80" required>
                 </label>
+                <label>
+                    Data
+                    <input id="lostFoundDate" type="date" required>
+                </label>
+                <label>
+                    Descrição
+                    <textarea id="lostFoundDescription" rows="4" maxlength="300" required></textarea>
+                </label>
+                <label>
+                    Imagem do item
+                    <input id="lostFoundImage" type="file" accept="image/*">
+                </label>
+                <div class="image-preview-card" id="lostFoundPreviewCard">
+                    <div class="image-preview-placeholder">
+                        <i class="fas fa-image"></i>
+                        <span>Adicione uma imagem para identificar o item.</span>
+                    </div>
+                    <img id="lostFoundPreviewImage" alt="Pré-visualização do item">
+                </div>
                 <div class="modal-actions">
-                    <button class="ghost-btn" id="cancelNotificationModal" type="button">Cancelar</button>
-                    <button class="primary-action" type="submit">Publicar</button>
+                    <button class="ghost-btn" id="cancelLostFoundModal" type="button">Cancelar</button>
+                    <button class="primary-action" type="submit">Salvar registro</button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <div class="modal-backdrop" id="notificationDetailModal" aria-hidden="true">
-        <div class="modal-card detail-modal-card">
-            <div class="modal-header">
-                <div>
-                    <h3 id="notificationDetailTitle">Detalhes da notificação</h3>
-                    <p id="notificationDetailSubtitle">Veja todas as informações da notificação.</p>
-                </div>
-                <button class="modal-close" id="closeNotificationDetailModal" type="button" aria-label="Fechar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="notification-detail-body">
-                <div class="notification-detail-meta">
-                    <span class="tag category" id="notificationDetailCategory">Avisos</span>
-                    <span class="tag status read" id="notificationDetailStatus">Lida</span>
-                </div>
-                <div class="notification-detail-grid">
-                    <div class="detail-line">
-                        <span>Autor</span>
-                        <strong id="notificationDetailAuthor">Sistema</strong>
-                    </div>
-                    <div class="detail-line">
-                        <span>Data</span>
-                        <strong id="notificationDetailDate">--</strong>
-                    </div>
-                </div>
-                <div class="notification-detail-copy">
-                    <h4>Mensagem</h4>
-                    <p id="notificationDetailMessage">--</p>
-                </div>
-                <div class="notification-detail-copy">
-                    <h4>Informações completas</h4>
-                    <p id="notificationDetailFullText">--</p>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="ghost-btn" id="closeNotificationDetailAction" type="button">Fechar</button>
-            </div>
         </div>
     </div>
 
     <script src="../scripts/supabase-client.js"></script>
     <script src="../scripts/community-hub.js"></script>
     <script src="../scripts/sidebar-links.js"></script>
-    <script src="../scripts/notificacoes.js"></script>
+    <script src="../scripts/achados-perdidos.js"></script>
 </body>
 </html>

@@ -1643,6 +1643,10 @@ async function scheduleAssembly(event) {
             return leftTime.localeCompare(rightTime);
         });
 
+        if (window.communityHub && typeof window.communityHub.createAssemblyNotification === 'function') {
+            window.communityHub.createAssemblyNotification(savedAssembly, assemblyState.currentUser);
+        }
+
         renderScheduledAssemblies();
         event.target.reset();
         showToast('Assembleia agendada com sucesso.', 'success');

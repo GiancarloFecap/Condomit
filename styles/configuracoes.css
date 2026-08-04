@@ -621,6 +621,248 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
 }
 
+.language-select-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 54px;
+    border: 2px solid var(--border-color);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+}
+
+[data-theme="dark"] .language-select-wrap {
+    background: linear-gradient(180deg, rgba(31,41,55,0.98) 0%, rgba(17,24,39,0.98) 100%);
+}
+
+.language-select-wrap > .fa-globe {
+    padding-left: 16px;
+    color: #1d4ed8;
+    font-size: 1rem;
+}
+
+.language-select-wrap .language-select-arrow {
+    padding-right: 16px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.language-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 14px 16px 14px 12px;
+    min-height: 54px;
+    font-weight: 600;
+}
+
+.language-select:focus {
+    border: none;
+    box-shadow: none;
+}
+
+.language-select-wrap:focus-within {
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.12);
+}
+
+.reservas-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.reservas-modal-overlay.open {
+    display: flex;
+}
+
+.reservas-modal-card {
+    width: min(100%, 760px);
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--card-bg);
+    border-radius: 22px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+    overflow: hidden;
+}
+
+.reservas-modal-header,
+.reservas-modal-footer {
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.reservas-modal-header h3 {
+    margin: 0 0 6px;
+    color: var(--text-primary);
+}
+
+.reservas-modal-header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.reservas-modal-footer {
+    border-top: 1px solid var(--border-color);
+    border-bottom: none;
+    justify-content: flex-end;
+}
+
+.reservas-modal-close {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.reservas-modal-body {
+    padding: 22px 24px;
+    overflow-y: auto;
+    display: grid;
+    gap: 14px;
+}
+
+.condo-modal-card {
+    width: min(100%, 820px);
+}
+
+.condominio-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.condominio-info-item {
+    padding: 18px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+[data-theme="dark"] .condominio-info-item {
+    background: linear-gradient(180deg, rgba(31,41,55,0.98) 0%, rgba(17,24,39,0.98) 100%);
+}
+
+.condominio-info-item span {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.condominio-info-item strong {
+    color: var(--text-primary);
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.reserva-item-card {
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+[data-theme="dark"] .reserva-item-card {
+    background: linear-gradient(180deg, rgba(31,41,55,0.98) 0%, rgba(17,24,39,0.98) 100%);
+}
+
+.reserva-item-top,
+.reserva-item-meta,
+.reserva-status-badge,
+.reservas-empty-state {
+    display: flex;
+    align-items: center;
+}
+
+.reserva-item-top {
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.reserva-item-top h4 {
+    margin: 0 0 4px;
+    color: var(--text-primary);
+}
+
+.reserva-item-top p,
+.reserva-item-meta span {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+.reserva-item-meta {
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.reserva-item-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.12);
+    font-size: 0.88rem;
+}
+
+.reserva-status-badge {
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.reserva-status-badge.disponivel {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.reserva-status-badge.indisponivel {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.reservas-empty-state {
+    min-height: 220px;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.reservas-empty-state i {
+    font-size: 2rem;
+    color: #94a3b8;
+}
+
 .config-footer {
     display: flex;
     justify-content: space-between;
@@ -640,5 +882,20 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
         flex-direction: column;
         gap: 8px;
         text-align: center;
+    }
+
+    .reservas-modal-header,
+    .reservas-modal-footer,
+    .reservas-modal-body {
+        padding: 18px;
+    }
+
+    .reserva-item-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .condominio-info-grid {
+        grid-template-columns: 1fr;
     }
 }
