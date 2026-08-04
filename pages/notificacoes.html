@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Notificações</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/notificacoes.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+
+            <nav class="sidebar-nav" id="sidebarSindico">
+                <div class="nav-section">
+                    <a href="index.html" class="nav-item">
+                        <i class="fas fa-home"></i>
+                        <span>Início</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Comunicado e Engajamento</div>
+                    <a href="notificacoes.html" class="nav-item active">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Mural de Avisos</span>
+                    </a>
+                    <a href="sugestoes.html" class="nav-item">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Canal de Sugestões</span>
+                    </a>
+                    <a href="ai-condomit.html" class="nav-item">
+                        <i class="fas fa-comments"></i>
+                        <span>Chat com Moradores</span>
+                    </a>
+                    <a href="porteiro.html" class="nav-item">
+                        <i class="fas fa-door-open"></i>
+                        <span>Chat com Porteiro</span>
+                    </a>
+                    <a href="marketplace.html" class="nav-item">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Market Place</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <a href="assembleia.html" class="nav-item">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Assembleia</span>
+                    </a>
+                    <a href="reservas.html" class="nav-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Reserva de Locais</span>
+                    </a>
+                    <a href="configuracoes.html" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+            </nav>
+
+            <nav class="sidebar-nav" id="sidebarMorador" style="display: none;">
+                <div class="nav-section">
+                    <a href="index-morador.html" class="nav-item">
+                        <i class="fas fa-home"></i>
+                        <span>Início</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Avisos e Comunicações</div>
+                    <a href="notificacoes.html" class="nav-item active">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Mural de Avisos</span>
+                    </a>
+                    <a href="sugestoes.html" class="nav-item">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Canal de Sugestões</span>
+                    </a>
+                    <a href="notificacoes.html" class="nav-item active">
+                        <i class="fas fa-bell"></i>
+                        <span>Notificações</span>
+                    </a>
+                    <a href="porteiro.html" class="nav-item">
+                        <i class="fas fa-door-open"></i>
+                        <span>Chat com Portaria</span>
+                    </a>
+                    <a href="marketplace.html" class="nav-item">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Market Place</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Assembleias</div>
+                    <a href="assembleia.html" class="nav-item">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Assembleias</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Reservas e Serviços</div>
+                    <a href="reservas.html" class="nav-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Reserva de Locais</span>
+                    </a>
+                    <a href="ai-condomit.html" class="nav-item">
+                        <i class="fas fa-robot"></i>
+                        <span>IA - Dúvidas do Condomínio</span>
+                    </a>
+                    <a href="configuracoes.html" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="btn-support">
+                    <i class="fas fa-headset"></i>
+                    <span>Central de Suporte</span>
+                </button>
+                <button class="btn-logout-sidebar" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Central de Notificações</h1>
+                    <p>Fique por dentro do que acontece no seu condomínio.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Morador</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="notifications-page">
+                <div class="page-head">
+                    <div>
+                        <h2>Notificações</h2>
+                        <p id="notificationsSubtitle">Veja os avisos mais recentes do condomínio.</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="ghost-btn" id="markAllReadBtn" type="button">
+                            <i class="fas fa-check-circle"></i>
+                            Marcar todas como lidas
+                        </button>
+                        <button class="primary-action" id="createNotificationBtn" type="button" style="display:none;">
+                            <i class="fas fa-plus"></i>
+                            Criar notificação
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filter-tabs" id="categoryTabs"></div>
+
+                <div class="notifications-layout">
+                    <section class="notifications-feed card-shell">
+                        <div class="section-head">
+                            <h3>Feed do condomínio</h3>
+                            <span class="muted" id="feedCounter">0 itens</span>
+                        </div>
+                        <div class="notifications-list" id="notificationsList"></div>
+                    </section>
+
+                    <aside class="notifications-sidebar">
+                        <div class="card-shell summary-card">
+                            <h3>Resumo</h3>
+                            <div class="summary-stats">
+                                <div class="summary-stat">
+                                    <span>Total</span>
+                                    <strong id="totalNotifications">0</strong>
+                                </div>
+                                <div class="summary-stat">
+                                    <span>Não lidas</span>
+                                    <strong id="unreadNotifications">0</strong>
+                                </div>
+                                <div class="summary-stat">
+                                    <span>Lidas</span>
+                                    <strong id="readNotifications">0</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-shell categories-card">
+                            <h3>Filtrar por categoria</h3>
+                            <div class="categories-list" id="categoriesSummary"></div>
+                        </div>
+
+                        <div class="card-shell help-card">
+                            <div class="help-icon"><i class="fas fa-life-ring"></i></div>
+                            <div>
+                                <h3>Precisa de ajuda?</h3>
+                                <p>Fale com o suporte quando precisar.</p>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="notificationModal" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h3>Nova notificação</h3>
+                    <p>Crie um aviso para todos os moradores.</p>
+                </div>
+                <button class="modal-close" id="closeNotificationModal" type="button" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form class="modal-form" id="notificationForm">
+                <label>
+                    Categoria
+                    <select id="notificationCategory" required>
+                        <option value="Avisos">Avisos</option>
+                        <option value="Reservas">Reservas</option>
+                        <option value="Assembleias">Assembleias</option>
+                        <option value="Entregas">Entregas</option>
+                    </select>
+                </label>
+                <label>
+                    Título
+                    <input id="notificationTitle" type="text" maxlength="100" required>
+                </label>
+                <label>
+                    Mensagem
+                    <textarea id="notificationMessage" rows="5" maxlength="400" required></textarea>
+                </label>
+                <div class="modal-actions">
+                    <button class="ghost-btn" id="cancelNotificationModal" type="button">Cancelar</button>
+                    <button class="primary-action" type="submit">Publicar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/community-hub.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/notificacoes.js"></script>
+</body>
+</html>

@@ -6,6 +6,8 @@ let plans = [];
 let mercadoPagoConfig = null;
 let mercadoPagoInstance = null;
 let walletBrickController = null;
+let checkoutFlowPending = false;
+let checkoutRecoveryTimeout = null;
 
 const DEBUG_SERVER_URL = 'http://127.0.0.1:7777/event';
 const DEBUG_SESSION_ID = 'mercadopago-button-error';
@@ -251,9 +253,11 @@ async function initCheckoutButton() {
             },
             callbacks: {
                 onReady: () => {
-                    showPaymentFeedback('info', 'Clique no botao para abrir o popup do Mercado Pago.');
+                    clearCheckoutPendingState();
+                    showPaymentFeedback('info', 'Clique no botao para abrir o checkout. Nao feche a janela antes de concluir o pagamento.');
                 },
                 onSubmit: async () => {
+                    markCheckoutPendingState();
                     const traceId = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}`;
                     // #region debug-point A:onSubmit-start
                     reportDebugEvent({
@@ -306,11 +310,13 @@ async function initCheckoutButton() {
                             traceId
                         });
                         // #endregion
+                        clearCheckoutPendingState();
                         showPaymentFeedback('error', error?.message || 'Nao foi possivel criar o pagamento.');
                         throw error;
                     }
                 },
                 onError: (error) => {
+                    resetCheckoutAfterPending('Nao foi possivel abrir o checkout agora. Tente novamente.');
                     // #region debug-point E:brick-error
                     reportDebugEvent({
                         runId: 'pre-fix',
@@ -499,28 +505,47 @@ async function createPaymentPreference(plan, pendingPayment, traceId) {
 
 function bindReturnListeners() {
     window.addEventListener('focus', () => {
+        if (checkoutFlowPending) {
+            handleCheckoutReturn();
+            return;
+        }
         refreshApprovedPaymentStatus();
     });
 
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
+            if (checkoutFlowPending) {
+                handleCheckoutReturn();
+                return;
+            }
             refreshApprovedPaymentStatus();
         }
     });
 }
 
-async function refreshApprovedPaymentStatus() {
+async function refreshApprovedPaymentStatus(options = {}) {
     if (!currentUser?.email) return;
 
     try {
         const approvedPayment = await fetchApprovedPayment(currentUser.email);
         if (approvedPayment) {
+            clearCheckoutPendingState();
             persistApprovedPlan(approvedPayment);
             window.location.href = 'index.html';
+            return true;
+        }
+
+        if (options.resetIfPending) {
+            resetCheckoutAfterPending(options.message);
         }
     } catch (error) {
         console.warn('[Checkout] Nao foi possivel revalidar pagamento aprovado:', error);
+        if (options.resetIfPending) {
+            resetCheckoutAfterPending('Nao foi possivel confirmar o pagamento agora. Voce pode tentar novamente.');
+        }
     }
+
+    return false;
 }
 
 function persistApprovedPlan(payment) {
@@ -547,6 +572,38 @@ function showPaymentFeedback(type, message) {
 
     feedback.className = `payment-feedback ${type || 'info'}`;
     feedback.textContent = message || '';
+}
+
+function clearCheckoutPendingState() {
+    checkoutFlowPending = false;
+    if (checkoutRecoveryTimeout) {
+        window.clearTimeout(checkoutRecoveryTimeout);
+        checkoutRecoveryTimeout = null;
+    }
+}
+
+function markCheckoutPendingState() {
+    clearCheckoutPendingState();
+    checkoutFlowPending = true;
+}
+
+function resetCheckoutAfterPending(message) {
+    clearCheckoutPendingState();
+    showPaymentFeedback('info', message || 'Pagamento nao concluido ainda. Quando quiser, abra o checkout novamente.');
+}
+
+function handleCheckoutReturn() {
+    showPaymentFeedback('info', 'Verificando o status do pagamento...');
+    if (checkoutRecoveryTimeout) {
+        window.clearTimeout(checkoutRecoveryTimeout);
+    }
+
+    checkoutRecoveryTimeout = window.setTimeout(() => {
+        refreshApprovedPaymentStatus({
+            resetIfPending: true,
+            message: 'Nao feche a janela antes de concluir o pagamento. Se voce fechou, basta abrir o checkout novamente.'
+        });
+    }, 700);
 }
 
 function extractUserCep(user) {

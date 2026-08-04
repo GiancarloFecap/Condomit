@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Marketplace</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/marketplace.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+
+            <nav class="sidebar-nav" id="sidebarSindico">
+                <div class="nav-section">
+                    <a href="index.html" class="nav-item">
+                        <i class="fas fa-home"></i>
+                        <span>Início</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Comunicado e Engajamento</div>
+                    <a href="notificacoes.html" class="nav-item">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Mural de Avisos</span>
+                    </a>
+                    <a href="sugestoes.html" class="nav-item">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Canal de Sugestões</span>
+                    </a>
+                    <a href="ai-condomit.html" class="nav-item">
+                        <i class="fas fa-comments"></i>
+                        <span>Chat com Moradores</span>
+                    </a>
+                    <a href="porteiro.html" class="nav-item">
+                        <i class="fas fa-door-open"></i>
+                        <span>Chat com Porteiro</span>
+                    </a>
+                    <a href="marketplace.html" class="nav-item active">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Market Place</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <a href="assembleia.html" class="nav-item">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Assembleia</span>
+                    </a>
+                    <a href="reservas.html" class="nav-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Reserva de Locais</span>
+                    </a>
+                    <a href="configuracoes.html" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+            </nav>
+
+            <nav class="sidebar-nav" id="sidebarMorador" style="display: none;">
+                <div class="nav-section">
+                    <a href="index-morador.html" class="nav-item">
+                        <i class="fas fa-home"></i>
+                        <span>Início</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Avisos e Comunicações</div>
+                    <a href="notificacoes.html" class="nav-item">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Mural de Avisos</span>
+                    </a>
+                    <a href="sugestoes.html" class="nav-item">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Canal de Sugestões</span>
+                    </a>
+                    <a href="notificacoes.html" class="nav-item">
+                        <i class="fas fa-bell"></i>
+                        <span>Notificações</span>
+                    </a>
+                    <a href="porteiro.html" class="nav-item">
+                        <i class="fas fa-door-open"></i>
+                        <span>Chat com Portaria</span>
+                    </a>
+                    <a href="marketplace.html" class="nav-item active">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Market Place</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Assembleias</div>
+                    <a href="assembleia.html" class="nav-item">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Assembleias</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Reservas e Serviços</div>
+                    <a href="reservas.html" class="nav-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Reserva de Locais</span>
+                    </a>
+                    <a href="ai-condomit.html" class="nav-item">
+                        <i class="fas fa-robot"></i>
+                        <span>IA - Dúvidas do Condomínio</span>
+                    </a>
+                    <a href="configuracoes.html" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="btn-support">
+                    <i class="fas fa-headset"></i>
+                    <span>Central de Suporte</span>
+                </button>
+                <button class="btn-logout-sidebar" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Marketplace</h1>
+                    <p>Compre, venda ou doe itens com segurança entre vizinhos.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Morador</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="marketplace-page">
+                <div class="marketplace-head">
+                    <div>
+                        <h2>MarketPlace do condomínio</h2>
+                        <p>Encontre boas oportunidades sem sair da sua comunidade.</p>
+                    </div>
+                    <button class="primary-action" id="createItemBtn" type="button">
+                        <i class="fas fa-plus"></i>
+                        Anunciar item
+                    </button>
+                </div>
+
+                <div class="marketplace-toolbar card-shell">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input id="marketplaceSearch" type="search" placeholder="Buscar por itens, categorias ou vendedor...">
+                    </div>
+                    <div class="toolbar-actions">
+                        <select id="marketplaceCategory">
+                            <option value="todos">Todas as categorias</option>
+                            <option value="moveis">Móveis</option>
+                            <option value="eletrodomesticos">Eletrodomésticos</option>
+                            <option value="eletronicos">Eletrônicos</option>
+                            <option value="infantil">Infantil</option>
+                            <option value="esportes">Esportes</option>
+                            <option value="livros">Livros</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                        <button class="ghost-btn" id="toggleFavoritesBtn" type="button">
+                            <i class="far fa-heart"></i>
+                            Favoritos
+                        </button>
+                    </div>
+                </div>
+
+                <div class="category-shortcuts" id="categoryShortcuts"></div>
+
+                <div class="marketplace-layout">
+                    <section class="marketplace-grid card-shell">
+                        <div class="section-head">
+                            <h3>Itens disponíveis</h3>
+                            <span class="muted" id="marketplaceCounter">0 resultados</span>
+                        </div>
+                        <div class="products-grid" id="marketplaceGrid"></div>
+                    </section>
+
+                    <aside class="marketplace-detail card-shell" id="marketplaceDetail"></aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="marketplaceModal" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h3>Novo anúncio</h3>
+                    <p>Publique um item para vender, doar ou negociar.</p>
+                </div>
+                <button class="modal-close" id="closeMarketplaceModal" type="button" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form class="modal-form" id="marketplaceForm">
+                <label>
+                    Título
+                    <input id="itemTitle" type="text" maxlength="80" required>
+                </label>
+                <label>
+                    Categoria
+                    <select id="itemCategory" required>
+                        <option value="moveis">Móveis</option>
+                        <option value="eletrodomesticos">Eletrodomésticos</option>
+                        <option value="eletronicos">Eletrônicos</option>
+                        <option value="infantil">Infantil</option>
+                        <option value="esportes">Esportes</option>
+                        <option value="livros">Livros</option>
+                        <option value="outros">Outros</option>
+                    </select>
+                </label>
+                <label>
+                    Preço
+                    <input id="itemPrice" type="number" min="0" step="0.01" required>
+                </label>
+                <label>
+                    Descrição
+                    <textarea id="itemDescription" rows="5" maxlength="400" required></textarea>
+                </label>
+                <div class="modal-actions">
+                    <button class="ghost-btn" id="cancelMarketplaceModal" type="button">Cancelar</button>
+                    <button class="primary-action" type="submit">Publicar anúncio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/community-hub.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/marketplace.js"></script>
+</body>
+</html>

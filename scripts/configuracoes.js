@@ -204,7 +204,9 @@ function updateUIWithUserData(currentUser) {
     const inicioLink = document.getElementById('inicio-link');
     if (inicioLink) {
         const userType = (currentUser.type || '').toLowerCase();
-        const targetPage = userType === 'morador' ? 'index-morador.html' : 'index.html';
+        const targetPage = userType === 'morador'
+            ? 'index-morador.html'
+            : (userType === 'porteiro' ? 'porteiro.html' : 'index.html');
         inicioLink.href = targetPage;
         inicioLink.addEventListener('click', function(event) {
             event.preventDefault();
@@ -763,5 +765,4 @@ async function executeDeleteAccount() {
         msg.textContent = 'Erro ao excluir conta: ' + (err.message || 'Tente novamente.');
     }
 }
-
 

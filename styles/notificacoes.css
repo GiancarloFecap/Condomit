@@ -1,0 +1,343 @@
+.notifications-page {
+    padding: 28px 32px 32px;
+}
+
+.page-head,
+.section-head,
+.notification-item,
+.notification-meta,
+.summary-stat,
+.category-pill,
+.category-summary-item,
+.help-card,
+.modal-header,
+.modal-actions {
+    display: flex;
+    align-items: center;
+}
+
+.page-head,
+.section-head,
+.modal-header,
+.modal-actions {
+    justify-content: space-between;
+}
+
+.page-head {
+    margin-bottom: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.page-head h2 {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+}
+
+.page-head p,
+.muted,
+.notification-text p,
+.summary-stat span,
+.help-card p,
+.modal-header p {
+    color: #6b7280;
+}
+
+.page-actions,
+.filter-tabs,
+.summary-stats,
+.categories-list {
+    display: flex;
+    gap: 12px;
+}
+
+.filter-tabs {
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.category-pill,
+.ghost-btn,
+.primary-action,
+.modal-close,
+.modal-form input,
+.modal-form textarea,
+.modal-form select {
+    border-radius: 12px;
+}
+
+.category-pill,
+.ghost-btn,
+.modal-close {
+    border: 1px solid #dbe2f0;
+    background: #fff;
+}
+
+.category-pill,
+.ghost-btn,
+.primary-action {
+    padding: 12px 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.category-pill {
+    color: #475569;
+}
+
+.category-pill.active {
+    background: #ecfeff;
+    border-color: #22c1d6;
+    color: #0f766e;
+}
+
+.ghost-btn {
+    color: #334155;
+}
+
+.primary-action {
+    border: none;
+    background: linear-gradient(135deg, #1e40af 0%, #0ea5a4 100%);
+    color: #fff;
+}
+
+.notifications-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
+    gap: 24px;
+}
+
+.card-shell {
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.notifications-list {
+    margin-top: 12px;
+}
+
+.notification-item {
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px 6px;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.notification-item[data-category="Avisos"] .notification-icon {
+    background: #fff7ed;
+    color: #f97316;
+}
+
+.notification-item[data-category="Reservas"] .notification-icon {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.notification-item[data-category="Assembleias"] .notification-icon {
+    background: #f5f3ff;
+    color: #7c3aed;
+}
+
+.notification-item[data-category="Entregas"] .notification-icon {
+    background: #ecfdf5;
+    color: #10b981;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-meta {
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.notification-text h4 {
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+
+.notification-text p {
+    line-height: 1.55;
+}
+
+.notification-badges {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tag {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.tag.category {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.tag.status {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.tag.status.read {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.notification-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #2563eb;
+    margin-top: 6px;
+}
+
+.notification-dot.read {
+    background: #cbd5e1;
+}
+
+.notifications-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.summary-stats {
+    flex-direction: column;
+    margin-top: 16px;
+}
+
+.summary-stat,
+.category-summary-item {
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.summary-stat:last-child,
+.category-summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-stat strong,
+.category-summary-item strong {
+    font-size: 1.1rem;
+}
+
+.help-card {
+    gap: 14px;
+    background: linear-gradient(135deg, #ecfeff 0%, #f8fafc 100%);
+}
+
+.help-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #22c1d6 0%, #1d4ed8 100%);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state {
+    padding: 32px 18px;
+    text-align: center;
+    color: #64748b;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+}
+
+.modal-backdrop.open {
+    display: flex;
+}
+
+.modal-card {
+    width: min(100%, 560px);
+    background: #fff;
+    border-radius: 22px;
+    padding: 24px;
+}
+
+.modal-close {
+    width: 42px;
+    height: 42px;
+    cursor: pointer;
+}
+
+.modal-form {
+    margin-top: 18px;
+    display: grid;
+    gap: 16px;
+}
+
+.modal-form label {
+    display: grid;
+    gap: 8px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.modal-form input,
+.modal-form textarea,
+.modal-form select {
+    padding: 12px 14px;
+    border: 1px solid #dbe2f0;
+    font: inherit;
+}
+
+@media (max-width: 1080px) {
+    .notifications-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .notifications-page {
+        padding: 20px;
+    }
+
+    .page-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .ghost-btn,
+    .primary-action {
+        width: 100%;
+        justify-content: center;
+    }
+}
