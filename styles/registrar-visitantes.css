@@ -83,21 +83,39 @@
     gap: 18px;
 }
 
-.form-row {
+.visitor-form .form-row {
     display: grid;
+    grid-auto-flow: row;
     gap: 16px;
+    width: 100%;
 }
 
-.form-row-3 {
+.visitor-form .form-row-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
 }
 
-.form-row-2 {
+.visitor-form .form-row-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
 }
 
-.form-row-4 {
+.visitor-form .form-row-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+}
+
+.visitor-form .form-row > label {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.visitor-form .form-row > label input,
+.visitor-form .form-row > label textarea {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .responsible-grid {

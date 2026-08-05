@@ -15,7 +15,8 @@ function getQueryParam(name) {
 
 function toast(msg, type) {
   if (window.AssemblyUtils?.showToast) return window.AssemblyUtils.showToast(msg, type);
-  alert(msg);
+  if (typeof window.showToast === 'function') return window.showToast(msg, type || 'info');
+  console.log('[Assembly Toast]', type ? `[${type}]` : '', msg);
 }
 
 async function getTokenInfo() {

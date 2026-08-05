@@ -8,6 +8,8 @@ let mercadoPagoInstance = null;
 let walletBrickController = null;
 let checkoutFlowPending = false;
 let checkoutRecoveryTimeout = null;
+let checkoutPendingHardTimeout = null;
+let lastCheckoutInitiatedAt = 0;
 
 const DEBUG_SERVER_URL = 'http://127.0.0.1:7777/event';
 const DEBUG_SESSION_ID = 'mercadopago-button-error';
@@ -576,20 +578,49 @@ function showPaymentFeedback(type, message) {
 
 function clearCheckoutPendingState() {
     checkoutFlowPending = false;
+    lastCheckoutInitiatedAt = 0;
     if (checkoutRecoveryTimeout) {
         window.clearTimeout(checkoutRecoveryTimeout);
         checkoutRecoveryTimeout = null;
+    }
+    if (checkoutPendingHardTimeout) {
+        window.clearTimeout(checkoutPendingHardTimeout);
+        checkoutPendingHardTimeout = null;
     }
 }
 
 function markCheckoutPendingState() {
     clearCheckoutPendingState();
     checkoutFlowPending = true;
+    lastCheckoutInitiatedAt = Date.now();
+
+    checkoutPendingHardTimeout = window.setTimeout(() => {
+        if (checkoutFlowPending) {
+            console.warn('[Checkout] Timeout máximo de fluxo atingido. Recuperando estado...');
+            resetCheckoutAfterPending(
+                'O checkout do Mercado Pago ficou aberto por muito tempo sem conclusão. Quando quiser, abra o pagamento novamente.'
+            );
+        }
+    }, 90 * 1000);
 }
 
 function resetCheckoutAfterPending(message) {
+    const wasPending = checkoutFlowPending;
     clearCheckoutPendingState();
-    showPaymentFeedback('info', message || 'Pagamento nao concluido ainda. Quando quiser, abra o checkout novamente.');
+    showPaymentFeedback('info', message || 'Pagamento não concluído ainda. Quando quiser, abra o checkout novamente.');
+
+    if (wasPending) {
+        window.setTimeout(async () => {
+            try {
+                await initCheckoutButton();
+            } catch (err) {
+                console.warn('[Checkout] Não foi possível reinicializar o Wallet Brick:', err);
+                renderPaymentPlaceholder(
+                    'O botão de pagamento ficou temporariamente indisponível. Recarregue a página para tentar novamente.'
+                );
+            }
+        }, 300);
+    }
 }
 
 function handleCheckoutReturn() {

@@ -19,9 +19,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('bar4')
     ];
 
-    /*
-     * Requisitos da senha.
-     */
     const requirements = {
         length: {
             el: document.getElementById('req-length'),
@@ -43,9 +40,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
-    /*
-     * Mostra ou esconde a senha.
-     */
     togglePassword?.addEventListener('click', function () {
         const newType =
             passwordInput.getAttribute('type') === 'password'
@@ -60,9 +54,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 : '<i class="fas fa-eye-slash"></i>';
     });
 
-    /*
-     * Mostra ou esconde a confirmação da senha.
-     */
     toggleConfirmPassword?.addEventListener('click', function () {
         const newType =
             confirmPasswordInput.getAttribute('type') === 'password'
@@ -77,9 +68,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 : '<i class="fas fa-eye-slash"></i>';
     });
 
-    /*
-     * Máscara de telefone.
-     */
     phoneInput?.addEventListener('input', function (event) {
         let value = event.target.value.replace(/\D/g, '');
 
@@ -102,9 +90,6 @@ document.addEventListener('DOMContentLoaded', function () {
         event.target.value = value;
     });
 
-    /*
-     * Máscara de CPF.
-     */
     cpfInput?.addEventListener('input', function (event) {
         let value = event.target.value.replace(/\D/g, '');
 
@@ -132,9 +117,6 @@ document.addEventListener('DOMContentLoaded', function () {
         event.target.value = value;
     });
 
-    /*
-     * Atualiza o indicador de força da senha.
-     */
     function updatePasswordStrength(password) {
         let validCount = 0;
 
@@ -175,9 +157,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        /*
-         * Atualiza as barras.
-         */
         strengthBarItems.forEach((bar, index) => {
             if (!bar) {
                 return;
@@ -222,7 +201,6 @@ document.addEventListener('DOMContentLoaded', function () {
             strengthText.style.color = labelColor;
 
             const span = strengthText.querySelector('span');
-
             if (span) {
                 span.style.color = labelColor;
             }
@@ -231,9 +209,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return validCount >= 4;
     }
 
-    /*
-     * Converte alguns erros do Supabase em mensagens mais claras.
-     */
     function getSignupErrorMessage(error) {
         const message = String(
             error?.message || error || ''
@@ -265,10 +240,7 @@ document.addEventListener('DOMContentLoaded', function () {
             message.includes('database error saving new user') ||
             message.includes('unexpected_failure')
         ) {
-            return (
-                'O usuário não pôde ser salvo no banco. ' +
-                'Verifique o gatilho on_auth_user_created e a tabela public.users.'
-            );
+            return 'Não foi possível concluir o seu cadastro no momento. Tente novamente.';
         }
 
         if (
@@ -278,13 +250,37 @@ document.addEventListener('DOMContentLoaded', function () {
             return 'Já existe um usuário cadastrado com este CPF.';
         }
 
+        if (
+            message.includes('duplicate key') &&
+            message.includes('email')
+        ) {
+            return 'Já existe um usuário cadastrado com este e-mail.';
+        }
+
+        if (message.includes('signup is disabled')) {
+            return 'Novos cadastros estão temporariamente desativados.';
+        }
+
+        if (
+            message.includes('email rate limit exceeded') ||
+            message.includes('too many requests') ||
+            message.includes('rate limit')
+        ) {
+            return 'Muitas tentativas recentes. Aguarde alguns minutos e tente novamente.';
+        }
+
+        if (
+            message.includes('network') ||
+            message.includes('fetch') ||
+            message.includes('failed to fetch')
+        ) {
+            return 'Falha de conexão. Verifique sua internet e tente novamente.';
+        }
+
         return error?.message ||
             'Não foi possível concluir o cadastro.';
     }
 
-    /*
-     * Ativa ou desativa o botão durante o cadastro.
-     */
     function setSubmitting(isSubmitting) {
         if (!submitButton) {
             return;
@@ -303,18 +299,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    /*
-     * Inicializa o indicador da senha.
-     */
     updatePasswordStrength('');
 
     passwordInput?.addEventListener('input', function () {
         updatePasswordStrength(passwordInput.value);
     });
 
-    /*
-     * Envio do formulário.
-     */
     signupForm?.addEventListener('submit', async function (event) {
         event.preventDefault();
 
@@ -339,10 +329,6 @@ document.addEventListener('DOMContentLoaded', function () {
             .value
             .trim();
 
-        /*
-         * Não usamos trim() na senha para não modificar
-         * silenciosamente aquilo que o usuário digitou.
-         */
         const password = document
             .getElementById('password')
             .value;
@@ -353,9 +339,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const type = 'porteiro';
 
-        /*
-         * Validação dos campos obrigatórios.
-         */
         if (
             !name ||
             !email ||
@@ -364,57 +347,41 @@ document.addEventListener('DOMContentLoaded', function () {
             !password ||
             !confirmPassword
         ) {
-            alert('Preencha todos os campos obrigatórios.');
+            showToast('Preencha todos os campos obrigatórios.', 'warning');
             return;
         }
 
-        /*
-         * Valida o formato básico do e-mail.
-         */
         const emailPattern =
             /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
         if (!emailPattern.test(email)) {
-            alert('Digite um endereço de e-mail válido.');
+            showToast('Digite um endereço de e-mail válido.', 'warning');
             return;
         }
 
-        /*
-         * Verifica se o CPF possui 11 números.
-         */
         const cpfNumbers = cpf.replace(/\D/g, '');
 
         if (cpfNumbers.length !== 11) {
-            alert('Digite um CPF com 11 números.');
+            showToast('Digite um CPF com 11 números.', 'warning');
             return;
         }
 
-        /*
-         * Verifica os requisitos da senha.
-         */
         const isPasswordValid =
             updatePasswordStrength(password);
 
         if (!isPasswordValid) {
-            alert(
-                'A senha não atende a todos os requisitos.'
+            showToast(
+                'A senha não atende a todos os requisitos de segurança.',
+                'warning'
             );
-
             return;
         }
 
-        /*
-         * Confirmação da senha.
-         */
         if (password !== confirmPassword) {
-            alert('As senhas não coincidem.');
+            showToast('As senhas não coincidem.', 'warning');
             return;
         }
 
-        /*
-         * Aceita o cliente com qualquer um destes nomes,
-         * conforme a inicialização usada no projeto.
-         */
         const supabaseClient =
             window.supabaseClient ||
             window.supabase;
@@ -430,10 +397,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             );
 
-            alert(
-                'O sistema de autenticação não foi carregado. ' +
-                'Verifique os scripts do Supabase.'
-            );
+            showModal({
+                title: 'Sistema indisponível',
+                message:
+                    'O sistema de autenticação não foi carregado. ' +
+                    'Atualize a página e tente novamente.',
+                type: 'error'
+            });
 
             return;
         }
@@ -441,17 +411,8 @@ document.addEventListener('DOMContentLoaded', function () {
         setSubmitting(true);
 
         try {
-            /*
-             * Cria o usuário em Authentication → Users.
-             *
-             * Os dados de options.data serão gravados em
-             * raw_user_meta_data e usados pelo gatilho SQL
-             * para criar o perfil em public.users.
-             */
-            const emailRedirectTo = new URL(
-                'entrar.html',
-                window.location.href
-            ).href;
+            const emailRedirectTo =
+                `${window.location.origin}/pages/entrar.html`;
 
             const {
                 data: authData,
@@ -480,12 +441,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 );
             }
 
-            /*
-             * Não chamamos createUser().
-             *
-             * O perfil em public.users deve ser criado pelo
-             * gatilho SQL on_auth_user_created.
-             */
+            if (
+                Array.isArray(authData.user.identities) &&
+                authData.user.identities.length === 0
+            ) {
+                showToast(
+                    'Já existe uma conta cadastrada com este e-mail.',
+                    'warning'
+                );
+                return;
+            }
+
             const sessionUser = {
                 id: authData.user.id,
                 auth_user_id: authData.user.id,
@@ -498,24 +464,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 condominium: null
             };
 
-            /*
-             * Quando a confirmação de e-mail está ativada,
-             * o usuário é criado, mas a sessão pode ser null.
-             */
             if (!authData.session) {
-                alert(
-                    'Cadastro realizado! ' +
-                    'Verifique seu e-mail para confirmar a conta.'
-                );
+                setSubmitting(false);
 
-                window.location.href = 'entrar.html';
+                showModal({
+                    title: 'Cadastro realizado!',
+                    message:
+                        'Cadastro realizado com sucesso! ' +
+                        'Enviamos um link de confirmação para o seu e-mail (' + email + ').\n\n' +
+                        'Confirme seu endereço antes de entrar na Condomit. ' +
+                        'Verifique também a pasta de spam ou lixo eletrônico.',
+                    type: 'success',
+                    confirmText: 'Ir para o Login',
+                    onConfirm: () => {
+                        window.location.href = 'entrar.html';
+                    }
+                });
                 return;
             }
 
-            /*
-             * Caso a confirmação de e-mail esteja desativada,
-             * o Supabase pode retornar uma sessão imediatamente.
-             */
             sessionStorage.setItem(
                 'condominiumUser',
                 JSON.stringify(sessionUser)
@@ -531,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 authData.session.access_token
             );
 
-            alert('Cadastro realizado com sucesso!');
+            showToast('Cadastro realizado com sucesso!', 'success');
 
             window.location.href = 'assembleia.html';
         } catch (error) {
@@ -540,9 +507,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 error
             );
 
-            alert(getSignupErrorMessage(error));
+            const friendly = getSignupErrorMessage(error);
+            showToast(friendly, 'error');
         } finally {
-            setSubmitting(false);
+            if (document.body.contains(signupForm)) {
+                setSubmitting(false);
+            }
         }
     });
 });

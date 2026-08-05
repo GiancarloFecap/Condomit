@@ -416,8 +416,7 @@ function getSidebarConfig(userType) {
                     { labelKey: 'visitor_release', icon: 'fas fa-user-check', route: 'porteiro-liberacao' },
                     { labelKey: 'register_visitor', icon: 'fas fa-user-plus', route: 'porteiro-registrar' },
                     { labelKey: 'visitor_entry_exit', icon: 'fas fa-right-left', route: 'porteiro-registro' },
-                    { labelKey: 'released_visitors', icon: 'fas fa-circle-check', route: 'porteiro-visitantes' },
-                    { labelKey: 'access_history', icon: 'fas fa-clock-rotate-left', route: 'porteiro-historico' }
+                    { labelKey: 'released_visitors', icon: 'fas fa-circle-check', route: 'porteiro-visitantes' }
                 ]
             },
             {

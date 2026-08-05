@@ -12,6 +12,156 @@ const SUPABASE_HEADERS = {
   'Content-Type': 'application/json'
 };
 
+(function initUiHelpers() {
+  const ICONS = {
+    success: 'fa-check',
+    error: 'fa-xmark',
+    warning: 'fa-exclamation',
+    info: 'fa-info'
+  };
+
+  const DEFAULT_TITLES = {
+    success: 'Sucesso',
+    error: 'Ops!',
+    warning: 'Atenção',
+    info: 'Informação'
+  };
+
+  function ensureToastContainer() {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'toast-container';
+      document.body.appendChild(container);
+    }
+    return container;
+  }
+
+  function showToast(message, type = 'info', options = {}) {
+    if (typeof message !== 'string' && typeof message !== 'number') {
+      message = String(message ?? '');
+    }
+    type = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info';
+    const title = options.title || DEFAULT_TITLES[type];
+    const duration = typeof options.duration === 'number' ? options.duration : (type === 'error' ? 6500 : 4500);
+
+    const container = ensureToastContainer();
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.setAttribute('role', type === 'error' || type === 'warning' ? 'alert' : 'status');
+
+    toast.innerHTML = `
+      <div class="toast-icon"><i class="fas ${ICONS[type]}"></i></div>
+      <div class="toast-content">
+        ${title ? `<div class="toast-title"></div>` : ''}
+        <div class="toast-message"></div>
+      </div>
+      <button type="button" class="toast-close" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+    `;
+
+    const titleEl = toast.querySelector('.toast-title');
+    if (titleEl) titleEl.textContent = title;
+    toast.querySelector('.toast-message').textContent = message;
+
+    let closeTimer = null;
+
+    const closeToast = () => {
+      if (toast.classList.contains('toast-leaving')) return;
+      toast.classList.add('toast-leaving');
+      if (closeTimer) window.clearTimeout(closeTimer);
+      window.setTimeout(() => toast.remove(), 260);
+    };
+
+    toast.querySelector('.toast-close').addEventListener('click', closeToast);
+
+    if (duration > 0) {
+      closeTimer = window.setTimeout(closeToast, duration);
+    }
+
+    toast.addEventListener('mouseenter', () => {
+      if (closeTimer) { window.clearTimeout(closeTimer); closeTimer = null; }
+    });
+    toast.addEventListener('mouseleave', () => {
+      if (duration > 0) closeTimer = window.setTimeout(closeToast, duration);
+    });
+
+    container.appendChild(toast);
+    return closeToast;
+  }
+
+  function showModal({ title, message, type = 'info', confirmText = 'OK', cancelText = null, onConfirm = null, onCancel = null, closable = true } = {}) {
+    type = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.setAttribute('role', 'dialog');
+    backdrop.setAttribute('aria-modal', 'true');
+
+    const hasCancel = typeof cancelText === 'string' && cancelText.length > 0;
+
+    backdrop.innerHTML = `
+      <div class="modal-box" role="document">
+        <div class="modal-header">
+          <div class="modal-icon modal-icon-${type}"><i class="fas ${ICONS[type]}"></i></div>
+          <div class="modal-title-wrap">
+            <div class="modal-title"></div>
+          </div>
+        </div>
+        <div class="modal-body"></div>
+        <div class="modal-footer">
+          ${hasCancel ? `<button type="button" class="modal-btn modal-btn-secondary modal-cancel"></button>` : ''}
+          <button type="button" class="modal-btn modal-btn-primary modal-confirm"></button>
+        </div>
+      </div>
+    `;
+
+    backdrop.querySelector('.modal-title').textContent = title || DEFAULT_TITLES[type];
+    backdrop.querySelector('.modal-body').textContent = typeof message === 'string' || typeof message === 'number' ? String(message) : '';
+    backdrop.querySelector('.modal-confirm').textContent = confirmText || 'OK';
+    if (hasCancel) backdrop.querySelector('.modal-cancel').textContent = cancelText;
+
+    let closed = false;
+    const close = (via) => {
+      if (closed) return;
+      closed = true;
+      backdrop.style.animation = 'modalFadeIn 0.18s ease reverse forwards';
+      const box = backdrop.querySelector('.modal-box');
+      if (box) box.style.animation = 'modalZoomIn 0.18s ease reverse forwards';
+      window.setTimeout(() => backdrop.remove(), 190);
+      if (via === 'confirm' && typeof onConfirm === 'function') onConfirm();
+      if (via === 'cancel' && typeof onCancel === 'function') onCancel();
+    };
+
+    backdrop.querySelector('.modal-confirm').addEventListener('click', () => close('confirm'));
+    const cancelBtn = backdrop.querySelector('.modal-cancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => close('cancel'));
+
+    if (closable && !hasCancel) {
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close('confirm'); });
+    } else if (closable) {
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close('cancel'); });
+    }
+
+    document.addEventListener('keydown', function escHandler(e) {
+      if (e.key === 'Escape' && document.body.contains(backdrop)) {
+        document.removeEventListener('keydown', escHandler);
+        close(hasCancel ? 'cancel' : 'confirm');
+      }
+    });
+
+    document.body.appendChild(backdrop);
+    setTimeout(() => {
+      const confirmBtn = backdrop.querySelector('.modal-confirm');
+      if (confirmBtn) confirmBtn.focus();
+    }, 50);
+
+    return { close };
+  }
+
+  window.showToast = showToast;
+  window.showModal = showModal;
+})();
+
 function getSupabaseAccessToken() {
   try {
     const t = sessionStorage.getItem('sb-access-token') || localStorage.getItem('sb-access-token');

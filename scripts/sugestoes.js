@@ -366,7 +366,7 @@ async function salvarStatusSindico() {
         abrirModalDetalhes(sugestaoAtualDetalhes);
         aplicarFiltros();
     } catch (error) {
-        alert('Erro ao atualizar status: ' + (error.message || 'Tente novamente.'));
+        window.showToast('Erro ao atualizar status: ' + (error.message || 'Tente novamente.'), 'error');
     }
 }
 
@@ -431,13 +431,13 @@ async function enviarSugestao() {
     const descricao = document.getElementById('sugestaoDescricao').value.trim();
 
     if (!titulo || !categoria || !descricao) {
-        alert('Por favor, preencha todos os campos.');
+        window.showToast('Por favor, preencha todos os campos.', 'warning');
         return;
     }
 
     const userCep = currentUser?.condominium?.cep;
     if (!userCep) {
-        alert('Erro: CEP do condomínio não identificado.');
+        window.showToast('Erro: CEP do condomínio não identificado.', 'error');
         return;
     }
 
@@ -478,7 +478,7 @@ async function enviarSugestao() {
         aplicarFiltros();
         fecharModal();
     } catch (error) {
-        alert('Erro ao enviar sugestão: ' + (error.message || 'Tente novamente. Certifique-se de que o título é único.'));
+        window.showToast('Erro ao enviar sugestão: ' + (error.message || 'Tente novamente. Certifique-se de que o título é único.'), 'error');
     }
 }
 

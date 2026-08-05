@@ -256,13 +256,20 @@ function openConfigSection(sectionKey) {
             if (typeof openEditProfileModal === 'function') {
                 openEditProfileModal();
             } else {
-                alert('Editor de perfil está carregando...');
+                window.showToast('Editor de perfil está carregando...', 'info');
             }
             break;
         case 'alterar-senha':
-            if (confirm(cfgT('confirm_change_password'))) {
-                window.location.href = 'redefinir-senha.html?source=configuracoes';
-            }
+            window.showModal({
+                title: 'Alterar senha',
+                message: cfgT('confirm_change_password'),
+                type: 'warning',
+                confirmText: 'Sim, alterar',
+                cancelText: 'Cancelar',
+                onConfirm: () => {
+                    window.location.href = 'redefinir-senha.html?source=configuracoes';
+                }
+            });
             break;
         case 'controle-acesso':
             openVisitorAccessModal();
@@ -285,7 +292,7 @@ function openConfigSection(sectionKey) {
         case 'sobre-empresa':
         case 'versao-app':
         case 'novas-atualizacoes':
-            alert(`Funcionalidade ainda não implementada: ${sectionKey.replace(/-/g, ' ')}`);
+            window.showToast(`Funcionalidade ainda não implementada: ${sectionKey.replace(/-/g, ' ')}`, 'info');
             break;
         case 'minhas-reservas':
             openReservationsModal();

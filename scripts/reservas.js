@@ -368,47 +368,52 @@ async function handleAgendar() {
     const dateStr = selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const timeStr = `${selectedTime.start} - ${selectedTime.end}`;
 
-    const confirm = window.confirm(`Você realmente quer agendar o ${selectedSpace.name} para ${dateStr} às ${timeStr}?`);
-
-    if (confirm) {
-        const userStr = sessionStorage.getItem('condominiumUser');
-        if (!userStr) {
-            alert('Você precisa estar logado para agendar.');
-            return;
-        }
-
-        const user = JSON.parse(userStr);
-        const reservationData = {
-            email: user.email,
-            nome_local: selectedSpace.name,
-            data_reserva: selectedDate.toISOString().split('T')[0],
-            horario_inicio: selectedTime.start,
-            horario_fim: selectedTime.end,
-            status: 'indisponivel'
-        };
-
-        try {
-            const response = await fetch('/api/reserva', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(reservationData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || 'Erro ao fazer reserva');
+    window.showModal({
+        title: 'Confirmar reserva',
+        message: `Você realmente quer agendar o ${selectedSpace.name} para ${dateStr} às ${timeStr}?`,
+        type: 'warning',
+        confirmText: 'Sim, agendar',
+        cancelText: 'Cancelar',
+        onConfirm: async () => {
+            const userStr = sessionStorage.getItem('condominiumUser');
+            if (!userStr) {
+                window.showToast('Você precisa estar logado para agendar.', 'warning');
+                return;
             }
 
-            alert('Reserva realizada com sucesso!');
-            await fetchReservations();
-            renderTimeSlots();
-        } catch (error) {
-            console.error('Erro ao fazer reserva:', error);
-            alert(`Erro ao fazer reserva: ${error.message}`);
+            const user = JSON.parse(userStr);
+            const reservationData = {
+                email: user.email,
+                nome_local: selectedSpace.name,
+                data_reserva: selectedDate.toISOString().split('T')[0],
+                horario_inicio: selectedTime.start,
+                horario_fim: selectedTime.end,
+                status: 'indisponivel'
+            };
+
+            try {
+                const response = await fetch('/api/reserva', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(reservationData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.message || 'Erro ao fazer reserva');
+                }
+
+                window.showToast('Reserva realizada com sucesso!', 'success');
+                await fetchReservations();
+                renderTimeSlots();
+            } catch (error) {
+                console.error('Erro ao fazer reserva:', error);
+                window.showToast(`Erro ao fazer reserva: ${error.message}`, 'error');
+            }
         }
-    }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', async function() {

@@ -257,14 +257,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const updatedUser = { ...currentUser, ...userUpdates };
             sessionStorage.setItem('condominiumUser', JSON.stringify(updatedUser));
 
-            alert('Condomínio registrado com sucesso!');
+            window.showToast('Condomínio registrado com sucesso!', 'success');
 
             // Now redirect to checkout (if no plan/payment)
 
             window.location.href = 'checkout.html';
         } catch (error) {
             console.error('Erro ao registrar condomínio:', error);
-            alert(`Não foi possível registrar o condomínio: ${error.message || error}`);
+            window.showToast(`Não foi possível registrar o condomínio: ${error.message || error}`, 'error');
         }
     });
 

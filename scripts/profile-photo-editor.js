@@ -455,7 +455,7 @@ window.openConfigSection = function(sectionKey) {
     if (originalOpenConfigSection) {
       originalOpenConfigSection(sectionKey);
     } else {
-      alert(`Funcionalidade ainda não implementada: ${sectionKey.replace(/-/g, ' ')}`);
+      window.showToast(`Funcionalidade ainda não implementada: ${sectionKey.replace(/-/g, ' ')}`, 'info');
     }
   }
 };
