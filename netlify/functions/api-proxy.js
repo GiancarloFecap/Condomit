@@ -1136,6 +1136,22 @@ async function reactivateSoftDeletedAuthUser({ uid, email, newPassword }) {
   return { reactivated: true };
 }
 
+async function deleteAuthAdminUserById(uid) {
+  if (!uid) return { deleted: false, reason: 'missing-uid' };
+  const deleteResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(uid)}`, {
+    method: 'DELETE',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+  if (!deleteResponse.ok && deleteResponse.status !== 404) {
+    const errBody = await deleteResponse.text().catch(() => '');
+    throw new Error(`Falha ao remover usuário do auth (HTTP ${deleteResponse.status}) ${errBody}`.trim());
+  }
+  return { deleted: true, status: deleteResponse.status };
+}
+
 async function handleAuthReactivateUser(event, body) {
   const email = String(body?.email || '').trim().toLowerCase();
   const newPassword = body?.password ? String(body.password) : null;
@@ -1572,8 +1588,26 @@ exports.handler = async (event, context) => {
       if (!email) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro email é obrigatório' }) };
       }
-      const result = await proxySupabaseRequest(null, `/users?email=eq.${encodeURIComponent(email)}`, 'DELETE');
-      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+      const normalizedEmail = String(email).trim().toLowerCase();
+      let authDeleteResult = { skipped: true };
+      try {
+        const authUser = await fetchAuthAdminUserByEmail(normalizedEmail);
+        if (authUser?.id) {
+          authDeleteResult = await deleteAuthAdminUserById(authUser.id);
+        }
+      } catch (authErr) {
+        console.warn('[DELETE /users] Aviso ao remover auth.user:', authErr?.message || authErr);
+      }
+      const result = await proxySupabaseRequest(null, `/users?email=eq.${encodeURIComponent(normalizedEmail)}`, 'DELETE');
+      return {
+        statusCode: result.status,
+        headers,
+        body: JSON.stringify({
+          ...(result.data || {}),
+          authDeleted: authDeleteResult.deleted || false,
+          authSkipped: authDeleteResult.skipped || false
+        })
+      };
     }
 
     if (pathname === '/condominiums' && rawMethod === 'DELETE') {

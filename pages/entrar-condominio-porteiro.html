@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrar no Condomínio - Porteiro - Condomit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/entrar-condominio-porteiro.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+</head>
+<body>
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Processando...</p>
+    </div>
+
+    <div id="alertContainer" class="alert-container"></div>
+
+    <div class="porteiro-page">
+        <div class="porteiro-container">
+            <button class="btn-back" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </button>
+
+            <div class="porteiro-header">
+                <div class="porteiro-icon-badge">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <img src="../assets/logo-full.png" alt="Condomit Logo" class="porteiro-logo">
+                <h1>Entrar no condomínio</h1>
+                <p>Acesso de porteiro — informe os dados do condomínio</p>
+            </div>
+
+            <form id="porteiroCondominiumForm" class="porteiro-form">
+                <div class="form-group">
+                    <label for="condominiumId">
+                        <i class="fas fa-building"></i> ID do condomínio
+                    </label>
+                    <input
+                        type="text"
+                        id="condominiumId"
+                        placeholder="Ex: 01234567-8"
+                        autocomplete="off"
+                        required
+                    >
+                    <span class="error-message" id="condominiumIdError"></span>
+                </div>
+
+                <div class="form-group">
+                    <label for="condominiumPassword">
+                        <i class="fas fa-lock"></i> Senha do condomínio
+                    </label>
+                    <div class="password-input">
+                        <input
+                            type="password"
+                            id="condominiumPassword"
+                            placeholder="Digite a senha do condomínio"
+                            autocomplete="off"
+                            required
+                        >
+                        <button type="button" id="togglePassword" class="toggle-password" aria-label="Mostrar senha">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <span class="error-message" id="condominiumPasswordError"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-large" id="submitBtn">
+                    Entrar no condomínio
+                </button>
+            </form>
+
+            <div class="porteiro-footer">
+                <p>Não tem as credenciais? <a href="#">Entre em contato com o síndico</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/entrar-condominio-porteiro.js"></script>
+</body>
+</html>

@@ -33,6 +33,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    try {
+        const email = String(currentUser.email || '').toLowerCase();
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const sessionKey = `porteiro:session:${email}:${todayStr}`;
+        const condoId = currentUser.condominium?.condominium_id || currentUser.condominium?.cep || '';
+        const everKey = `porteiro:entry:${email}:${condoId}`;
+        const hasPassedEntry = !!sessionStorage.getItem(sessionKey) ||
+            (condoId ? !!sessionStorage.getItem(everKey) : false);
+        if (!hasPassedEntry) {
+            window.location.href = 'entrar-condominio-porteiro.html';
+            return;
+        }
+    } catch (_) {}
+
     const profileNameTop = document.getElementById('profileNameTop');
     const profileAvatarTop = document.getElementById('profileAvatarTop');
     const sidebarApartment = document.getElementById('sidebarApartment');

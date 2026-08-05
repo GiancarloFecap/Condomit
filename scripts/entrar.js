@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (user.condominium) {
                 window.location.href = 'index-porteiro.html';
             } else {
-                window.location.href = 'entrar-condominio.html';
+                window.location.href = 'entrar-condominio-porteiro.html';
             }
         } else {
             window.location.href = 'assembleia.html';
