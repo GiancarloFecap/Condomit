@@ -85,6 +85,19 @@ async function fetchUserByEmail(email) {
   }
 }
 
+async function fetchUserByCpf(cpf) {
+  const normalizedCpf = String(cpf || '').replace(/\D/g, '');
+  if (!normalizedCpf) return null;
+
+  try {
+    const data = await supabaseFetch(`/users?select=*&cpf=eq.${encodeURIComponent(normalizedCpf)}&limit=1`);
+    return Array.isArray(data) && data.length ? data[0] : null;
+  } catch (error) {
+    console.error('Erro ao buscar usuário por CPF:', error);
+    return null;
+  }
+}
+
 async function createUser(user) {
   const response = await fetch('/api/register', {
     method: 'POST',
@@ -161,6 +174,38 @@ async function createCondominium(condo) {
   return Array.isArray(data) ? data[0] : data;
 }
 
+async function createVisitor(visitor) {
+  const payload = {
+    cpf: String(visitor?.cpf || '').replace(/\D/g, ''),
+    full_name: String(visitor?.full_name || '').trim(),
+    rg: String(visitor?.rg || '').trim(),
+    phone: String(visitor?.phone || '').trim() || null,
+    email: String(visitor?.email || '').trim() || null,
+    responsible_cpf: String(visitor?.responsible_cpf || '').replace(/\D/g, '')
+  };
+
+  const data = await supabaseFetch('/visitors', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload)
+  });
+
+  return Array.isArray(data) ? data[0] : data;
+}
+
+async function getVisitorsByResponsibleCpf(responsibleCpf) {
+  const normalizedCpf = String(responsibleCpf || '').replace(/\D/g, '');
+  if (!normalizedCpf) return [];
+
+  try {
+    const data = await supabaseFetch(`/visitors?select=*&responsible_cpf=eq.${encodeURIComponent(normalizedCpf)}&order=created_at.desc`);
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Erro ao buscar visitantes por responsável:', error);
+    return [];
+  }
+}
+
 async function fetchPendingNoticesCount(cep) {
   if (!cep) return 0;
 
@@ -220,19 +265,70 @@ async function scheduleAssemblyDb(assembly) {
   return Array.isArray(data) ? data[0] : data;
 }
 
+function normalizeCondominiumIdentifier(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function getAssemblyCondominiumIdentifiers(assembly) {
+  return [
+    assembly?.cep,
+    assembly?.condominium_cep,
+    assembly?.condominiumCep,
+    assembly?.condominium_id,
+    assembly?.condominiumId
+  ]
+    .map(normalizeCondominiumIdentifier)
+    .filter(Boolean);
+}
+
 async function getScheduledAssemblies() {
   return await supabaseFetch('/scheduled_assemblies?select=*&order=date.asc,start_time.asc');
 }
 
 async function getScheduledAssembliesByCep(userCep) {
   if (!userCep) return [];
+  const rawIdentifier = String(userCep || '').trim();
+  const normalizedIdentifier = normalizeCondominiumIdentifier(rawIdentifier);
   try {
-    const encodedCep = encodeURIComponent(userCep);
-    const data = await supabaseFetch(`/scheduled_assemblies?select=*&cep=eq.${encodedCep}&order=date.asc,start_time.asc`);
-    return Array.isArray(data) ? data : [];
+    const filters = [];
+    if (normalizedIdentifier) {
+      filters.push(`cep.eq.${encodeURIComponent(normalizedIdentifier)}`);
+      filters.push(`condominium_cep.eq.${encodeURIComponent(normalizedIdentifier)}`);
+      filters.push(`condominium_id.eq.${encodeURIComponent(normalizedIdentifier)}`);
+    }
+    if (rawIdentifier && rawIdentifier !== normalizedIdentifier) {
+      filters.push(`cep.eq.${encodeURIComponent(rawIdentifier)}`);
+      filters.push(`condominium_cep.eq.${encodeURIComponent(rawIdentifier)}`);
+      filters.push(`condominium_id.eq.${encodeURIComponent(rawIdentifier)}`);
+    }
+
+    const path = filters.length
+      ? `/scheduled_assemblies?select=*&or=(${filters.join(',')})&order=date.asc,start_time.asc`
+      : '/scheduled_assemblies?select=*&order=date.asc,start_time.asc';
+
+    const data = await supabaseFetch(path);
+    const rows = Array.isArray(data) ? data : [];
+
+    if (!normalizedIdentifier) {
+      return rows;
+    }
+
+    return rows.filter((assembly) => {
+      const identifiers = getAssemblyCondominiumIdentifiers(assembly);
+      return identifiers.includes(normalizedIdentifier);
+    });
   } catch (error) {
     console.error('Erro ao buscar assembleias agendadas:', error);
-    return [];
+    try {
+      const fallback = await getScheduledAssemblies();
+      return (Array.isArray(fallback) ? fallback : []).filter((assembly) => {
+        const identifiers = getAssemblyCondominiumIdentifiers(assembly);
+        return identifiers.includes(normalizedIdentifier);
+      });
+    } catch (fallbackError) {
+      console.error('Erro ao aplicar fallback de assembleias:', fallbackError);
+      return [];
+    }
   }
 }
 
@@ -296,6 +392,9 @@ async function refreshCurrentUserFromDb() {
 
 window.refreshCurrentUserFromDb = refreshCurrentUserFromDb;
 window.getNormalizedUserType = getNormalizedUserType;
+window.fetchUserByCpf = fetchUserByCpf;
+window.createVisitor = createVisitor;
+window.getVisitorsByResponsibleCpf = getVisitorsByResponsibleCpf;
 
 async function saveSuggestion(suggestion) {
   try {

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Manutenção Preventiva</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/manutencao-preventiva.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Manutenção Preventiva</h1>
+                    <p>Acompanhe e gerencie as manutenções preventivas do condomínio.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Síndico</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="maintenance-page">
+                <div class="maintenance-head">
+                    <div class="metrics-grid">
+                        <article class="metric-card">
+                            <div class="metric-icon blue"><i class="fas fa-clipboard-check"></i></div>
+                            <div>
+                                <span>Total de manutenções</span>
+                                <strong id="maintenanceTotalCount">0</strong>
+                                <small>Este mês</small>
+                            </div>
+                        </article>
+                        <article class="metric-card">
+                            <div class="metric-icon green"><i class="fas fa-circle-check"></i></div>
+                            <div>
+                                <span>Concluídas</span>
+                                <strong id="maintenanceCompletedCount">0</strong>
+                                <small id="maintenanceCompletedRatio">0%</small>
+                            </div>
+                        </article>
+                        <article class="metric-card">
+                            <div class="metric-icon amber"><i class="fas fa-clock"></i></div>
+                            <div>
+                                <span>Pendentes</span>
+                                <strong id="maintenancePendingCount">0</strong>
+                                <small id="maintenancePendingRatio">0%</small>
+                            </div>
+                        </article>
+                        <article class="metric-card">
+                            <div class="metric-icon red"><i class="fas fa-circle-exclamation"></i></div>
+                            <div>
+                                <span>Atrasadas</span>
+                                <strong id="maintenanceLateCount">0</strong>
+                                <small id="maintenanceLateRatio">0%</small>
+                            </div>
+                        </article>
+                    </div>
+                    <button class="primary-action" id="openMaintenanceModalBtn" type="button">
+                        <i class="fas fa-plus"></i>
+                        Nova manutenção
+                    </button>
+                </div>
+
+                <div class="maintenance-layout">
+                    <section class="maintenance-main">
+                        <div class="toolbar card-shell">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input id="maintenanceSearch" type="search" placeholder="Buscar por tarefa ou local...">
+                            </div>
+                            <div class="toolbar-actions">
+                                <select id="maintenanceCategoryFilter">
+                                    <option value="todos">Todas as categorias</option>
+                                </select>
+                                <select id="maintenanceStatusFilter">
+                                    <option value="todos">Todos os status</option>
+                                    <option value="pendente">Pendente</option>
+                                    <option value="concluida">Concluída</option>
+                                    <option value="atrasada">Atrasada</option>
+                                </select>
+                                <button class="ghost-btn" id="maintenanceClearFilters" type="button">
+                                    <i class="fas fa-filter-circle-xmark"></i>
+                                    Limpar filtros
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-card card-shell">
+                            <div class="section-head">
+                                <div>
+                                    <h2>Manutenções programadas</h2>
+                                    <p id="maintenanceCounter">0 manutenções encontradas</p>
+                                </div>
+                            </div>
+
+                            <div class="table-wrap">
+                                <table class="maintenance-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tarefa</th>
+                                            <th>Local</th>
+                                            <th>Categoria</th>
+                                            <th>Periodicidade</th>
+                                            <th>Próxima execução</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="maintenanceTableBody">
+                                        <tr>
+                                            <td colspan="7" class="table-empty">Carregando manutenções...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="table-footer">
+                                <div class="pagination">
+                                    <button type="button" class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                                    <button type="button" class="page-btn active">1</button>
+                                    <button type="button" class="page-btn">2</button>
+                                    <button type="button" class="page-btn">3</button>
+                                    <button type="button" class="page-btn">4</button>
+                                    <span class="page-dots">...</span>
+                                    <button type="button" class="page-btn">6</button>
+                                    <button type="button" class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                                <div class="page-size-badge">10 por página</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside class="maintenance-sidebar">
+                        <div class="card-shell side-card">
+                            <div class="calendar-head">
+                                <h3>Calendário</h3>
+                                <div class="calendar-nav">
+                                    <button type="button" class="calendar-btn"><i class="fas fa-chevron-left"></i></button>
+                                    <span>Maio 2024</span>
+                                    <button type="button" class="calendar-btn"><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                            <div class="calendar-weekdays">
+                                <span>Dom</span>
+                                <span>Seg</span>
+                                <span>Ter</span>
+                                <span>Qua</span>
+                                <span>Qui</span>
+                                <span>Sex</span>
+                                <span>Sáb</span>
+                            </div>
+                            <div class="calendar-grid">
+                                <span class="muted">28</span>
+                                <span class="muted">29</span>
+                                <span class="muted">30</span>
+                                <span>1</span>
+                                <span>2</span>
+                                <span>3</span>
+                                <span>4</span>
+                                <span>5</span>
+                                <span>6</span>
+                                <span>7</span>
+                                <span>8</span>
+                                <span>9</span>
+                                <span>10</span>
+                                <span>11</span>
+                                <span>12</span>
+                                <span>13</span>
+                                <span>14</span>
+                                <span>15</span>
+                                <span>16</span>
+                                <span>17</span>
+                                <span class="calendar-day active">18</span>
+                                <span>19</span>
+                                <span>20</span>
+                                <span>21</span>
+                                <span>22</span>
+                                <span>23</span>
+                                <span>24</span>
+                                <span>25</span>
+                                <span>26</span>
+                                <span>27</span>
+                                <span>28</span>
+                                <span>29</span>
+                                <span>30</span>
+                                <span>31</span>
+                                <span class="muted">1</span>
+                            </div>
+                            <div class="calendar-legend">
+                                <span><i class="legend-dot amber"></i>Pendentes</span>
+                                <span><i class="legend-dot red"></i>Atrasadas</span>
+                                <span><i class="legend-dot green"></i>Concluídas</span>
+                            </div>
+                        </div>
+
+                        <div class="card-shell side-card">
+                            <h3>Próximas manutenções</h3>
+                            <div class="upcoming-list" id="upcomingMaintenanceList"></div>
+                        </div>
+
+                        <div class="card-shell side-card documents-card">
+                            <h3>Documentos e registros</h3>
+                            <p>Acesse relatórios, históricos e comprovantes das manutenções.</p>
+                            <button class="ghost-btn full-width" type="button">
+                                <i class="fas fa-file-lines"></i>
+                                Ver documentos
+                            </button>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="maintenanceModal" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h3>Nova manutenção</h3>
+                    <p>Cadastre uma nova atividade preventiva para acompanhar no cronograma.</p>
+                </div>
+                <button class="modal-close" id="closeMaintenanceModal" type="button" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form class="modal-form" id="maintenanceForm">
+                <label>
+                    Tarefa
+                    <input id="maintenanceTitle" type="text" maxlength="80" required>
+                </label>
+                <div class="form-grid">
+                    <label>
+                        Local
+                        <input id="maintenanceLocation" type="text" maxlength="60" required>
+                    </label>
+                    <label>
+                        Categoria
+                        <select id="maintenanceCategory" required>
+                            <option value="Elevadores">Elevadores</option>
+                            <option value="Segurança">Segurança</option>
+                            <option value="Hidráulica">Hidráulica</option>
+                            <option value="Elétrica">Elétrica</option>
+                            <option value="Limpeza">Limpeza</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="form-grid">
+                    <label>
+                        Periodicidade
+                        <select id="maintenanceFrequency" required>
+                            <option value="Mensal">Mensal</option>
+                            <option value="Bimestral">Bimestral</option>
+                            <option value="Trimestral">Trimestral</option>
+                            <option value="Semestral">Semestral</option>
+                            <option value="Anual">Anual</option>
+                        </select>
+                    </label>
+                    <label>
+                        Próxima execução
+                        <input id="maintenanceDate" type="date" required>
+                    </label>
+                </div>
+                <label>
+                    Descrição
+                    <textarea id="maintenanceDescription" rows="4" maxlength="220" required></textarea>
+                </label>
+                <div class="modal-actions">
+                    <button class="ghost-btn" id="cancelMaintenanceModal" type="button">Cancelar</button>
+                    <button class="primary-action" type="submit">Salvar manutenção</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/manutencao-preventiva.js"></script>
+</body>
+</html>

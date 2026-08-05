@@ -385,6 +385,7 @@
 
     <script src="../scripts/supabase-client.js"></script>
     <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/visitor-registration.js"></script>
     <script src="../scripts/configuracoes.js"></script>
     <script src="../scripts/profile-photo-editor.js"></script>
 
@@ -430,6 +431,58 @@
             </div>
             <div class="reservas-modal-footer">
                 <button type="button" class="btn-edit-profile" id="condominioModalAction">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="reservas-modal-overlay" id="visitorAccessModal">
+        <div class="reservas-modal-card condo-modal-card">
+            <div class="reservas-modal-header">
+                <div>
+                    <h3>Registrar visitante</h3>
+                    <p>Cadastre apenas as informações do visitante. O responsável será você.</p>
+                </div>
+                <button type="button" class="reservas-modal-close" id="visitorAccessModalClose" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="reservas-modal-body">
+                <form id="visitorAccessForm" class="visitor-access-form">
+                    <div class="visitor-access-grid">
+                        <label>
+                            <span>Nome completo</span>
+                            <input type="text" data-field="visitor-full-name" placeholder="Digite o nome completo" required>
+                        </label>
+                        <label>
+                            <span>CPF</span>
+                            <input type="text" data-field="visitor-cpf" placeholder="Digite o CPF" required>
+                        </label>
+                        <label>
+                            <span>RG</span>
+                            <input type="text" data-field="visitor-rg" placeholder="Digite o RG" required>
+                        </label>
+                        <label>
+                            <span>Telefone do visitante</span>
+                            <input type="text" data-field="visitor-phone" placeholder="(11) 99999-9999">
+                        </label>
+                        <label class="visitor-access-email">
+                            <span>E-mail</span>
+                            <input type="email" data-field="visitor-email" placeholder="visitante@email.com">
+                        </label>
+                        <input type="hidden" data-field="responsible-cpf">
+                        <input type="hidden" data-field="responsible-name">
+                        <input type="hidden" data-field="responsible-phone">
+                        <input type="hidden" data-field="responsible-apartment">
+                        <input type="hidden" data-field="responsible-block">
+                    </div>
+
+                    <div class="visitor-feedback" data-role="visitor-feedback"></div>
+
+                    <div class="reservas-modal-footer visitor-access-footer">
+                        <button type="button" class="btn-edit-profile" data-action="cancel-visitor">Cancelar</button>
+                        <button type="submit" class="btn-edit-profile visitor-submit-btn" data-action="submit-visitor">Registrar visitante</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

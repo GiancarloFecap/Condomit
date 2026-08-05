@@ -778,6 +778,78 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     word-break: break-word;
 }
 
+.visitor-access-form {
+    display: grid;
+    gap: 18px;
+}
+
+.visitor-access-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.visitor-access-grid label {
+    display: grid;
+    gap: 8px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.visitor-access-grid label span {
+    color: var(--text-primary);
+}
+
+.visitor-access-grid input {
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font: inherit;
+    color: var(--text-primary);
+    background: var(--card-bg);
+}
+
+.visitor-access-email {
+    grid-column: 1 / -1;
+}
+
+.visitor-access-footer {
+    padding: 0;
+    border: none;
+    justify-content: flex-end;
+}
+
+.visitor-submit-btn {
+    background: #1d4ed8 !important;
+    color: #fff !important;
+    border-color: #1d4ed8 !important;
+}
+
+.visitor-feedback {
+    display: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.visitor-feedback[data-state="info"] {
+    display: block;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.visitor-feedback[data-state="success"] {
+    display: block;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.visitor-feedback[data-state="error"] {
+    display: block;
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
 .reserva-item-card {
     border: 1px solid var(--border-color);
     border-radius: 16px;
@@ -896,6 +968,10 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     }
 
     .condominio-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .visitor-access-grid {
         grid-template-columns: 1fr;
     }
 }

@@ -41,14 +41,19 @@
 
 .residents-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.85fr);
-    gap: 24px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
 }
 
 .residents-main,
 .residents-sidebar {
     display: grid;
     gap: 18px;
+}
+
+.residents-sidebar {
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    align-items: start;
 }
 
 .card-shell {
@@ -62,21 +67,35 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 14px;
+    align-items: end;
 }
 
-.search-box {
+.search-bar-group {
+    display: grid;
+    gap: 8px;
+}
+
+.search-bar-label {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+.search-bar {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-height: 44px;
     padding: 0 14px;
     border: 1px solid #dbe2f0;
     border-radius: 14px;
+    background: #fff;
 }
 
-.search-box input,
+.search-bar input,
 .toolbar-actions select {
     width: 100%;
-    padding: 14px 0;
+    padding: 10px 0;
     border: none;
     background: transparent;
     font: inherit;
@@ -89,7 +108,8 @@
 
 .toolbar-actions select {
     min-width: 165px;
-    padding: 14px;
+    min-height: 44px;
+    padding: 10px 14px;
     border: 1px solid #dbe2f0;
     border-radius: 12px;
     background: #fff;
@@ -150,7 +170,7 @@
 .residents-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 860px;
+    min-width: 760px;
 }
 
 .residents-table th,
@@ -203,31 +223,6 @@
     gap: 4px;
 }
 
-.status-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 12px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 700;
-}
-
-.status-pill.ativo {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.status-pill.inativo {
-    background: #e2e8f0;
-    color: #475569;
-}
-
-.status-pill.dependente {
-    background: #ede9fe;
-    color: #6d28d9;
-}
-
 .action-buttons {
     display: flex;
     gap: 8px;
@@ -270,10 +265,6 @@
     background: #fff;
 }
 
-.status-donut {
-    background: conic-gradient(#22c55e 0 70%, #94a3b8 70% 88%, #f59e0b 88% 100%);
-}
-
 .chart-legend {
     display: grid;
     gap: 10px;
@@ -299,24 +290,6 @@
     margin-right: 8px;
 }
 
-.quick-links {
-    display: grid;
-    gap: 10px;
-}
-
-.quick-links button {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1px solid #dbe2f0;
-    background: #fff;
-    color: #334155;
-    cursor: pointer;
-}
-
 .tip-card h3 {
     margin-bottom: 10px;
 }
@@ -329,6 +302,7 @@
 
 @media (max-width: 1100px) {
     .residents-layout,
+    .residents-sidebar,
     .toolbar {
         grid-template-columns: 1fr;
     }

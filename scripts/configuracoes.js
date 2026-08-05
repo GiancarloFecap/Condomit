@@ -125,7 +125,14 @@ function clearLoginPersistent() {
 
 function updateUIWithUserData(currentUser) {
     const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    const userTypeLabel = currentUser.type === 'sindico' ? 'Síndico' : 'Morador';
+    const normalizedUserType = typeof getNormalizedUserType === 'function'
+        ? getNormalizedUserType(currentUser)
+        : String(currentUser.type || '').trim().toLowerCase();
+    const userTypeLabel = normalizedUserType === 'sindico'
+        ? 'Síndico'
+        : normalizedUserType === 'porteiro'
+            ? 'Porteiro'
+            : 'Morador';
 
     // Top bar avatar
     const topAvatar = document.getElementById('user-avatar-top');
@@ -179,8 +186,10 @@ function updateUIWithUserData(currentUser) {
     if (phoneEl) phoneEl.textContent = currentUser.phone || 'Não informado';
 
     if (unitEl) {
-        if (currentUser.type === 'sindico') {
+        if (normalizedUserType === 'sindico') {
             unitEl.textContent = 'Administração';
+        } else if (normalizedUserType === 'porteiro') {
+            unitEl.textContent = 'Portaria';
         } else {
             const apt = currentUser.condominium?.apartment || '---';
             const bloco = currentUser.condominium?.block || '---';
@@ -247,10 +256,12 @@ function openConfigSection(sectionKey) {
                 window.location.href = 'redefinir-senha.html?source=configuracoes';
             }
             break;
+        case 'controle-acesso':
+            openVisitorAccessModal();
+            break;
         case 'minha-unidade':
         case 'meus-condominos':
         case 'autenticacao-2fa':
-        case 'controle-acesso':
         case 'comunicados-sindico':
         case 'avisos-gerais':
         case 'reserva-areas':
@@ -261,7 +272,6 @@ function openConfigSection(sectionKey) {
         case 'politica-privacidade':
         case 'termos-uso':
         case 'consentimentos':
-        case 'info-condominio':
         case 'contato-uteis':
         case 'prestadores-servicos':
         case 'sobre-empresa':
@@ -556,6 +566,9 @@ function setFontSize(size) {
 
 function setLanguage(lang) {
     localStorage.setItem('app-language', lang);
+    if (typeof window.applyGlobalAppLanguage === 'function') {
+        window.applyGlobalAppLanguage(lang);
+    }
     applyTranslations(lang);
 }
 
@@ -759,6 +772,63 @@ async function openCondominiumInfoModal() {
 
 function closeCondominiumInfoModal() {
     document.getElementById('condominioModal')?.classList.remove('open');
+}
+
+let visitorAccessFormBound = false;
+
+function ensureVisitorAccessModal() {
+    const modal = document.getElementById('visitorAccessModal');
+    if (!modal) return null;
+
+    if (modal.dataset.bound !== 'true') {
+        document.getElementById('visitorAccessModalClose')?.addEventListener('click', closeVisitorAccessModal);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) closeVisitorAccessModal();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && modal.classList.contains('open')) {
+                closeVisitorAccessModal();
+            }
+        });
+        modal.dataset.bound = 'true';
+    }
+
+    if (!visitorAccessFormBound && window.visitorRegistration) {
+        const form = document.getElementById('visitorAccessForm');
+        const currentUser = getCurrentUser();
+        if (form && currentUser) {
+            window.visitorRegistration.initForm(form, {
+                currentUser,
+                lockResponsibleToCurrentUser: true,
+                onCancel: closeVisitorAccessModal
+            });
+            visitorAccessFormBound = true;
+        }
+    }
+
+    return modal;
+}
+
+function openVisitorAccessModal() {
+    const modal = ensureVisitorAccessModal();
+    if (!modal) return;
+    const form = document.getElementById('visitorAccessForm');
+    const currentUser = getCurrentUser();
+    form?.reset();
+    if (form && currentUser && window.visitorRegistration?.syncLockedResponsible) {
+        window.visitorRegistration.syncLockedResponsible(form, currentUser);
+    }
+    const feedback = form?.querySelector('[data-role="visitor-feedback"]');
+    if (feedback) {
+        feedback.textContent = '';
+        feedback.dataset.state = 'info';
+        feedback.style.display = 'none';
+    }
+    modal.classList.add('open');
+}
+
+function closeVisitorAccessModal() {
+    document.getElementById('visitorAccessModal')?.classList.remove('open');
 }
 
 async function fetchCurrentCondominiumInfo() {
@@ -1109,6 +1179,7 @@ function initPreferences() {
     }
     ensureReservationsModal();
     ensureCondominiumModal();
+    ensureVisitorAccessModal();
 }
 
 /* ============ EXCLUIR CONTA ============ */

@@ -1393,21 +1393,58 @@ function formatDate(dateStr) {
     return `${day}/${month}/${year}`;
 }
 
-function extractUserCep(user) {
-    if (!user) return null;
+function normalizeCondominiumIdentifier(value) {
+    return String(value || '').replace(/\D/g, '');
+}
 
-    if (user.condominium) {
-        if (typeof user.condominium === 'string') {
-            try {
-                const parsed = JSON.parse(user.condominium);
-                return parsed?.cep || parsed?.condominium_id || null;
-            } catch (_) {}
-        } else if (typeof user.condominium === 'object') {
-            return user.condominium.cep || user.condominium.condominium_id || null;
+function getUserCondominiumIdentifiers(user) {
+    if (!user) return [];
+
+    let condominium = user.condominium || {};
+    if (typeof condominium === 'string') {
+        try {
+            condominium = JSON.parse(condominium);
+        } catch (_) {
+            condominium = {};
         }
     }
 
-    return user.cep || user.condominium_cep || null;
+    return [
+        condominium?.cep,
+        condominium?.condominium_id,
+        condominium?.condominiumId,
+        user?.cep,
+        user?.condominium_cep,
+        user?.condominiumCep,
+        user?.condominium_id,
+        user?.condominiumId
+    ]
+        .map(normalizeCondominiumIdentifier)
+        .filter(Boolean);
+}
+
+function getAssemblyCondominiumIdentifiers(assembly) {
+    return [
+        assembly?.cep,
+        assembly?.condominium_cep,
+        assembly?.condominiumCep,
+        assembly?.condominium_id,
+        assembly?.condominiumId
+    ]
+        .map(normalizeCondominiumIdentifier)
+        .filter(Boolean);
+}
+
+function assemblyBelongsToCurrentCondominium(assembly) {
+    const userIdentifiers = getUserCondominiumIdentifiers(assemblyState.currentUser);
+    const assemblyIdentifiers = getAssemblyCondominiumIdentifiers(assembly);
+    if (!userIdentifiers.length) return true;
+    return assemblyIdentifiers.some((identifier) => userIdentifiers.includes(identifier));
+}
+
+function extractUserCep(user) {
+    const identifiers = getUserCondominiumIdentifiers(user);
+    return identifiers[0] || null;
 }
 
 function renderScheduleAssemblyInfo() {
@@ -1507,6 +1544,8 @@ async function loadScheduledAssemblies() {
         } else {
             scheduledAssemblies = [];
         }
+        scheduledAssemblies = (Array.isArray(scheduledAssemblies) ? scheduledAssemblies : [])
+            .filter(assemblyBelongsToCurrentCondominium);
         renderScheduledAssemblies();
     } catch (error) {
         console.error('Erro ao carregar assembleias:', error);

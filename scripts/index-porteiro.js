@@ -70,7 +70,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             minute: '2-digit'
         }).replace(',', ' -');
     }
+
+    bindQuickActions();
 });
+
+function bindQuickActions() {
+    const quickRoutes = {
+        'liberacao-visitantes': 'index-porteiro.html#liberacao-visitantes',
+        'registrar-visitante': 'registrar-visitantes.html',
+        'registro-acesso': 'index-porteiro.html#registro-acesso',
+        'visitantes-liberados': 'index-porteiro.html#visitantes-liberados',
+        'historico-acesso': 'index-porteiro.html#historico-acesso'
+    };
+
+    Object.entries(quickRoutes).forEach(([cardId, target]) => {
+        const card = document.getElementById(cardId);
+        const button = card?.querySelector('button');
+        if (!card || !button) return;
+
+        button.addEventListener('click', () => {
+            window.location.href = target;
+        });
+    });
+}
 
 function logout() {
     sessionStorage.removeItem('condominiumUser');

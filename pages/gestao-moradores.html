@@ -26,16 +26,18 @@
                 </div>
                 <div class="top-bar-right">
                     <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn"><i class="fas fa-video"></i></button>
                         <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
                     </div>
-                    <button class="ghost-btn" type="button">
-                        <i class="fas fa-file-import"></i>
-                        Importar moradores
-                    </button>
-                    <button class="primary-action" type="button">
-                        <i class="fas fa-plus"></i>
-                        Adicionar morador
-                    </button>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Síndico</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
                 </div>
             </header>
 
@@ -43,24 +45,17 @@
                 <div class="residents-layout">
                     <section class="residents-main">
                         <div class="toolbar card-shell">
-                            <div class="search-box">
-                                <i class="fas fa-search"></i>
-                                <input id="residentSearch" type="search" placeholder="Buscar por nome, apartamento ou bloco...">
+                            <div class="search-bar-group">
+                                <label class="search-bar-label" for="residentSearch">Barra de pesquisa</label>
+                                <div class="search-bar">
+                                    <i class="fas fa-search"></i>
+                                    <input id="residentSearch" type="search" placeholder="Buscar por nome, apartamento ou bloco...">
+                                </div>
                             </div>
                             <div class="toolbar-actions">
                                 <select id="residentBlockFilter">
                                     <option value="todos">Todos os blocos</option>
                                 </select>
-                                <select id="residentStatusFilter">
-                                    <option value="todos">Todos os status</option>
-                                    <option value="ativo">Ativos</option>
-                                    <option value="inativo">Inativos</option>
-                                    <option value="dependente">Dependentes</option>
-                                </select>
-                                <button class="ghost-btn" type="button">
-                                    <i class="fas fa-sliders"></i>
-                                    Filtros
-                                </button>
                             </div>
                         </div>
 
@@ -119,13 +114,12 @@
                                             <th>Unidade</th>
                                             <th>Bloco</th>
                                             <th>Contato</th>
-                                            <th>Status</th>
                                             <th>Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="residentsTableBody">
                                         <tr>
-                                            <td colspan="6" class="table-empty">Carregando moradores...</td>
+                                            <td colspan="5" class="table-empty">Carregando moradores...</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -139,24 +133,6 @@
                             <div class="chart-row">
                                 <div class="donut-chart" id="blockDonut"></div>
                                 <div class="chart-legend" id="blockLegend"></div>
-                            </div>
-                        </div>
-
-                        <div class="card-shell side-card">
-                            <h3>Status dos moradores</h3>
-                            <div class="chart-row">
-                                <div class="donut-chart status-donut" id="statusDonut"></div>
-                                <div class="chart-legend" id="statusLegend"></div>
-                            </div>
-                        </div>
-
-                        <div class="card-shell side-card">
-                            <h3>Ações rápidas</h3>
-                            <div class="quick-links">
-                                <button type="button"><i class="fas fa-user-plus"></i><span>Adicionar novo morador</span></button>
-                                <button type="button"><i class="fas fa-users"></i><span>Gerenciar dependentes</span></button>
-                                <button type="button"><i class="fas fa-paper-plane"></i><span>Enviar comunicado</span></button>
-                                <button type="button"><i class="fas fa-file-export"></i><span>Exportar contatos</span></button>
                             </div>
                         </div>
 

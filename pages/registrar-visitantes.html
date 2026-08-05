@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Registrar Visitantes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/registrar-visitantes.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar porteiro-sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Registrar Visitantes</h1>
+                    <p>Cadastre a entrada de visitantes no condomínio.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                    </div>
+                    <button class="ghost-btn" id="visitorHistoryBtn" type="button">
+                        <i class="fas fa-clock-rotate-left"></i>
+                        <span>Ver histórico de acessos</span>
+                    </button>
+                </div>
+            </header>
+
+            <section class="visitor-page">
+                <div class="visitor-layout">
+                    <section class="visitor-main card-shell">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-user-plus"></i></div>
+                            <div>
+                                <h2>Novo visitante</h2>
+                            </div>
+                        </div>
+
+                        <form id="visitorRegistrationForm" class="visitor-form">
+                            <div class="form-row form-row-3">
+                                <label>
+                                    <span>Nome completo</span>
+                                    <input type="text" data-field="visitor-full-name" placeholder="Digite o nome completo" required>
+                                </label>
+                                <label>
+                                    <span>CPF</span>
+                                    <input type="text" data-field="visitor-cpf" placeholder="Digite o CPF" required>
+                                </label>
+                                <label>
+                                    <span>RG</span>
+                                    <input type="text" data-field="visitor-rg" placeholder="Digite o RG" required>
+                                </label>
+                            </div>
+
+                            <div class="form-row">
+                                <label class="full-width">
+                                    <span>CPF do responsável</span>
+                                    <input type="text" data-field="responsible-cpf" placeholder="Digite o CPF do responsável" required>
+                                </label>
+                            </div>
+
+                            <div class="form-row form-row-4">
+                                <label>
+                                    <span>Nome do responsável</span>
+                                    <input type="text" data-field="responsible-name" placeholder="Digite o nome do responsável" readonly>
+                                </label>
+                                <label>
+                                    <span>Telefone do responsável</span>
+                                    <input type="text" data-field="responsible-phone" placeholder="(11) 99999-9999" readonly>
+                                </label>
+                                <label>
+                                    <span>Apartamento</span>
+                                    <input type="text" data-field="responsible-apartment" placeholder="Ex: 101" readonly>
+                                </label>
+                                <label>
+                                    <span>Bloco</span>
+                                    <input type="text" data-field="responsible-block" placeholder="Ex: A" readonly>
+                                </label>
+                            </div>
+
+                            <div class="form-row form-row-3">
+                                <label>
+                                    <span>Telefone do visitante</span>
+                                    <input type="text" data-field="visitor-phone" placeholder="(11) 99999-9999">
+                                </label>
+                                <label>
+                                    <span>E-mail</span>
+                                    <input type="email" data-field="visitor-email" placeholder="visitante@email.com">
+                                </label>
+                                <label>
+                                    <span>Data da visita</span>
+                                    <input type="date" data-field="visit-date">
+                                </label>
+                            </div>
+
+                            <div class="form-row form-row-3">
+                                <label>
+                                    <span>Horário previsto</span>
+                                    <input type="time" data-field="visit-time">
+                                </label>
+                                <label>
+                                    <span>Previsão de saída</span>
+                                    <input type="time" data-field="visit-exit-time">
+                                </label>
+                                <label class="notes-inline">
+                                    <span>Observações</span>
+                                    <textarea data-field="visit-notes" rows="2" placeholder="Informações adicionais (opcional)"></textarea>
+                                </label>
+                            </div>
+
+                            <div class="visitor-feedback" data-role="visitor-feedback"></div>
+
+                            <div class="security-note">
+                                <div class="security-icon"><i class="fas fa-shield-halved"></i></div>
+                                <div>
+                                    <strong>Segurança em primeiro lugar</strong>
+                                    <p>Todos os visitantes são registrados e sua entrada é autorizada pelo morador responsável.</p>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button class="ghost-btn" type="button" data-action="cancel-visitor">
+                                    <span>Cancelar</span>
+                                </button>
+                                <button class="primary-action" type="submit" data-action="submit-visitor">
+                                    <i class="fas fa-id-badge"></i>
+                                    <span>Registrar visitante</span>
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <aside class="visitor-sidebar">
+                        <div class="card-shell side-card">
+                            <h3>Visitantes presentes</h3>
+                            <div id="visitorPresenceList" class="presence-list"></div>
+                        </div>
+
+                        <div class="card-shell side-card">
+                            <h3>Acessos de hoje</h3>
+                            <div class="metric-highlight">
+                                <strong id="todayVisitorsCount">0</strong>
+                                <span>Total de visitantes</span>
+                            </div>
+                            <div class="sparkline-chart" aria-hidden="true">
+                                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                            </div>
+                        </div>
+
+                        <div class="card-shell side-card">
+                            <h3>Motivos mais frequentes</h3>
+                            <div class="reason-item">
+                                <span>Visita a moradores</span>
+                                <strong>60%</strong>
+                            </div>
+                            <div class="reason-bar"><span style="width:60%"></span></div>
+                            <div class="reason-item">
+                                <span>Prestador de serviço</span>
+                                <strong>25%</strong>
+                            </div>
+                            <div class="reason-bar"><span style="width:25%"></span></div>
+                            <div class="reason-item">
+                                <span>Entrega</span>
+                                <strong>10%</strong>
+                            </div>
+                            <div class="reason-bar"><span style="width:10%"></span></div>
+                            <div class="reason-item">
+                                <span>Outros</span>
+                                <strong>5%</strong>
+                            </div>
+                            <div class="reason-bar"><span style="width:5%"></span></div>
+                        </div>
+
+                        <div class="card-shell warning-card">
+                            <h3>Dica de segurança</h3>
+                            <p>Sempre confirme a identidade do visitante e comunique o morador responsável.</p>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/visitor-registration.js"></script>
+    <script src="../scripts/registrar-visitantes.js"></script>
+</body>
+</html>
