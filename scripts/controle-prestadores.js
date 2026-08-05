@@ -1,5 +1,6 @@
 const providerState = {
     currentUser: null,
+    currentCondoCep: '',
     providers: [],
     filters: {
         tab: 'all',
@@ -20,15 +21,30 @@ const providerCategoryMeta = {
     elevator: { label: 'Elevadores', icon: 'fa-elevator', className: 'elevator' }
 };
 
+const providerValidStatuses = ['agendado', 'em andamento', 'concluído', 'cancelado'];
+
 document.addEventListener('DOMContentLoaded', async () => {
     const currentUser = await loadProviderUser();
     if (!currentUser) return;
 
     providerState.currentUser = currentUser;
+    providerState.currentCondoCep = extractCondoCep(currentUser);
     initProviderPageShell(currentUser);
     bindProviderPageControls();
-    loadProviders();
+    await loadProviders();
 });
+
+function extractCondoCep(user) {
+    const ids = typeof window.getUserCondominiumIdentifiers === 'function'
+        ? window.getUserCondominiumIdentifiers(user || {})
+        : [];
+    if (ids.length) return ids[0];
+    const c = typeof user?.condominium === 'string'
+        ? (() => { try { return JSON.parse(user.condominium); } catch (_) { return {}; } })()
+        : (user?.condominium || {});
+    const raw = c.cep || c.condominium_id || c.condominiumId || user?.cep || user?.condominium_cep || user?.condominium_id || '';
+    return String(raw || '').replace(/\D/g, '');
+}
 
 async function loadProviderUser() {
     let currentUser = null;
@@ -41,7 +57,7 @@ async function loadProviderUser() {
     }
 
     if (!currentUser) {
-        window.location.href = 'entrar.html';
+        window.location.href = '../entrar.html';
         return null;
     }
 
@@ -75,8 +91,19 @@ function initProviderPageShell(currentUser) {
     }
 
     if (providerVisitDate) providerVisitDate.value = today;
-    if (providerDateFilter) providerDateFilter.value = today;
-    providerState.filters.date = today;
+    if (providerDateFilter) providerDateFilter.value = '';
+    providerState.filters.date = '';
+
+    const statusEl = document.getElementById('providerInitialStatus');
+    if (statusEl) {
+        statusEl.innerHTML = providerValidStatuses.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s[0].toUpperCase() + s.slice(1))}</option>`).join('');
+        statusEl.value = 'agendado';
+    }
+    const statusFilterEl = document.getElementById('providerStatusFilter');
+    if (statusFilterEl) {
+        statusFilterEl.innerHTML = '<option value="all">Todos os status</option>' +
+            providerValidStatuses.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s[0].toUpperCase() + s.slice(1))}</option>`).join('');
+    }
 
     if (typeof window.initPorterTopBar === 'function') {
         window.initPorterTopBar(currentUser);
@@ -144,75 +171,87 @@ function bindProviderPageControls() {
     providerForm?.addEventListener('submit', handleProviderSubmit);
 }
 
-function loadProviders() {
-    const stored = getStoredProviders();
-    providerState.providers = stored.length ? stored : buildDefaultProviders();
-    if (!stored.length) saveProviders();
+async function loadProviders() {
+    const rows = typeof window.listServiceProvidersByCep === 'function'
+        ? await window.listServiceProvidersByCep(providerState.currentCondoCep)
+        : [];
+    providerState.providers = (Array.isArray(rows) ? rows : []).map(mapProviderRowToUi);
+    if (!providerState.providers.length) {
+        providerState.providers = buildDefaultProviders();
+        for (const p of providerState.providers) {
+            try { await saveProviderToSupabase(p); } catch (_) {}
+        }
+        const rows2 = typeof window.listServiceProvidersByCep === 'function'
+            ? await window.listServiceProvidersByCep(providerState.currentCondoCep)
+            : [];
+        if (Array.isArray(rows2) && rows2.length) {
+            providerState.providers = rows2.map(mapProviderRowToUi);
+        }
+    }
     populateProviderCategoryOptions();
     renderProviderPage();
 }
 
-function getCondominiumKey(user = providerState.currentUser) {
-    const identifiers = typeof window.getUserCondominiumIdentifiers === 'function'
-        ? window.getUserCondominiumIdentifiers(user)
-        : [];
-    return identifiers[0] || 'geral';
-}
-
-function getProviderStorageKey(user = providerState.currentUser) {
-    return `condomit.provider-control.${getCondominiumKey(user)}`;
-}
-
-function getStoredProviders(user = providerState.currentUser) {
-    try {
-        return JSON.parse(localStorage.getItem(getProviderStorageKey(user)) || '[]');
-    } catch (_) {
-        return [];
-    }
-}
-
-function saveProviders(user = providerState.currentUser) {
-    localStorage.setItem(getProviderStorageKey(user), JSON.stringify(providerState.providers));
+function mapProviderRowToUi(row) {
+    return {
+        email: String(row?.email || '').trim().toLowerCase(),
+        name: String(row?.provider_name || row?.name || 'Prestador').trim(),
+        company: String(row?.company || 'Empresa').trim(),
+        service: String(row?.service || 'Serviço').trim(),
+        category: String(row?.category || 'cleaning').trim(),
+        phone: String(row?.phone || '').trim(),
+        visitDate: String(row?.service_date || row?.visitDate || '').trim().slice(0, 10),
+        visitWindow: String(row?.service_window || row?.visitWindow || '--').trim(),
+        status: providerValidStatuses.includes(String(row?.initial_status || '').trim().toLowerCase())
+            ? String(row?.initial_status).trim().toLowerCase()
+            : 'agendado',
+        cep: String(row?.cep || providerState.currentCondoCep || '').trim(),
+        created_at: row?.created_at || new Date().toISOString()
+    };
 }
 
 function buildDefaultProviders() {
-    const currentUserName = providerState.currentUser?.name || 'Porteiro';
-    return [
-        createProviderRecord({ name: 'Carlos Alberto', company: 'Elétrica Forte LTDA', service: 'Instalações e reparos', category: 'electrical', phone: '(11) 98765-4321', email: 'contato@eletricaforte.com.br', visitDate: '2026-08-04', visitWindow: '08:00 - 12:00', status: 'in_progress', authorizedBy: currentUserName }),
-        createProviderRecord({ name: 'Fernanda Lima', company: 'Limpa Mais Serviços', service: 'Áreas comuns', category: 'cleaning', phone: '(11) 97654-3210', email: 'contato@limpamais.com.br', visitDate: '2026-08-04', visitWindow: '07:00 - 11:00', status: 'active', authorizedBy: currentUserName }),
-        createProviderRecord({ name: 'João Pedro', company: 'Hidrotec Soluções', service: 'Reparos e instalações', category: 'hydraulic', phone: '(11) 95432-1098', email: 'contato@hidrotec.com.br', visitDate: '2026-08-04', visitWindow: '13:00 - 17:00', status: 'scheduled', authorizedBy: currentUserName }),
-        createProviderRecord({ name: 'Ricardo Souza', company: 'Jardinagem Verde', service: 'Manutenção de jardins', category: 'gardening', phone: '(11) 97123-4567', email: 'contato@jardinagemverde.com.br', visitDate: '2026-08-03', visitWindow: '08:00 - 12:00', status: 'inactive', authorizedBy: currentUserName }),
-        createProviderRecord({ name: 'Marcos Vinicius', company: 'Tech Seg Sistemas', service: 'Câmeras e alarmes', category: 'security', phone: '(11) 99988-7766', email: 'contato@techseg.com.br', visitDate: '2026-08-03', visitWindow: '09:00 - 13:00', status: 'active', authorizedBy: currentUserName }),
-        createProviderRecord({ name: 'Juliana Martins', company: 'Pintar Bem', service: 'Paredes e fachadas', category: 'painting', phone: '(11) 98877-6655', email: 'contato@pintarbem.com.br', visitDate: '2026-08-02', visitWindow: '--', status: 'blocked', authorizedBy: currentUserName }),
-        createProviderRecord({ name: 'Alexandre Oliveira', company: 'Elevadores Plus', service: 'Preventiva e corretiva', category: 'elevator', phone: '(11) 99876-5432', email: 'contato@elevadoresplus.com.br', visitDate: '2026-08-02', visitWindow: '08:00 - 12:00', status: 'active', authorizedBy: currentUserName })
-    ];
+    return [];
 }
 
-function createProviderRecord(values) {
-    return {
-        id: values.id || `provider-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-        name: values.name || 'Prestador',
-        company: values.company || 'Empresa',
-        service: values.service || 'Serviço',
-        category: values.category || 'cleaning',
-        phone: values.phone || '',
-        email: values.email || '',
-        visitDate: values.visitDate || new Date().toISOString().slice(0, 10),
-        visitWindow: values.visitWindow || '--',
-        status: values.status || 'scheduled',
-        authorizedBy: values.authorizedBy || 'Portaria'
-    };
+async function saveProviderToSupabase(providerUi) {
+    if (typeof window.createServiceProvider !== 'function') return null;
+    try {
+        return await window.createServiceProvider({
+            cep: providerState.currentCondoCep,
+            email: providerUi.email,
+            provider_name: providerUi.name,
+            company: providerUi.company,
+            service: providerUi.service,
+            category: providerUi.category,
+            phone: providerUi.phone,
+            service_date: providerUi.visitDate,
+            service_window: providerUi.visitWindow,
+            initial_status: providerUi.status
+        });
+    } catch (err) {
+        console.warn('saveProviderToSupabase warning:', err);
+        throw err;
+    }
 }
 
 function populateProviderCategoryOptions() {
     const providerCategoryFilter = document.getElementById('providerCategoryFilter');
-    if (!providerCategoryFilter) return;
+    const providerCategoryForm = document.getElementById('providerCategory');
+    const allCategories = Object.keys(providerCategoryMeta);
 
-    const categories = [...new Set(providerState.providers.map((provider) => provider.category).filter(Boolean))];
-    providerCategoryFilter.innerHTML = `
-        <option value="all">Todas as categorias</option>
-        ${categories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(getCategoryMeta(category).label)}</option>`).join('')}
-    `;
+    if (providerCategoryFilter) {
+        providerCategoryFilter.innerHTML = `
+            <option value="all">Todas as categorias</option>
+            ${allCategories.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(getCategoryMeta(category).label)}</option>`).join('')}
+        `;
+    }
+
+    if (providerCategoryForm) {
+        providerCategoryForm.innerHTML = allCategories.map((category) =>
+            `<option value="${escapeHtml(category)}">${escapeHtml(getCategoryMeta(category).label)}</option>`
+        ).join('');
+    }
 }
 
 function renderProviderPage() {
@@ -226,10 +265,10 @@ function updateProviderMetrics() {
     const todayKey = new Date().toISOString().slice(0, 10);
     const todayProviders = providerState.providers.filter((provider) => provider.visitDate === todayKey);
 
-    setText('activeProvidersCount', providerState.providers.filter((provider) => provider.status === 'active').length);
-    setText('scheduledProvidersCount', todayProviders.filter((provider) => provider.status === 'scheduled').length);
-    setText('inProgressProvidersCount', providerState.providers.filter((provider) => provider.status === 'in_progress').length);
-    setText('blockedProvidersCount', providerState.providers.filter((provider) => provider.status === 'blocked').length);
+    setText('activeProvidersCount', providerState.providers.length);
+    setText('scheduledProvidersCount', todayProviders.length);
+    setText('inProgressProvidersCount', 0);
+    setText('blockedProvidersCount', 0);
 }
 
 function applyProviderFilters() {
@@ -308,14 +347,14 @@ function renderProviderTable(providers) {
                     <strong>${formatDate(provider.visitDate)}</strong><br>
                     <small>${escapeHtml(provider.visitWindow)}</small>
                 </td>
-                <td><span class="provider-status-chip ${escapeHtml(provider.status)}">${escapeHtml(getStatusLabel(provider.status))}</span></td>
+                <td><span class="provider-status-chip status-${escapeHtml(provider.status.replace(/\s+/g, '-'))}">${escapeHtml(getStatusLabel(provider.status))}</span></td>
                 <td>
                     <div class="request-actions">
-                        <button class="icon-more" type="button" data-action="cycle-status" data-id="${escapeHtml(provider.id)}" title="Alterar status">
+                        <button class="icon-more" type="button" data-action="cycle-status" data-email="${escapeHtml(provider.email)}" title="Avançar status">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="icon-more" type="button" title="Mais opções">
-                            <i class="fas fa-ellipsis-vertical"></i>
+                        <button class="icon-more" type="button" title="Remover prestador" data-action="delete" data-email="${escapeHtml(provider.email)}">
+                            <i class="fas fa-trash-can"></i>
                         </button>
                     </div>
                 </td>
@@ -325,7 +364,13 @@ function renderProviderTable(providers) {
 
     providerTableBody.querySelectorAll('[data-action="cycle-status"]').forEach((button) => {
         button.addEventListener('click', () => {
-            cycleProviderStatus(button.dataset.id);
+            cycleProviderStatus(button.dataset.email);
+        });
+    });
+
+    providerTableBody.querySelectorAll('[data-action="delete"]').forEach((button) => {
+        button.addEventListener('click', () => {
+            deleteProviderAction(button.dataset.email);
         });
     });
 }
@@ -362,18 +407,49 @@ function setActiveProviderTab(nextTab) {
     });
 }
 
-function cycleProviderStatus(providerId) {
-    const sequence = ['scheduled', 'active', 'in_progress', 'inactive', 'blocked'];
-    const index = providerState.providers.findIndex((provider) => provider.id === providerId);
+async function cycleProviderStatus(providerEmail) {
+    const normalizedEmail = String(providerEmail || '').trim().toLowerCase();
+    const index = providerState.providers.findIndex((provider) => String(provider.email).toLowerCase() === normalizedEmail);
     if (index === -1) return;
     const current = providerState.providers[index].status;
+    const sequence = providerValidStatuses.slice();
     const next = sequence[(sequence.indexOf(current) + 1) % sequence.length];
-    providerState.providers[index].status = next;
-    saveProviders();
+    if (typeof window.updateServiceProviderStatus === 'function') {
+        const updated = await window.updateServiceProviderStatus(normalizedEmail, next);
+        if (updated) providerState.providers[index] = mapProviderRowToUi(updated);
+    }
     renderProviderPage();
 }
 
-function handleProviderSubmit(event) {
+async function deleteProviderAction(providerEmail) {
+    const normalizedEmail = String(providerEmail || '').trim().toLowerCase();
+    if (!normalizedEmail) return;
+    const ok = typeof window.showModal === 'function'
+        ? await new Promise((resolve) => {
+            window.showModal({
+                title: 'Remover prestador?',
+                message: 'Tem certeza que deseja remover o prestador do condomínio? Essa ação não pode ser desfeita.',
+                confirmLabel: 'Remover',
+                cancelLabel: 'Cancelar',
+                onConfirm: () => resolve(true),
+                onCancel: () => resolve(false)
+            });
+        })
+        : true;
+    if (ok === false) return;
+    if (typeof window.deleteServiceProvider === 'function') {
+        const removed = await window.deleteServiceProvider(normalizedEmail);
+        if (removed) {
+            providerState.providers = providerState.providers.filter((p) => String(p.email).toLowerCase() !== normalizedEmail);
+            if (typeof window.showToast === 'function') window.showToast('Prestador removido com sucesso.', 'success');
+        } else if (typeof window.showToast === 'function') {
+            window.showToast('Não foi possível remover o prestador.', 'error');
+        }
+    }
+    renderProviderPage();
+}
+
+async function handleProviderSubmit(event) {
     event.preventDefault();
 
     const values = {
@@ -385,8 +461,7 @@ function handleProviderSubmit(event) {
         email: document.getElementById('providerEmail')?.value.trim(),
         visitDate: document.getElementById('providerVisitDate')?.value,
         visitWindow: document.getElementById('providerVisitWindow')?.value.trim(),
-        status: document.getElementById('providerInitialStatus')?.value,
-        authorizedBy: providerState.currentUser?.name || 'Portaria'
+        status: document.getElementById('providerInitialStatus')?.value || 'agendado'
     };
 
     const providerFeedback = document.getElementById('providerFeedback');
@@ -398,22 +473,65 @@ function handleProviderSubmit(event) {
         return;
     }
 
-    providerState.providers.unshift(createProviderRecord(values));
-    saveProviders();
-    populateProviderCategoryOptions();
-    renderProviderPage();
-    event.target.reset();
-    const providerVisitDate = document.getElementById('providerVisitDate');
-    if (providerVisitDate) providerVisitDate.value = new Date().toISOString().slice(0, 10);
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    if (submitBtn) { submitBtn.disabled = true; }
 
-    if (providerFeedback) {
-        providerFeedback.dataset.state = 'success';
-        providerFeedback.textContent = 'Prestador cadastrado com sucesso.';
+    try {
+        const created = await saveProviderToSupabase({
+            email: values.email,
+            name: values.name,
+            company: values.company,
+            service: values.service,
+            category: values.category,
+            phone: values.phone,
+            visitDate: values.visitDate,
+            visitWindow: values.visitWindow,
+            status: values.status
+        });
+        if (created) {
+            providerState.providers.unshift(mapProviderRowToUi(created));
+        } else {
+            providerState.providers.unshift(mapProviderRowToUi({
+                email: values.email,
+                cep: providerState.currentCondoCep,
+                provider_name: values.name,
+                company: values.company,
+                service: values.service,
+                category: values.category,
+                phone: values.phone,
+                service_date: values.visitDate,
+                service_window: values.visitWindow,
+                initial_status: values.status,
+                created_at: new Date().toISOString()
+            }));
+        }
+        populateProviderCategoryOptions();
+        renderProviderPage();
+        event.target.reset();
+        const providerVisitDate = document.getElementById('providerVisitDate');
+        if (providerVisitDate) providerVisitDate.value = new Date().toISOString().slice(0, 10);
+        const providerInitialStatus = document.getElementById('providerInitialStatus');
+        if (providerInitialStatus) providerInitialStatus.value = 'agendado';
+
+        if (providerFeedback) {
+            providerFeedback.dataset.state = 'success';
+            providerFeedback.textContent = 'Prestador cadastrado com sucesso.';
+        }
+        if (typeof window.showToast === 'function') window.showToast('Prestador cadastrado com sucesso.', 'success');
+
+        setTimeout(() => {
+            closeProviderModal();
+        }, 700);
+    } catch (err) {
+        if (providerFeedback) {
+            providerFeedback.dataset.state = 'error';
+            providerFeedback.textContent = String(err?.message || err) || 'Erro ao cadastrar prestador.';
+        } else if (typeof window.showToast === 'function') {
+            window.showToast(String(err?.message || err) || 'Erro ao cadastrar prestador.', 'error');
+        }
+    } finally {
+        if (submitBtn) { submitBtn.disabled = false; }
     }
-
-    setTimeout(() => {
-        closeProviderModal();
-    }, 700);
 }
 
 function openProviderModal() {
@@ -435,6 +553,8 @@ function closeProviderModal() {
     }
     const providerVisitDate = document.getElementById('providerVisitDate');
     if (providerVisitDate) providerVisitDate.value = new Date().toISOString().slice(0, 10);
+    const providerInitialStatus = document.getElementById('providerInitialStatus');
+    if (providerInitialStatus) providerInitialStatus.value = 'agendado';
     if (!providerModal) return;
     providerModal.classList.remove('active');
     providerModal.setAttribute('aria-hidden', 'true');
@@ -445,11 +565,11 @@ function getCategoryMeta(category) {
 }
 
 function getStatusLabel(status) {
-    if (status === 'active') return 'Ativo';
-    if (status === 'scheduled') return 'Agendado';
-    if (status === 'in_progress') return 'Em andamento';
-    if (status === 'inactive') return 'Inativo';
-    return 'Bloqueado';
+    if (status === 'agendado') return 'Agendado';
+    if (status === 'em andamento') return 'Em andamento';
+    if (status === 'concluído') return 'Concluído';
+    if (status === 'cancelado') return 'Cancelado';
+    return 'Agendado';
 }
 
 function setText(id, value) {
@@ -482,6 +602,7 @@ function escapeHtml(text) {
 }
 
 function logout() {
+    if (typeof window.performFullLogout === 'function') { window.performFullLogout(); return; }
     sessionStorage.removeItem('condominiumUser');
     try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
     window.location.href = '../inicio.html';

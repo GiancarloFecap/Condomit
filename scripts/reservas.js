@@ -543,6 +543,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 function logout() {
+    if (typeof window.performFullLogout === 'function') { window.performFullLogout(); return; }
     sessionStorage.removeItem('condominiumUser');
     try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
     window.location.href = '../inicio.html';

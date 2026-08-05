@@ -233,6 +233,7 @@ function updateUIWithUserData(currentUser) {
 }
 
 function logout() {
+    if (typeof window.performFullLogout === 'function') { window.performFullLogout(); return; }
     if (confirm(cfgT('confirm_logout'))) {
         sessionStorage.removeItem('condominiumUser');
         try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}

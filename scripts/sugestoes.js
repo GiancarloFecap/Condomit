@@ -33,6 +33,7 @@ const iconePorCategoria = {
 };
 
 function logout() {
+    if (typeof window.performFullLogout === 'function') { window.performFullLogout(); return; }
     try { sessionStorage.removeItem('condominiumUser'); } catch(_) {}
     try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
     window.location.href = '../inicio.html';

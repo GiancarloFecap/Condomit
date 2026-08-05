@@ -235,15 +235,41 @@ async function fetchUserByEmail(email) {
   }
 }
 
+function formatCpfMasked(raw) {
+  const digits = String(raw || '').replace(/\D/g, '');
+  if (digits.length !== 11) return raw || '';
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
 async function fetchUserByCpf(cpf) {
   const normalizedCpf = String(cpf || '').replace(/\D/g, '');
-  if (!normalizedCpf) return null;
+  if (!normalizedCpf || normalizedCpf.length !== 11) return null;
 
+  const attempts = [
+    `/users?select=*&cpf=eq.${encodeURIComponent(normalizedCpf)}&limit=1`,
+    `/users?select=*&cpf=eq.${encodeURIComponent(formatCpfMasked(normalizedCpf))}&limit=1`
+  ];
+  for (let i = 0; i < attempts.length; i++) {
+    try {
+      const data = await supabaseFetch(attempts[i]);
+      if (Array.isArray(data) && data.length) return data[0];
+    } catch (error) {
+      console.warn(`Tentativa ${i + 1} de busca por CPF falhou:`, error?.message || error);
+    }
+  }
   try {
-    const data = await supabaseFetch(`/users?select=*&cpf=eq.${encodeURIComponent(normalizedCpf)}&limit=1`);
-    return Array.isArray(data) && data.length ? data[0] : null;
+    const all = await supabaseFetch(`/users?select=cpf,name,phone,email,condominium,id,type,cep,condominium_cep,condominium_id,condominiumId`);
+    if (!Array.isArray(all) || !all.length) return null;
+    const match = all.find((user) => String(user?.cpf || '').replace(/\D/g, '') === normalizedCpf);
+    if (!match) return null;
+    try {
+      const complete = await supabaseFetch(`/users?select=*&id=eq.${encodeURIComponent(match.id)}&limit=1`);
+      return Array.isArray(complete) && complete.length ? complete[0] : match;
+    } catch (_) {
+      return match;
+    }
   } catch (error) {
-    console.error('Erro ao buscar usuário por CPF:', error);
+    console.error('Erro ao buscar usuário por CPF (fallback):', error);
     return null;
   }
 }
@@ -395,11 +421,29 @@ async function fetchUsersByCpfs(cpfs, select = 'cpf,name,phone,email,condominium
 
   if (!normalizedCpfs.length) return [];
 
+  const directQueries = [
+    `/users?select=${encodeURIComponent(select)}&cpf=in.(${normalizedCpfs.join(',')})`,
+    `/users?select=${encodeURIComponent(select)}&cpf=in.(${normalizedCpfs.map((c) => formatCpfMasked(c)).join(',')})`
+  ];
+
+  for (let i = 0; i < directQueries.length; i++) {
+    try {
+      const data = await supabaseFetch(directQueries[i]);
+      if (Array.isArray(data) && data.length) {
+        const covered = new Set(data.map((u) => String(u?.cpf || '').replace(/\D/g, '')));
+        const missing = normalizedCpfs.filter((c) => !covered.has(c));
+        if (!missing.length) return data;
+      }
+    } catch (_) {}
+  }
+
   try {
-    const data = await supabaseFetch(`/users?select=${encodeURIComponent(select)}&cpf=in.(${normalizedCpfs.join(',')})`);
-    return Array.isArray(data) ? data : [];
+    const wideSelect = select.includes(',') ? select : 'cpf,name,phone,email,condominium,id';
+    const all = await supabaseFetch(`/users?select=${encodeURIComponent(wideSelect)}`);
+    if (!Array.isArray(all)) return [];
+    return all.filter((user) => normalizedCpfs.includes(String(user?.cpf || '').replace(/\D/g, '')));
   } catch (error) {
-    console.error('Erro ao buscar usuários por CPF:', error);
+    console.error('Erro ao buscar usuários por CPF (fallback):', error);
     return [];
   }
 }
@@ -657,6 +701,167 @@ async function refreshCurrentUserFromDb() {
   return user;
 }
 
+async function performFullLogout(redirectPath = null) {
+  try {
+    const authClient = window.supabase?.auth;
+    if (authClient && typeof authClient.signOut === 'function') {
+      try {
+        await authClient.signOut({ scope: 'global' });
+      } catch (err) {
+        console.warn('signOut Supabase falhou, continuando limpeza local:', err);
+      }
+    }
+  } catch (err) {
+    console.warn('auth signOut catch outer:', err);
+  }
+
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      const removeKeys = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key) removeKeys.push(key);
+      }
+      removeKeys.forEach((k) => sessionStorage.removeItem(k));
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const removeKeys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith('condomit.') ||
+          key.startsWith('condominium') ||
+          key.startsWith('release_statuses:') ||
+          key.startsWith('porteiro:') ||
+          key.toLowerCase().includes('condomit') ||
+          key.toLowerCase().includes('visitor') ||
+          key.toLowerCase().includes('provider-control') ||
+          key.toLowerCase().includes('access-log') ||
+          key.toLowerCase().includes('release-status')
+        )) {
+          removeKeys.push(key);
+        }
+      }
+      removeKeys.forEach((k) => localStorage.removeItem(k));
+      try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
+      try { localStorage.removeItem('sb-localhost-auth-token'); } catch (_) {}
+      try { localStorage.removeItem('sb-127.0.0.1-auth-token'); } catch (_) {}
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof document !== 'undefined' && document.cookie) {
+      document.cookie.split(';').forEach((c) => {
+        const name = c.trim().split('=')[0];
+        if (name) {
+          const clean = (domain) => {
+            try {
+              document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; ${domain ? `domain=${domain};` : ''}`;
+            } catch (_) {}
+          };
+          clean('');
+          clean(window.location.hostname);
+        }
+      });
+    }
+  } catch (_) {}
+
+  const destination = redirectPath || (
+    typeof window !== 'undefined' && window.location?.pathname?.includes('/pages/')
+      ? '../inicio.html'
+      : 'inicio.html'
+  );
+  try {
+    window.location.replace(destination);
+  } catch (_) {
+    window.location.href = destination;
+  }
+}
+
+async function listServiceProvidersByCep(cep) {
+  const cepClean = String(cep || '').replace(/\D/g, '');
+  if (!cepClean) return [];
+  try {
+    const data = await supabaseFetch(`/service_providers?select=*&cep=eq.${encodeURIComponent(cepClean)}&order=service_date.desc,created_at.desc`);
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Erro ao listar prestadores por CEP:', error);
+    return [];
+  }
+}
+
+async function createServiceProvider(payload) {
+  const cepClean = String(payload?.cep || '').replace(/\D/g, '');
+  const normalizedEmail = String(payload?.email || '').trim().toLowerCase();
+  if (!cepClean || !normalizedEmail) throw new Error('CEP e e-mail são obrigatórios.');
+  const row = {
+    email: normalizedEmail,
+    cep: cepClean,
+    provider_name: String(payload?.provider_name || payload?.name || '').trim(),
+    company: String(payload?.company || '').trim(),
+    service: String(payload?.service || '').trim(),
+    category: String(payload?.category || 'cleaning').trim(),
+    phone: String(payload?.phone || '').trim(),
+    service_date: String(payload?.service_date || payload?.visitDate || new Date().toISOString().slice(0, 10)).slice(0, 10),
+    service_window: String(payload?.service_window || payload?.visitWindow || '--').trim(),
+    initial_status: String(payload?.initial_status || payload?.status || 'agendado').trim()
+  };
+  const validStatuses = ['agendado', 'em andamento', 'concluído', 'cancelado'];
+  if (!validStatuses.includes(row.initial_status)) row.initial_status = 'agendado';
+  try {
+    const data = await supabaseFetch('/service_providers', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify(row)
+    });
+    return Array.isArray(data) ? data[0] : data;
+  } catch (error) {
+    const msg = String(error?.message || error || '');
+    if (msg.includes('23505') || msg.toLowerCase().includes('duplicate') || msg.toLowerCase().includes('already exists')) {
+      throw new Error('Já existe um prestador cadastrado com este e-mail.');
+    }
+    throw error;
+  }
+}
+
+async function updateServiceProviderStatus(email, nextStatus) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return null;
+  const validStatuses = ['agendado', 'em andamento', 'concluído', 'cancelado'];
+  const status = validStatuses.includes(String(nextStatus || '').trim()) ? String(nextStatus).trim() : 'agendado';
+  try {
+    const data = await supabaseFetch(`/service_providers?email=eq.${encodeURIComponent(normalizedEmail)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ initial_status: status })
+    });
+    return Array.isArray(data) && data.length ? data[0] : null;
+  } catch (error) {
+    console.error('Erro ao atualizar status do prestador:', error);
+    return null;
+  }
+}
+
+async function deleteServiceProvider(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return false;
+  try {
+    await supabaseFetch(`/service_providers?email=eq.${encodeURIComponent(normalizedEmail)}`, { method: 'DELETE' });
+    return true;
+  } catch (error) {
+    console.error('Erro ao remover prestador:', error);
+    return false;
+  }
+}
+
+window.listServiceProvidersByCep = listServiceProvidersByCep;
+window.createServiceProvider = createServiceProvider;
+window.updateServiceProviderStatus = updateServiceProviderStatus;
+window.deleteServiceProvider = deleteServiceProvider;
+window.performFullLogout = performFullLogout;
 window.refreshCurrentUserFromDb = refreshCurrentUserFromDb;
 window.getNormalizedUserType = getNormalizedUserType;
 window.fetchUserByCpf = fetchUserByCpf;

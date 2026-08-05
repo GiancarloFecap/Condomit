@@ -1,310 +1,6 @@
-document.addEventListener('DOMContentLoaded', function () {
-    const sampleVisitors = [
-        {
-            id: 1,
-            nome: 'Rafael Souza',
-            avatarColor: '#1e40af',
-            avatarIniciais: 'RS',
-            documento: '123.456.789-01',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Ana Paula',
-            responsavelUnidade: 'Apto 203',
-            unidadeBloco: 'Bloco A',
-            unidadeApto: 'Apto 203',
-            data: '24/05/2024',
-            horario: '09:00 - 12:00',
-            motivo: 'Visita pessoal',
-            status: 'liberado'
-        },
-        {
-            id: 2,
-            nome: 'Juliana Martins',
-            avatarColor: '#86198f',
-            avatarIniciais: 'JM',
-            documento: '987.654.321-00',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Carlos Alberto',
-            responsavelUnidade: 'Apto 101',
-            unidadeBloco: 'Bloco A',
-            unidadeApto: 'Apto 101',
-            data: '24/05/2024',
-            horario: '14:00 - 18:00',
-            motivo: 'Reunião',
-            status: 'liberado'
-        },
-        {
-            id: 3,
-            nome: 'Lucas Fernandes',
-            avatarColor: '#0f766e',
-            avatarIniciais: 'LF',
-            documento: '456.789.123-09',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Fernanda Lima',
-            responsavelUnidade: 'Apto 302',
-            unidadeBloco: 'Bloco B',
-            unidadeApto: 'Apto 302',
-            data: '24/05/2024',
-            horario: '15:00 - 17:00',
-            motivo: 'Prestação de serviço',
-            status: 'liberado'
-        },
-        {
-            id: 4,
-            nome: 'Mariana Oliveira',
-            avatarColor: '#9d174d',
-            avatarIniciais: 'MO',
-            documento: '321.654.987-11',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Ricardo Ferreira',
-            responsavelUnidade: 'Apto 104',
-            unidadeBloco: 'Bloco C',
-            unidadeApto: 'Apto 104',
-            data: '25/05/2024',
-            horario: '10:00 - 13:00',
-            motivo: 'Entregas',
-            status: 'liberado'
-        },
-        {
-            id: 5,
-            nome: 'Pedro Henrique',
-            avatarColor: '#92400e',
-            avatarIniciais: 'PH',
-            documento: '159.753.456-20',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Juliana Santos',
-            responsavelUnidade: 'Apto 401',
-            unidadeBloco: 'Bloco D',
-            unidadeApto: 'Apto 401',
-            data: '25/05/2024',
-            horario: '16:00 - 20:00',
-            motivo: 'Visita pessoal',
-            status: 'liberado'
-        },
-        {
-            id: 6,
-            nome: 'Carla Dias',
-            avatarColor: '#be185d',
-            avatarIniciais: 'CD',
-            documento: '753.951.852-33',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Ana Paula',
-            responsavelUnidade: 'Apto 203',
-            unidadeBloco: 'Bloco A',
-            unidadeApto: 'Apto 203',
-            data: '23/05/2024',
-            horario: '09:00 - 11:00',
-            motivo: 'Visita pessoal',
-            status: 'indefinido'
-        },
-        {
-            id: 7,
-            nome: 'Roberto Almeida',
-            avatarColor: '#155e75',
-            avatarIniciais: 'RA',
-            documento: '852.456.963-87',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Carlos Alberto',
-            responsavelUnidade: 'Apto 101',
-            unidadeBloco: 'Bloco A',
-            unidadeApto: 'Apto 101',
-            data: '22/05/2024',
-            horario: '14:00 - 17:00',
-            motivo: 'Prestação de serviço',
-            status: 'indefinido'
-        },
-        {
-            id: 8,
-            nome: 'Camila Ferreira',
-            avatarColor: '#4c1d95',
-            avatarIniciais: 'CF',
-            documento: '357.159.456-22',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Marcos Vinícius',
-            responsavelUnidade: 'Apto 301',
-            unidadeBloco: 'Bloco B',
-            unidadeApto: 'Apto 301',
-            data: '26/05/2024',
-            horario: '10:00 - 14:00',
-            motivo: 'Aniversário',
-            status: 'liberado'
-        },
-        {
-            id: 9,
-            nome: 'André Gomes',
-            avatarColor: '#831843',
-            avatarIniciais: 'AG',
-            documento: '741.852.963-05',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Beatriz Costa',
-            responsavelUnidade: 'Apto 201',
-            unidadeBloco: 'Bloco C',
-            unidadeApto: 'Apto 201',
-            data: '26/05/2024',
-            horario: '18:00 - 22:00',
-            motivo: 'Jantar',
-            status: 'liberado'
-        },
-        {
-            id: 10,
-            nome: 'Fernanda Nascimento',
-            avatarColor: '#065f46',
-            avatarIniciais: 'FN',
-            documento: '951.753.654-88',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Ana Paula',
-            responsavelUnidade: 'Apto 203',
-            unidadeBloco: 'Bloco A',
-            unidadeApto: 'Apto 203',
-            data: '27/05/2024',
-            horario: '14:00 - 17:00',
-            motivo: 'Entrega de encomenda',
-            status: 'pendente'
-        },
-        {
-            id: 11,
-            nome: 'Gustavo Lima',
-            avatarColor: '#b45309',
-            avatarIniciais: 'GL',
-            documento: '321.987.741-55',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Carlos Alberto',
-            responsavelUnidade: 'Apto 101',
-            unidadeBloco: 'Bloco A',
-            unidadeApto: 'Apto 101',
-            data: '27/05/2024',
-            horario: '08:00 - 12:00',
-            motivo: 'Prestação de serviço',
-            status: 'pendente'
-        },
-        {
-            id: 12,
-            nome: 'Larissa Silva',
-            avatarColor: '#1d4ed8',
-            avatarIniciais: 'LS',
-            documento: '456.789.321-44',
-            documentoTipo: 'CPF',
-            responsavelNome: 'João Silva',
-            responsavelUnidade: 'Apto 502',
-            unidadeBloco: 'Bloco D',
-            unidadeApto: 'Apto 502',
-            data: '28/05/2024',
-            horario: '15:00 - 19:00',
-            motivo: 'Visita pessoal',
-            status: 'pendente'
-        },
-        {
-            id: 13,
-            nome: 'Rafael Costa',
-            avatarColor: '#9f1239',
-            avatarIniciais: 'RC',
-            documento: '123.456.789-10',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Fernanda Lima',
-            responsavelUnidade: 'Apto 302',
-            unidadeBloco: 'Bloco B',
-            unidadeApto: 'Apto 302',
-            data: '28/05/2024',
-            horario: '09:00 - 11:00',
-            motivo: 'Prestação de serviço',
-            status: 'indefinido'
-        },
-        {
-            id: 14,
-            nome: 'Julio Cesar',
-            avatarColor: '#166534',
-            avatarIniciais: 'JC',
-            documento: '654.321.789-01',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Ricardo Ferreira',
-            responsavelUnidade: 'Apto 104',
-            unidadeBloco: 'Bloco C',
-            unidadeApto: 'Apto 104',
-            data: '29/05/2024',
-            horario: '10:00 - 14:00',
-            motivo: 'Visita pessoal',
-            status: 'liberado'
-        },
-        {
-            id: 15,
-            nome: 'Mariana Silva',
-            avatarColor: '#4338ca',
-            avatarIniciais: 'MS',
-            documento: '852.963.741-22',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Juliana Santos',
-            responsavelUnidade: 'Apto 401',
-            unidadeBloco: 'Bloco D',
-            unidadeApto: 'Apto 401',
-            data: '29/05/2024',
-            horario: '13:00 - 17:00',
-            motivo: 'Reunião',
-            status: 'liberado'
-        },
-        {
-            id: 16,
-            nome: 'Matheus Alves',
-            avatarColor: '#b91c1c',
-            avatarIniciais: 'MA',
-            documento: '159.753.951-66',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Ana Paula',
-            responsavelUnidade: 'Apto 203',
-            unidadeBloco: 'Bloco A',
-            unidadeApto: 'Apto 203',
-            data: '30/05/2024',
-            horario: '09:00 - 12:00',
-            motivo: 'Prestação de serviço',
-            status: 'indefinido'
-        },
-        {
-            id: 17,
-            nome: 'Amanda Rocha',
-            avatarColor: '#115e59',
-            avatarIniciais: 'AR',
-            documento: '741.852.456-99',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Carlos Alberto',
-            responsavelUnidade: 'Apto 101',
-            unidadeBloco: 'Bloco A',
-            unidadeApto: 'Apto 101',
-            data: '30/05/2024',
-            horario: '16:00 - 20:00',
-            motivo: 'Visita pessoal',
-            status: 'pendente'
-        },
-        {
-            id: 18,
-            nome: 'Diego Martins',
-            avatarColor: '#7c3aed',
-            avatarIniciais: 'DM',
-            documento: '963.852.741-33',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Fernanda Lima',
-            responsavelUnidade: 'Apto 302',
-            unidadeBloco: 'Bloco B',
-            unidadeApto: 'Apto 302',
-            data: '31/05/2024',
-            horario: '14:00 - 18:00',
-            motivo: 'Entregas',
-            status: 'pendente'
-        },
-        {
-            id: 19,
-            nome: 'Luiza Azevedo',
-            avatarColor: '#c2410c',
-            avatarIniciais: 'LA',
-            documento: '321.654.987-12',
-            documentoTipo: 'CPF',
-            responsavelNome: 'Ricardo Ferreira',
-            responsavelUnidade: 'Apto 104',
-            unidadeBloco: 'Bloco C',
-            unidadeApto: 'Apto 104',
-            data: '31/05/2024',
-            horario: '10:00 - 14:00',
-            motivo: 'Aniversário',
-            status: 'liberado'
-        }
-    ];
+document.addEventListener('DOMContentLoaded', async function () {
+    let visitorList = [];
+    let currentUser = null;
 
     const state = {
         page: 1,
@@ -322,6 +18,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const tableInfo = document.getElementById('tableInfo');
     const btnLiberar = document.getElementById('btnLiberarVisitante');
     const btnFiltros = document.getElementById('btnFiltros');
+    const todayCountEl = document.getElementById('todayCount');
+    const upcomingCountEl = document.getElementById('upcomingCount');
+    const monthCountEl = document.getElementById('monthCount');
 
     function normalizeString(s) {
         return String(s || '')
@@ -331,10 +30,199 @@ document.addEventListener('DOMContentLoaded', function () {
             .trim();
     }
 
+    function formatCpf(value) {
+        const digits = String(value || '').replace(/\D/g, '');
+        if (digits.length !== 11) return value || '';
+        return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+    }
+
+    function formatPhone(value) {
+        const d = String(value || '').replace(/\D/g, '');
+        if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+        if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+        return value || '';
+    }
+
+    function formatDatePt(value) {
+        if (!value) return '--';
+        const d = new Date(value);
+        if (isNaN(d.getTime())) {
+            const parts = String(value).split(/[-/ T]/).filter(Boolean);
+            if (parts.length >= 3 && parts[0].length === 4) {
+                return `${parts[2].slice(0, 2)}/${parts[1]}/${parts[0]}`;
+            }
+            return String(value).slice(0, 10);
+        }
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${day}/${month}/${d.getFullYear()}`;
+    }
+
+    function formatDateTimeRange(visitor) {
+        const dateValue = visitor?.visit_date || visitor?.date || visitor?.created_at || visitor?.scheduled_at || '';
+        const startTime = visitor?.start_time || visitor?.visit_time || visitor?.time_from || '';
+        const endTime = visitor?.end_time || visitor?.time_until || '';
+        const dateLabel = formatDatePt(dateValue);
+        let timeLabel = '--:--';
+        if (startTime && endTime) timeLabel = `${String(startTime).slice(0, 5)} - ${String(endTime).slice(0, 5)}`;
+        else if (startTime) timeLabel = `${String(startTime).slice(0, 5)}`;
+        else {
+            const d = dateValue ? new Date(dateValue) : null;
+            if (d && !isNaN(d.getTime())) {
+                timeLabel = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            }
+        }
+        return { dateLabel, timeLabel };
+    }
+
     function statusLabel(status) {
-        if (status === 'liberado') return 'Liberado';
-        if (status === 'pendente') return 'Pendente';
-        return '—';
+        const s = String(status || '').toLowerCase();
+        if (s === 'liberado' || s === 'approved' || s === 'released' || s === 'confirmed') return 'Liberado';
+        if (s === 'pendente' || s === 'pending' || s === 'awaiting') return 'Pendente';
+        if (s === 'negado' || s === 'rejected' || s === 'denied') return 'Negado';
+        return 'Pendente';
+    }
+
+    function statusKey(status) {
+        const s = String(status || '').toLowerCase();
+        if (s === 'liberado' || s === 'approved' || s === 'released' || s === 'confirmed') return 'liberado';
+        if (s === 'negado' || s === 'rejected' || s === 'denied') return 'negado';
+        return 'pendente';
+    }
+
+    function avatarInitials(fullName) {
+        const name = normalizeString(fullName || '');
+        if (!name) return '??';
+        const parts = name.split(/\s+/).filter(Boolean);
+        if (!parts.length) return '??';
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    const avatarColors = [
+        '#1e40af', '#86198f', '#0f766e', '#9d174d', '#92400e',
+        '#155e75', '#4c1d95', '#831843', '#065f46', '#b45309',
+        '#1d4ed8', '#9f1239', '#166534', '#4338ca', '#b91c1c',
+        '#115e59', '#7c3aed', '#c2410c', '#be185d', '#0369a1'
+    ];
+
+    function avatarColorFor(seed) {
+        const s = normalizeString(seed || '');
+        let sum = 0;
+        for (let i = 0; i < s.length; i++) sum += s.charCodeAt(i);
+        return avatarColors[sum % avatarColors.length];
+    }
+
+    function getCurrentUser() {
+        try {
+            const raw = sessionStorage.getItem('condominiumUser') ||
+                (typeof refreshCurrentUserFromDb === 'function' ? null : null);
+            if (raw) return JSON.parse(raw);
+        } catch (_) {}
+        return null;
+    }
+
+    function getStoredReleaseStatuses() {
+        try {
+            const key = `release_statuses:${normalizeString(currentUser?.email || 'all')}`;
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function setReleaseVisitorStatus(visitorCpf, status, payload = {}) {
+        try {
+            const key = `release_statuses:${normalizeString(currentUser?.email || 'all')}`;
+            const all = getStoredReleaseStatuses();
+            all[String(visitorCpf || '').replace(/\D/g, '')] = {
+                status,
+                updatedAt: new Date().toISOString(),
+                ...payload
+            };
+            localStorage.setItem(key, JSON.stringify(all));
+        } catch (_) {}
+    }
+
+    function transformVisitorRow(raw) {
+        const responsible = raw?.responsible || null;
+        const respCondo = responsible?.condominium || {};
+        const visitorCondo = typeof raw?.condominium === 'string'
+            ? (() => { try { return JSON.parse(raw.condominium); } catch (_) { return {}; } })()
+            : (raw?.condominium || {});
+
+        const schedule = raw?.schedule || {};
+        const visitDate = raw?.visit_date || schedule?.date || visitorCondo?.visit_date || raw?.created_at;
+        const startTime = raw?.start_time || schedule?.start_time || raw?.time_from || '';
+        const endTime = raw?.end_time || schedule?.end_time || raw?.time_until || '';
+        const reason = raw?.reason || raw?.purpose || raw?.visit_reason || raw?.motivo || 'Visita';
+        const stored = getStoredReleaseStatuses();
+        const storedStatus = stored[String(raw?.cpf || '').replace(/\D/g, '')]?.status || null;
+        const statusRaw = storedStatus || raw?.status || raw?.liberacao_status || raw?.access_status || 'pendente';
+
+        const unidade = raw?.apartment || raw?.unit || visitorCondo?.unit || visitorCondo?.apartamento || respCondo?.apartment || respCondo?.unit || '--';
+        const bloco = raw?.block || visitorCondo?.block || visitorCondo?.bloco || respCondo?.block || respCondo?.bloco || '--';
+        const unidadeLabel = unidade ? `Apto ${String(unidade).replace(/^Apto\s*/i, '')}` : '';
+        const blocoLabel = bloco ? (String(bloco).startsWith('Bloco') ? bloco : `Bloco ${bloco}`) : '';
+        const respUnidade = [blocoLabel, unidadeLabel].filter(Boolean).join(' / ') || 'Unidade --';
+
+        return {
+            id: raw?.id || raw?.cpf || `v-${Math.random().toString(36).slice(2)}`,
+            raw,
+            nome: raw?.full_name || raw?.nome || raw?.name || 'Visitante sem nome',
+            documento: formatCpf(raw?.cpf || raw?.documento || raw?.rg || '') || (raw?.rg ? `RG ${raw.rg}` : '--'),
+            documentoTipo: raw?.cpf ? 'CPF' : (raw?.rg ? 'RG' : 'Doc'),
+            rg: raw?.rg || '',
+            cpf: raw?.cpf || '',
+            phone: raw?.phone || raw?.telefone || '',
+            email: raw?.email || '',
+            reason,
+            visitDate,
+            startTime,
+            endTime,
+            responsavelNome: responsible?.name || responsible?.full_name || responsible?.nome || raw?.responsible_name || 'Responsável não informado',
+            responsavelCpf: responsible?.cpf || raw?.responsible_cpf || '',
+            responsavelPhone: responsible?.phone || '',
+            responsavelEmail: responsible?.email || '',
+            responsavelUnidade: respUnidade,
+            responsavelCondo: respCondo,
+            condominiumId: respCondo?.cep || respCondo?.condominium_id || respCondo?.condominiumId || visitorCondo?.cep || visitorCondo?.condominium_id || '',
+            condominiumName: respCondo?.name || respCondo?.condominium_name || visitorCondo?.name || '',
+            unidadeBloco: blocoLabel || '--',
+            unidadeApto: unidadeLabel || '--',
+            avatarIniciais: avatarInitials(raw?.full_name || raw?.nome || raw?.name || ''),
+            avatarColor: avatarColorFor(raw?.cpf || raw?.full_name || raw?.nome || ''),
+            status: statusKey(statusRaw),
+            created_at: raw?.created_at
+        };
+    }
+
+    async function loadCurrentUser() {
+        try {
+            if (typeof refreshCurrentUserFromDb === 'function') {
+                currentUser = await refreshCurrentUserFromDb();
+            }
+            if (!currentUser) {
+                currentUser = getCurrentUser();
+            }
+        } catch (_) {
+            currentUser = getCurrentUser();
+        }
+        if (!currentUser) {
+            window.location.href = 'entrar.html';
+        }
+    }
+
+    async function loadVisitorListFromDb() {
+        try {
+            if (typeof window.getVisitorsForCondominium !== 'function') return [];
+            const rows = await window.getVisitorsForCondominium(currentUser || {});
+            return (Array.isArray(rows) ? rows : []).map(transformVisitorRow);
+        } catch (err) {
+            console.error('Erro ao carregar visitantes:', err);
+            return [];
+        }
     }
 
     function getFilteredVisitors() {
@@ -342,31 +230,74 @@ document.addEventListener('DOMContentLoaded', function () {
         const today = new Date();
         const dateWindow = parseInt(state.filterDate, 10);
 
-        return sampleVisitors.filter(v => {
+        return visitorList.filter(v => {
             if (state.filterBlock && v.unidadeBloco !== state.filterBlock) return false;
 
             if (searchNorm) {
                 const haystack = normalizeString(
-                    v.nome + ' ' +
-                    v.documento + ' ' +
-                    v.responsavelNome + ' ' +
-                    v.responsavelUnidade
+                    (v.nome || '') + ' ' +
+                    (v.documento || '') + ' ' +
+                    (v.responsavelNome || '') + ' ' +
+                    (v.responsavelUnidade || '') + ' ' +
+                    (v.rg || '') + ' ' +
+                    (v.phone || '')
                 );
                 if (!haystack.includes(searchNorm)) return false;
             }
 
-            if (state.filterDate !== 'all' && !isNaN(dateWindow)) {
+            if (state.filterDate !== 'all' && !isNaN(dateWindow) && v.visitDate) {
                 try {
-                    const [dd, mm, yyyy] = v.data.split('/').map(n => parseInt(n, 10));
-                    const vDate = new Date(yyyy, mm - 1, dd);
-                    const limit = new Date(today);
-                    limit.setDate(today.getDate() + dateWindow);
-                    if (vDate > limit) return false;
+                    const vDateOnly = new Date(v.visitDate);
+                    if (isNaN(vDateOnly.getTime())) {
+                        const s = String(v.visitDate);
+                        const parts = s.split(/[-/]/).filter(Boolean).map(n => parseInt(n, 10));
+                        if (parts.length >= 3 && parts[0] < 32) {
+                            const day = parts[0], month = parts[1] - 1, year = parts[2];
+                            const normalized = new Date(year, month, day);
+                            if (!isNaN(normalized.getTime())) {
+                                normalized.setHours(0, 0, 0, 0);
+                                const limit = new Date(today);
+                                limit.setHours(0, 0, 0, 0);
+                                limit.setDate(limit.getDate() + dateWindow);
+                                if (normalized > limit) return false;
+                            }
+                        }
+                    } else {
+                        vDateOnly.setHours(0, 0, 0, 0);
+                        const limit = new Date(today);
+                        limit.setHours(0, 0, 0, 0);
+                        limit.setDate(limit.getDate() + dateWindow);
+                        if (vDateOnly > limit) return false;
+                    }
                 } catch (_) {}
             }
-
             return true;
         });
+    }
+
+    function updateMetrics() {
+        const today = new Date();
+        const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        const weekEnd = new Date(today);
+        weekEnd.setDate(today.getDate() + 8);
+
+        let todayCount = 0;
+        let upcomingCount = 0;
+        let monthCount = 0;
+
+        visitorList.forEach(v => {
+            const d = new Date(v.visitDate || v.created_at);
+            if (isNaN(d.getTime())) return;
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            if (key === todayKey) todayCount++;
+            if (d >= today && d <= weekEnd) upcomingCount++;
+            if (key.startsWith(monthKey)) monthCount++;
+        });
+
+        if (todayCountEl) todayCountEl.textContent = String(todayCount);
+        if (upcomingCountEl) upcomingCountEl.textContent = String(upcomingCount);
+        if (monthCountEl) monthCountEl.textContent = String(monthCount);
     }
 
     function renderTable() {
@@ -378,12 +309,18 @@ document.addEventListener('DOMContentLoaded', function () {
         const start = (state.page - 1) * state.pageSize;
         const pageItems = filtered.slice(start, start + state.pageSize);
 
-        tableBody.innerHTML = pageItems.map(v => `
-            <tr data-id="${v.id}">
+        tableBody.innerHTML = pageItems.length
+            ? pageItems.map(v => {
+                const { dateLabel, timeLabel } = formatDateTimeRange(v);
+                const dataCpf = String(v.cpf || v.id || '').replace(/"/g, '&quot;');
+                return `
+            <tr data-id="${String(v.id).replace(/"/g, '&quot;')}">
                 <td>
                     <div class="visitante-cell">
-                        <div class="visitante-avatar" style="background: ${v.avatarColor}22; color: ${v.avatarColor};">${v.avatarIniciais}</div>
-                        <span class="visitante-nome">${v.nome}</span>
+                        <div class="visitante-avatar" style="background: ${v.avatarColor}22; color: ${v.avatarColor}; cursor: pointer;" data-action="profile" data-cpf="${dataCpf}">
+                            ${v.avatarIniciais}
+                        </div>
+                        <span class="visitante-nome" data-action="profile" data-cpf="${dataCpf}" style="cursor: pointer;">${v.nome}</span>
                     </div>
                 </td>
                 <td>
@@ -408,29 +345,46 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="data-horario-cell">
                         <i class="fas fa-calendar-alt"></i>
                         <div>
-                            <span class="data-label">${v.data}</span>
-                            <div class="horario-label">${v.horario}</div>
+                            <span class="data-label">${dateLabel}</span>
+                            <div class="horario-label">${timeLabel}</div>
                         </div>
                     </div>
                 </td>
-                <td>${v.motivo}</td>
+                <td>${v.reason}</td>
                 <td>
                     <span class="status-badge status-${v.status}">${statusLabel(v.status)}</span>
                 </td>
                 <td>
-                    <button class="btn-acoes" type="button" aria-label="Mais ações" data-action-id="${v.id}">
+                    <button class="btn-acoes" type="button" aria-label="Mais ações" data-action-id="${String(v.id).replace(/"/g, '&quot;')}" data-cpf="${dataCpf}">
                         <i class="fas fa-ellipsis-v"></i>
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `;
+            }).join('')
+            : `
+            <tr>
+                <td colspan="8" style="text-align:center; padding:48px 16px; color:#64748B;">
+                    <i class="fas fa-users" style="font-size: 36px; opacity: .3; margin-bottom: 12px; display:block;"></i>
+                    Nenhum visitante encontrado para este condomínio.
+                </td>
+            </tr>
+        `;
+
+        tableBody.querySelectorAll('[data-action="profile"]').forEach(el => {
+            el.addEventListener('click', function () {
+                const cpf = String(this.getAttribute('data-cpf') || '').replace(/\D/g, '');
+                const v = visitorList.find(x => String(x.cpf || '').replace(/\D/g, '') === cpf) ||
+                    visitorList[0];
+                if (v) openVisitorProfileModal(v);
+            });
+        });
 
         tableBody.querySelectorAll('.btn-acoes').forEach(btn => {
             btn.addEventListener('click', function () {
-                const id = Number(this.getAttribute('data-action-id'));
-                const v = sampleVisitors.find(x => x.id === id);
-                if (!v) return;
-                showToast('Ações para o visitante ' + v.nome + ' em breve.', 'info');
+                const cpf = String(this.getAttribute('data-cpf') || '').replace(/\D/g, '');
+                const v = visitorList.find(x => String(x.cpf || '').replace(/\D/g, '') === cpf);
+                if (v) openVisitorProfileModal(v);
             });
         });
 
@@ -439,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function () {
         tableInfo.textContent = `Mostrando ${startCount} a ${endCount} de ${totalItems} visitantes`;
 
         renderPagination(totalPages);
-        populateBlocks();
+        populateBlocks(filtered);
     }
 
     function renderPagination(totalPages) {
@@ -478,15 +432,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function populateBlocks() {
-        if (blockSelect.options.length > 1) return;
-        const blocks = Array.from(new Set(sampleVisitors.map(v => v.unidadeBloco))).sort();
-        blocks.forEach(b => {
-            const opt = document.createElement('option');
-            opt.value = b;
-            opt.textContent = b;
-            blockSelect.appendChild(opt);
-        });
+    function populateBlocks(list) {
+        if (blockSelect.getAttribute('data-populated') === '1') return;
+        const current = blockSelect.value;
+        const blocks = Array.from(
+            new Set(
+                (list || visitorList)
+                    .map(v => String(v.unidadeBloco || '').trim())
+                    .filter(v => v && v !== '--')
+            )
+        ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        blockSelect.innerHTML = '<option value="">Todos os blocos</option>' +
+            blocks.map(b => `<option value="${b.replace(/"/g, '&quot;')}">${b}</option>`).join('');
+        blockSelect.value = current;
+        blockSelect.setAttribute('data-populated', '1');
     }
 
     function updateMesReferencia() {
@@ -495,6 +454,153 @@ document.addEventListener('DOMContentLoaded', function () {
         const now = new Date();
         const label = document.getElementById('mesReferencia');
         if (label) label.textContent = `${meses[now.getMonth()]}/${now.getFullYear()}`;
+    }
+
+    function ensureModalStructure() {
+        if (document.getElementById('visitorProfileModalBackdrop')) return;
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.id = 'visitorProfileModalBackdrop';
+        backdrop.innerHTML = `
+            <div class="modal-box visitor-modal" role="dialog" aria-modal="true" aria-labelledby="visitorProfileTitle">
+                <div class="modal-header">
+                    <div class="modal-icon modal-icon-info" id="visitorProfileIcon"><i class="fas fa-user"></i></div>
+                    <div class="modal-title-wrap">
+                        <h3 class="modal-title" id="visitorProfileTitle">Perfil do visitante</h3>
+                        <p class="modal-sub" id="visitorProfileSub" style="color:#64748B; margin:4px 0 0; font-size:13px;">Detalhes completos do acesso</p>
+                    </div>
+                    <button class="modal-close" type="button" id="visitorProfileClose" aria-label="Fechar" style="background:none; border:none; cursor:pointer; font-size:18px; color:#64748B;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="visitorProfileBody">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="modal-btn modal-btn-secondary" id="visitorProfileCancel">
+                        <i class="fas fa-times"></i> Fechar
+                    </button>
+                    <button type="button" class="modal-btn modal-btn-primary" id="visitorProfileLiberar" style="background: linear-gradient(135deg, #10b981 0%, #0f766e 100%);">
+                        <i class="fas fa-check-circle"></i> Liberar visitante
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(backdrop);
+
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) closeVisitorProfileModal();
+        });
+        document.getElementById('visitorProfileClose').addEventListener('click', closeVisitorProfileModal);
+        document.getElementById('visitorProfileCancel').addEventListener('click', closeVisitorProfileModal);
+        document.getElementById('visitorProfileLiberar').addEventListener('click', function () {
+            liberarVisitanteFromModal();
+        });
+    }
+
+    let currentModalVisitor = null;
+
+    function openVisitorProfileModal(visitor) {
+        ensureModalStructure();
+        currentModalVisitor = visitor;
+        const { dateLabel, timeLabel } = formatDateTimeRange(visitor);
+        const body = document.getElementById('visitorProfileBody');
+        const iconDiv = document.getElementById('visitorProfileIcon');
+        iconDiv.style.background = `${visitor.avatarColor}`;
+        iconDiv.innerHTML = `<span style="font-size:18px; font-weight:700;">${visitor.avatarIniciais}</span>`;
+
+        body.innerHTML = `
+            <div class="visitor-modal-grid">
+                <div class="info-col">
+                    <h4 class="info-title"><i class="fas fa-user-circle"></i> Visitante</h4>
+                    <div class="info-row"><span>Nome completo</span><strong>${visitor.nome}</strong></div>
+                    <div class="info-row"><span>CPF</span><strong>${formatCpf(visitor.cpf) || '--'}</strong></div>
+                    <div class="info-row"><span>RG</span><strong>${visitor.rg || '--'}</strong></div>
+                    <div class="info-row"><span>Telefone</span><strong>${formatPhone(visitor.phone) || '--'}</strong></div>
+                    <div class="info-row"><span>E-mail</span><strong>${visitor.email || '--'}</strong></div>
+                </div>
+                <div class="info-col">
+                    <h4 class="info-title"><i class="fas fa-home"></i> Responsável</h4>
+                    <div class="info-row"><span>Nome</span><strong>${visitor.responsavelNome}</strong></div>
+                    <div class="info-row"><span>CPF</span><strong>${formatCpf(visitor.responsavelCpf) || '--'}</strong></div>
+                    <div class="info-row"><span>Telefone</span><strong>${formatPhone(visitor.responsavelPhone) || '--'}</strong></div>
+                    <div class="info-row"><span>E-mail</span><strong>${visitor.responsavelEmail || '--'}</strong></div>
+                    <div class="info-row"><span>Unidade</span><strong>${visitor.responsavelUnidade}</strong></div>
+                </div>
+                <div class="info-col full">
+                    <h4 class="info-title"><i class="fas fa-calendar-check"></i> Visita</h4>
+                    <div class="info-row"><span>Data</span><strong>${dateLabel}</strong></div>
+                    <div class="info-row"><span>Horário</span><strong>${timeLabel}</strong></div>
+                    <div class="info-row"><span>Motivo</span><strong>${visitor.reason}</strong></div>
+                    <div class="info-row"><span>Condomínio</span><strong>${visitor.condominiumName || visitor.condominiumId || '--'}</strong></div>
+                    <div class="info-row"><span>Status</span><strong><span class="status-badge status-${visitor.status}">${statusLabel(visitor.status)}</span></strong></div>
+                </div>
+            </div>
+        `;
+        document.getElementById('visitorProfileModalBackdrop').classList.add('open');
+    }
+
+    function closeVisitorProfileModal() {
+        const backdrop = document.getElementById('visitorProfileModalBackdrop');
+        if (backdrop) backdrop.classList.remove('open');
+        currentModalVisitor = null;
+    }
+
+    async function liberarVisitanteFromModal() {
+        if (!currentModalVisitor) return;
+        const v = currentModalVisitor;
+        const btn = document.getElementById('visitorProfileLiberar');
+        btn.disabled = true;
+        try {
+            setReleaseVisitorStatus(v.cpf, 'liberado', {
+                by: currentUser?.email || null,
+                visitor_cpf: v.cpf,
+                responsible_cpf: v.responsavelCpf
+            });
+            const updated = visitorList.map(item =>
+                (String(item.cpf || '').replace(/\D/g, '') === String(v.cpf || '').replace(/\D/g, ''))
+                    ? { ...item, status: 'liberado' }
+                    : item
+            );
+            visitorList = updated;
+            updateMetrics();
+            renderTable();
+            if (typeof window.showToast === 'function') {
+                window.showToast('Visitante liberado com sucesso!', 'success');
+            } else {
+                showToast('Visitante liberado com sucesso!', 'success');
+            }
+            closeVisitorProfileModal();
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container') || (() => {
+            const d = document.createElement('div');
+            d.id = 'toast-container';
+            d.className = 'toast-container';
+            document.body.appendChild(d);
+            return d;
+        })();
+        const toast = document.createElement('div');
+        const bgMap = {
+            success: '#10b981', error: '#dc2626', warning: '#d97706', info: '#2563eb'
+        };
+        toast.className = `toast`;
+        toast.style.cssText = `
+            pointer-events:auto; background:white; border-radius:12px; padding:14px 16px; display:flex;
+            align-items:center; gap:12px; box-shadow:0 10px 24px rgba(0,0,0,.18); border-left:4px solid ${bgMap[type] || '#2563eb'};
+            margin-bottom: 10px; animation: toastIn 200ms ease;
+        `;
+        toast.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}" style="color:${bgMap[type] || '#2563eb'}; font-size: 18px;"></i>
+            <span style="flex:1; font-size:14px; color:#111827;">${message}</span>
+            <button type="button" style="background:none; border:none; color:#94a3b8; cursor:pointer;"><i class="fas fa-times"></i></button>
+        `;
+        toast.querySelector('button').addEventListener('click', () => toast.remove());
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 4500);
     }
 
     if (searchInput) {
@@ -545,6 +651,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeVisitorProfileModal();
+    });
+
     updateMesReferencia();
+    await loadCurrentUser();
+    visitorList = await loadVisitorListFromDb();
+    updateMetrics();
     renderTable();
 });

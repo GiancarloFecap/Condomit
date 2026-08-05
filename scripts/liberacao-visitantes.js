@@ -1,6 +1,7 @@
 const releaseState = {
     currentUser: null,
     visitors: [],
+    currentModalVisitorRaw: null,
     filters: {
         tab: 'pending',
         search: '',
@@ -295,9 +296,9 @@ function renderReleaseList(visitors) {
                     <span>${createdAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
                 <div class="request-main">
-                    <div class="request-avatar">${getInitials(visitor?.full_name)}</div>
+                    <div class="request-avatar" style="cursor:pointer;" data-action="profile" data-cpf="${visitorCpf}" title="Ver perfil do visitante">${getInitials(visitor?.full_name)}</div>
                     <div class="request-meta">
-                        <strong>${escapeHtml(visitor?.full_name || 'Visitante')}</strong>
+                        <strong style="cursor:pointer;" data-action="profile" data-cpf="${visitorCpf}" title="Ver perfil do visitante">${escapeHtml(visitor?.full_name || 'Visitante')}</strong>
                         <small>CPF: ${escapeHtml(formatCpf(visitor?.cpf))}</small>
                         <div class="badge-row">
                             <span class="pill info">Visita</span>
@@ -316,17 +317,25 @@ function renderReleaseList(visitors) {
                         <i class="fas fa-circle-xmark"></i>
                         <span>Recusar</span>
                     </button>
-                    <button class="icon-more" type="button" title="Mais informações">
-                        <i class="fas fa-ellipsis-vertical"></i>
+                    <button class="icon-more" type="button" title="Perfil do visitante" data-action="profile" data-cpf="${visitorCpf}">
+                        <i class="fas fa-user"></i>
                     </button>
                 </div>
             </article>
         `;
     }).join('');
 
-    list.querySelectorAll('[data-action]').forEach((button) => {
+    list.querySelectorAll('[data-action="approve"], [data-action="reject"]').forEach((button) => {
         button.addEventListener('click', () => {
             updateVisitorReleaseStatus(button.dataset.cpf, button.dataset.action === 'approve' ? 'approved' : 'rejected');
+        });
+    });
+
+    list.querySelectorAll('[data-action="profile"]').forEach((element) => {
+        element.addEventListener('click', () => {
+            const cpf = String(element.dataset.cpf || '').replace(/\D/g, '');
+            const visitor = releaseState.visitors.find((v) => String(v?.cpf || '').replace(/\D/g, '') === cpf);
+            if (visitor) openReleaseVisitorProfileModal(visitor);
         });
     });
 }
@@ -424,7 +433,195 @@ function escapeHtml(text) {
         .replaceAll("'", '&#39;');
 }
 
+function ensureReleaseModalCssInjected() {
+    if (document.getElementById('releaseModalCss')) return;
+    const style = document.createElement('style');
+    style.id = 'releaseModalCss';
+    style.textContent = `
+.modal-box.release-visitor-modal { max-width: 820px; }
+.release-modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 28px; }
+.release-modal-grid .info-col.full { grid-column: 1 / -1; border-top: 1px solid #e5e7eb; padding-top: 18px; }
+.info-col { display: flex; flex-direction: column; gap: 10px; }
+.info-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 6px 0; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
+.info-title i { color: #1e40af; font-size: 13px; }
+.info-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; font-size: 13.5px; }
+.info-row > span:first-child { color: #6b7280; font-weight: 400; flex-shrink: 0; }
+.info-row > strong { color: #111827; font-weight: 500; text-align: right; word-break: break-word; }
+.info-row .status-badge { display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.status-badge.release-approved { background: rgba(14, 165, 164, 0.12); color: #0f766e; }
+.status-badge.release-rejected { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
+.status-badge.release-pending { background: rgba(245, 158, 11, 0.12); color: #b45309; }
+html[data-theme="dark"] .release-modal-grid .info-col.full { border-top-color: #2d3b50; }
+html[data-theme="dark"] .info-title { color: #e2e8f0; border-bottom-color: #1e293b; }
+html[data-theme="dark"] .info-title i { color: #60a5fa; }
+html[data-theme="dark"] .info-row > span:first-child { color: #94a3b8; }
+html[data-theme="dark"] .info-row > strong { color: #f8fafc; }
+@media (max-width: 760px) {
+.release-modal-grid { grid-template-columns: 1fr; }
+.release-modal-grid .info-col.full { border-top: none; padding-top: 0; }
+.info-col + .info-col:not(.full) { border-top: 1px solid #e5e7eb; padding-top: 16px; }
+html[data-theme="dark"] .info-col + .info-col:not(.full) { border-top-color: #2d3b50; }
+}
+`;
+    document.head.appendChild(style);
+}
+
+function formatReleasePhone(value) {
+    const d = String(value || '').replace(/\D/g, '');
+    if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+    if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    return value || '--';
+}
+
+function formatReleaseDatePt(value) {
+    if (!value) return '--';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) {
+        const parts = String(value).split(/[-/ T]/).filter(Boolean);
+        if (parts.length >= 3 && parts[0].length === 4) return `${parts[2].slice(0, 2)}/${parts[1]}/${parts[0]}`;
+        return String(value).slice(0, 10);
+    }
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
+function formatReleaseDateTimeRange(visitorRaw) {
+    const dateValue = visitorRaw?.visit_date || visitorRaw?.date || visitorRaw?.created_at || visitorRaw?.scheduled_at || '';
+    const startTime = visitorRaw?.start_time || visitorRaw?.visit_time || visitorRaw?.time_from || (visitorRaw?.schedule && visitorRaw.schedule.start_time) || '';
+    const endTime = visitorRaw?.end_time || visitorRaw?.time_until || (visitorRaw?.schedule && visitorRaw.schedule.end_time) || '';
+    const dateLabel = formatReleaseDatePt(dateValue);
+    let timeLabel = '--:--';
+    if (startTime && endTime) timeLabel = `${String(startTime).slice(0, 5)} - ${String(endTime).slice(0, 5)}`;
+    else if (startTime) timeLabel = `${String(startTime).slice(0, 5)}`;
+    else if (dateValue) {
+        const d = new Date(dateValue);
+        if (!isNaN(d.getTime())) timeLabel = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    return { dateLabel, timeLabel };
+}
+
+function getReleaseStatusBadge(visitorRaw) {
+    const statuses = getStoredReleaseStatuses();
+    const cpf = String(visitorRaw?.cpf || '').replace(/\D/g, '');
+    const status = statuses?.[cpf]?.status || 'pending';
+    if (status === 'approved') return '<span class="status-badge release-approved">Liberado</span>';
+    if (status === 'rejected') return '<span class="status-badge release-rejected">Recusado</span>';
+    return '<span class="status-badge release-pending">Aguardando</span>';
+}
+
+function ensureReleaseModalStructure() {
+    ensureReleaseModalCssInjected();
+    if (document.getElementById('releaseVisitorModalBackdrop')) return;
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.id = 'releaseVisitorModalBackdrop';
+    backdrop.innerHTML = `
+<div class="modal-box release-visitor-modal" role="dialog" aria-modal="true" aria-labelledby="releaseVisitorTitle">
+  <div class="modal-header">
+    <div class="modal-icon modal-icon-info" id="releaseVisitorIcon"><i class="fas fa-user"></i></div>
+    <div class="modal-title-wrap">
+      <h3 class="modal-title" id="releaseVisitorTitle">Perfil do visitante</h3>
+      <p class="modal-sub" style="color:#64748B; margin:4px 0 0; font-size:13px;">Detalhes completos do acesso</p>
+    </div>
+    <button class="modal-close" type="button" id="releaseVisitorClose" aria-label="Fechar" style="background:none; border:none; cursor:pointer; font-size:18px; color:#64748B;">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="modal-body" id="releaseVisitorBody"></div>
+  <div class="modal-footer">
+    <button type="button" class="modal-btn modal-btn-secondary" id="releaseVisitorCancel">
+      <i class="fas fa-times"></i> Fechar
+    </button>
+    <button type="button" class="modal-btn modal-btn-primary" id="releaseVisitorLiberar" style="background: linear-gradient(135deg, #10b981 0%, #0f766e 100%);">
+      <i class="fas fa-check-circle"></i> Liberar visitante
+    </button>
+  </div>
+</div>`;
+    document.body.appendChild(backdrop);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeReleaseVisitorProfileModal(); });
+    document.getElementById('releaseVisitorClose').addEventListener('click', closeReleaseVisitorProfileModal);
+    document.getElementById('releaseVisitorCancel').addEventListener('click', closeReleaseVisitorProfileModal);
+    document.getElementById('releaseVisitorLiberar').addEventListener('click', liberarFromReleaseModal);
+}
+
+function openReleaseVisitorProfileModal(visitorRaw) {
+    ensureReleaseModalStructure();
+    releaseState.currentModalVisitorRaw = visitorRaw;
+    const responsible = visitorRaw?.responsible || {};
+    const respCondo = responsible?.condominium || {};
+    const { dateLabel, timeLabel } = formatReleaseDateTimeRange(visitorRaw);
+    const body = document.getElementById('releaseVisitorBody');
+    const iconDiv = document.getElementById('releaseVisitorIcon');
+    const avatarColors = ['#1e40af','#86198f','#0f766e','#9d174d','#92400e','#155e75','#4c1d95','#065f46','#b45309','#1d4ed8','#0369a1'];
+    const seed = String(visitorRaw?.cpf || visitorRaw?.full_name || '').toLowerCase().replace(/\s+/g, '');
+    let sum = 0; for (let i = 0; i < seed.length; i++) sum += seed.charCodeAt(i);
+    const avatarColor = avatarColors[sum % avatarColors.length];
+    iconDiv.style.background = avatarColor;
+    iconDiv.innerHTML = `<span style="font-size:18px; font-weight:700;">${getInitials(visitorRaw?.full_name)}</span>`;
+    const apartment = respCondo?.apartment || respCondo?.unit || respCondo?.apartamento || '--';
+    const block = respCondo?.block || respCondo?.bloco || '--';
+    const respUnidade = (block !== '--' ? (String(block).startsWith('Bloco') ? block : `Bloco ${block}`) : '') +
+        (apartment !== '--' ? ` / Apto ${String(apartment).replace(/^Apto\s*/i, '')}` : '') || 'Unidade --';
+    const reason = visitorRaw?.reason || visitorRaw?.purpose || visitorRaw?.visit_reason || visitorRaw?.motivo || 'Visita';
+    const condoName = respCondo?.name || respCondo?.condominium_name || visitorRaw?.condominium?.name || '--';
+    body.innerHTML = `
+<div class="release-modal-grid">
+  <div class="info-col">
+    <h4 class="info-title"><i class="fas fa-user-circle"></i> Visitante</h4>
+    <div class="info-row"><span>Nome completo</span><strong>${escapeHtml(visitorRaw?.full_name || visitorRaw?.nome || visitorRaw?.name || '--')}</strong></div>
+    <div class="info-row"><span>CPF</span><strong>${formatCpf(visitorRaw?.cpf) || '--'}</strong></div>
+    <div class="info-row"><span>RG</span><strong>${escapeHtml(visitorRaw?.rg || '--')}</strong></div>
+    <div class="info-row"><span>Telefone</span><strong>${formatReleasePhone(visitorRaw?.phone || visitorRaw?.telefone)}</strong></div>
+    <div class="info-row"><span>E-mail</span><strong>${escapeHtml(visitorRaw?.email || '--')}</strong></div>
+  </div>
+  <div class="info-col">
+    <h4 class="info-title"><i class="fas fa-home"></i> Responsável</h4>
+    <div class="info-row"><span>Nome</span><strong>${escapeHtml(responsible?.name || responsible?.full_name || responsible?.nome || visitorRaw?.responsible_name || '--')}</strong></div>
+    <div class="info-row"><span>CPF</span><strong>${formatCpf(responsible?.cpf || visitorRaw?.responsible_cpf) || '--'}</strong></div>
+    <div class="info-row"><span>Telefone</span><strong>${formatReleasePhone(responsible?.phone || responsible?.telefone)}</strong></div>
+    <div class="info-row"><span>E-mail</span><strong>${escapeHtml(responsible?.email || '--')}</strong></div>
+    <div class="info-row"><span>Unidade</span><strong>${escapeHtml(respUnidade)}</strong></div>
+  </div>
+  <div class="info-col full">
+    <h4 class="info-title"><i class="fas fa-calendar-check"></i> Visita</h4>
+    <div class="info-row"><span>Data</span><strong>${dateLabel}</strong></div>
+    <div class="info-row"><span>Horário</span><strong>${timeLabel}</strong></div>
+    <div class="info-row"><span>Motivo</span><strong>${escapeHtml(reason)}</strong></div>
+    <div class="info-row"><span>Condomínio</span><strong>${escapeHtml(condoName)}</strong></div>
+    <div class="info-row"><span>Status</span><strong>${getReleaseStatusBadge(visitorRaw)}</strong></div>
+  </div>
+</div>`;
+    document.getElementById('releaseVisitorModalBackdrop').classList.add('open');
+}
+
+function closeReleaseVisitorProfileModal() {
+    const backdrop = document.getElementById('releaseVisitorModalBackdrop');
+    if (backdrop) backdrop.classList.remove('open');
+    releaseState.currentModalVisitorRaw = null;
+}
+
+function liberarFromReleaseModal() {
+    const v = releaseState.currentModalVisitorRaw;
+    if (!v) return;
+    const cpf = String(v?.cpf || '').replace(/\D/g, '');
+    const btn = document.getElementById('releaseVisitorLiberar');
+    btn.disabled = true;
+    try {
+        updateVisitorReleaseStatus(cpf, 'approved');
+        if (typeof window.showToast === 'function') {
+            window.showToast('Visitante liberado com sucesso!', 'success');
+        }
+        closeReleaseVisitorProfileModal();
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeReleaseVisitorProfileModal();
+});
+
 function logout() {
+    if (typeof window.performFullLogout === 'function') { window.performFullLogout(); return; }
     sessionStorage.removeItem('condominiumUser');
     try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
     window.location.href = '../inicio.html';
