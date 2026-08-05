@@ -42,8 +42,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             currentUser = JSON.parse(loggedInUser);
 
-            // Se o tipo não é morador, redirecionar
-            if (currentUser.type !== 'morador') {
+            // Aceita tanto morador quanto porteiro nesta página
+            const userType = String(currentUser.type || currentUser.user_type || '').toLowerCase();
+            if (userType !== 'morador' && userType !== 'porteiro') {
                 window.location.href = 'tipo-usuario.html';
                 return;
             }
@@ -56,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         `/api/user_condominiums?user_email=eq.${encodeURIComponent(currentUser.email)}`
                     );
                     if (boundResponse && boundResponse.length > 0) {
-                        window.location.href = 'index-morador.html';
+                        window.location.href = userType === 'porteiro' ? 'index-porteiro.html' : 'index-morador.html';
                         return;
                     }
                 } catch (err) {
@@ -66,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Se o vínculo foi salvo na sessão mas ainda não foi retornado
                 // pela consulta, permitir o acesso imediato ao dashboard.
                 if (currentUser.condominium.condominium_id) {
-                    window.location.href = 'index-morador.html';
+                    window.location.href = userType === 'porteiro' ? 'index-porteiro.html' : 'index-morador.html';
                     return;
                 }
             }
@@ -310,11 +311,14 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
 
-            // 5. Exibir sucesso e redirecionar
+            // 5. Exibir sucesso e redirecionar conforme tipo de usuário
             showAlert('Condomínio vinculado com sucesso!', 'success');
 
+            const finalUserType = String(currentUser.type || currentUser.user_type || '').toLowerCase();
+            const redirectPage = finalUserType === 'porteiro' ? 'index-porteiro.html' : 'index-morador.html';
+
             setTimeout(() => {
-                window.location.href = 'index-morador.html';
+                window.location.href = redirectPage;
             }, 1000);
 
         } catch (error) {

@@ -1503,20 +1503,28 @@ function updateUserProfile() {
 async function loadScheduledAssemblies() {
     try {
         const cep = extractUserCep(assemblyState.currentUser);
+        let rawList = [];
         if (cep && typeof getScheduledAssembliesByCep === 'function') {
-            scheduledAssemblies = await getScheduledAssembliesByCep(cep);
+            rawList = await getScheduledAssembliesByCep(cep);
         } else if (typeof getScheduledAssemblies === 'function') {
-            scheduledAssemblies = await getScheduledAssemblies();
-        } else {
-            scheduledAssemblies = [];
+            rawList = await getScheduledAssemblies();
         }
-        scheduledAssemblies = (Array.isArray(scheduledAssemblies) ? scheduledAssemblies : [])
-            .filter(assemblyBelongsToCurrentCondominium);
+        rawList = Array.isArray(rawList) ? rawList : [];
+        rawList = rawList.filter(assemblyBelongsToCurrentCondominium);
+
+        const todayIso = new Date().toISOString().split('T')[0];
+        scheduledAssemblies = rawList.filter(a => String(a.date || '').localeCompare(todayIso) >= 0);
+        pastAssemblies = rawList.filter(a => String(a.date || '').localeCompare(todayIso) < 0);
+
         renderScheduledAssemblies();
+        renderPastAssemblies();
     } catch (error) {
         console.error('Erro ao carregar assembleias:', error);
         if ($('scheduled-list')) {
             $('scheduled-list').innerHTML = '<p>Nao foi possivel carregar as assembleias no momento.</p>';
+        }
+        if ($('past-list')) {
+            $('past-list').innerHTML = '<p>Nao foi possivel carregar as assembleias passadas.</p>';
         }
     }
 }
@@ -1588,13 +1596,15 @@ function renderPastAssemblies() {
     }
 
     pastAssemblies.forEach((assembly) => {
+        const timeValue = assembly.start_time || assembly.time || assembly.end_time || '--:--';
+        const safeId = Number.isFinite(Number(assembly.id)) ? Number(assembly.id) : `'${escapeHtml(String(assembly.id)).replace(/'/g, "\\'")}'`;
         listContainer.insertAdjacentHTML('beforeend', `
             <div class="assembly-item">
                 <div class="assembly-info">
                     <h3>${escapeHtml(assembly.title)}</h3>
-                    <p><i class="far fa-calendar-alt"></i> <strong>Data:</strong> ${formatDate(assembly.date)}, as ${escapeHtml(assembly.time)}</p>
+                    <p><i class="far fa-calendar-alt"></i> <strong>Data:</strong> ${formatDate(assembly.date)}, as ${escapeHtml(timeValue)}</p>
                 </div>
-                <button class="btn btn-secondary" onclick="viewPastAssembly(${Number(assembly.id)})">
+                <button class="btn btn-secondary" onclick="viewPastAssembly(${safeId})">
                     <i class="fas fa-eye"></i> Ver detalhes
                 </button>
             </div>
@@ -1657,7 +1667,27 @@ async function scheduleAssembly(event) {
         showToast('Assembleia agendada com sucesso.', 'success');
     } catch (error) {
         console.error('Erro ao agendar assembleia:', error);
-        showToast('Nao foi possivel agendar a assembleia. Tente novamente.', 'error');
+        const rawMessage = error && (error.message || String(error)) || '';
+        let userMessage = rawMessage && /(falha|erro|campos|usuario|cep|condominio|sessao|login|obrigatorio|criador|encontrado|autenticado)/i.test(rawMessage)
+            ? rawMessage
+            : '';
+        if (!userMessage) {
+            const lower = rawMessage.toLowerCase();
+            if (lower.includes('row-level') || lower.includes('policy') || lower.includes('rls') || lower.includes('403')) {
+                userMessage = 'Permissao insuficiente para agendar a assembleia. Verifique se voce e sindico do condominio.';
+            } else if (lower.includes('foreign') || lower.includes('condominiums') || lower.includes('cep')) {
+                userMessage = 'O CEP do condominio nao esta cadastrado na base. Contate o suporte.';
+            } else if (lower.includes('not-null') || lower.includes('not null') || lower.includes('column') || lower.includes('does not exist')) {
+                userMessage = 'Configuracao da tabela de assembleias esta incompleta. Contate o suporte.';
+            } else if (lower.includes('network') || lower.includes('fetch') || lower.includes('cors') || lower.includes('failed to fetch')) {
+                userMessage = 'Falha de conexao. Verifique sua internet e tente novamente.';
+            } else if (rawMessage) {
+                userMessage = rawMessage;
+            } else {
+                userMessage = 'Nao foi possivel agendar a assembleia. Tente novamente.';
+            }
+        }
+        showToast(userMessage, 'error');
     }
 }
 
@@ -1739,8 +1769,26 @@ function resetVotePanel() {
 }
 
 function viewPastAssembly(id) {
-    const assembly = assemblyData[id];
-    if (!assembly) return;
+    const lookupId = Number(id);
+    let assembly = assemblyData[lookupId];
+    if (!assembly) {
+        const fromList = pastAssemblies.find(a => String(a.id) === String(lookupId)) ||
+            pastAssemblies.find(a => String(a.id) === String(id));
+        if (fromList) {
+            assemblyData[lookupId] = {
+                title: fromList.title || 'Assembleia',
+                summary: fromList.description
+                    ? `<p>${escapeHtml(fromList.description)}</p>`
+                    : '<p>Resumo da assembleia sera exibido aqui.</p>',
+                comments: []
+            };
+            assembly = assemblyData[lookupId];
+        }
+    }
+    if (!assembly) {
+        showToast('Detalhes da assembleia nao encontrados.', 'warning');
+        return;
+    }
 
     assemblyState.viewingPastAssemblyId = id;
     if ($('past-assembly-title')) $('past-assembly-title').textContent = assembly.title;

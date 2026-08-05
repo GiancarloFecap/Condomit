@@ -1098,6 +1098,274 @@ async function patchSupabaseUserPlan(email, planId) {
   return result.data;
 }
 
+async function fetchAuthAdminUserByEmail(email) {
+  if (!email) return null;
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(email)}`, {
+    method: 'GET',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+    }
+  });
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error(`Auth admin lookup falhou (HTTP ${response.status})`);
+  }
+  const payload = await response.json().catch(() => ({}));
+  const users = Array.isArray(payload?.users) ? payload.users : [];
+  return users.length ? users[0] : null;
+}
+
+async function reactivateSoftDeletedAuthUser({ uid, email, newPassword }) {
+  if (!uid) return { reactivated: false, reason: 'missing-uid' };
+  const patchPayload = { deleted_at: null, banned_until: null };
+  if (newPassword) patchPayload.password = newPassword;
+  const patchResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(uid)}`, {
+    method: 'PUT',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(patchPayload)
+  });
+  if (!patchResponse.ok) {
+    const errBody = await patchResponse.text().catch(() => '');
+    throw new Error(`Falha ao reativar usuário (HTTP ${patchResponse.status}) ${errBody}`.trim());
+  }
+  return { reactivated: true };
+}
+
+async function handleAuthReactivateUser(event, body) {
+  const email = String(body?.email || '').trim().toLowerCase();
+  const newPassword = body?.password ? String(body.password) : null;
+  const userType = body?.user_type ? String(body.user_type).trim().toLowerCase() : null;
+  const redirectTo = body?.emailRedirectTo || `${APP_BASE_URL}/pages/entrar.html`;
+  const probeOnly = Boolean(body?.probe_only);
+
+  if (!email) {
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'E-mail é obrigatório' })
+    };
+  }
+
+  let authUser = null;
+  try {
+    authUser = await fetchAuthAdminUserByEmail(email);
+  } catch (err) {
+    console.error('[Reactivate] Lookup error:', err.message);
+    return {
+      statusCode: 502,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Falha ao consultar conta existente.', reactivated: false })
+    };
+  }
+
+  if (!authUser) {
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reactivated: false, status: 'not-found', exists: false, deleted: false })
+    };
+  }
+
+  const isDeleted = Boolean(authUser.deleted_at);
+
+  if (probeOnly) {
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reactivated: false,
+        status: isDeleted ? 'deleted' : 'active',
+        exists: true,
+        deleted: isDeleted,
+        active: !isDeleted,
+        alreadyActive: !isDeleted
+      })
+    };
+  }
+
+  if (!isDeleted) {
+    return {
+      statusCode: 409,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Já existe uma conta ativa cadastrada com este e-mail.', reactivated: false, status: 'already-active', exists: true, deleted: false })
+    };
+  }
+
+  try {
+    const result = await reactivateSoftDeletedAuthUser({
+      uid: authUser.id,
+      email,
+      newPassword
+    });
+    if (!result.reactivated) throw new Error('Falha interna na reativação');
+
+    const resendResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(authUser.id)}/reauthenticate`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      }
+    }).catch(() => null);
+
+    try {
+      await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_SERVICE_ROLE_KEY },
+        body: JSON.stringify({ email, redirectTo })
+      }).catch(() => null);
+    } catch (_) {}
+
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reactivated: true,
+        status: 'reactivated',
+        userId: authUser.id,
+        emailSent: resendResponse?.ok || false
+      })
+    };
+  } catch (err) {
+    console.error('[Reactivate] Patch error:', err.message);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: err.message || 'Falha ao reativar a conta.', reactivated: false })
+    };
+  }
+}
+
+async function handleCreateScheduledAssembly(event, body) {
+  const payload = body || {};
+
+  const title = String(payload.title || '').trim();
+  const date = String(payload.date || '').trim();
+  const startTime = String(payload.start_time || payload.startTime || '').trim();
+  const cep = String(payload.cep || '').replace(/\D/g, '');
+  const createdBy = String(payload.created_by || payload.createdBy || '').trim().toLowerCase();
+
+  if (!title || !date || !startTime || !cep) {
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Campos obrigatórios ausentes: título, data, horário e CEP do condomínio.' })
+    };
+  }
+
+  if (!createdBy) {
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Usuário criador não identificado. Refaça o login e tente novamente.' })
+    };
+  }
+
+  let callerEmail = null;
+  const rawAuthHeader =
+    (event.headers && (event.headers['Authorization'] || event.headers['authorization'])) ||
+    (event.multiValueHeaders && (
+      (event.multiValueHeaders['Authorization'] && event.multiValueHeaders['Authorization'][0]) ||
+      (event.multiValueHeaders['authorization'] && event.multiValueHeaders['authorization'][0])
+    )) ||
+    null;
+
+  if (rawAuthHeader) {
+    const tokenMatch = String(rawAuthHeader).match(/Bearer\s+(\S+)/i);
+    if (tokenMatch && tokenMatch[1]) {
+      try {
+        const userInfo = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          method: 'GET',
+          headers: {
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${tokenMatch[1]}`
+          }
+        }).then(async (r) => (r.ok ? r.json().catch(() => null) : null));
+        callerEmail = userInfo?.email ? String(userInfo.email).trim().toLowerCase() : null;
+      } catch (_) {
+        callerEmail = null;
+      }
+    }
+  }
+
+  if (callerEmail && callerEmail !== createdBy) {
+    return {
+      statusCode: 403,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'O usuário autenticado não corresponde ao criador informado.' })
+    };
+  }
+
+  if (!callerEmail) {
+    const matchingUsers = await fetchSupabaseUsersByEmail(createdBy);
+    const isKnownUser = Array.isArray(matchingUsers) && matchingUsers.length > 0;
+    if (!isKnownUser) {
+      return {
+        statusCode: 403,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Usuário criador não encontrado. Refaça o login e tente novamente.' })
+      };
+    }
+  }
+
+  const insertPayload = {
+    cep,
+    title,
+    description: payload.description ?? null,
+    date,
+    start_time: startTime,
+    end_time: payload.end_time || payload.endTime || startTime,
+    created_by: createdBy,
+    assembly_type: payload.assembly_type || payload.assemblyType || 'ordinaria',
+    status: payload.status || 'agendada'
+  };
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/scheduled_assemblies`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation,resolution=merge-duplicates'
+      },
+      body: JSON.stringify(insertPayload)
+    });
+
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }
+
+    if (!response.ok) {
+      const message = (data && (data.message || data.error)) || `Erro HTTP ${response.status} ao salvar`;
+      console.error('[AssemblyCreate] Supabase insert error:', response.status, message);
+      return {
+        statusCode: response.status >= 400 && response.status < 500 ? response.status : 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: message })
+      };
+    }
+
+    const result = Array.isArray(data) ? data[0] : (data || insertPayload);
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(result)
+    };
+  } catch (err) {
+    console.error('[AssemblyCreate] Network/Supabase error:', err.message);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: err.message || 'Falha ao salvar a assembleia no banco.' })
+    };
+  }
+}
+
 async function handleForgotPassword(event, body) {
   const { email, resetPageUrl } = body || {};
   // #region debug-point C:netlify-handler-start
@@ -1410,6 +1678,14 @@ exports.handler = async (event, context) => {
 
     if (pathname === '/reset-password' && rawMethod === 'POST') {
       return await handleResetPassword(body);
+    }
+
+    if ((pathname === '/auth/reactivate-user' || pathname === '/auth/reativar-usuario') && rawMethod === 'POST') {
+      return await handleAuthReactivateUser(event, body);
+    }
+
+    if ((pathname === '/assemblies' || pathname === '/agendar-assembleia' || pathname === '/scheduled-assemblies') && rawMethod === 'POST') {
+      return await handleCreateScheduledAssembly(event, body);
     }
 
     return {

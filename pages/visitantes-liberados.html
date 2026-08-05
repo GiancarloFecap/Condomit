@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Visitantes Liberados</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/visitantes-liberados.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Visitantes Liberados</h1>
+                    <p>Acompanhe os visitantes autorizados a entrar no condomínio.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button" id="topBellBtn" aria-label="Abrir notificações">
+                            <i class="fas fa-bell"></i>
+                            <span class="badge-notification">3</span>
+                        </button>
+                        <button class="btn btn-primary btn-liberar-visitante" type="button" id="btnLiberarVisitante">
+                            <i class="fas fa-plus"></i> Liberar visitante
+                        </button>
+                    </div>
+                    <div class="user-profile-small" id="topProfileBlock">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">João Silva</div>
+                            <div class="type" id="profileTypeTop">Síndico</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">JS</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="visitantes-liberados-page">
+                <div class="metrics-row-three">
+                    <article class="metric-card-3 metric-success">
+                        <div class="metric-card-content">
+                            <div class="metric-icon-green"><i class="fas fa-user-check"></i></div>
+                            <div>
+                                <div class="metric-label">Visitantes liberados hoje</div>
+                                <div class="metric-value" id="todayReleasedCount">5</div>
+                                <div class="metric-caption metric-caption-green"><span class="dot-green"></span> Acessos válidos</div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="metric-card-3 metric-purple">
+                        <div class="metric-card-content">
+                            <div class="metric-icon-purple"><i class="fas fa-calendar-check"></i></div>
+                            <div>
+                                <div class="metric-label">Próximos acessos</div>
+                                <div class="metric-value" id="upcomingCount">8</div>
+                                <div class="metric-caption metric-caption-purple"><span class="dot-purple"></span> Agendados</div>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="metric-card-3 metric-blue">
+                        <div class="metric-card-content">
+                            <div class="metric-icon-blue"><i class="fas fa-id-card"></i></div>
+                            <div>
+                                <div class="metric-label">Total liberados (mês)</div>
+                                <div class="metric-value" id="monthCount">37</div>
+                                <div class="metric-caption metric-caption-blue"><span class="dot-blue"></span> <span id="mesReferencia">Maio/2024</span></div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="filters-row">
+                    <div class="search-input-wrap">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" placeholder="Buscar por nome, documento ou responsável...">
+                    </div>
+                    <select id="blockSelect" class="filter-select">
+                        <option value="">Todos os blocos</option>
+                    </select>
+                    <select id="dateSelect" class="filter-select">
+                        <option value="7">Hoje até 7 dias</option>
+                        <option value="15">Hoje até 15 dias</option>
+                        <option value="30">Hoje até 30 dias</option>
+                        <option value="all">Todos</option>
+                    </select>
+                    <button class="btn-filter-extra" type="button" id="btnFiltros">
+                        <i class="fas fa-filter"></i> Filtros
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-wrap">
+                        <table class="visitantes-table">
+                            <thead>
+                                <tr>
+                                    <th>Visitante</th>
+                                    <th>Documento</th>
+                                    <th>Responsável</th>
+                                    <th>Unidade</th>
+                                    <th>Data e Horário</th>
+                                    <th>Motivo da Visita</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="visitantesTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="table-footer">
+                        <div class="table-info" id="tableInfo">Mostrando 1 a 7 de 19 visitantes</div>
+                        <div class="table-pagination">
+                            <button class="page-btn" type="button" id="prevPageBtn" aria-label="Página anterior">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button class="page-btn page-btn-active" type="button" data-page="1">1</button>
+                            <button class="page-btn" type="button" data-page="2">2</button>
+                            <button class="page-btn" type="button" data-page="3">3</button>
+                            <button class="page-btn" type="button" aria-label="Mais páginas">...</button>
+                            <button class="page-btn" type="button" id="nextPageBtn" aria-label="Próxima página">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <div class="page-size-wrap">
+                            <select id="pageSizeSelect" class="page-size-select">
+                                <option value="7">7 por página</option>
+                                <option value="10">10 por página</option>
+                                <option value="15">15 por página</option>
+                                <option value="30">30 por página</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/community-hub.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/i18n.js"></script>
+    <script src="../scripts/visitantes-liberados.js"></script>
+</body>
+</html>

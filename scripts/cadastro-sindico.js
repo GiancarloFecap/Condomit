@@ -1,4 +1,24 @@
-document.addEventListener('DOMContentLoaded', function () {
+    async function tryReactivateDeletedUser({ email, password, type, emailRedirectTo }) {
+        try {
+            const response = await fetch('/api/auth/reactivate-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    user_type: type,
+                    emailRedirectTo
+                })
+            });
+            const payload = await response.json().catch(() => ({}));
+            return { status: response.status, data: payload || {} };
+        } catch (err) {
+            console.warn('[Reactivate] Falha na chamada à API:', err?.message || err);
+            return { status: 0, data: {}, error: err };
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
     const signupForm = document.getElementById('signupForm');
     const togglePassword = document.getElementById('togglePassword');
     const toggleConfirmPassword = document.getElementById(
@@ -520,8 +540,46 @@ document.addEventListener('DOMContentLoaded', function () {
                     Array.isArray(authData.user.identities) &&
                     authData.user.identities.length === 0
                 ) {
+                    const reactivateResult = await tryReactivateDeletedUser({
+                        email,
+                        password,
+                        type,
+                        emailRedirectTo
+                    });
+
+                    if (reactivateResult?.data?.reactivated === true) {
+                        setSubmitting(false);
+                        showModal({
+                            title: 'Conta recuperada!',
+                            message:
+                                'Detectamos que existia uma conta com este e-mail que havia sido removida. ' +
+                                'A conta foi reativada e enviamos um <strong>novo link de confirmação</strong> para ' +
+                                `<strong>${email}</strong>.<br><br>` +
+                                'Clique no botão "Confirmar meu e-mail" para ativar a sua conta. ' +
+                                'Verifique também a pasta de <strong>spam</strong> ou <strong>lixo eletrônico</strong>.',
+                            type: 'success',
+                            confirmText: 'Ir para o Login',
+                            cancelText: 'Permanecer aqui',
+                            onConfirm: () => {
+                                window.location.href = 'entrar.html';
+                            }
+                        });
+                        return;
+                    }
+
+                    if (
+                        reactivateResult?.data?.status === 'already-active' ||
+                        reactivateResult?.status === 409
+                    ) {
+                        showToast(
+                            'Já existe uma conta ativa cadastrada com este e-mail. Recupere sua senha se não lembrar.',
+                            'warning'
+                        );
+                        return;
+                    }
+
                     showToast(
-                        'Já existe uma conta cadastrada com este e-mail.',
+                        'Já existe uma conta cadastrada com este e-mail. Recupere sua senha se não lembrar.',
                         'warning'
                     );
                     return;
@@ -586,6 +644,54 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Erro ao cadastrar síndico:',
                     error
                 );
+
+                const originalMessage = String(error?.message || error || '').toLowerCase();
+                const looksLikeEmailConflict =
+                    originalMessage.includes('user already registered') ||
+                    originalMessage.includes('already been registered') ||
+                    originalMessage.includes('already registered');
+
+                if (looksLikeEmailConflict) {
+                    const emailRedirectTo =
+                        `${window.location.origin}/pages/entrar.html`;
+                    const reactivateResult = await tryReactivateDeletedUser({
+                        email,
+                        password,
+                        type,
+                        emailRedirectTo
+                    });
+
+                    if (reactivateResult?.data?.reactivated === true) {
+                        setSubmitting(false);
+                        showModal({
+                            title: 'Conta recuperada!',
+                            message:
+                                'Detectamos que existia uma conta com este e-mail que havia sido removida. ' +
+                                'A conta foi reativada e enviamos um <strong>novo link de confirmação</strong> para ' +
+                                `<strong>${email}</strong>.<br><br>` +
+                                'Clique no botão "Confirmar meu e-mail" para ativar a sua conta. ' +
+                                'Verifique também a pasta de <strong>spam</strong> ou <strong>lixo eletrônico</strong>.',
+                            type: 'success',
+                            confirmText: 'Ir para o Login',
+                            cancelText: 'Permanecer aqui',
+                            onConfirm: () => {
+                                window.location.href = 'entrar.html';
+                            }
+                        });
+                        return;
+                    }
+
+                    if (
+                        reactivateResult?.data?.status === 'already-active' ||
+                        reactivateResult?.status === 409
+                    ) {
+                        showToast(
+                            'Já existe uma conta ativa cadastrada com este e-mail. Recupere sua senha se não lembrar.',
+                            'warning'
+                        );
+                        return;
+                    }
+                }
 
                 const friendly = getSignupErrorMessage(error);
                 showToast(friendly, 'error');

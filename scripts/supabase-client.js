@@ -490,12 +490,46 @@ async function fetchResidentsByCondoCep(cep) {
 }
 
 async function scheduleAssemblyDb(assembly) {
-  const data = await supabaseFetch('/scheduled_assemblies', {
-    method: 'POST',
-    headers: { Prefer: 'return=representation,resolution=merge-duplicates' },
-    body: JSON.stringify(assembly)
-  });
-  return Array.isArray(data) ? data[0] : data;
+  try {
+    const data = await supabaseFetch('/scheduled_assemblies', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation,resolution=merge-duplicates' },
+      body: JSON.stringify(assembly)
+    });
+    return Array.isArray(data) ? data[0] : data;
+  } catch (directError) {
+    const accessToken = getSupabaseAccessToken();
+    try {
+      const proxyResponse = await fetch('/api/assemblies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+        },
+        body: JSON.stringify(assembly)
+      });
+      const text = await proxyResponse.text();
+      let proxyData;
+      try {
+        proxyData = text ? JSON.parse(text) : null;
+      } catch (_parseErr) {
+        proxyData = text;
+      }
+      if (!proxyResponse.ok) {
+        const proxyMsg = proxyData?.error || proxyData?.message || `Falha HTTP ${proxyResponse.status}`;
+        throw new Error(proxyMsg);
+      }
+      return Array.isArray(proxyData) ? proxyData[0] : proxyData;
+    } catch (proxyError) {
+      let userMessage = proxyError?.message || String(proxyError || 'Erro desconhecido');
+      if (/jwt|token|autentic/i.test(userMessage)) {
+        userMessage = 'Sessão expirada. Faça login novamente e tente agendar a assembleia.';
+      }
+      const err = new Error(userMessage);
+      err.cause = { directError, proxyError };
+      throw err;
+    }
+  }
 }
 
 function normalizeCondominiumIdentifier(value) {

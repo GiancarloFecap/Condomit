@@ -2,6 +2,35 @@ document.addEventListener('DOMContentLoaded', async function() {
     let resendCooldownUntil = 0;
     let resendInProgress = false;
 
+    async function tryReactivateDeletedUser({ email, password, emailRedirectTo }) {
+        try {
+            const response = await fetch('/api/auth/reactivate-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, emailRedirectTo })
+            });
+            const payload = await response.json().catch(() => ({}));
+            return { status: response.status, data: payload || {} };
+        } catch (err) {
+            console.warn('[Reactivate] Falha na chamada à API:', err?.message || err);
+            return { status: 0, data: {}, error: err };
+        }
+    }
+
+    async function checkDeletedUserOfferReactivate(email) {
+        try {
+            const response = await fetch('/api/auth/reactivate-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, probe_only: true })
+            });
+            const payload = await response.json().catch(() => ({}));
+            return payload;
+        } catch (_) {
+            return {};
+        }
+    }
+
     async function fetchApprovedPayment(email) {
         try {
             const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
@@ -51,7 +80,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                 window.location.href = 'entrar-condominio.html';
             }
         } else if (type === 'porteiro') {
-            window.location.href = 'index-porteiro.html';
+            if (user.condominium) {
+                window.location.href = 'index-porteiro.html';
+            } else {
+                window.location.href = 'entrar-condominio.html';
+            }
         } else {
             window.location.href = 'assembleia.html';
         }
@@ -241,6 +274,49 @@ document.addEventListener('DOMContentLoaded', async function() {
                     errMsg.includes('credentials') ||
                     (authError.status && authError.status >= 400 && authError.status < 500)
                 ) {
+                    const probeResult = await checkDeletedUserOfferReactivate(email);
+
+                    if (probeResult?.exists && probeResult?.deleted) {
+                        setLoginSubmitting(false);
+                        showModal({
+                            title: 'Esta conta foi removida',
+                            message:
+                                `Detectamos que o e-mail <strong>${email}</strong> já teve uma conta cadastrada anteriormente mas ela foi inativada.<br><br>` +
+                                'Deseja <strong>reativar a conta</strong> e receber um e-mail para recuperar o acesso?',
+                            type: 'warning',
+                            confirmText: 'Reativar e enviar e-mail',
+                            cancelText: 'Não, voltar',
+                            onConfirm: async () => {
+                                const emailRedirectTo =
+                                    `${window.location.origin}/pages/entrar.html`;
+                                const reactivateResult = await tryReactivateDeletedUser({
+                                    email,
+                                    emailRedirectTo
+                                });
+
+                                if (reactivateResult?.data?.reactivated === true) {
+                                    showModal({
+                                        title: 'Conta reativada!',
+                                        message:
+                                            'A sua conta foi reativada com sucesso. Enviamos um e-mail para ' +
+                                            `<strong>${email}</strong> com um link para cadastrar uma nova senha.<br><br>` +
+                                            'Verifique também a pasta de <strong>spam</strong> ou <strong>lixo eletrônico</strong>.',
+                                        type: 'success',
+                                        confirmText: 'Entendido'
+                                    });
+                                } else if (reactivateResult?.data?.status === 'already-active') {
+                                    showToast('Esta conta já está ativa. Apenas efetue o login.', 'info');
+                                } else {
+                                    showToast(
+                                        'Não foi possível reativar a conta agora. Tente novamente mais tarde.',
+                                        'error'
+                                    );
+                                }
+                            }
+                        });
+                        return;
+                    }
+
                     showToast('E-mail ou senha incorretos.', 'error');
                     return;
                 }

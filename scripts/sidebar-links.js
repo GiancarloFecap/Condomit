@@ -334,7 +334,8 @@ function getTargetForRoute(routeKey, userType) {
         'porteiro-liberacao': 'liberacao-visitantes.html',
         'porteiro-registrar': 'registrar-visitantes.html',
         'porteiro-registro': 'registro-entrada-saida.html',
-        'porteiro-visitantes': 'liberacao-visitantes.html?tab=liberados',
+        'porteiro-visitantes': 'visitantes-liberados.html',
+        'sindico-visitantes-liberados': 'visitantes-liberados.html',
         'porteiro-historico': 'registro-entrada-saida.html',
         'porteiro-emergencia': 'index-porteiro.html#emergencia',
         'porteiro-entregas': 'autorizacao-entregas.html',
@@ -518,6 +519,15 @@ function getSidebarConfig(userType) {
         {
             titleKey: 'resident_management',
             items: [{ labelKey: 'resident_management_link', icon: 'fas fa-users-cog', route: 'gestao-moradores' }]
+        },
+        {
+            titleKey: 'access_control',
+            items: [
+                { labelKey: 'visitor_release', icon: 'fas fa-user-check', route: 'porteiro-liberacao' },
+                { labelKey: 'register_visitor', icon: 'fas fa-user-plus', route: 'porteiro-registrar' },
+                { labelKey: 'visitor_entry_exit', icon: 'fas fa-right-left', route: 'porteiro-registro' },
+                { labelKey: 'released_visitors', icon: 'fas fa-circle-check', route: 'sindico-visitantes-liberados' }
+            ]
         },
         {
             titleKey: 'reservations_maintenance',
