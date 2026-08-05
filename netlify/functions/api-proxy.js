@@ -1152,6 +1152,46 @@ async function deleteAuthAdminUserById(uid) {
   return { deleted: true, status: deleteResponse.status };
 }
 
+async function createAuthAdminUser({ email, password, userMetadata, emailConfirm = false, autoConfirm = false }) {
+  if (!email) return { created: false, reason: 'missing-email' };
+  const payload = {
+    email: String(email).trim().toLowerCase(),
+    email_confirm: Boolean(emailConfirm || autoConfirm),
+    confirm: Boolean(emailConfirm || autoConfirm)
+  };
+  if (password) payload.password = String(password);
+  if (userMetadata && typeof userMetadata === 'object') payload.user_metadata = userMetadata;
+
+  const createResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const body = await createResponse.json().catch(() => ({}));
+  if (!createResponse.ok) {
+    const message =
+      (body && (body.msg || body.message || body.error_description || body.error)) ||
+      createResponse.statusText;
+    return {
+      created: false,
+      status: createResponse.status,
+      error: `Falha ao criar usuário no auth (HTTP ${createResponse.status}) ${message}`.trim(),
+      raw: body
+    };
+  }
+
+  return {
+    created: true,
+    status: createResponse.status,
+    user: body
+  };
+}
+
 async function handleAuthReactivateUser(event, body) {
   const email = String(body?.email || '').trim().toLowerCase();
   const newPassword = body?.password ? String(body.password) : null;
@@ -1254,6 +1294,129 @@ async function handleAuthReactivateUser(event, body) {
       body: JSON.stringify({ error: err.message || 'Falha ao reativar a conta.', reactivated: false })
     };
   }
+}
+
+async function handleAdminSignupUser(event, body) {
+  const email = String(body?.email || '').trim().toLowerCase();
+  const password = body?.password ? String(body.password) : null;
+  const userType = body?.user_type ? String(body.user_type).trim().toLowerCase() : null;
+  const name = body?.name ? String(body.name).trim() : null;
+  const phone = body?.phone ? String(body.phone).trim() : null;
+  const cpf = body?.cpf ? String(body.cpf).trim() : null;
+  const emailRedirectTo =
+    body?.emailRedirectTo ||
+    body?.email_redirect_to ||
+    `${APP_BASE_URL}/pages/entrar.html`;
+
+  if (!email) {
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'E-mail é obrigatório.' })
+    };
+  }
+
+  let existingAuth = null;
+  try {
+    existingAuth = await fetchAuthAdminUserByEmail(email);
+  } catch (_) {}
+
+  if (existingAuth && !existingAuth.deleted_at) {
+    return {
+      statusCode: 409,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        error: 'Já existe uma conta cadastrada com este e-mail.',
+        status: 'already-active',
+        email,
+        exists: true
+      })
+    };
+  }
+
+  let reactivated = false;
+  let authUser = existingAuth || null;
+  if (existingAuth && existingAuth.deleted_at) {
+    try {
+      const result = await reactivateSoftDeletedAuthUser({
+        uid: existingAuth.id,
+        email,
+        newPassword: password
+      });
+      if (result?.reactivated) {
+        reactivated = true;
+        authUser = { ...existingAuth };
+      }
+    } catch (reactivateErr) {
+      console.warn('[AdminSignup] Reativacao falhou:', reactivateErr?.message);
+    }
+  }
+
+  if (!authUser || reactivated === false) {
+    const userMetadata = {
+      ...(name ? { name } : {}),
+      ...(phone ? { phone } : {}),
+      ...(cpf ? { cpf } : {}),
+      ...(userType ? { user_type: userType } : {})
+    };
+    const createResult = await createAuthAdminUser({
+      email,
+      password,
+      userMetadata,
+      emailConfirm: false,
+      autoConfirm: false
+    });
+    if (!createResult.created) {
+      return {
+        statusCode: 502,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: createResult.error || 'Falha ao criar conta.',
+          status: 'admin-create-failed'
+        })
+      };
+    }
+    authUser = createResult.user || null;
+  }
+
+  if (!authUser?.id) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Usuario nao retornado pelo auth.', status: 'no-user' })
+    };
+  }
+
+  try {
+    await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      },
+      body: JSON.stringify({ email, redirectTo: emailRedirectTo })
+    }).catch(() => null);
+
+    await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(authUser.id)}/reauthenticate`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+      }
+    }).catch(() => null);
+  } catch (_) {}
+
+  return {
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      created: true,
+      reactivated,
+      status: reactivated ? 'reactivated' : 'created',
+      user: { id: authUser.id, email, role: authUser.role || 'authenticated' }
+    })
+  };
 }
 
 async function handleCreateScheduledAssembly(event, body) {
@@ -1716,6 +1879,10 @@ exports.handler = async (event, context) => {
 
     if ((pathname === '/auth/reactivate-user' || pathname === '/auth/reativar-usuario') && rawMethod === 'POST') {
       return await handleAuthReactivateUser(event, body);
+    }
+
+    if ((pathname === '/auth/admin/signup' || pathname === '/auth/signup-admin' || pathname === '/auth/cadastro-admin' || pathname === '/signup-admin' || pathname === '/cadastro-admin') && rawMethod === 'POST') {
+      return await handleAdminSignupUser(event, body);
     }
 
     if ((pathname === '/assemblies' || pathname === '/agendar-assembleia' || pathname === '/scheduled-assemblies') && rawMethod === 'POST') {

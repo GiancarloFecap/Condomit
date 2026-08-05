@@ -18,6 +18,29 @@
         }
     }
 
+    async function tryAdminSignup({ email, password, name, phone, cpf, type, emailRedirectTo }) {
+        try {
+            const response = await fetch('/api/auth/admin/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    name,
+                    phone,
+                    cpf,
+                    user_type: type,
+                    emailRedirectTo
+                })
+            });
+            const payload = await response.json().catch(() => ({}));
+            return { status: response.status, data: payload || {} };
+        } catch (err) {
+            console.warn('[AdminSignup] Falha na chamada à API:', err?.message || err);
+            return { status: 0, data: {}, error: err };
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
     const signupForm = document.getElementById('signupForm');
     const submitButton = document.getElementById('submitBtn');
@@ -403,7 +426,60 @@
                 });
 
             if (authError) {
-                throw new Error(authError.message);
+                const errMsg = String(authError.message || '').toLowerCase();
+                const isRateLimit =
+                    errMsg.includes('email rate limit') ||
+                    errMsg.includes('rate limit') ||
+                    errMsg.includes('too many') ||
+                    String(authError.status || '').startsWith('429') ||
+                    authError.code === 'over_email_send_rate_limit' ||
+                    authError.code === 'email_rate_limit_exceeded' ||
+                    authError.code === '429';
+                if (isRateLimit) {
+                    const fallback = await tryAdminSignup({
+                        email,
+                        password,
+                        name,
+                        phone,
+                        cpf,
+                        type,
+                        emailRedirectTo
+                    });
+                    if (fallback && fallback.data && fallback.data.created) {
+                        authData = {
+                            user: fallback.data.user || { id: fallback.data.user?.id, email, identities: [{ id: 'admin' }] },
+                            session: null
+                        };
+                        authError = null;
+                        if (fallback.data.reactivated) {
+                            setSubmitting(false);
+                            showModal({
+                                title: 'Conta recuperada!',
+                                message:
+                                    'Detectamos que existia uma conta com este e-mail que havia sido removida. ' +
+                                    'A conta foi reativada e enviamos um <strong>novo link de confirmação</strong> para ' +
+                                    `<strong>${email}</strong>.<br><br>` +
+                                    'Clique no botão "Confirmar meu e-mail" para ativar a sua conta. ' +
+                                    'Verifique também a pasta de <strong>spam</strong> ou <strong>lixo eletrônico</strong>.',
+                                type: 'success',
+                                confirmText: 'Ir para o Login',
+                                cancelText: 'Permanecer aqui',
+                                onConfirm: () => {
+                                    window.location.href = 'entrar.html';
+                                }
+                            });
+                            return;
+                        }
+                    } else {
+                        const fallbackMsg =
+                            (fallback && fallback.data && (fallback.data.error || fallback.data.message)) ||
+                            authError.message;
+                        throw new Error(fallbackMsg || authError.message);
+                    }
+                }
+                if (authError) {
+                    throw new Error(authError.message);
+                }
             }
 
             if (!authData?.user?.id) {

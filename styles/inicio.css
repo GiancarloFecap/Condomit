@@ -69,7 +69,11 @@ body {
 }
 
 .logo { 
-    height: 150px; 
+    height: auto;
+    max-height: 72px;
+    width: auto;
+    max-width: 220px;
+    object-fit: contain;
     margin-left: 20px; 
 } 
 .header-nav { 
