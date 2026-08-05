@@ -45,8 +45,7 @@
 
 .page-actions,
 .filter-tabs,
-.summary-stats,
-.categories-list {
+.summary-stats {
     display: flex;
     gap: 12px;
 }
@@ -283,20 +282,17 @@
     margin-top: 16px;
 }
 
-.summary-stat,
-.category-summary-item {
+.summary-stat {
     justify-content: space-between;
     padding: 14px 0;
     border-bottom: 1px solid #edf2f7;
 }
 
-.summary-stat:last-child,
-.category-summary-item:last-child {
+.summary-stat:last-child {
     border-bottom: none;
 }
 
-.summary-stat strong,
-.category-summary-item strong {
+.summary-stat strong {
     font-size: 1.1rem;
 }
 

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Liberação de Visitantes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/porteiro-acessos.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar porteiro-sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Liberação de Visitantes</h1>
+                    <p>Aprove, recuse ou acompanhe os visitantes vinculados ao seu condomínio.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button"><i class="fas fa-bell"></i></button>
+                    </div>
+                    <button class="ghost-outline" type="button" id="accessHistoryBtn">
+                        <i class="fas fa-clock-rotate-left"></i>
+                        <span>Ver histórico de acessos</span>
+                    </button>
+                </div>
+            </header>
+
+            <section class="access-page">
+                <div class="metrics-row">
+                    <article class="metric-card pending">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-clock-rotate-left"></i></div>
+                            <div>
+                                <div class="metric-label">Aguardando liberação</div>
+                                <div class="metric-value" id="pendingVisitorsCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Visitantes</div>
+                    </article>
+
+                    <article class="metric-card success">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-circle-check"></i></div>
+                            <div>
+                                <div class="metric-label">Liberados hoje</div>
+                                <div class="metric-value" id="approvedVisitorsCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Visitantes</div>
+                    </article>
+
+                    <article class="metric-card danger">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-circle-xmark"></i></div>
+                            <div>
+                                <div class="metric-label">Recusados hoje</div>
+                                <div class="metric-value" id="rejectedVisitorsCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Visitantes</div>
+                    </article>
+
+                    <article class="metric-card accent">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-users"></i></div>
+                            <div>
+                                <div class="metric-label">Total hoje</div>
+                                <div class="metric-value" id="todayVisitorsTotal">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Visitantes</div>
+                    </article>
+                </div>
+
+                <div class="access-layout">
+                    <section class="access-main panel-card">
+                        <div class="status-tabs" id="releaseTabs">
+                            <button class="status-tab active" data-tab="pending" type="button">Aguardando liberação <span class="count-pill" id="tabPendingCount">0</span></button>
+                            <button class="status-tab" data-tab="approved" type="button">Liberados <span class="count-pill" id="tabApprovedCount">0</span></button>
+                            <button class="status-tab" data-tab="rejected" type="button">Recusados <span class="count-pill" id="tabRejectedCount">0</span></button>
+                        </div>
+
+                        <div class="toolbar">
+                            <div class="toolbar-left">
+                                <label class="search-field">
+                                    <i class="fas fa-magnifying-glass"></i>
+                                    <input type="search" id="releaseSearchInput" placeholder="Buscar por nome do visitante ou responsável...">
+                                </label>
+                            </div>
+                            <div class="toolbar-right">
+                                <label class="select-field">
+                                    <select id="releaseBlockFilter">
+                                        <option value="all">Todos os blocos</option>
+                                    </select>
+                                </label>
+                                <label class="select-field">
+                                    <select id="releasePeriodFilter">
+                                        <option value="all">Todos os períodos</option>
+                                        <option value="today">Hoje</option>
+                                        <option value="7d">Últimos 7 dias</option>
+                                        <option value="30d">Últimos 30 dias</option>
+                                    </select>
+                                </label>
+                                <button class="filter-btn" type="button" id="clearReleaseFiltersBtn">
+                                    <i class="fas fa-filter-circle-xmark"></i>
+                                    <span>Limpar filtros</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="request-list" id="visitorReleaseList"></div>
+                    </section>
+
+                    <aside class="sidebar-stack">
+                        <section class="side-card">
+                            <h3>Acesso rápido</h3>
+                            <div class="quick-links">
+                                <a href="registrar-visitantes.html" class="quick-link">
+                                    <span class="quick-link-icon"><i class="fas fa-user-plus"></i></span>
+                                    <span>
+                                        <strong>Registrar visitante</strong>
+                                        <small>Cadastrar nova entrada</small>
+                                    </span>
+                                </a>
+                                <a href="liberacao-visitantes.html?tab=approved" class="quick-link">
+                                    <span class="quick-link-icon"><i class="fas fa-list-check"></i></span>
+                                    <span>
+                                        <strong>Lista de autorizados</strong>
+                                        <small>Ver liberados do dia</small>
+                                    </span>
+                                </a>
+                                <a href="registro-entrada-saida.html" class="quick-link">
+                                    <span class="quick-link-icon"><i class="fas fa-right-left"></i></span>
+                                    <span>
+                                        <strong>Histórico de acessos</strong>
+                                        <small>Visualizar movimentações</small>
+                                    </span>
+                                </a>
+                            </div>
+                        </section>
+
+                        <section class="side-card">
+                            <h3>Informações importantes</h3>
+                            <p>A liberação do visitante deve ser confirmada com base no morador responsável e no condomínio do porteiro logado.</p>
+                        </section>
+
+                        <section class="side-card">
+                            <h3>Atividade de hoje</h3>
+                            <div class="donut-chart" id="releaseDonutChart" aria-hidden="true"></div>
+                            <ul class="summary-legend">
+                                <li><span class="legend-label"><span class="legend-dot" style="background:#0ea5a4;"></span>Liberados</span><strong id="legendApprovedCount">0</strong></li>
+                                <li><span class="legend-label"><span class="legend-dot" style="background:#f59e0b;"></span>Aguardando</span><strong id="legendPendingCount">0</strong></li>
+                                <li><span class="legend-label"><span class="legend-dot" style="background:#ef4444;"></span>Recusados</span><strong id="legendRejectedCount">0</strong></li>
+                            </ul>
+                        </section>
+
+                        <section class="side-card">
+                            <h3>Dica de segurança</h3>
+                            <p>Confirme sempre a identidade do visitante e valide o bloco e apartamento do responsável antes de liberar o acesso.</p>
+                        </section>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/liberacao-visitantes.js"></script>
+</body>
+</html>

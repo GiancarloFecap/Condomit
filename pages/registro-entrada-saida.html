@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Registro de Entrada e Saída</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/porteiro-acessos.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar porteiro-sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Registro de Entrada e Saída</h1>
+                    <p>Acompanhe as movimentações recentes da portaria em tempo real.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button"><i class="fas fa-bell"></i></button>
+                    </div>
+                    <button class="ghost-outline" type="button" id="refreshAccessLogBtn">
+                        <i class="fas fa-arrows-rotate"></i>
+                        <span>Atualizar registros</span>
+                    </button>
+                </div>
+            </header>
+
+            <section class="access-page">
+                <div class="metrics-row">
+                    <article class="metric-card pending">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-right-to-bracket"></i></div>
+                            <div>
+                                <div class="metric-label">Entradas hoje</div>
+                                <div class="metric-value" id="entriesTodayCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Movimentações de entrada</div>
+                    </article>
+
+                    <article class="metric-card success">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-right-from-bracket"></i></div>
+                            <div>
+                                <div class="metric-label">Saídas hoje</div>
+                                <div class="metric-value" id="exitsTodayCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Movimentações de saída</div>
+                    </article>
+
+                    <article class="metric-card accent">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-users"></i></div>
+                            <div>
+                                <div class="metric-label">Total hoje</div>
+                                <div class="metric-value" id="movementsTodayCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Movimentações registradas</div>
+                    </article>
+
+                    <article class="metric-card danger">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-clock"></i></div>
+                            <div>
+                                <div class="metric-label">Pico de movimento</div>
+                                <div class="metric-value" id="peakHourLabel">--:--</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Horário de maior fluxo</div>
+                    </article>
+                </div>
+
+                <div class="access-layout">
+                    <section class="access-main panel-card">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Movimentações recentes</h2>
+                                <p class="panel-subtitle">A lista considera os visitantes cadastrados e as liberações feitas pelo porteiro no mesmo condomínio.</p>
+                            </div>
+                        </div>
+
+                        <div class="toolbar">
+                            <div class="toolbar-left">
+                                <label class="search-field">
+                                    <i class="fas fa-magnifying-glass"></i>
+                                    <input type="search" id="accessSearchInput" placeholder="Buscar por nome, documento ou responsável...">
+                                </label>
+                            </div>
+                            <div class="toolbar-right">
+                                <label class="select-field">
+                                    <select id="accessTypeFilter">
+                                        <option value="all">Todos os tipos</option>
+                                        <option value="entry">Somente entradas</option>
+                                        <option value="exit">Somente saídas</option>
+                                    </select>
+                                </label>
+                                <label class="select-field">
+                                    <select id="accessBlockFilter">
+                                        <option value="all">Todos os blocos</option>
+                                    </select>
+                                </label>
+                                <label class="date-field">
+                                    <i class="fas fa-calendar-day"></i>
+                                    <input type="date" id="accessDateFilter">
+                                </label>
+                                <button class="filter-btn" type="button" id="clearAccessFiltersBtn">
+                                    <i class="fas fa-filter-circle-xmark"></i>
+                                    <span>Limpar filtros</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-wrap">
+                            <table class="access-table">
+                                <thead>
+                                    <tr>
+                                        <th>Horário</th>
+                                        <th>Tipo</th>
+                                        <th>Nome / Descrição</th>
+                                        <th>Documento</th>
+                                        <th>Apartamento</th>
+                                        <th>Bloco</th>
+                                        <th>Responsável</th>
+                                        <th>Registro</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accessLogTableBody"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="section-footer">
+                            <span class="records-note" id="accessLogSummary">Mostrando 0 registros</span>
+                            <button class="ghost-outline" type="button" id="accessLogExportBtn">
+                                <i class="fas fa-file-export"></i>
+                                <span>Atualizar visualização</span>
+                            </button>
+                        </div>
+                    </section>
+
+                    <aside class="sidebar-stack">
+                        <section class="side-card">
+                            <h3>Filtros rápidos</h3>
+                            <div class="filter-chip-group">
+                                <button class="filter-chip active" type="button" data-quick-filter="all">
+                                    <span class="filter-chip-icon"><i class="fas fa-table-cells-large"></i></span>
+                                    <span>
+                                        <strong>Todos os registros</strong>
+                                        <small>Exibir todas as movimentações</small>
+                                    </span>
+                                </button>
+                                <button class="filter-chip" type="button" data-quick-filter="entry">
+                                    <span class="filter-chip-icon"><i class="fas fa-right-to-bracket"></i></span>
+                                    <span>
+                                        <strong>Somente entradas</strong>
+                                        <small>Mostrar apenas entradas</small>
+                                    </span>
+                                </button>
+                                <button class="filter-chip" type="button" data-quick-filter="exit">
+                                    <span class="filter-chip-icon"><i class="fas fa-right-from-bracket"></i></span>
+                                    <span>
+                                        <strong>Somente saídas</strong>
+                                        <small>Mostrar apenas saídas</small>
+                                    </span>
+                                </button>
+                            </div>
+                        </section>
+
+                        <section class="side-card">
+                            <h3>Resumo de atividade</h3>
+                            <div class="donut-chart" id="accessDonutChart" aria-hidden="true"></div>
+                            <ul class="summary-legend">
+                                <li><span class="legend-label"><span class="legend-dot" style="background:#0ea5a4;"></span>Entradas</span><strong id="legendEntriesCount">0</strong></li>
+                                <li><span class="legend-label"><span class="legend-dot" style="background:#f59e0b;"></span>Saídas</span><strong id="legendExitsCount">0</strong></li>
+                                <li><span class="legend-label"><span class="legend-dot" style="background:#6366f1;"></span>Visitantes</span><strong id="legendVisitorsCount">0</strong></li>
+                            </ul>
+                        </section>
+
+                        <section class="side-card">
+                            <h3>Segurança em primeiro lugar</h3>
+                            <p>Todos os acessos filtrados aqui pertencem ao mesmo condomínio do porteiro logado, com base no responsável cadastrado.</p>
+                        </section>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/visitor-registration.js"></script>
+    <script src="../scripts/registro-entrada-saida.js"></script>
+</body>
+</html>

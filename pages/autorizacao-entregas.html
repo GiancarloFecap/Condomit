@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Autorização de Entregas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/porteiro-acessos.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar porteiro-sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Autorização de Entregas</h1>
+                    <p>Autorize entregas para moradores e acompanhe o controle na portaria.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button"><i class="fas fa-bell"></i></button>
+                    </div>
+                    <button class="soft-action" type="button" id="newDeliveryBtn">
+                        <i class="fas fa-plus"></i>
+                        <span>Autorizar nova entrega</span>
+                    </button>
+                </div>
+            </header>
+
+            <section class="access-page">
+                <div class="metrics-row">
+                    <article class="metric-card success">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-truck"></i></div>
+                            <div>
+                                <div class="metric-label">Entregas ativas</div>
+                                <div class="metric-value" id="activeDeliveriesCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Autorizadas</div>
+                    </article>
+
+                    <article class="metric-card accent">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-clock"></i></div>
+                            <div>
+                                <div class="metric-label">Agendadas para hoje</div>
+                                <div class="metric-value" id="scheduledTodayCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Aguardando</div>
+                    </article>
+
+                    <article class="metric-card pending">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-circle-check"></i></div>
+                            <div>
+                                <div class="metric-label">Concluídas hoje</div>
+                                <div class="metric-value" id="completedTodayCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Entregues</div>
+                    </article>
+
+                    <article class="metric-card danger">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-circle-xmark"></i></div>
+                            <div>
+                                <div class="metric-label">Canceladas hoje</div>
+                                <div class="metric-value" id="canceledTodayCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Canceladas</div>
+                    </article>
+                </div>
+
+                <section class="panel-card">
+                    <div class="toolbar">
+                        <div class="toolbar-left">
+                            <label class="search-field">
+                                <i class="fas fa-magnifying-glass"></i>
+                                <input type="search" id="deliverySearchInput" placeholder="Buscar por morador, entrega ou código...">
+                            </label>
+                        </div>
+                        <div class="toolbar-right">
+                            <label class="select-field">
+                                <select id="deliveryStatusFilter">
+                                    <option value="all">Todos os status</option>
+                                    <option value="active">Ativas</option>
+                                    <option value="scheduled">Agendadas</option>
+                                    <option value="completed">Concluídas</option>
+                                    <option value="canceled">Canceladas</option>
+                                </select>
+                            </label>
+                            <label class="select-field">
+                                <select id="deliveryBlockFilter">
+                                    <option value="all">Todos os blocos</option>
+                                </select>
+                            </label>
+                            <label class="date-field">
+                                <i class="fas fa-calendar-day"></i>
+                                <input type="date" id="deliveryDateFilter">
+                            </label>
+                            <button class="filter-btn" type="button" id="clearDeliveryFiltersBtn">
+                                <i class="fas fa-filter-circle-xmark"></i>
+                                <span>Limpar filtros</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="status-tabs" id="deliveryTabs">
+                        <button class="status-tab active" type="button" data-tab="all">Todas</button>
+                        <button class="status-tab" type="button" data-tab="active">Ativas</button>
+                        <button class="status-tab" type="button" data-tab="scheduled">Agendadas</button>
+                        <button class="status-tab" type="button" data-tab="completed">Concluídas</button>
+                        <button class="status-tab" type="button" data-tab="canceled">Canceladas</button>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="access-table">
+                            <thead>
+                                <tr>
+                                    <th>Entrega</th>
+                                    <th>Morador</th>
+                                    <th>Unidade</th>
+                                    <th>Transportadora</th>
+                                    <th>Previsão</th>
+                                    <th>Autorizado por</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deliveryTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="delivery-info-strip">
+                        <article class="info-pill-card">
+                            <span class="info-pill-icon"><i class="fas fa-shield-halved"></i></span>
+                            <div>
+                                <strong>Como funciona</strong>
+                                <p>Ao autorizar uma entrega, a portaria recebe a informação para validação no momento da chegada.</p>
+                            </div>
+                        </article>
+                        <article class="info-pill-card">
+                            <span class="info-pill-icon"><i class="fas fa-circle-check"></i></span>
+                            <div>
+                                <strong>Segurança</strong>
+                                <p>Controle total de quem pode retirar ou deixar encomendas dentro do condomínio.</p>
+                            </div>
+                        </article>
+                        <article class="info-pill-card">
+                            <span class="info-pill-icon"><i class="fas fa-clock"></i></span>
+                            <div>
+                                <strong>Praticidade</strong>
+                                <p>Agende entregas com antecedência e organize o fluxo da portaria.</p>
+                            </div>
+                        </article>
+                        <article class="info-pill-card">
+                            <span class="info-pill-icon"><i class="fas fa-bell"></i></span>
+                            <div>
+                                <strong>Notificações</strong>
+                                <p>Receba alertas rápidos sobre o status das entregas cadastradas.</p>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-backdrop delivery-modal" id="deliveryModal" aria-hidden="true">
+        <div class="delivery-modal-card" role="dialog" aria-modal="true" aria-labelledby="deliveryModalTitle">
+            <div class="delivery-modal-header">
+                <div>
+                    <h2 id="deliveryModalTitle">Autorizar nova entrega</h2>
+                    <p>Registre uma entrega para o condomínio atual.</p>
+                </div>
+                <button class="icon-more" type="button" id="closeDeliveryModalBtn" aria-label="Fechar modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="delivery-modal-body">
+                <form class="delivery-form" id="deliveryForm">
+                    <div class="delivery-form-row">
+                        <label>
+                            <span>Morador</span>
+                            <input type="text" id="deliveryResidentName" placeholder="Nome do morador" required>
+                        </label>
+                        <label>
+                            <span>Código da entrega</span>
+                            <input type="text" id="deliveryCode" placeholder="Ex: PED-12345" required>
+                        </label>
+                    </div>
+                    <div class="delivery-form-row">
+                        <label>
+                            <span>Apartamento</span>
+                            <input type="text" id="deliveryApartment" placeholder="Ex: 203" required>
+                        </label>
+                        <label>
+                            <span>Bloco</span>
+                            <input type="text" id="deliveryBlock" placeholder="Ex: A" required>
+                        </label>
+                    </div>
+                    <div class="delivery-form-row">
+                        <label>
+                            <span>Transportadora</span>
+                            <input type="text" id="deliveryCarrier" placeholder="Ex: Mercado Envios" required>
+                        </label>
+                        <label>
+                            <span>Categoria</span>
+                            <select id="deliveryType" required>
+                                <option value="store">Loja</option>
+                                <option value="marketplace">Marketplace</option>
+                                <option value="food">Delivery</option>
+                                <option value="service">Serviço</option>
+                                <option value="other">Outros</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="delivery-form-row">
+                        <label>
+                            <span>Data prevista</span>
+                            <input type="date" id="deliveryDate" required>
+                        </label>
+                        <label>
+                            <span>Janela de entrega</span>
+                            <input type="text" id="deliveryWindow" placeholder="Ex: 14:00 - 18:00" required>
+                        </label>
+                    </div>
+                    <label>
+                        <span>Observações</span>
+                        <textarea id="deliveryNotes" placeholder="Informações adicionais sobre a entrega"></textarea>
+                    </label>
+
+                    <div class="delivery-feedback" id="deliveryFeedback"></div>
+
+                    <div class="delivery-modal-actions">
+                        <button class="ghost-outline" type="button" id="cancelDeliveryBtn">Cancelar</button>
+                        <button class="soft-action" type="submit">
+                            <i class="fas fa-check"></i>
+                            <span>Salvar autorização</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/autorizacao-entregas.js"></script>
+</body>
+</html>

@@ -39,29 +39,38 @@ async function loadVisitorPageUser() {
 }
 
 function initVisitorPageShell(currentUser) {
-    const historyButton = document.getElementById('visitorHistoryBtn');
-    historyButton?.addEventListener('click', () => {
-        window.location.href = 'index-porteiro.html#historico-acesso';
-    });
-
-    const now = new Date();
-    const visitDate = document.querySelector('[data-field="visit-date"]');
-    const visitTime = document.querySelector('[data-field="visit-time"]');
-    const exitTime = document.querySelector('[data-field="visit-exit-time"]');
-
-    if (visitDate) visitDate.value = now.toISOString().slice(0, 10);
-    if (visitTime) visitTime.value = now.toTimeString().slice(0, 5);
-    if (exitTime) {
-        const future = new Date(now.getTime() + (2 * 60 * 60 * 1000));
-        exitTime.value = future.toTimeString().slice(0, 5);
-    }
-
     const sidebarApartment = document.getElementById('sidebarApartment');
+    const profileNameTop = document.getElementById('profileNameTop');
+    const profileAvatarTop = document.getElementById('profileAvatarTop');
+    const visitorPageDateLabel = document.getElementById('visitorPageDateLabel');
+    const fullName = currentUser.name || 'Porteiro';
+    const initials = fullName
+        .split(' ')
+        .filter(Boolean)
+        .map((part) => part[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || 'PT';
+
+    if (profileNameTop) profileNameTop.textContent = fullName;
+    if (profileAvatarTop) profileAvatarTop.textContent = initials;
+
     if (sidebarApartment && currentUser.condominium?.name) {
         const words = currentUser.condominium.name.split(' ');
         sidebarApartment.innerHTML = words.length > 2
             ? `${words.slice(0, 2).join(' ')}<br>${words.slice(2).join(' ')}`
             : currentUser.condominium.name;
+    }
+
+    if (visitorPageDateLabel) {
+        const now = new Date();
+        visitorPageDateLabel.textContent = now.toLocaleDateString('pt-BR', {
+            weekday: 'long',
+            day: '2-digit',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).replace(',', ' -');
     }
 }
 

@@ -249,6 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.applyGlobalAppLanguage = function applyGlobalAppLanguage(lang = getAppLanguage()) {
+        sidebarRuntime.currentPage = window.location.pathname.split('/').pop() || '';
+        sidebarRuntime.currentUser = getSidebarCurrentUser();
+        sidebarRuntime.currentUserType = getSidebarUserType(sidebarRuntime.currentUser);
         document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
         renderSidebar(sidebarRuntime.currentUser, sidebarRuntime.currentUserType, sidebarRuntime.currentPage, lang);
         bindSupportButtons('mailto:contato.condomit@gmail.com?subject=Contato%20Condomit');
@@ -328,14 +331,14 @@ function getTargetForRoute(routeKey, userType) {
         'ia-duvidas': 'ai-condomit.html',
         comunicados: 'ai-condomit.html',
         configuracoes: 'configuracoes.html',
-        'porteiro-liberacao': 'index-porteiro.html#liberacao-visitantes',
+        'porteiro-liberacao': 'liberacao-visitantes.html',
         'porteiro-registrar': 'registrar-visitantes.html',
-        'porteiro-registro': 'index-porteiro.html#registro-acesso',
-        'porteiro-visitantes': 'index-porteiro.html#visitantes-liberados',
-        'porteiro-historico': 'index-porteiro.html#historico-acesso',
+        'porteiro-registro': 'registro-entrada-saida.html',
+        'porteiro-visitantes': 'liberacao-visitantes.html?tab=liberados',
+        'porteiro-historico': 'registro-entrada-saida.html',
         'porteiro-emergencia': 'index-porteiro.html#emergencia',
-        'porteiro-entregas': 'index-porteiro.html#entregas',
-        'porteiro-prestadores': 'index-porteiro.html#prestadores'
+        'porteiro-entregas': 'autorizacao-entregas.html',
+        'porteiro-prestadores': 'controle-prestadores.html'
     };
 
     return routeMap[routeKey] || '';
@@ -387,8 +390,11 @@ function renderSidebarSection(section, userType, currentPage, lang = getAppLangu
 
     const items = section.items.map((item) => {
         const target = getTargetForRoute(item.route, userType);
-        const targetPage = target.split('#')[0];
-        const isActive = targetPage && targetPage === currentPage;
+        const targetPage = target.split('#')[0].split('?')[0];
+        const currentPathWithSearch = `${currentPage}${window.location.search || ''}`;
+        const isActive = target.includes('?')
+            ? target === currentPathWithSearch
+            : targetPage && targetPage === currentPage && !window.location.search;
         return `
             <a href="${target || '#'}" class="nav-item ${isActive ? 'active' : ''}" data-section="${item.route}">
                 <i class="${item.icon}"></i>
@@ -415,12 +421,23 @@ function getSidebarConfig(userType) {
                 ]
             },
             {
+                titleKey: 'relationships',
+                items: [
+                    { labelKey: 'chat_residents', icon: 'fas fa-comments', route: 'chat-moradores' },
+                    { labelKey: 'chat_syndic', icon: 'fas fa-user-tie', route: 'chat-sindico' }
+                ]
+            },
+            {
                 titleKey: 'emergency_services',
                 items: [
                     { labelKey: 'emergency_button', icon: 'fas fa-bell', route: 'porteiro-emergencia' },
                     { labelKey: 'deliveries_authorization', icon: 'fas fa-box-open', route: 'porteiro-entregas' },
                     { labelKey: 'provider_control', icon: 'fas fa-user-gear', route: 'porteiro-prestadores' }
                 ]
+            },
+            {
+                titleKey: 'settings',
+                items: [{ labelKey: 'settings', icon: 'fas fa-cog', route: 'configuracoes' }]
             }
         ];
     }
@@ -433,8 +450,7 @@ function getSidebarConfig(userType) {
                 items: [
                     { labelKey: 'mural', icon: 'fas fa-bullhorn', route: 'mural' },
                     { labelKey: 'suggestions', icon: 'fas fa-lightbulb', route: 'sugestoes' },
-                    { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' },
-                    { labelKey: 'mail', icon: 'fas fa-envelope', route: 'correio' }
+                    { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' }
                 ]
             },
             {
@@ -481,8 +497,7 @@ function getSidebarConfig(userType) {
             titleKey: 'notice_engagement',
             items: [
                 { labelKey: 'mural', icon: 'fas fa-bullhorn', route: 'mural' },
-                { labelKey: 'suggestions_long', icon: 'fas fa-lightbulb', route: 'sugestoes' },
-                { labelKey: 'indications', icon: 'fas fa-flag', route: 'indicacoes' }
+                { labelKey: 'suggestions_long', icon: 'fas fa-lightbulb', route: 'sugestoes' }
             ]
         },
         {
@@ -641,7 +656,11 @@ function translateTitle(lang = getAppLanguage()) {
         'Condomit - Gestão de Moradores': 'Condomit - Resident Management',
         'Condomit - Manutenção Preventiva': 'Condomit - Preventive Maintenance',
         'Condomit - Registrar Visitantes': 'Condomit - Register Visitors',
-        'Condomit - Painel do Porteiro': 'Condomit - Porter Dashboard'
+        'Condomit - Painel do Porteiro': 'Condomit - Porter Dashboard',
+        'Condomit - Liberação de Visitantes': 'Condomit - Visitor Release',
+        'Condomit - Registro de Entrada e Saída': 'Condomit - Entry and Exit Log',
+        'Condomit - Autorização de Entregas': 'Condomit - Delivery Authorization',
+        'Condomit - Controle de Prestadores': 'Condomit - Provider Control'
     };
 
     document.title = titleMap[currentTitle] || currentTitle;

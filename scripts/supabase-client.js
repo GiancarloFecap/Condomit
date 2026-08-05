@@ -206,6 +206,89 @@ async function getVisitorsByResponsibleCpf(responsibleCpf) {
   }
 }
 
+function parseUserCondominium(user) {
+  let condominium = user?.condominium || null;
+  if (typeof condominium === 'string') {
+    try {
+      condominium = JSON.parse(condominium);
+    } catch (_) {
+      condominium = null;
+    }
+  }
+  return condominium && typeof condominium === 'object' ? condominium : {};
+}
+
+function getUserCondominiumIdentifiers(user) {
+  const condominium = parseUserCondominium(user);
+  const identifiers = [
+    condominium?.cep,
+    condominium?.condominium_cep,
+    condominium?.condominium_id,
+    condominium?.condominiumId,
+    user?.cep,
+    user?.condominium_cep,
+    user?.condominium_id,
+    user?.condominiumId
+  ]
+    .map((value) => String(value || '').replace(/\D/g, ''))
+    .filter(Boolean);
+
+  return [...new Set(identifiers)];
+}
+
+async function fetchUsersByCpfs(cpfs, select = 'cpf,name,phone,email,condominium') {
+  const normalizedCpfs = [...new Set(
+    (Array.isArray(cpfs) ? cpfs : [])
+      .map((value) => String(value || '').replace(/\D/g, ''))
+      .filter((value) => value.length === 11)
+  )];
+
+  if (!normalizedCpfs.length) return [];
+
+  try {
+    const data = await supabaseFetch(`/users?select=${encodeURIComponent(select)}&cpf=in.(${normalizedCpfs.join(',')})`);
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Erro ao buscar usuários por CPF:', error);
+    return [];
+  }
+}
+
+async function getVisitorsForCondominium(user) {
+  const condominiumIdentifiers = getUserCondominiumIdentifiers(user);
+  if (!condominiumIdentifiers.length) return [];
+
+  try {
+    const visitors = await supabaseFetch('/visitors?select=*&order=created_at.desc');
+    const visitorRows = Array.isArray(visitors) ? visitors : [];
+    if (!visitorRows.length) return [];
+
+    const responsibleUsers = await fetchUsersByCpfs(visitorRows.map((item) => item?.responsible_cpf));
+    const responsibleByCpf = new Map(
+      responsibleUsers.map((responsible) => [
+        String(responsible?.cpf || '').replace(/\D/g, ''),
+        { ...responsible, condominium: parseUserCondominium(responsible) }
+      ])
+    );
+
+    return visitorRows
+      .map((visitor) => {
+        const responsibleCpf = String(visitor?.responsible_cpf || '').replace(/\D/g, '');
+        return {
+          ...visitor,
+          responsible: responsibleByCpf.get(responsibleCpf) || null
+        };
+      })
+      .filter((visitor) => {
+        const responsibleIdentifiers = getUserCondominiumIdentifiers(visitor?.responsible);
+        return responsibleIdentifiers.some((identifier) => condominiumIdentifiers.includes(identifier));
+      });
+  } catch (error) {
+    console.error('Erro ao buscar visitantes do condomínio:', error);
+    return [];
+  }
+}
+
 async function fetchPendingNoticesCount(cep) {
   if (!cep) return 0;
 
@@ -393,8 +476,11 @@ async function refreshCurrentUserFromDb() {
 window.refreshCurrentUserFromDb = refreshCurrentUserFromDb;
 window.getNormalizedUserType = getNormalizedUserType;
 window.fetchUserByCpf = fetchUserByCpf;
+window.fetchUsersByCpfs = fetchUsersByCpfs;
 window.createVisitor = createVisitor;
 window.getVisitorsByResponsibleCpf = getVisitorsByResponsibleCpf;
+window.getVisitorsForCondominium = getVisitorsForCondominium;
+window.getUserCondominiumIdentifiers = getUserCondominiumIdentifiers;
 
 async function saveSuggestion(suggestion) {
   try {

@@ -21,17 +21,21 @@
         <main class="main-content">
             <header class="top-bar">
                 <div class="top-bar-left">
-                    <h1>Registrar Visitantes</h1>
-                    <p>Cadastre a entrada de visitantes no condomínio.</p>
+                    <h1 id="visitorPageTitle">Registrar Visitantes</h1>
+                    <p id="visitorPageDateLabel">Hoje</p>
                 </div>
                 <div class="top-bar-right">
                     <div class="top-icons">
                         <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-shield"></i></button>
                     </div>
-                    <button class="ghost-btn" id="visitorHistoryBtn" type="button">
-                        <i class="fas fa-clock-rotate-left"></i>
-                        <span>Ver histórico de acessos</span>
-                    </button>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Porteiro</div>
+                            <div class="type">Porteiro</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">PT</div>
+                    </div>
                 </div>
             </header>
 
@@ -61,14 +65,25 @@
                                 </label>
                             </div>
 
-                            <div class="form-row">
+                            <div class="form-row form-row-2">
+                                <label>
+                                    <span>Telefone do visitante</span>
+                                    <input type="text" data-field="visitor-phone" placeholder="(11) 99999-9999">
+                                </label>
+                                <label>
+                                    <span>E-mail</span>
+                                    <input type="email" data-field="visitor-email" placeholder="visitante@email.com">
+                                </label>
+                            </div>
+
+                            <div class="form-row form-row-2">
                                 <label class="full-width">
                                     <span>CPF do responsável</span>
                                     <input type="text" data-field="responsible-cpf" placeholder="Digite o CPF do responsável" required>
                                 </label>
                             </div>
 
-                            <div class="form-row form-row-4">
+                            <div class="form-row form-row-2 responsible-grid">
                                 <label>
                                     <span>Nome do responsável</span>
                                     <input type="text" data-field="responsible-name" placeholder="Digite o nome do responsável" readonly>
@@ -84,36 +99,6 @@
                                 <label>
                                     <span>Bloco</span>
                                     <input type="text" data-field="responsible-block" placeholder="Ex: A" readonly>
-                                </label>
-                            </div>
-
-                            <div class="form-row form-row-3">
-                                <label>
-                                    <span>Telefone do visitante</span>
-                                    <input type="text" data-field="visitor-phone" placeholder="(11) 99999-9999">
-                                </label>
-                                <label>
-                                    <span>E-mail</span>
-                                    <input type="email" data-field="visitor-email" placeholder="visitante@email.com">
-                                </label>
-                                <label>
-                                    <span>Data da visita</span>
-                                    <input type="date" data-field="visit-date">
-                                </label>
-                            </div>
-
-                            <div class="form-row form-row-3">
-                                <label>
-                                    <span>Horário previsto</span>
-                                    <input type="time" data-field="visit-time">
-                                </label>
-                                <label>
-                                    <span>Previsão de saída</span>
-                                    <input type="time" data-field="visit-exit-time">
-                                </label>
-                                <label class="notes-inline">
-                                    <span>Observações</span>
-                                    <textarea data-field="visit-notes" rows="2" placeholder="Informações adicionais (opcional)"></textarea>
                                 </label>
                             </div>
 

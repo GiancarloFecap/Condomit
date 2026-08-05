@@ -196,25 +196,14 @@ function renderNotificationsSummary(notifications) {
         window.communityHub.isNotificationRead(item.id, notificationState.currentUser)
     ).length;
     const unreadCount = notifications.length - readCount;
-    const counts = getNotificationCounts(notifications);
 
     const totalNotifications = document.getElementById('totalNotifications');
     const unreadNotifications = document.getElementById('unreadNotifications');
     const readNotifications = document.getElementById('readNotifications');
-    const categoriesSummary = document.getElementById('categoriesSummary');
 
     if (totalNotifications) totalNotifications.textContent = String(notifications.length);
     if (unreadNotifications) unreadNotifications.textContent = String(unreadCount);
     if (readNotifications) readNotifications.textContent = String(readCount);
-
-    if (categoriesSummary) {
-        categoriesSummary.innerHTML = ['Avisos', 'Reservas', 'Assembleias', 'Entregas'].map((category) => `
-            <div class="category-summary-item">
-                <span>${category}</span>
-                <strong>${counts[category] || 0}</strong>
-            </div>
-        `).join('');
-    }
 }
 
 function getNotificationCounts(notifications) {

@@ -1491,46 +1491,12 @@ function updateUserProfile() {
         scheduleSection.style.display = assemblyState.currentUser.type === 'sindico' ? 'block' : 'none';
     }
 
-    const nav = document.querySelector('.sidebar-nav');
-    if (nav && assemblyState.currentUser.type !== 'sindico') {
-        const homeLink = nav.querySelector('a[href="index.html"]');
-        if (homeLink) homeLink.setAttribute('href', 'index-morador.html');
-
-        nav.querySelectorAll('.nav-section').forEach((section) => {
-            const title = section.querySelector('.nav-section-title');
-            if (title && /Gestao de Moradores/i.test(title.textContent || '')) {
-                section.style.display = 'none';
-            }
-        });
-
-        nav.querySelectorAll('a.nav-item').forEach((link) => {
-            if (/Gestao de Moradores/i.test((link.textContent || '').trim())) {
-                link.style.display = 'none';
-            }
-        });
-    } else if (nav) {
-        const homeLink = nav.querySelector('a[href="index-morador.html"]');
-        if (homeLink) homeLink.setAttribute('href', 'index.html');
-        nav.querySelectorAll('.nav-section').forEach((section) => { section.style.display = ''; });
-        nav.querySelectorAll('a.nav-item').forEach((link) => { link.style.display = ''; });
+    if (typeof window.applyGlobalAppLanguage === 'function') {
+        window.applyGlobalAppLanguage();
     }
 
     if (typeof syncAllAvatars === 'function') {
         syncAllAvatars(assemblyState.currentUser);
-    }
-
-    const condoNameEl = document.querySelector('.condo-name');
-    if (condoNameEl && assemblyState.currentUser.condominium) {
-        const rawName = typeof assemblyState.currentUser.condominium === 'object'
-            ? (assemblyState.currentUser.condominium.name || assemblyState.currentUser.condominium.condominium_name)
-            : null;
-
-        if (rawName) {
-            const chunks = String(rawName).split(' ');
-            condoNameEl.innerHTML = chunks.length > 2
-                ? `${escapeHtml(chunks.slice(0, 2).join(' '))}<br>${escapeHtml(chunks.slice(2).join(' '))}`
-                : escapeHtml(rawName);
-        }
     }
 }
 

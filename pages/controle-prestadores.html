@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Controle de Prestadores</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/porteiro-acessos.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar porteiro-sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Controle de Prestadores</h1>
+                    <p>Gerencie e acompanhe o acesso e as atividades dos prestadores de serviço.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button"><i class="fas fa-bell"></i></button>
+                    </div>
+                    <button class="soft-action" type="button" id="newProviderBtn">
+                        <i class="fas fa-plus"></i>
+                        <span>Novo prestador</span>
+                    </button>
+                </div>
+            </header>
+
+            <section class="access-page">
+                <div class="metrics-row">
+                    <article class="metric-card success">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-users-gear"></i></div>
+                            <div>
+                                <div class="metric-label">Prestadores ativos</div>
+                                <div class="metric-value" id="activeProvidersCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Ativos</div>
+                    </article>
+
+                    <article class="metric-card accent">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-clock"></i></div>
+                            <div>
+                                <div class="metric-label">Agendados para hoje</div>
+                                <div class="metric-value" id="scheduledProvidersCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Agendados</div>
+                    </article>
+
+                    <article class="metric-card pending">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-clipboard-list"></i></div>
+                            <div>
+                                <div class="metric-label">Serviços em andamento</div>
+                                <div class="metric-value" id="inProgressProvidersCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Em andamento</div>
+                    </article>
+
+                    <article class="metric-card danger">
+                        <div class="metric-head">
+                            <div class="metric-icon"><i class="fas fa-circle-xmark"></i></div>
+                            <div>
+                                <div class="metric-label">Inadimplentes</div>
+                                <div class="metric-value" id="blockedProvidersCount">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-caption">Irregular</div>
+                    </article>
+                </div>
+
+                <div class="provider-grid">
+                    <section class="panel-card">
+                        <div class="toolbar">
+                            <div class="toolbar-left">
+                                <label class="search-field">
+                                    <i class="fas fa-magnifying-glass"></i>
+                                    <input type="search" id="providerSearchInput" placeholder="Buscar por nome, empresa ou serviço...">
+                                </label>
+                            </div>
+                            <div class="toolbar-right">
+                                <label class="select-field">
+                                    <select id="providerStatusFilter">
+                                        <option value="all">Todos os status</option>
+                                        <option value="active">Ativos</option>
+                                        <option value="scheduled">Agendados</option>
+                                        <option value="in_progress">Em andamento</option>
+                                        <option value="inactive">Inativos</option>
+                                        <option value="blocked">Bloqueados</option>
+                                    </select>
+                                </label>
+                                <label class="select-field">
+                                    <select id="providerCategoryFilter">
+                                        <option value="all">Todas as categorias</option>
+                                    </select>
+                                </label>
+                                <label class="date-field">
+                                    <i class="fas fa-calendar-day"></i>
+                                    <input type="date" id="providerDateFilter">
+                                </label>
+                                <button class="filter-btn" type="button" id="clearProviderFiltersBtn">
+                                    <i class="fas fa-filter-circle-xmark"></i>
+                                    <span>Limpar filtros</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="status-tabs" id="providerTabs">
+                            <button class="status-tab active" type="button" data-tab="all">Todos</button>
+                            <button class="status-tab" type="button" data-tab="active">Ativos</button>
+                            <button class="status-tab" type="button" data-tab="scheduled">Agendados</button>
+                            <button class="status-tab" type="button" data-tab="in_progress">Em andamento</button>
+                            <button class="status-tab" type="button" data-tab="inactive">Inativos</button>
+                            <button class="status-tab" type="button" data-tab="blocked">Bloqueados</button>
+                        </div>
+
+                        <div class="table-wrap">
+                            <table class="access-table provider-table">
+                                <thead>
+                                    <tr>
+                                        <th>Prestador</th>
+                                        <th>Empresa / Serviço</th>
+                                        <th>Categoria</th>
+                                        <th>Contato</th>
+                                        <th>Entrada / Saída</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="providerTableBody"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="section-footer">
+                            <span class="records-note" id="providerSummary">Mostrando 0 prestadores</span>
+                            <label class="select-field">
+                                <select id="providerPageSize">
+                                    <option value="10">10 por página</option>
+                                    <option value="20">20 por página</option>
+                                </select>
+                            </label>
+                        </div>
+                    </section>
+
+                    <aside class="sidebar-stack">
+                        <section class="side-card">
+                            <h3>Categorias</h3>
+                            <ul class="category-list" id="providerCategoryList"></ul>
+                        </section>
+
+                        <section class="side-card">
+                            <h3>Documentos necessários</h3>
+                            <ul class="document-checklist">
+                                <li><span class="document-icon"><i class="fas fa-check"></i></span><div><strong>Documento de identificação</strong><br><small class="legend-note">RG ou CNH atualizados</small></div></li>
+                                <li><span class="document-icon"><i class="fas fa-check"></i></span><div><strong>Comprovante de empresa</strong><br><small class="legend-note">CNPJ ou contrato do serviço</small></div></li>
+                                <li><span class="document-icon"><i class="fas fa-check"></i></span><div><strong>Certificados e licenças</strong><br><small class="legend-note">Quando exigidos pela atividade</small></div></li>
+                                <li><span class="document-icon"><i class="fas fa-check"></i></span><div><strong>Seguro de responsabilidade</strong><br><small class="legend-note">Para serviços com maior exposição</small></div></li>
+                                <li><span class="document-icon"><i class="fas fa-check"></i></span><div><strong>NRs e treinamentos</strong><br><small class="legend-note">Conforme o tipo de manutenção</small></div></li>
+                            </ul>
+                        </section>
+
+                        <section class="side-card">
+                            <h3>Dica de segurança</h3>
+                            <p>Sempre verifique a documentação e libere o acesso apenas para prestadores autorizados e vinculados ao serviço esperado.</p>
+                        </section>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-backdrop delivery-modal" id="providerModal" aria-hidden="true">
+        <div class="delivery-modal-card provider-modal-card" role="dialog" aria-modal="true" aria-labelledby="providerModalTitle">
+            <div class="delivery-modal-header">
+                <div>
+                    <h2 id="providerModalTitle">Novo prestador</h2>
+                    <p>Cadastre um prestador para o condomínio atual.</p>
+                </div>
+                <button class="icon-more" type="button" id="closeProviderModalBtn" aria-label="Fechar modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="delivery-modal-body">
+                <form class="delivery-form" id="providerForm">
+                    <div class="delivery-form-row">
+                        <label>
+                            <span>Nome do prestador</span>
+                            <input type="text" id="providerName" placeholder="Nome completo" required>
+                        </label>
+                        <label>
+                            <span>Empresa</span>
+                            <input type="text" id="providerCompany" placeholder="Empresa ou autônomo" required>
+                        </label>
+                    </div>
+                    <div class="delivery-form-row">
+                        <label>
+                            <span>Serviço</span>
+                            <input type="text" id="providerService" placeholder="Ex: Instalação elétrica" required>
+                        </label>
+                        <label>
+                            <span>Categoria</span>
+                            <select id="providerCategory" required>
+                                <option value="electrical">Elétrica</option>
+                                <option value="cleaning">Limpeza</option>
+                                <option value="hydraulic">Hidráulica</option>
+                                <option value="security">Segurança</option>
+                                <option value="gardening">Jardinagem</option>
+                                <option value="painting">Pintura</option>
+                                <option value="elevator">Elevadores</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="delivery-form-row">
+                        <label>
+                            <span>Telefone</span>
+                            <input type="text" id="providerPhone" placeholder="(11) 99999-9999" required>
+                        </label>
+                        <label>
+                            <span>E-mail</span>
+                            <input type="email" id="providerEmail" placeholder="prestador@email.com" required>
+                        </label>
+                    </div>
+                    <div class="delivery-form-row">
+                        <label>
+                            <span>Data do atendimento</span>
+                            <input type="date" id="providerVisitDate" required>
+                        </label>
+                        <label>
+                            <span>Janela do atendimento</span>
+                            <input type="text" id="providerVisitWindow" placeholder="Ex: 08:00 - 12:00" required>
+                        </label>
+                    </div>
+                    <label>
+                        <span>Status inicial</span>
+                        <select id="providerInitialStatus" required>
+                            <option value="scheduled">Agendado</option>
+                            <option value="active">Ativo</option>
+                            <option value="in_progress">Em andamento</option>
+                            <option value="inactive">Inativo</option>
+                            <option value="blocked">Bloqueado</option>
+                        </select>
+                    </label>
+
+                    <div class="provider-feedback" id="providerFeedback"></div>
+
+                    <div class="delivery-modal-actions">
+                        <button class="ghost-outline" type="button" id="cancelProviderBtn">Cancelar</button>
+                        <button class="soft-action" type="submit">
+                            <i class="fas fa-check"></i>
+                            <span>Salvar prestador</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/controle-prestadores.js"></script>
+</body>
+</html>

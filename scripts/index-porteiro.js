@@ -76,20 +76,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function bindQuickActions() {
     const quickRoutes = {
-        'liberacao-visitantes': 'index-porteiro.html#liberacao-visitantes',
+        'liberacao-visitantes': 'liberacao-visitantes.html',
         'registrar-visitante': 'registrar-visitantes.html',
-        'registro-acesso': 'index-porteiro.html#registro-acesso',
-        'visitantes-liberados': 'index-porteiro.html#visitantes-liberados',
-        'historico-acesso': 'index-porteiro.html#historico-acesso'
+        'registro-acesso': 'registro-entrada-saida.html',
+        'visitantes-liberados': 'liberacao-visitantes.html?tab=liberados',
+        'historico-acesso': 'registro-entrada-saida.html'
     };
 
     Object.entries(quickRoutes).forEach(([cardId, target]) => {
         const card = document.getElementById(cardId);
         const button = card?.querySelector('button');
         if (!card || !button) return;
+        card.style.cursor = 'pointer';
+        card.setAttribute('role', 'link');
+        card.setAttribute('tabindex', '0');
 
         button.addEventListener('click', () => {
             window.location.href = target;
+        });
+
+        card.addEventListener('click', (event) => {
+            if (event.target.closest('button')) return;
+            window.location.href = target;
+        });
+
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                window.location.href = target;
+            }
         });
     });
 }
