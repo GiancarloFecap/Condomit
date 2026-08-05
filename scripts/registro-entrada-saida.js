@@ -52,7 +52,6 @@ async function loadPorterUser() {
 
 function initAccessPageShell(currentUser) {
     const sidebarApartment = document.getElementById('sidebarApartment');
-    const refreshButton = document.getElementById('refreshAccessLogBtn');
     const exportButton = document.getElementById('accessLogExportBtn');
     const accessDateFilter = document.getElementById('accessDateFilter');
 
@@ -68,11 +67,13 @@ function initAccessPageShell(currentUser) {
         accessLogState.filters.date = accessDateFilter.value;
     }
 
-    [refreshButton, exportButton].forEach((button) => {
-        button?.addEventListener('click', () => {
-            loadAccessMovements();
-        });
+    exportButton?.addEventListener('click', () => {
+        loadAccessMovements();
     });
+
+    if (typeof window.initPorterTopBar === 'function') {
+        window.initPorterTopBar(currentUser);
+    }
 }
 
 function bindAccessPageControls() {

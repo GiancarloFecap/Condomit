@@ -77,6 +77,10 @@ function initProviderPageShell(currentUser) {
     if (providerVisitDate) providerVisitDate.value = today;
     if (providerDateFilter) providerDateFilter.value = today;
     providerState.filters.date = today;
+
+    if (typeof window.initPorterTopBar === 'function') {
+        window.initPorterTopBar(currentUser);
+    }
 }
 
 function bindProviderPageControls() {

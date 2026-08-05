@@ -67,6 +67,10 @@ function initDeliveryPageShell(currentUser) {
     if (deliveryDate) deliveryDate.value = today;
     if (deliveryDateFilter) deliveryDateFilter.value = today;
     deliveryState.filters.date = today;
+
+    if (typeof window.initPorterTopBar === 'function') {
+        window.initPorterTopBar(currentUser);
+    }
 }
 
 function bindDeliveryPageControls() {

@@ -71,6 +71,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateUIWithUserData(currentUser);
     initPreferences();
     initEditProfileModal();
+
+    const params = new URLSearchParams(window.location.search || '');
+    const openTarget = params.get('open') || '';
+    const hashTarget = String(window.location.hash || '').replace('#', '');
+
+    if (openTarget === 'editar-perfil' || openTarget === 'perfil' || hashTarget === 'editar-perfil') {
+        try { openConfigSection('editar-perfil'); } catch (_) {}
+    }
 });
 
 function getCurrentUser() {
@@ -845,15 +853,76 @@ async function fetchCurrentCondominiumInfo() {
         if (!response.ok) throw new Error('Falha ao consultar condomínio.');
         const data = await response.json();
         const fromApi = Array.isArray(data) ? data[0] : data;
-        return { ...localCondo, ...(fromApi || {}), cep };
+        const condominium = { ...localCondo, ...(fromApi || {}), cep };
+        const manager = await fetchCurrentCondominiumManager(condominium, currentUser);
+        return mergeCondominiumManagerInfo(condominium, manager);
     } catch (_) {
-        return { ...localCondo, cep };
+        const condominium = { ...localCondo, cep };
+        const manager = await fetchCurrentCondominiumManager(condominium, currentUser);
+        return mergeCondominiumManagerInfo(condominium, manager);
     }
+}
+
+async function fetchCurrentCondominiumManager(condominium, currentUser = getCurrentUser()) {
+    if (typeof supabaseFetch !== 'function') return null;
+
+    const normalizedCondoIdentifiers = getCondominiumIdentifiersForModal(condominium, currentUser);
+    if (!normalizedCondoIdentifiers.length) return null;
+
+    try {
+        const users = await supabaseFetch('/users?select=name,phone,email,type,user_type,condominium');
+        if (!Array.isArray(users)) return null;
+
+        return users.find((user) => {
+            const userType = String(user?.type || user?.user_type || '').trim().toLowerCase();
+            if (userType !== 'sindico') return false;
+
+            const userIdentifiers = getCondominiumIdentifiersForModal(user?.condominium, user);
+            return userIdentifiers.some((identifier) => normalizedCondoIdentifiers.includes(identifier));
+        }) || null;
+    } catch (error) {
+        console.error('Erro ao buscar síndico responsável do condomínio:', error);
+        return null;
+    }
+}
+
+function getCondominiumIdentifiersForModal(condominium, user) {
+    const condoObject = condominium && typeof condominium === 'object' ? condominium : {};
+    const identifiers = [
+        condoObject?.cep,
+        condoObject?.condominium_cep,
+        condoObject?.condominium_id,
+        condoObject?.condominiumId,
+        user?.cep,
+        user?.condominium_cep,
+        user?.condominium_id,
+        user?.condominiumId
+    ]
+        .map((value) => String(value || '').replace(/\D/g, ''))
+        .filter(Boolean);
+
+    return [...new Set(identifiers)];
+}
+
+function mergeCondominiumManagerInfo(condominium, manager) {
+    if (!manager) return condominium;
+
+    return {
+        ...condominium,
+        manager_name: manager?.name || condominium?.manager_name || condominium?.syndic_name || '',
+        syndic_name: manager?.name || condominium?.syndic_name || condominium?.manager_name || '',
+        contact_phone: manager?.phone || condominium?.contact_phone || condominium?.phone || '',
+        phone: manager?.phone || condominium?.phone || condominium?.contact_phone || '',
+        manager_email: manager?.email || condominium?.manager_email || ''
+    };
 }
 
 function renderCondominiumInfoModal(condominium) {
     const body = document.getElementById('condominioModalBody');
     if (!body) return;
+
+    const managerName = condominium?.manager_name || condominium?.syndic_name || cfgT('not_informed');
+    const managerContact = condominium?.contact_phone || condominium?.phone || cfgT('not_informed');
 
     const items = [
         [cfgT('condo_name'), condominium?.condominium_name || condominium?.name || cfgT('not_informed')],
@@ -862,8 +931,8 @@ function renderCondominiumInfoModal(condominium) {
         [cfgT('condo_city_state'), buildCityStateLabel(condominium)],
         [cfgT('condo_block'), condominium?.block || cfgT('not_informed')],
         [cfgT('condo_apartment'), condominium?.apartment || cfgT('not_informed')],
-        [cfgT('condo_manager'), condominium?.manager_name || condominium?.syndic_name || cfgT('not_informed')],
-        [cfgT('condo_contact'), condominium?.phone || condominium?.contact_phone || condominium?.email || cfgT('not_informed')]
+        [cfgT('condo_manager'), managerName],
+        [cfgT('condo_contact'), managerContact]
     ];
 
     body.innerHTML = `

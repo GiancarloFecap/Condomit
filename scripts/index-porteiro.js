@@ -71,6 +71,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }).replace(',', ' -');
     }
 
+    if (typeof window.initPorterTopBar === 'function') {
+        window.initPorterTopBar(currentUser);
+    }
+
     bindQuickActions();
 });
 

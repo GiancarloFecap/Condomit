@@ -22,16 +22,21 @@
             <header class="top-bar">
                 <div class="top-bar-left">
                     <h1>Registro de Entrada e Saída</h1>
-                    <p>Acompanhe as movimentações recentes da portaria em tempo real.</p>
+                    <p id="currentDateLabel">Hoje</p>
                 </div>
                 <div class="top-bar-right">
                     <div class="top-icons">
-                        <button class="icon-btn" type="button"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn" type="button" id="topCameraBtn" aria-label="Abrir assembleia"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn" type="button" id="topBellBtn" aria-label="Abrir notificações"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn" type="button" id="topUserBtn" aria-label="Editar perfil"><i class="fas fa-user"></i></button>
                     </div>
-                    <button class="ghost-outline" type="button" id="refreshAccessLogBtn">
-                        <i class="fas fa-arrows-rotate"></i>
-                        <span>Atualizar registros</span>
-                    </button>
+                    <div class="user-profile-small" id="topProfileBlock">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Porteiro</div>
+                            <div class="type">Porteiro</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">PT</div>
+                    </div>
                 </div>
             </header>
 
@@ -200,6 +205,7 @@
     <script src="../scripts/supabase-client.js"></script>
     <script src="../scripts/sidebar-links.js"></script>
     <script src="../scripts/visitor-registration.js"></script>
+    <script src="../scripts/porteiro-topbar.js"></script>
     <script src="../scripts/registro-entrada-saida.js"></script>
 </body>
 </html>

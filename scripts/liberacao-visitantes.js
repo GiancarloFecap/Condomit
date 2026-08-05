@@ -52,7 +52,6 @@ async function loadPorterUser() {
 
 function initReleasePageShell(currentUser) {
     const sidebarApartment = document.getElementById('sidebarApartment');
-    const historyButton = document.getElementById('accessHistoryBtn');
 
     if (sidebarApartment && currentUser.condominium?.name) {
         const words = currentUser.condominium.name.split(' ');
@@ -61,9 +60,9 @@ function initReleasePageShell(currentUser) {
             : currentUser.condominium.name;
     }
 
-    historyButton?.addEventListener('click', () => {
-        window.location.href = 'registro-entrada-saida.html';
-    });
+    if (typeof window.initPorterTopBar === 'function') {
+        window.initPorterTopBar(currentUser);
+    }
 }
 
 function bindReleasePageControls() {
