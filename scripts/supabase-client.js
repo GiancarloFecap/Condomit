@@ -230,26 +230,57 @@ async function supabaseFetch(path, options = {}) {
 }
 
 async function fetchUserByEmail(email) {
-  try {
-    const response = await fetch(`/api/users?email=${encodeURIComponent(email)}`);
-    const contentType = response.headers && response.headers.get ? response.headers.get('content-type') : '';
-    if (!response.ok || (contentType && !contentType.includes('application/json'))) {
-      const text = await response.text().catch(() => '');
-      let data = null;
-      try { data = text ? JSON.parse(text) : null; } catch (_) {}
-      if (data && (typeof data === 'object') && (Array.isArray(data) || data.email || data.error === undefined)) {
-        return Array.isArray(data) && data.length ? data[0] : (data && !Array.isArray(data) && data.email ? data : null);
+  if (!email) return null;
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const proxyUrls = [
+    `/api/users?email=${encodeURIComponent(normalizedEmail)}&select=*`,
+    `/.netlify/functions/api-proxy/api/users?email=${encodeURIComponent(normalizedEmail)}&select=*`
+  ];
+  const directUrls = [
+    `/users?select=*&email=eq.${encodeURIComponent(normalizedEmail)}`,
+    `/public.users?select=*&email=eq.${encodeURIComponent(normalizedEmail)}`
+  ];
+  const allUrls = [...proxyUrls, ...directUrls];
+  let lastError = null;
+
+  for (const url of allUrls) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        lastError = new Error(`HTTP ${response.status} em ${url}`);
+        continue;
       }
-      throw new Error(data?.error || `Erro ao buscar usuário (HTTP ${response.status})`);
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        if (data.length > 0) return data[0];
+        continue;
+      }
+      if (data && typeof data === 'object') {
+        if ((data.email && String(data.email).trim().toLowerCase() === normalizedEmail) || data.id) {
+          return data;
+        }
+      }
+    } catch (err) {
+      lastError = err;
+      console.warn(`[fetchUserByEmail] Falhou em ${url}:`, err?.message || err);
     }
-    const data = await response.json();
-    return Array.isArray(data) && data.length ? data[0] : null;
-  } catch (error) {
-    if (error && error.name === 'SyntaxError') {
-      throw new Error('Erro ao buscar usuário: resposta inesperada do servidor');
-    }
-    throw error;
   }
+
+  try {
+    const fallbackTarget = `/users?select=*&order=created_at.desc&limit=300`;
+    const response = await fetch(fallbackTarget);
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        const found = data.find(u => (u.email && String(u.email).trim().toLowerCase() === normalizedEmail));
+        if (found) return found;
+      }
+    }
+  } catch (fallbackErr) {
+    console.warn('[fetchUserByEmail] Fallback scan falhou:', fallbackErr?.message || fallbackErr);
+  }
+
+  return null;
 }
 
 function formatCpfMasked(raw) {
@@ -1241,6 +1272,7 @@ window.refreshCurrentUserFromDb = refreshCurrentUserFromDb;
 window.getNormalizedUserType = getNormalizedUserType;
 window.fetchUserByCpf = fetchUserByCpf;
 window.fetchUsersByCpfs = fetchUsersByCpfs;
+window.fetchUserByEmail = fetchUserByEmail;
 window.createVisitor = createVisitor;
 window.getVisitorsByResponsibleCpf = getVisitorsByResponsibleCpf;
 window.getVisitorsForCondominium = getVisitorsForCondominium;

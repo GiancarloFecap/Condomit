@@ -168,11 +168,15 @@
         setFeedback(form, 'Buscando responsável...', 'info');
 
         let user = null;
-        if (typeof window.fetchUserByCpf === 'function') {
+        let searchError = null;
+        if (typeof window.fetchUserByCpf !== 'function') {
+            searchError = 'Função de busca por CPF não carregada. Atualize a página.';
+        } else {
             try {
                 user = await window.fetchUserByCpf(normalizedCpf);
             } catch (fetchErr) {
-                console.warn('Erro ao buscar responsável por CPF:', fetchErr?.message || fetchErr);
+                searchError = fetchErr?.message || String(fetchErr);
+                console.warn('Erro ao buscar responsável por CPF:', searchError);
                 user = null;
             }
         }
@@ -232,7 +236,11 @@
             setValue(form.responsiblePhone, '');
             setValue(form.responsibleApartment, '');
             setValue(form.responsibleBlock, '');
-            setFeedback(form, 'CPF do responsável não encontrado.', 'error');
+            if (searchError) {
+                setFeedback(form, `CPF do responsável não encontrado. Detalhe: ${searchError}`, 'error');
+            } else {
+                setFeedback(form, 'CPF do responsável não encontrado.', 'error');
+            }
             return null;
         }
 

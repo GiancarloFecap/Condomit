@@ -1841,16 +1841,30 @@ exports.handler = async (event, context) => {
       if (qs) {
         const hasCpfFilter = /cpf[\s]*=/i.test(qs) || /cpf\.(eq|like|ilike|neq|gt|lt|in|cs)\./i.test(qs);
         if (hasCpfFilter) {
-          const userTargets = [
-            { path: '/users', scope: 'public.users via default search path' },
-            { path: '/public.users', scope: 'explicit public.users' },
-            { path: '/users?select=*', scope: 'default users with select=*' }
-          ];
+          const normalized = (query.cpf || '').replace(/\D/g, '');
+          const qsClean = qs
+            .split('&')
+            .filter(p => {
+              const k = p.split('=')[0] || '';
+              return !/^select[\.]?$/i.test(k) && !/^select=/i.test(k) && !/^apikey=/i.test(k) && !/^authorization=/i.test(k);
+            })
+            .join('&');
+          const cpfQueryParts = [
+            `cpf=eq.${encodeURIComponent(query.cpf || '')}`,
+            normalized ? `cpf=ilike.*${encodeURIComponent(normalized)}*` : null,
+            normalized ? `cpf=eq.${encodeURIComponent(`${normalized.slice(0,3)}.${normalized.slice(3,6)}.${normalized.slice(6,9)}-${normalized.slice(9)}`)}` : null
+          ].filter(Boolean);
+          const userTargets = [];
+          for (const part of cpfQueryParts) {
+            userTargets.push({ path: `/users?select=*`, scope: 'default search path', extra: part });
+            userTargets.push({ path: `/public.users?select=*`, scope: 'explicit public.users', extra: part });
+          }
           let lastOkEmpty = null;
           let lastError = null;
           for (let i = 0; i < userTargets.length; i++) {
             const base = userTargets[i].path;
-            const target = base.includes('?') ? `${base}&${qs}` : `${base}?${qs}`;
+            const extra = userTargets[i].extra || '';
+            const target = extra ? `${base}&${extra}` : base;
             try {
               const result = await proxySupabaseRequest(null, target, 'GET');
               if (result.status >= 200 && result.status < 400 && Array.isArray(result.data)) {

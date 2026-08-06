@@ -55,10 +55,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             const persistent = { email: user.email, name: user.name || null, type: user.type || null, t: Date.now() };
             localStorage.setItem('condominiumPersistentUser', JSON.stringify(persistent));
         } catch(_) {}
-        if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
+        try {
+            if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
+        } catch(avatarErr) {
+            console.warn('Erro ao sincronizar avatar (ignorado):', avatarErr);
+        }
 
         if (type === 'sindico') {
-            const approvedPayment = await fetchApprovedPayment(user.email);
+            let approvedPayment = null;
+            try {
+                approvedPayment = await fetchApprovedPayment(user.email);
+            } catch (paymentErr) {
+                console.warn('Erro ao checar pagamento (tratado):', paymentErr);
+                approvedPayment = null;
+            }
 
             if (approvedPayment) {
                 if (user.condominium) {
@@ -416,7 +426,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             await redirectByUserType(loadedUser);
         } catch (error) {
             console.error('Erro ao fazer login:', error);
-            showToast('Erro ao fazer login. Tente novamente.', 'error');
+            const detail = error?.message ? ` ${error.message}` : '';
+            showToast('Erro ao fazer login. Tente novamente.' + detail, 'error');
         } finally {
             if (document.body.contains(loginForm)) {
                 setLoginSubmitting(false);
