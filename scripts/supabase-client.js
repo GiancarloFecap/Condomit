@@ -238,8 +238,14 @@ async function fetchUserByEmail(email) {
   ];
   const directUrls = [
     `/users?select=*&email=eq.${encodeURIComponent(normalizedEmail)}`,
-    `/public.users?select=*&email=eq.${encodeURIComponent(normalizedEmail)}`
+    `/users?select=*&email=ilike.*${encodeURIComponent(normalizedEmail)}*`,
+    `/public.users?select=*&email=eq.${encodeURIComponent(normalizedEmail)}`,
+    `/public.users?select=*&email=ilike.*${encodeURIComponent(normalizedEmail)}*`
   ];
+  if (normalizedEmail !== String(email).trim()) {
+    directUrls.push(`/users?select=*&email=eq.${encodeURIComponent(String(email).trim())}`);
+    directUrls.push(`/public.users?select=*&email=eq.${encodeURIComponent(String(email).trim())}`);
+  }
   const allUrls = [...proxyUrls, ...directUrls];
   let lastError = null;
 
@@ -252,7 +258,11 @@ async function fetchUserByEmail(email) {
       }
       const data = await response.json();
       if (Array.isArray(data)) {
-        if (data.length > 0) return data[0];
+        if (data.length > 0) {
+          const match = data.find(u => (u && String(u.email || '').trim().toLowerCase() === normalizedEmail));
+          if (match) return match;
+          return data[0];
+        }
         continue;
       }
       if (data && typeof data === 'object') {
@@ -267,9 +277,14 @@ async function fetchUserByEmail(email) {
   }
 
   try {
-    const fallbackTarget = `/users?select=*&order=created_at.desc&limit=300`;
-    const response = await fetch(fallbackTarget);
-    if (response.ok) {
+    const scanTargets = [
+      `/api/users?select=*&order=created_at.desc&limit=300`,
+      `/.netlify/functions/api-proxy/api/users?select=*&order=created_at.desc&limit=300`,
+      `/users?select=*&order=created_at.desc&limit=300`
+    ];
+    for (const fallbackTarget of scanTargets) {
+      const response = await fetch(fallbackTarget);
+      if (!response.ok) continue;
       const data = await response.json();
       if (Array.isArray(data)) {
         const found = data.find(u => (u.email && String(u.email).trim().toLowerCase() === normalizedEmail));
@@ -280,6 +295,49 @@ async function fetchUserByEmail(email) {
     console.warn('[fetchUserByEmail] Fallback scan falhou:', fallbackErr?.message || fallbackErr);
   }
 
+  return null;
+}
+
+async function fetchUserByAuthUserId(authUserId) {
+  if (!authUserId) return null;
+  const cleanId = String(authUserId).trim();
+  const query = `auth_user_id=eq.${encodeURIComponent(cleanId)}&select=*`;
+  const urls = [
+    `/.netlify/functions/api-proxy/api/users?${query}`,
+    `/api/users?${query}`,
+    `/users?${query}`,
+    `/public.users?${query}`
+  ];
+  for (const url of urls) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) continue;
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        if (data.length > 0 && data[0].email) return data[0];
+      } else if (data && data.email) {
+        return data;
+      }
+    } catch (err) {
+      console.warn(`[fetchUserByAuthUserId] Falhou em ${url}:`, err?.message || err);
+    }
+  }
+  try {
+    const scanTargets = [
+      `/api/users?select=*&order=created_at.desc&limit=300`,
+      `/.netlify/functions/api-proxy/api/users?select=*&order=created_at.desc&limit=300`,
+      `/users?select=*&order=created_at.desc&limit=300`
+    ];
+    for (const fallbackTarget of scanTargets) {
+      const response = await fetch(fallbackTarget);
+      if (!response.ok) continue;
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        const found = data.find(u => u && String(u.auth_user_id || '').toLowerCase() === cleanId.toLowerCase());
+        if (found) return found;
+      }
+    }
+  } catch (_) {}
   return null;
 }
 
@@ -1273,6 +1331,7 @@ window.getNormalizedUserType = getNormalizedUserType;
 window.fetchUserByCpf = fetchUserByCpf;
 window.fetchUsersByCpfs = fetchUsersByCpfs;
 window.fetchUserByEmail = fetchUserByEmail;
+window.fetchUserByAuthUserId = fetchUserByAuthUserId;
 window.createVisitor = createVisitor;
 window.getVisitorsByResponsibleCpf = getVisitorsByResponsibleCpf;
 window.getVisitorsForCondominium = getVisitorsForCondominium;

@@ -379,9 +379,36 @@ document.addEventListener('DOMContentLoaded', async function() {
                 authData.session.access_token
             );
 
-            const rawUser = await fetchUserByEmail(authData.user.email);
+            const authEmailNormalized = String(authData.user.email || '').trim().toLowerCase();
+            let rawUser = null;
+            if (typeof window.fetchUserByEmail === 'function') {
+                try {
+                    rawUser = await window.fetchUserByEmail(authData.user.email);
+                } catch (byEmailErr) {
+                    console.warn('[entrar] fetchUserByEmail falhou (tentando auth_user_id fallback):', byEmailErr?.message || byEmailErr);
+                    rawUser = null;
+                }
+            } else {
+                try {
+                    rawUser = await fetchUserByEmail(authData.user.email);
+                } catch (byEmailErr) {
+                    console.warn('[entrar] fallback fetchUserByEmail falhou:', byEmailErr?.message || byEmailErr);
+                    rawUser = null;
+                }
+            }
+
+            if (!rawUser && typeof window.fetchUserByAuthUserId === 'function' && authData.user?.id) {
+                try {
+                    rawUser = await window.fetchUserByAuthUserId(authData.user.id);
+                    if (rawUser) console.log('[entrar] Perfil carregado via auth_user_id (email query falhou).');
+                } catch (byIdErr) {
+                    console.warn('[entrar] fetchUserByAuthUserId falhou:', byIdErr?.message || byIdErr);
+                    rawUser = null;
+                }
+            }
 
             if (!rawUser) {
+                console.warn('[entrar] Nenhuma busca retornou perfil. authEmail=', authEmailNormalized, 'auth_user_id=', authData.user?.id);
                 await window.supabase.auth.signOut();
                 sessionStorage.removeItem('sb-session');
                 sessionStorage.removeItem('sb-access-token');
@@ -390,7 +417,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     title: 'Perfil não encontrado',
                     message:
                         'A autenticação foi realizada, mas o perfil do usuário não foi localizado no sistema.\n\n' +
-                        'Entre em contato com o suporte se o problema persistir.',
+                        'Entre em contato com o suporte se o problema persistir.\n\n' +
+                        `Dados da autenticação:\nE-mail: ${authData.user.email}\nID: ${authData.user.id}`,
                     type: 'error'
                 });
                 return;

@@ -1890,12 +1890,97 @@ exports.handler = async (event, context) => {
       }
 
       const email = query.email;
-      if (!email) {
-        const all = await proxySupabaseRequest(null, '/users?select=*&order=created_at.desc&limit=300', 'GET');
-        return { statusCode: all.status, headers, body: JSON.stringify(all.data) };
+      if (email) {
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const emailQueryParts = [
+          `email=eq.${encodeURIComponent(normalizedEmail)}`,
+          `email=ilike.*${encodeURIComponent(normalizedEmail)}*`
+        ];
+        if (normalizedEmail !== String(email).trim()) {
+          emailQueryParts.push(`email=eq.${encodeURIComponent(String(email).trim())}`);
+        }
+        const userTargets = [];
+        for (const part of emailQueryParts) {
+          userTargets.push({ path: `/users?select=*`, scope: 'default search path', extra: part });
+          userTargets.push({ path: `/public.users?select=*`, scope: 'explicit public.users', extra: part });
+        }
+        let lastOkEmpty = null;
+        let lastError = null;
+        let foundData = null;
+        for (let i = 0; i < userTargets.length; i++) {
+          const base = userTargets[i].path;
+          const extra = userTargets[i].extra || '';
+          const target = extra ? `${base}&${extra}` : base;
+          try {
+            const result = await proxySupabaseRequest(null, target, 'GET');
+            if (result.status >= 200 && result.status < 400 && Array.isArray(result.data)) {
+              if (result.data.length > 0) {
+                const match = result.data.find(u => u && String(u.email || '').trim().toLowerCase() === normalizedEmail);
+                if (match) {
+                  foundData = [match];
+                  break;
+                }
+                if (!foundData) foundData = result.data.slice(0, 1);
+                if (!lastOkEmpty) lastOkEmpty = { status: result.status, data: [] };
+              } else {
+                if (!lastOkEmpty) lastOkEmpty = result;
+              }
+            } else {
+              lastError = result;
+            }
+          } catch (err) {
+            lastError = { status: 500, data: [{ error: err?.message || String(err) }] };
+          }
+        }
+        if (foundData) {
+          return { statusCode: 200, headers, body: JSON.stringify(foundData) };
+        }
+        if (lastOkEmpty) {
+          return { statusCode: lastOkEmpty.status || 200, headers, body: JSON.stringify([]) };
+        }
+        if (lastError) {
+          return { statusCode: lastError.status || 500, headers, body: JSON.stringify(lastError.data || []) };
+        }
+        return { statusCode: 200, headers, body: JSON.stringify([]) };
       }
-      const result = await proxySupabaseRequest(null, `/users?select=*&email=eq.${encodeURIComponent(email)}`, 'GET');
-      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+
+      const authUserId = query.auth_user_id;
+      if (authUserId) {
+        const cleanId = String(authUserId).trim();
+        const userTargets = [
+          { path: `/users?select=*`, scope: 'default search path', extra: `auth_user_id=eq.${encodeURIComponent(cleanId)}` },
+          { path: `/public.users?select=*`, scope: 'explicit public.users', extra: `auth_user_id=eq.${encodeURIComponent(cleanId)}` }
+        ];
+        let lastOkEmpty = null;
+        let lastError = null;
+        for (let i = 0; i < userTargets.length; i++) {
+          const base = userTargets[i].path;
+          const extra = userTargets[i].extra || '';
+          const target = `${base}&${extra}`;
+          try {
+            const result = await proxySupabaseRequest(null, target, 'GET');
+            if (result.status >= 200 && result.status < 400 && Array.isArray(result.data)) {
+              if (result.data.length > 0) {
+                return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+              }
+              if (!lastOkEmpty) lastOkEmpty = result;
+            } else {
+              lastError = result;
+            }
+          } catch (err) {
+            lastError = { status: 500, data: [{ error: err?.message || String(err) }] };
+          }
+        }
+        if (lastOkEmpty) {
+          return { statusCode: lastOkEmpty.status || 200, headers, body: JSON.stringify([]) };
+        }
+        if (lastError) {
+          return { statusCode: lastError.status || 500, headers, body: JSON.stringify(lastError.data || []) };
+        }
+      }
+
+      const all = await proxySupabaseRequest(null, '/users?select=*&order=created_at.desc&limit=300', 'GET');
+      return { statusCode: all.status, headers, body: JSON.stringify(all.data) };
     }
 
     if (pathname === '/users' && rawMethod === 'PATCH') {
