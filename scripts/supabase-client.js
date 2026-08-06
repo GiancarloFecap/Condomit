@@ -574,114 +574,126 @@ async function fetchResidentsByCondoCep(cep) {
     });
 }
 
+function normalizeCepForDatabase(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+
+  if (digits.length !== 8) {
+    return '';
+  }
+
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
 async function scheduleAssemblyDb(assembly) {
   const safeAssembly = { ...assembly };
-  const cepRaw = safeAssembly.cep || safeAssembly.condominium_cep || safeAssembly.condominium_id;
-  let cepClean = '';
-  if (cepRaw) {
-    cepClean = String(cepRaw).replace(/\D/g, '');
-    if (cepClean) safeAssembly.cep = cepClean;
+
+  const cep = normalizeCepForDatabase(
+    safeAssembly.cep ||
+    safeAssembly.condominium_cep ||
+    safeAssembly.condominiumCep ||
+    safeAssembly.condominium_id ||
+    safeAssembly.condominiumId
+  );
+
+  if (!cep) {
+    throw new Error(
+      'CEP do condomínio inválido. Informe um CEP com 8 dígitos.'
+    );
   }
+
+  safeAssembly.cep = cep;
+
+  const validStatuses = [
+    'agendada',
+    'em_andamento',
+    'encerrada',
+    'cancelada'
+  ];
+
+  safeAssembly.status = validStatuses.includes(
+    String(safeAssembly.status || '').toLowerCase()
+  )
+    ? String(safeAssembly.status).toLowerCase()
+    : 'agendada';
+
   delete safeAssembly.condominium_cep;
   delete safeAssembly.condominiumCep;
-  if (!safeAssembly.status) safeAssembly.status = 'agendada';
-  if (!safeAssembly.updated_at) safeAssembly.updated_at = new Date().toISOString();
-  const validStatuses = ['agendada', 'em_andamento', 'encerrada', 'cancelada'];
-  if (!validStatuses.includes(String(safeAssembly.status).toLowerCase())) {
-    safeAssembly.status = 'agendada';
-  }
-  const expectedNullable = ['livekit_room_name', 'started_at', 'ended_at'];
-  expectedNullable.forEach((k) => {
-    if (k in safeAssembly && (safeAssembly[k] === undefined || safeAssembly[k] === null)) {
-      delete safeAssembly[k];
+  delete safeAssembly.condominium_id;
+  delete safeAssembly.condominiumId;
+  delete safeAssembly.updated_at;
+
+  [
+    'livekit_room_name',
+    'started_at',
+    'ended_at'
+  ].forEach((field) => {
+    if (
+      safeAssembly[field] === undefined ||
+      safeAssembly[field] === null ||
+      safeAssembly[field] === ''
+    ) {
+      delete safeAssembly[field];
     }
   });
 
-  if (cepClean) {
-    try {
-      const proxyCepCheck = await fetch(`/api/condominiums?cep=eq.${encodeURIComponent(cepClean)}`).catch(() => null);
-      if (proxyCepCheck && proxyCepCheck.ok) {
-        try {
-          const condos = await proxyCepCheck.json();
-          if (Array.isArray(condos) && condos.length === 0) {
-            try {
-              await fetch('/api/condominiums', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  cep: cepClean,
-                  condominium_name: 'Condomínio ' + cepClean,
-                  condominium_id: cepClean
-                })
-              });
-            } catch (_) {}
-          }
-        } catch (_) {}
-      }
-    } catch (_) {}
-  }
-
-  function postProcessRow(row) {
-    if (!row) return row;
-    if (!row.cep && cepClean) row.cep = cepClean;
-    if (!row.status) row.status = 'agendada';
-    if (!row.updated_at) row.updated_at = new Date().toISOString();
-    if (row.condominium_cep && !row.cep) row.cep = row.condominium_cep;
-    return row;
-  }
-
   const accessToken = getSupabaseAccessToken();
+
+  let response;
+
   try {
-    const proxyResponse = await fetch('/api/assemblies', {
+    response = await fetch('/api/assemblies', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+        ...(accessToken
+          ? { Authorization: `Bearer ${accessToken}` }
+          : {})
       },
       body: JSON.stringify(safeAssembly)
     });
-    const text = await proxyResponse.text();
-    let proxyData;
-    try {
-      proxyData = text ? JSON.parse(text) : null;
-    } catch (_parseErr) {
-      proxyData = text;
-    }
-    if (proxyResponse.ok && proxyData) {
-      return postProcessRow(Array.isArray(proxyData) ? proxyData[0] : proxyData);
-    }
-  } catch (proxyError) {
-    console.warn('scheduleAssemblyDb API proxy falhou:', proxyError?.message || proxyError);
+  } catch (networkError) {
+    throw new Error(
+      `Falha ao acessar o servidor de assembleias: ${
+        networkError.message || networkError
+      }`
+    );
   }
 
+  const responseText = await response.text();
+
+  let responseData = null;
+
   try {
-    const data = await supabaseFetch('/scheduled_assemblies', {
-      method: 'POST',
-      headers: { Prefer: 'return=representation,resolution=merge-duplicates' },
-      body: JSON.stringify(safeAssembly)
-    });
-    return postProcessRow(Array.isArray(data) ? data[0] : data);
-  } catch (directError) {
-    const directMsg = String(directError?.message || directError || '');
-    const isFkOrColumn = /foreign key|cep_fk|violates foreign|column.*not found|condominium_cep|could not find.*column/i.test(directMsg);
-    if (isFkOrColumn || /row.level|rls|policy/i.test(directMsg)) {
-      const fallbackRow = {
-        ...safeAssembly,
-        id: safeAssembly.id || 'local-' + Date.now(),
-        public_id: safeAssembly.public_id || cryptoRandomUuid(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      return fallbackRow;
-    }
-    let userMessage = directMsg || 'Erro desconhecido';
-    if (/jwt|token|autentic/i.test(userMessage)) {
-      userMessage = 'Sessão expirada. Faça login novamente e tente agendar a assembleia.';
-    }
-    const err = new Error(userMessage);
-    err.cause = { directError };
-    throw err;
+    responseData = responseText
+      ? JSON.parse(responseText)
+      : null;
+  } catch (_) {
+    responseData = responseText;
   }
+
+  if (!response.ok) {
+    const serverMessage =
+      responseData && typeof responseData === 'object'
+        ? responseData.error || responseData.message
+        : responseData;
+
+    throw new Error(
+      serverMessage ||
+      `Erro HTTP ${response.status} ao salvar a assembleia.`
+    );
+  }
+
+  const savedAssembly = Array.isArray(responseData)
+    ? responseData[0]
+    : responseData;
+
+  if (!savedAssembly || !savedAssembly.id) {
+    throw new Error(
+      'O servidor não confirmou a gravação da assembleia no banco de dados.'
+    );
+  }
+
+  return savedAssembly;
 }
 
 function normalizeCondominiumIdentifier(value) {

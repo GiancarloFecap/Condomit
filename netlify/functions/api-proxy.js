@@ -27,6 +27,23 @@ const RESET_TOKEN_TTL_MS = 5 * 60 * 1000;
 const SUPPORT_PAYMENT_MAILTO = 'mailto:contato.condomit@gmail.com?subject=Suporte%20Condomit%20-%20Pagamento';
 const paymentConfirmationEmailAttempts = new Map();
 
+function normalizeCepForDatabase(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+
+  if (digits.length !== 8) {
+    return '';
+  }
+
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
+function hasSupabaseAdminConfig() {
+  return Boolean(
+    SUPABASE_URL &&
+    SUPABASE_SERVICE_ROLE_KEY
+  );
+}
+
 function normalizeMercadoPagoEnvironment(value) {
   const normalized = String(value || '').trim().toLowerCase();
   return ['production', 'prod', 'live'].includes(normalized) ? 'production' : 'test';
@@ -1422,10 +1439,23 @@ async function handleAdminSignupUser(event, body) {
 async function handleCreateScheduledAssembly(event, body) {
   const payload = body || {};
 
+  if (!hasSupabaseAdminConfig()) {
+  return {
+    statusCode: 500,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      error:
+        'SUPABASE_SERVICE_ROLE_KEY não está configurada no servidor.'
+    })
+  };
+}
+
   const title = String(payload.title || '').trim();
   const date = String(payload.date || '').trim();
   const startTime = String(payload.start_time || payload.startTime || '').trim();
-  const cep = String(payload.cep || '').replace(/\D/g, '');
+  const cep = normalizeCepForDatabase(payload.cep);
   const createdBy = String(payload.created_by || payload.createdBy || '').trim().toLowerCase();
 
   if (!title || !date || !startTime || !cep) {
@@ -1510,7 +1540,7 @@ async function handleCreateScheduledAssembly(event, body) {
         apikey: SUPABASE_SERVICE_ROLE_KEY,
         Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         'Content-Type': 'application/json',
-        Prefer: 'return=representation,resolution=merge-duplicates'
+        Prefer: 'return=representation'
       },
       body: JSON.stringify(insertPayload)
     });

@@ -135,16 +135,67 @@
   }
 
   function isOrganizer(user, assembly) {
-    user = user || getCurrentUser();
-    if (!user || !assembly) return false;
-    if (isSindico(user)) return true;
-    const createdBy = assembly.created_by || assembly.assembly_created_by || assembly.organizer_id || assembly.owner_id;
-    if (createdBy && user.id && String(createdBy) === String(user.id)) return true;
-    if (assembly.organizers && Array.isArray(assembly.organizers)) {
-      return assembly.organizers.some(o => (typeof o === 'string' ? o : (o.id || o.user_id)) === String(user.id));
-    }
+  user = user || getCurrentUser();
+
+  if (!user || !assembly) {
     return false;
   }
+
+  if (isSindico(user)) {
+    return true;
+  }
+
+  const createdBy =
+    assembly.created_by ||
+    assembly.assembly_created_by ||
+    assembly.organizer_id ||
+    assembly.owner_id;
+
+  const userIdentifiers = [
+    user.id,
+    user.email
+  ]
+    .filter(Boolean)
+    .map((value) =>
+      String(value).toLowerCase()
+    );
+
+  if (
+    createdBy &&
+    userIdentifiers.includes(
+      String(createdBy).toLowerCase()
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    assembly.organizers &&
+    Array.isArray(assembly.organizers)
+  ) {
+    return assembly.organizers.some(
+      (organizer) => {
+        const identifier =
+          typeof organizer === 'string'
+            ? organizer
+            : (
+                organizer.id ||
+                organizer.user_id ||
+                organizer.email
+              );
+
+        return (
+          identifier &&
+          userIdentifiers.includes(
+            String(identifier).toLowerCase()
+          )
+        );
+      }
+    );
+  }
+
+  return false;
+}
 
   async function checkAssemblyAccess(user, assemblyCep) {
     user = user || getCurrentUser();

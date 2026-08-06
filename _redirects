@@ -1,4 +1,4 @@
-/api/*                              /.netlify/functions/api-proxy   200!
+/api/* /.netlify/functions/api-proxy/api/:splat 200!
 /pages/redefinir-senha.html         /pages/redefinir-senha.html     200
 /pages/*                            /pages/:splat                   200
 /scripts/*                          /scripts/:splat                 200

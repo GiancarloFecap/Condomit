@@ -7,9 +7,28 @@ const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
 const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
 const LIVEKIT_URL = process.env.LIVEKIT_URL || process.env.VITE_LIVEKIT_URL;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+let supabaseClient = null;
+
+function getSupabaseAdmin() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
+    return null;
+  }
+
+  if (!supabaseClient) {
+    supabaseClient = createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+  }
+
+  return supabaseClient;
+}
 
 function httpError(statusCode, message, details = null) {
   const body = { error: message };
@@ -45,6 +64,15 @@ function getUserCondominiumCEP(user) {
 
 function normalizeCep(value) {
   return String(value || '').replace(/\D/g, '');
+}
+
+const supabase = getSupabaseAdmin();
+
+if (!supabase) {
+  return httpError(
+    500,
+    'Supabase administrativo não configurado no servidor.'
+  );
 }
 
 exports.handler = async (event, context) => {
