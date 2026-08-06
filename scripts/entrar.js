@@ -55,20 +55,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             const persistent = { email: user.email, name: user.name || null, type: user.type || null, t: Date.now() };
             localStorage.setItem('condominiumPersistentUser', JSON.stringify(persistent));
         } catch(_) {}
-        try {
-            if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
-        } catch(avatarErr) {
-            console.warn('Erro ao sincronizar avatar (ignorado):', avatarErr);
-        }
+        if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
 
         if (type === 'sindico') {
-            let approvedPayment = null;
-            try {
-                approvedPayment = await fetchApprovedPayment(user.email);
-            } catch (paymentErr) {
-                console.warn('Erro ao checar pagamento (tratado):', paymentErr);
-                approvedPayment = null;
-            }
+            const approvedPayment = await fetchApprovedPayment(user.email);
 
             if (approvedPayment) {
                 if (user.condominium) {
@@ -379,36 +369,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 authData.session.access_token
             );
 
-            const authEmailNormalized = String(authData.user.email || '').trim().toLowerCase();
-            let rawUser = null;
-            if (typeof window.fetchUserByEmail === 'function') {
-                try {
-                    rawUser = await window.fetchUserByEmail(authData.user.email);
-                } catch (byEmailErr) {
-                    console.warn('[entrar] fetchUserByEmail falhou (tentando auth_user_id fallback):', byEmailErr?.message || byEmailErr);
-                    rawUser = null;
-                }
-            } else {
-                try {
-                    rawUser = await fetchUserByEmail(authData.user.email);
-                } catch (byEmailErr) {
-                    console.warn('[entrar] fallback fetchUserByEmail falhou:', byEmailErr?.message || byEmailErr);
-                    rawUser = null;
-                }
-            }
-
-            if (!rawUser && typeof window.fetchUserByAuthUserId === 'function' && authData.user?.id) {
-                try {
-                    rawUser = await window.fetchUserByAuthUserId(authData.user.id);
-                    if (rawUser) console.log('[entrar] Perfil carregado via auth_user_id (email query falhou).');
-                } catch (byIdErr) {
-                    console.warn('[entrar] fetchUserByAuthUserId falhou:', byIdErr?.message || byIdErr);
-                    rawUser = null;
-                }
-            }
+            const rawUser = await fetchUserByEmail(authData.user.email);
 
             if (!rawUser) {
-                console.warn('[entrar] Nenhuma busca retornou perfil. authEmail=', authEmailNormalized, 'auth_user_id=', authData.user?.id);
                 await window.supabase.auth.signOut();
                 sessionStorage.removeItem('sb-session');
                 sessionStorage.removeItem('sb-access-token');
@@ -417,8 +380,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     title: 'Perfil não encontrado',
                     message:
                         'A autenticação foi realizada, mas o perfil do usuário não foi localizado no sistema.\n\n' +
-                        'Entre em contato com o suporte se o problema persistir.\n\n' +
-                        `Dados da autenticação:\nE-mail: ${authData.user.email}\nID: ${authData.user.id}`,
+                        'Entre em contato com o suporte se o problema persistir.',
                     type: 'error'
                 });
                 return;
@@ -454,8 +416,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             await redirectByUserType(loadedUser);
         } catch (error) {
             console.error('Erro ao fazer login:', error);
-            const detail = error?.message ? ` ${error.message}` : '';
-            showToast('Erro ao fazer login. Tente novamente.' + detail, 'error');
+            showToast('Erro ao fazer login. Tente novamente.', 'error');
         } finally {
             if (document.body.contains(loginForm)) {
                 setLoginSubmitting(false);

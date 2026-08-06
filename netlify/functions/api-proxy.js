@@ -1420,17 +1420,13 @@ async function handleAdminSignupUser(event, body) {
 }
 
 async function handleCreateScheduledAssembly(event, body) {
-  const rawPayload = body || {};
-  delete rawPayload.condominium_cep;
-  delete rawPayload.condominiumCep;
-  const payload = { ...rawPayload };
+  const payload = body || {};
 
   const title = String(payload.title || '').trim();
   const date = String(payload.date || '').trim();
   const startTime = String(payload.start_time || payload.startTime || '').trim();
   const cep = String(payload.cep || '').replace(/\D/g, '');
-  const createdByRaw = String(payload.created_by || payload.createdBy || '').trim();
-  const createdBy = createdByRaw ? createdByRaw.toLowerCase() : '';
+  const createdBy = String(payload.created_by || payload.createdBy || '').trim().toLowerCase();
 
   if (!title || !date || !startTime || !cep) {
     return {
@@ -1475,99 +1471,39 @@ async function handleCreateScheduledAssembly(event, body) {
     }
   }
 
-  const matchingUsers = await fetchSupabaseUsersByEmail(createdBy).catch(() => []);
-  const isKnownUser = Array.isArray(matchingUsers) && matchingUsers.length > 0;
-
-  if (!callerEmail && !isKnownUser) {
+  if (callerEmail && callerEmail !== createdBy) {
     return {
       statusCode: 403,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Usuário criador não encontrado. Refaça o login e tente novamente.' })
+      body: JSON.stringify({ error: 'O usuário autenticado não corresponde ao criador informado.' })
     };
   }
 
-  if (callerEmail && isKnownUser && callerEmail !== createdBy) {
-    const sameUserByCpf = matchingUsers.some((u) => {
-      const leftEmail = String(u.email || '').toLowerCase();
-      const rightEmail = String(createdBy || '').toLowerCase();
-      const caller = String(callerEmail || '').toLowerCase();
-      return leftEmail === rightEmail && leftEmail === caller;
-    });
-    const callersRecords = matchingUsers.filter((u) => {
-      const e = String(u.email || '').toLowerCase();
-      return e === callerEmail;
-    });
-    if (!sameUserByCpf && callersRecords.length === 0) {
+  if (!callerEmail) {
+    const matchingUsers = await fetchSupabaseUsersByEmail(createdBy);
+    const isKnownUser = Array.isArray(matchingUsers) && matchingUsers.length > 0;
+    if (!isKnownUser) {
       return {
         statusCode: 403,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'O usuário autenticado não corresponde ao criador informado.' })
+        body: JSON.stringify({ error: 'Usuário criador não encontrado. Refaça o login e tente novamente.' })
       };
     }
   }
 
-  try {
-    const existingCondos = await fetch(`${SUPABASE_URL}/rest/v1/condominiums?select=*&cep=eq.${encodeURIComponent(cep)}&limit=1`, {
-      headers: {
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-      }
-    }).then(async (r) => (r.ok ? (r.json().catch(() => []) || []) : [])).catch(() => []);
-    if (!Array.isArray(existingCondos) || existingCondos.length === 0) {
-      try {
-        await proxySupabaseRequest({
-          cep,
-          condominium_id: cep,
-          condominium_name: `Condomínio ${cep}`
-        }, '/condominiums', 'POST');
-      } catch (_) {}
-    }
-  } catch (_) {}
-
-  const validStatuses = ['agendada', 'em_andamento', 'encerrada', 'cancelada'];
-  const requestedStatus = String(payload.status || 'agendada').trim().toLowerCase();
-  const safeStatus = validStatuses.includes(requestedStatus) ? requestedStatus : 'agendada';
-  const nowIso = new Date().toISOString();
-
-  const baseInsert = {
+  const insertPayload = {
     cep,
-    condominium_cep: cep,
     title,
-    description: (payload.description === undefined || payload.description === null) ? null : payload.description,
+    description: payload.description ?? null,
     date,
     start_time: startTime,
     end_time: payload.end_time || payload.endTime || startTime,
     created_by: createdBy,
     assembly_type: payload.assembly_type || payload.assemblyType || 'ordinaria',
-    status: safeStatus,
-    updated_at: payload.updated_at || nowIso,
-    created_at: payload.created_at || nowIso
+    status: payload.status || 'agendada'
   };
 
-  const livekitRoom = String(payload.livekit_room_name || payload.livekitRoomName || '').trim();
-  if (livekitRoom) baseInsert.livekit_room_name = livekitRoom;
-  const startedAt = payload.started_at || payload.startedAt;
-  if (startedAt) baseInsert.started_at = startedAt;
-  const endedAt = payload.ended_at || payload.endedAt;
-  if (endedAt) baseInsert.ended_at = endedAt;
-  const publicId = payload.public_id || payload.publicId;
-  if (publicId) baseInsert.public_id = publicId;
-
-  const insertVariants = [
-    { ...baseInsert },
-    (() => {
-      const v = { ...baseInsert };
-      delete v.condominium_cep;
-      return v;
-    })(),
-    (() => {
-      const v = { ...baseInsert };
-      delete v.cep;
-      return v;
-    })()
-  ];
-
-  async function tryInsert(insertPayload) {
+  try {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/scheduled_assemblies`, {
       method: 'POST',
       headers: {
@@ -1578,73 +1514,29 @@ async function handleCreateScheduledAssembly(event, body) {
       },
       body: JSON.stringify(insertPayload)
     });
+
     const text = await response.text();
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }
-    return { ok: response.ok, status: response.status, data, message: (data && (data.message || data.error)) || `HTTP ${response.status}` };
-  }
 
-  let lastResult = null;
-  let inserted = null;
-  for (let i = 0; i < insertVariants.length; i++) {
-    const variant = insertVariants[i];
-    try {
-      const attempt = await tryInsert(variant);
-      lastResult = attempt;
-      if (attempt.ok && attempt.data) {
-        inserted = attempt.data;
-        break;
-      }
-      const msg = String(attempt.message || '').toLowerCase();
-      if (attempt.status === 400 && (
-        /column.*does not exist|column.*not found|schema cache|scheduled_assemblies_cep_fk|foreign key/.test(msg)
-      )) {
-        continue;
-      }
-      if (attempt.status < 500) {
-        break;
-      }
-    } catch (err) {
-      lastResult = { ok: false, status: 500, data: null, message: err?.message || String(err) };
-    }
-  }
-
-  try {
-    if (inserted) {
-      const result = Array.isArray(inserted) ? inserted[0] : (inserted || baseInsert);
+    if (!response.ok) {
+      const message = (data && (data.message || data.error)) || `Erro HTTP ${response.status} ao salvar`;
+      console.error('[AssemblyCreate] Supabase insert error:', response.status, message);
       return {
-        statusCode: 200,
+        statusCode: response.status >= 400 && response.status < 500 ? response.status : 500,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result)
+        body: JSON.stringify({ error: message })
       };
     }
 
-    const finalMessage = lastResult?.message || 'Falha ao salvar';
-    console.error('[AssemblyCreate] Todas tentativas de insert falharam. Final error:', finalMessage);
-
-    if (/column.*not found|condominium_cep|could not find.*column|foreign key|scheduled_assemblies_cep_fk/i.test(String(finalMessage || ''))) {
-      const safeFallback = {
-        ...baseInsert,
-        id: baseInsert.id || 'netlify-' + Date.now(),
-        public_id: baseInsert.public_id || (crypto.randomUUID ? crypto.randomUUID() : ('uuid-' + Date.now())),
-        created_at: baseInsert.created_at || nowIso,
-        updated_at: nowIso,
-        _proxyFallback: true
-      };
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(safeFallback)
-      };
-    }
-
+    const result = Array.isArray(data) ? data[0] : (data || insertPayload);
     return {
-      statusCode: (lastResult && lastResult.status >= 400 && lastResult.status < 500) ? lastResult.status : 500,
+      statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: finalMessage })
+      body: JSON.stringify(result)
     };
   } catch (err) {
-    console.error('[AssemblyCreate] Final try/catch error:', err.message);
+    console.error('[AssemblyCreate] Network/Supabase error:', err.message);
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -1756,7 +1648,7 @@ function parsePath(event) {
       const rest = p.slice(apiProxyIndex + '/.netlify/functions/api-proxy'.length);
       return rest.startsWith('/') ? rest : '/' + rest;
     }
-    if (p.startsWith('/users') || p.startsWith('/register') || p.startsWith('/condominiums') || p.startsWith('/pagamento') || p.startsWith('/reserva') || p.startsWith('/plano') || p.startsWith('/forgot') || p.startsWith('/reset') || p.startsWith('/user_condominiums') || p.startsWith('/esqueceu-senha') || p.startsWith('/mercadopago') || p.startsWith('/assemblies') || p.startsWith('/scheduled-assemblies') || p.startsWith('/agendar-assembleia') || p.startsWith('/auth/')) {
+    if (p.startsWith('/users') || p.startsWith('/register') || p.startsWith('/condominiums') || p.startsWith('/pagamento') || p.startsWith('/reserva') || p.startsWith('/plano') || p.startsWith('/forgot') || p.startsWith('/reset') || p.startsWith('/user_condominiums') || p.startsWith('/esqueceu-senha') || p.startsWith('/mercadopago')) {
       return p;
     }
   }
@@ -1837,150 +1729,12 @@ exports.handler = async (event, context) => {
     }
 
     if (pathname === '/users' && rawMethod === 'GET') {
-      const qs = eventQueryString(query);
-      if (qs) {
-        const hasCpfFilter = /cpf[\s]*=/i.test(qs) || /cpf\.(eq|like|ilike|neq|gt|lt|in|cs)\./i.test(qs);
-        if (hasCpfFilter) {
-          const normalized = (query.cpf || '').replace(/\D/g, '');
-          const qsClean = qs
-            .split('&')
-            .filter(p => {
-              const k = p.split('=')[0] || '';
-              return !/^select[\.]?$/i.test(k) && !/^select=/i.test(k) && !/^apikey=/i.test(k) && !/^authorization=/i.test(k);
-            })
-            .join('&');
-          const cpfQueryParts = [
-            `cpf=eq.${encodeURIComponent(query.cpf || '')}`,
-            normalized ? `cpf=ilike.*${encodeURIComponent(normalized)}*` : null,
-            normalized ? `cpf=eq.${encodeURIComponent(`${normalized.slice(0,3)}.${normalized.slice(3,6)}.${normalized.slice(6,9)}-${normalized.slice(9)}`)}` : null
-          ].filter(Boolean);
-          const userTargets = [];
-          for (const part of cpfQueryParts) {
-            userTargets.push({ path: `/users?select=*`, scope: 'default search path', extra: part });
-            userTargets.push({ path: `/public.users?select=*`, scope: 'explicit public.users', extra: part });
-          }
-          let lastOkEmpty = null;
-          let lastError = null;
-          for (let i = 0; i < userTargets.length; i++) {
-            const base = userTargets[i].path;
-            const extra = userTargets[i].extra || '';
-            const target = extra ? `${base}&${extra}` : base;
-            try {
-              const result = await proxySupabaseRequest(null, target, 'GET');
-              if (result.status >= 200 && result.status < 400 && Array.isArray(result.data)) {
-                if (result.data.length > 0) {
-                  return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
-                }
-                if (!lastOkEmpty) lastOkEmpty = result;
-              } else {
-                lastError = result;
-              }
-            } catch (err) {
-              lastError = { status: 500, data: [{ error: err?.message || String(err) }] };
-            }
-          }
-          if (lastOkEmpty) {
-            return { statusCode: lastOkEmpty.status || 200, headers, body: JSON.stringify([]) };
-          }
-          if (lastError) {
-            return { statusCode: lastError.status || 500, headers, body: JSON.stringify(lastError.data || []) };
-          }
-          return { statusCode: 200, headers, body: JSON.stringify([]) };
-        }
-      }
-
       const email = query.email;
-      if (email) {
-        const normalizedEmail = String(email).trim().toLowerCase();
-        const emailQueryParts = [
-          `email=eq.${encodeURIComponent(normalizedEmail)}`,
-          `email=ilike.*${encodeURIComponent(normalizedEmail)}*`
-        ];
-        if (normalizedEmail !== String(email).trim()) {
-          emailQueryParts.push(`email=eq.${encodeURIComponent(String(email).trim())}`);
-        }
-        const userTargets = [];
-        for (const part of emailQueryParts) {
-          userTargets.push({ path: `/users?select=*`, scope: 'default search path', extra: part });
-          userTargets.push({ path: `/public.users?select=*`, scope: 'explicit public.users', extra: part });
-        }
-        let lastOkEmpty = null;
-        let lastError = null;
-        let foundData = null;
-        for (let i = 0; i < userTargets.length; i++) {
-          const base = userTargets[i].path;
-          const extra = userTargets[i].extra || '';
-          const target = extra ? `${base}&${extra}` : base;
-          try {
-            const result = await proxySupabaseRequest(null, target, 'GET');
-            if (result.status >= 200 && result.status < 400 && Array.isArray(result.data)) {
-              if (result.data.length > 0) {
-                const match = result.data.find(u => u && String(u.email || '').trim().toLowerCase() === normalizedEmail);
-                if (match) {
-                  foundData = [match];
-                  break;
-                }
-                if (!foundData) foundData = result.data.slice(0, 1);
-                if (!lastOkEmpty) lastOkEmpty = { status: result.status, data: [] };
-              } else {
-                if (!lastOkEmpty) lastOkEmpty = result;
-              }
-            } else {
-              lastError = result;
-            }
-          } catch (err) {
-            lastError = { status: 500, data: [{ error: err?.message || String(err) }] };
-          }
-        }
-        if (foundData) {
-          return { statusCode: 200, headers, body: JSON.stringify(foundData) };
-        }
-        if (lastOkEmpty) {
-          return { statusCode: lastOkEmpty.status || 200, headers, body: JSON.stringify([]) };
-        }
-        if (lastError) {
-          return { statusCode: lastError.status || 500, headers, body: JSON.stringify(lastError.data || []) };
-        }
-        return { statusCode: 200, headers, body: JSON.stringify([]) };
+      if (!email) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro email é obrigatório' }) };
       }
-
-      const authUserId = query.auth_user_id;
-      if (authUserId) {
-        const cleanId = String(authUserId).trim();
-        const userTargets = [
-          { path: `/users?select=*`, scope: 'default search path', extra: `auth_user_id=eq.${encodeURIComponent(cleanId)}` },
-          { path: `/public.users?select=*`, scope: 'explicit public.users', extra: `auth_user_id=eq.${encodeURIComponent(cleanId)}` }
-        ];
-        let lastOkEmpty = null;
-        let lastError = null;
-        for (let i = 0; i < userTargets.length; i++) {
-          const base = userTargets[i].path;
-          const extra = userTargets[i].extra || '';
-          const target = `${base}&${extra}`;
-          try {
-            const result = await proxySupabaseRequest(null, target, 'GET');
-            if (result.status >= 200 && result.status < 400 && Array.isArray(result.data)) {
-              if (result.data.length > 0) {
-                return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
-              }
-              if (!lastOkEmpty) lastOkEmpty = result;
-            } else {
-              lastError = result;
-            }
-          } catch (err) {
-            lastError = { status: 500, data: [{ error: err?.message || String(err) }] };
-          }
-        }
-        if (lastOkEmpty) {
-          return { statusCode: lastOkEmpty.status || 200, headers, body: JSON.stringify([]) };
-        }
-        if (lastError) {
-          return { statusCode: lastError.status || 500, headers, body: JSON.stringify(lastError.data || []) };
-        }
-      }
-
-      const all = await proxySupabaseRequest(null, '/users?select=*&order=created_at.desc&limit=300', 'GET');
-      return { statusCode: all.status, headers, body: JSON.stringify(all.data) };
+      const result = await proxySupabaseRequest(null, `/users?select=*&email=eq.${encodeURIComponent(email)}`, 'GET');
+      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
     }
 
     if (pathname === '/users' && rawMethod === 'PATCH') {

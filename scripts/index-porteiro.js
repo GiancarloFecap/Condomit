@@ -39,22 +39,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const sessionKey = `porteiro:session:${email}:${todayStr}`;
         const condoId = currentUser.condominium?.condominium_id || currentUser.condominium?.cep || '';
         const everKey = `porteiro:entry:${email}:${condoId}`;
-        const boundPersistenceKey = `porteiro:confirmed-entry:${email}:${condoId}`;
         const hasPassedEntry = !!sessionStorage.getItem(sessionKey) ||
-            (condoId ? !!sessionStorage.getItem(everKey) : false) ||
-            (condoId ? !!localStorage.getItem(boundPersistenceKey) : false);
-        const hasStrongCondoLink =
-            !!(currentUser.condominium && (currentUser.condominium.condominium_id || currentUser.condominium.cep));
-        if (!hasPassedEntry && !hasStrongCondoLink) {
+            (condoId ? !!sessionStorage.getItem(everKey) : false);
+        if (!hasPassedEntry) {
             window.location.href = 'entrar-condominio-porteiro.html';
             return;
-        }
-        if (!hasPassedEntry && hasStrongCondoLink) {
-            sessionStorage.setItem(sessionKey, '1');
-            if (condoId) {
-                sessionStorage.setItem(everKey, '1');
-                try { localStorage.setItem(boundPersistenceKey, '1'); } catch (_) {}
-            }
         }
     } catch (_) {}
 

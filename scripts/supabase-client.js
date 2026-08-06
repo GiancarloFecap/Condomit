@@ -230,115 +230,26 @@ async function supabaseFetch(path, options = {}) {
 }
 
 async function fetchUserByEmail(email) {
-  if (!email) return null;
-  const normalizedEmail = String(email).trim().toLowerCase();
-  const proxyUrls = [
-    `/api/users?email=${encodeURIComponent(normalizedEmail)}&select=*`,
-    `/.netlify/functions/api-proxy/api/users?email=${encodeURIComponent(normalizedEmail)}&select=*`
-  ];
-  const directUrls = [
-    `/users?select=*&email=eq.${encodeURIComponent(normalizedEmail)}`,
-    `/users?select=*&email=ilike.*${encodeURIComponent(normalizedEmail)}*`,
-    `/public.users?select=*&email=eq.${encodeURIComponent(normalizedEmail)}`,
-    `/public.users?select=*&email=ilike.*${encodeURIComponent(normalizedEmail)}*`
-  ];
-  if (normalizedEmail !== String(email).trim()) {
-    directUrls.push(`/users?select=*&email=eq.${encodeURIComponent(String(email).trim())}`);
-    directUrls.push(`/public.users?select=*&email=eq.${encodeURIComponent(String(email).trim())}`);
-  }
-  const allUrls = [...proxyUrls, ...directUrls];
-  let lastError = null;
-
-  for (const url of allUrls) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        lastError = new Error(`HTTP ${response.status} em ${url}`);
-        continue;
-      }
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        if (data.length > 0) {
-          const match = data.find(u => (u && String(u.email || '').trim().toLowerCase() === normalizedEmail));
-          if (match) return match;
-          return data[0];
-        }
-        continue;
-      }
-      if (data && typeof data === 'object') {
-        if ((data.email && String(data.email).trim().toLowerCase() === normalizedEmail) || data.id) {
-          return data;
-        }
-      }
-    } catch (err) {
-      lastError = err;
-      console.warn(`[fetchUserByEmail] Falhou em ${url}:`, err?.message || err);
-    }
-  }
-
   try {
-    const scanTargets = [
-      `/api/users?select=*&order=created_at.desc&limit=300`,
-      `/.netlify/functions/api-proxy/api/users?select=*&order=created_at.desc&limit=300`,
-      `/users?select=*&order=created_at.desc&limit=300`
-    ];
-    for (const fallbackTarget of scanTargets) {
-      const response = await fetch(fallbackTarget);
-      if (!response.ok) continue;
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        const found = data.find(u => (u.email && String(u.email).trim().toLowerCase() === normalizedEmail));
-        if (found) return found;
+    const response = await fetch(`/api/users?email=${encodeURIComponent(email)}`);
+    const contentType = response.headers && response.headers.get ? response.headers.get('content-type') : '';
+    if (!response.ok || (contentType && !contentType.includes('application/json'))) {
+      const text = await response.text().catch(() => '');
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (_) {}
+      if (data && (typeof data === 'object') && (Array.isArray(data) || data.email || data.error === undefined)) {
+        return Array.isArray(data) && data.length ? data[0] : (data && !Array.isArray(data) && data.email ? data : null);
       }
+      throw new Error(data?.error || `Erro ao buscar usuário (HTTP ${response.status})`);
     }
-  } catch (fallbackErr) {
-    console.warn('[fetchUserByEmail] Fallback scan falhou:', fallbackErr?.message || fallbackErr);
+    const data = await response.json();
+    return Array.isArray(data) && data.length ? data[0] : null;
+  } catch (error) {
+    if (error && error.name === 'SyntaxError') {
+      throw new Error('Erro ao buscar usuário: resposta inesperada do servidor');
+    }
+    throw error;
   }
-
-  return null;
-}
-
-async function fetchUserByAuthUserId(authUserId) {
-  if (!authUserId) return null;
-  const cleanId = String(authUserId).trim();
-  const query = `auth_user_id=eq.${encodeURIComponent(cleanId)}&select=*`;
-  const urls = [
-    `/.netlify/functions/api-proxy/api/users?${query}`,
-    `/api/users?${query}`,
-    `/users?${query}`,
-    `/public.users?${query}`
-  ];
-  for (const url of urls) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) continue;
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        if (data.length > 0 && data[0].email) return data[0];
-      } else if (data && data.email) {
-        return data;
-      }
-    } catch (err) {
-      console.warn(`[fetchUserByAuthUserId] Falhou em ${url}:`, err?.message || err);
-    }
-  }
-  try {
-    const scanTargets = [
-      `/api/users?select=*&order=created_at.desc&limit=300`,
-      `/.netlify/functions/api-proxy/api/users?select=*&order=created_at.desc&limit=300`,
-      `/users?select=*&order=created_at.desc&limit=300`
-    ];
-    for (const fallbackTarget of scanTargets) {
-      const response = await fetch(fallbackTarget);
-      if (!response.ok) continue;
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        const found = data.find(u => u && String(u.auth_user_id || '').toLowerCase() === cleanId.toLowerCase());
-        if (found) return found;
-      }
-    }
-  } catch (_) {}
-  return null;
 }
 
 function formatCpfMasked(raw) {
@@ -353,76 +264,51 @@ async function fetchUserByCpf(cpf) {
 
   const maskedCpf = formatCpfMasked(normalizedCpf);
 
-  const proxyUrls = [
-    '/api/users',
-    '/.netlify/functions/api-proxy/api/users'
-  ];
-
-  for (let p = 0; p < proxyUrls.length; p++) {
-    const baseUrl = proxyUrls[p];
-    const variants = [
-      `${baseUrl}?cpf=eq.${encodeURIComponent(normalizedCpf)}&select=*`,
-      `${baseUrl}?cpf=eq.${encodeURIComponent(maskedCpf)}&select=*`,
-      `${baseUrl}?cpf=ilike.*${encodeURIComponent(normalizedCpf)}*&select=*&limit=100`
-    ];
-    for (let v = 0; v < variants.length; v++) {
-      try {
-        const r = await fetch(variants[v]);
-        if (!r.ok) continue;
-        const ct = r.headers.get ? r.headers.get('content-type') : '';
-        if (!ct || !ct.includes('application/json')) continue;
-        const data = await r.json();
-        if (!Array.isArray(data)) continue;
-        const exact = data.find((u) => String(u?.cpf || '').replace(/\D/g, '') === normalizedCpf);
-        if (exact) return exact;
-        if (data.length === 1) return data[0];
-        if (data.length > 0) {
-          return data[0];
-        }
-      } catch (_) {}
-    }
-  }
-
-  const directAttempts = [
-    `/users?select=*&cpf=eq.${encodeURIComponent(normalizedCpf)}&limit=5`,
-    `/users?select=*&cpf=eq.${encodeURIComponent(maskedCpf)}&limit=5`,
-    `/public.users?select=*&cpf=eq.${encodeURIComponent(normalizedCpf)}&limit=5`,
-    `/public.users?select=*&cpf=eq.${encodeURIComponent(maskedCpf)}&limit=5`
-  ];
-  for (let i = 0; i < directAttempts.length; i++) {
-    try {
-      const data = await supabaseFetch(directAttempts[i]);
-      if (Array.isArray(data) && data.length) {
-        const exact = data.find((u) => String(u?.cpf || '').replace(/\D/g, '') === normalizedCpf);
-        return exact || data[0];
+  try {
+    const directResponse = await fetch(`/api/users?cpf=eq.${encodeURIComponent(normalizedCpf)}`);
+    if (directResponse.ok) {
+      const contentType = directResponse.headers.get ? directResponse.headers.get('content-type') : '';
+      if (contentType && contentType.includes('application/json')) {
+        const data = await directResponse.json();
+        if (Array.isArray(data) && data.length) return data[0];
       }
+    }
+  } catch (_) {}
+
+  try {
+    const maskedResponse = await fetch(`/api/users?cpf=eq.${encodeURIComponent(maskedCpf)}`);
+    if (maskedResponse.ok) {
+      const contentType = maskedResponse.headers.get ? maskedResponse.headers.get('content-type') : '';
+      if (contentType && contentType.includes('application/json')) {
+        const data = await maskedResponse.json();
+        if (Array.isArray(data) && data.length) return data[0];
+      }
+    }
+  } catch (_) {}
+
+  const attempts = [
+    `/users?select=*&cpf=eq.${encodeURIComponent(normalizedCpf)}&limit=1`,
+    `/users?select=*&cpf=eq.${encodeURIComponent(maskedCpf)}&limit=1`
+  ];
+  for (let i = 0; i < attempts.length; i++) {
+    try {
+      const data = await supabaseFetch(attempts[i]);
+      if (Array.isArray(data) && data.length) return data[0];
     } catch (error) {
       console.warn(`Tentativa ${i + 1} de busca por CPF (Supabase direto) falhou:`, error?.message || error);
     }
   }
-
   try {
-    const selects = [
-      `/users?select=*&order=created_at.desc&limit=400`,
-      `/public.users?select=*&order=created_at.desc&limit=400`
-    ];
-    for (let s = 0; s < selects.length; s++) {
-      try {
-        const all = await supabaseFetch(selects[s]);
-        if (!Array.isArray(all) || !all.length) continue;
-        const match = all.find((user) => String(user?.cpf || '').replace(/\D/g, '') === normalizedCpf);
-        if (!match) continue;
-        try {
-          const id = match.id;
-          if (!id) return match;
-          const full = await supabaseFetch(`/users?select=*&id=eq.${encodeURIComponent(id)}&limit=1`);
-          return Array.isArray(full) && full.length ? full[0] : match;
-        } catch (_) {
-          return match;
-        }
-      } catch (_) {}
+    const all = await supabaseFetch(`/users?select=cpf,name,phone,email,condominium,id,type,cep,condominium_cep,condominium_id,condominiumId`);
+    if (!Array.isArray(all) || !all.length) return null;
+    const match = all.find((user) => String(user?.cpf || '').replace(/\D/g, '') === normalizedCpf);
+    if (!match) return null;
+    try {
+      const complete = await supabaseFetch(`/users?select=*&id=eq.${encodeURIComponent(match.id)}&limit=1`);
+      return Array.isArray(complete) && complete.length ? complete[0] : match;
+    } catch (_) {
+      return match;
     }
-    return null;
   } catch (error) {
     console.error('Erro ao buscar usuário por CPF (fallback):', error);
     return null;
@@ -505,106 +391,23 @@ async function createCondominium(condo) {
   return Array.isArray(data) ? data[0] : data;
 }
 
-async function createVisitor(visitor, currentUser) {
-  const normalizedCpf = String(visitor?.cpf || '').replace(/\D/g, '');
-  const normalizedResponsible = String(visitor?.responsible_cpf || '').replace(/\D/g, '');
-  const user = currentUser || (() => {
-    try {
-      const raw = sessionStorage.getItem('condominiumUser') || localStorage.getItem('condominiumPersistentUser') || '';
-      return raw ? JSON.parse(raw) : null;
-    } catch (_) { return null; }
-  })();
-
-  const condoCepClean = (() => {
-    const candidates = [
-      user?.condominium?.cep,
-      user?.condominium?.condominium_id,
-      user?.condominium?.condominiumId,
-      user?.cep,
-      user?.condominium_id,
-      user?.condominiumId
-    ].map((x) => String(x || '').replace(/\D/g, '')).filter(Boolean);
-    return candidates[0] || '';
-  })();
-
-  const basePayload = {
-    cpf: normalizedCpf,
+async function createVisitor(visitor) {
+  const payload = {
+    cpf: String(visitor?.cpf || '').replace(/\D/g, ''),
     full_name: String(visitor?.full_name || '').trim(),
     rg: String(visitor?.rg || '').trim(),
     phone: String(visitor?.phone || '').trim() || null,
     email: String(visitor?.email || '').trim() || null,
-    responsible_cpf: normalizedResponsible,
-    created_by: String(user?.email || visitor?.created_by || '').toLowerCase() || null,
-    created_at: new Date().toISOString()
+    responsible_cpf: String(visitor?.responsible_cpf || '').replace(/\D/g, '')
   };
-  if (condoCepClean) {
-    basePayload.condominium_cep = condoCepClean;
-    basePayload.cep = condoCepClean;
-    basePayload.condominium_id = condoCepClean;
-  }
 
-  function postProcess(row) {
-    if (!row) return row;
-    if (!row.cpf && normalizedCpf) row.cpf = normalizedCpf;
-    if (!row.responsible_cpf && normalizedResponsible) row.responsible_cpf = normalizedResponsible;
-    return row;
-  }
-
-  const attempts = [
-    { ...basePayload },
-    (() => { const v = { ...basePayload }; delete v.condominium_cep; return v; })(),
-    (() => { const v = { ...basePayload }; delete v.cep; return v; })()
-  ];
-
-  const visitorProxies = ['/api/visitors', '/.netlify/functions/api-proxy/api/visitors'];
-  for (let p = 0; p < visitorProxies.length; p++) {
-    for (let a = 0; a < attempts.length; a++) {
-      try {
-        const accessToken = getSupabaseAccessToken();
-        const r = await fetch(visitorProxies[p], {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-          },
-          body: JSON.stringify(attempts[a])
-        });
-        if (!r.ok) continue;
-        const data = await r.json().catch(() => null);
-        if (!data) continue;
-        return postProcess(Array.isArray(data) ? data[0] : data);
-      } catch (_) {}
-    }
-  }
-
-  for (let a = 0; a < attempts.length; a++) {
-    try {
-      const data = await supabaseFetch('/visitors', {
-        method: 'POST',
-        headers: { Prefer: 'return=representation,resolution=merge-duplicates' },
-        body: JSON.stringify(attempts[a])
-      });
-      return postProcess(Array.isArray(data) ? data[0] : data);
-    } catch (err) {
-      const msg = String(err?.message || '').toLowerCase();
-      const recoverable = /column.*not found|schema cache|does not exist|violates foreign|cep_fk|foreign key|row.level|rls|policy|403|permission/i.test(msg);
-      if (!recoverable || a === attempts.length - 1) {
-        const fallbackRow = {
-          ...attempts[a],
-          id: attempts[a].id || 'local-' + Date.now(),
-          created_at: attempts[a].created_at || new Date().toISOString(),
-          _localOnly: true
-        };
-        return postProcess(fallbackRow);
-      }
-    }
-  }
-  return postProcess({
-    ...basePayload,
-    id: basePayload.id || 'local-' + Date.now(),
-    created_at: basePayload.created_at || new Date().toISOString(),
-    _localOnly: true
+  const data = await supabaseFetch('/visitors', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(payload)
   });
+
+  return Array.isArray(data) ? data[0] : data;
 }
 
 async function getVisitorsByResponsibleCpf(responsibleCpf) {
@@ -783,10 +586,6 @@ async function scheduleAssemblyDb(assembly) {
   delete safeAssembly.condominiumCep;
   if (!safeAssembly.status) safeAssembly.status = 'agendada';
   if (!safeAssembly.updated_at) safeAssembly.updated_at = new Date().toISOString();
-  if (!safeAssembly.created_at) safeAssembly.created_at = new Date().toISOString();
-  if (!safeAssembly.assembly_type) safeAssembly.assembly_type = 'ordinaria';
-  if (cepClean && !safeAssembly.condominium_cep) safeAssembly.condominium_cep = cepClean;
-  if (cepClean && !safeAssembly.cep) safeAssembly.cep = cepClean;
   const validStatuses = ['agendada', 'em_andamento', 'encerrada', 'cancelada'];
   if (!validStatuses.includes(String(safeAssembly.status).toLowerCase())) {
     safeAssembly.status = 'agendada';
@@ -827,119 +626,52 @@ async function scheduleAssemblyDb(assembly) {
     if (!row.cep && cepClean) row.cep = cepClean;
     if (!row.status) row.status = 'agendada';
     if (!row.updated_at) row.updated_at = new Date().toISOString();
-    if (!row.created_at) row.created_at = row.updated_at || new Date().toISOString();
-    if (!row.assembly_type) row.assembly_type = 'ordinaria';
     if (row.condominium_cep && !row.cep) row.cep = row.condominium_cep;
-    const returnedCep = String(row.cep || '').replace(/\D/g, '');
-    if (returnedCep && returnedCep !== cepClean && cepClean) {
-      if (!row._raw_cep) row._raw_cep = returnedCep;
-    }
     return row;
   }
 
   const accessToken = getSupabaseAccessToken();
-  const proxyTargets = [
-    '/api/assemblies',
-    '/api/scheduled-assemblies',
-    '/.netlify/functions/api-proxy/api/assemblies'
-  ];
-  let proxyResult = null;
-  for (let p = 0; p < proxyTargets.length; p++) {
-    const url = proxyTargets[p];
+  try {
+    const proxyResponse = await fetch('/api/assemblies', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+      },
+      body: JSON.stringify(safeAssembly)
+    });
+    const text = await proxyResponse.text();
+    let proxyData;
     try {
-      const proxyResponse = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        },
-        body: JSON.stringify(safeAssembly)
-      });
-      const text = await proxyResponse.text();
-      let proxyData;
-      try {
-        proxyData = text ? JSON.parse(text) : null;
-      } catch (_parseErr) {
-        proxyData = text;
-      }
-      if (proxyResponse.ok && proxyData) {
-        return postProcessRow(Array.isArray(proxyData) ? proxyData[0] : proxyData);
-      }
-      proxyResult = { status: proxyResponse.status, data: proxyData };
-      if (!proxyResponse.ok) {
-        const proxyErrMsg = proxyData && typeof proxyData === 'object' && proxyData.error
-          ? String(proxyData.error)
-          : (typeof proxyData === 'string' ? proxyData : `HTTP ${proxyResponse.status}`);
-        console.warn(`[scheduleAssemblyDb] Proxy ${url} rejeitou:`, proxyErrMsg || `status ${proxyResponse.status}`);
-      }
-    } catch (proxyError) {
-      console.warn(`[scheduleAssemblyDb] Proxy ${url} falhou:`, proxyError?.message || proxyError);
+      proxyData = text ? JSON.parse(text) : null;
+    } catch (_parseErr) {
+      proxyData = text;
     }
+    if (proxyResponse.ok && proxyData) {
+      return postProcessRow(Array.isArray(proxyData) ? proxyData[0] : proxyData);
+    }
+  } catch (proxyError) {
+    console.warn('scheduleAssemblyDb API proxy falhou:', proxyError?.message || proxyError);
   }
 
-  async function tryDirectInsert(payload, endpoint) {
-    const path = endpoint || '/scheduled_assemblies';
-    const data = await supabaseFetch(path, {
+  try {
+    const data = await supabaseFetch('/scheduled_assemblies', {
       method: 'POST',
       headers: { Prefer: 'return=representation,resolution=merge-duplicates' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(safeAssembly)
     });
     return postProcessRow(Array.isArray(data) ? data[0] : data);
-  }
-
-  const directAttempts = [
-    safeAssembly,
-    (() => { const v = { ...safeAssembly }; delete v.condominium_cep; return v; })(),
-    (() => { const v = { ...safeAssembly }; delete v.cep; return v; })()
-  ];
-  let lastDirectError = null;
-  for (let a = 0; a < directAttempts.length; a++) {
-    try {
-      return await tryDirectInsert(directAttempts[a]);
-    } catch (attemptErr) {
-      lastDirectError = attemptErr;
-      const msg = String(attemptErr?.message || attemptErr || '').toLowerCase();
-      const recoverable = /column.*not found|schema cache|does not exist|violates foreign|cep_fk|foreign key/i.test(msg);
-      if (recoverable) continue;
-      const rlsOr403 = /row.level|rls|policy|403|401|jwt|token|permission/i.test(msg);
-      if (rlsOr403) continue;
-      break;
-    }
-  }
-
-  if (lastDirectError) {
-    const directMsg = String(lastDirectError?.message || lastDirectError || '');
+  } catch (directError) {
+    const directMsg = String(directError?.message || directError || '');
     const isFkOrColumn = /foreign key|cep_fk|violates foreign|column.*not found|condominium_cep|could not find.*column/i.test(directMsg);
-    const isRls = /row.level|rls|policy|403|permission/i.test(directMsg);
-    if (isFkOrColumn || isRls) {
+    if (isFkOrColumn || /row.level|rls|policy/i.test(directMsg)) {
       const fallbackRow = {
         ...safeAssembly,
         id: safeAssembly.id || 'local-' + Date.now(),
         public_id: safeAssembly.public_id || cryptoRandomUuid(),
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        _localOnly: true
+        updated_at: new Date().toISOString()
       };
-      try {
-        const userKey = 'condominiumUser';
-        let userEmail = 'unknown';
-        try {
-          const raw = sessionStorage.getItem(userKey) || localStorage.getItem('condominiumPersistentUser') || '';
-          if (raw) {
-            const u = JSON.parse(raw);
-            userEmail = String(u.email || '').toLowerCase().replace(/[^a-z0-9_.@-]/g, '') || 'unknown';
-          }
-        } catch (_) {}
-        const storageKey = `condomit:assemblies-pending:${userEmail}:${safeAssembly.cep || 'no-cep'}`;
-        let pending = [];
-        try {
-          const existing = localStorage.getItem(storageKey);
-          pending = existing ? JSON.parse(existing) : [];
-        } catch (_) { pending = []; }
-        pending.push(fallbackRow);
-        try { localStorage.setItem(storageKey, JSON.stringify(pending)); } catch (_) {}
-        fallbackRow._pendingStorageKey = storageKey;
-      } catch (_StorageErr) {}
       return fallbackRow;
     }
     let userMessage = directMsg || 'Erro desconhecido';
@@ -947,18 +679,9 @@ async function scheduleAssemblyDb(assembly) {
       userMessage = 'Sessão expirada. Faça login novamente e tente agendar a assembleia.';
     }
     const err = new Error(userMessage);
-    err.cause = { lastDirectError, proxyResult };
+    err.cause = { directError };
     throw err;
   }
-
-  const fallbackRow = {
-    ...safeAssembly,
-    id: safeAssembly.id || 'local-' + Date.now(),
-    public_id: safeAssembly.public_id || cryptoRandomUuid(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-  return fallbackRow;
 }
 
 function normalizeCondominiumIdentifier(value) {
@@ -986,72 +709,6 @@ async function getScheduledAssembliesByCep(userCep) {
   const rawIdentifier = String(userCep || '').trim();
   const normalizedIdentifier = normalizeCondominiumIdentifier(rawIdentifier);
 
-  function loadPendingAssembliesForCep(targetNormalizedCep) {
-    const out = [];
-    try {
-      const userKey = 'condominiumUser';
-      let userEmail = null;
-      const raw = sessionStorage.getItem(userKey) || localStorage.getItem('condominiumPersistentUser') || '';
-      if (raw) {
-        const u = JSON.parse(raw);
-        userEmail = String(u.email || '').toLowerCase().replace(/[^a-z0-9_.@-]/g, '') || null;
-      }
-      const patterns = userEmail
-        ? [`condomit:assemblies-pending:${userEmail}:${targetNormalizedCep || 'no-cep'}`]
-        : [`condomit:assemblies-pending:unknown:${targetNormalizedCep || 'no-cep'}`];
-      if (!targetNormalizedCep) patterns.length = 0;
-      for (let i = 0; i < patterns.length; i++) {
-        try {
-          const items = localStorage.getItem(patterns[i]);
-          if (items) {
-            const parsed = JSON.parse(items);
-            if (Array.isArray(parsed)) out.push(...parsed);
-          }
-        } catch (_) {}
-      }
-      if (!targetNormalizedCep) {
-        try {
-          const prefix = 'condomit:assemblies-pending:';
-          for (let k = 0; k < localStorage.length; k++) {
-            const key = localStorage.key(k);
-            if (key && key.startsWith(prefix)) {
-              try {
-                const items = JSON.parse(localStorage.getItem(key) || '[]');
-                if (Array.isArray(items)) out.push(...items);
-              } catch (_) {}
-            }
-          }
-        } catch (_) {}
-      }
-    } catch (_) {}
-    return out.map((row) => ({ ...row, _pendingRow: true }));
-  }
-
-  function mergeDedupe(serverRows, pendingRows) {
-    const out = [];
-    const seen = new Set();
-    const push = (row) => {
-      if (!row) return;
-      const idCandidates = [
-        row.public_id,
-        row.id,
-        row.internal_id,
-        [String(row.date || ''), String(row.start_time || ''), String(row.title || ''), String(row.cep || row.condominium_cep || '')].join('||')
-      ].filter(Boolean);
-      for (let i = 0; i < idCandidates.length; i++) {
-        const c = String(idCandidates[i]);
-        if (seen.has(c)) return;
-      }
-      for (let i = 0; i < idCandidates.length; i++) {
-        seen.add(String(idCandidates[i]));
-      }
-      out.push(row);
-    };
-    if (Array.isArray(serverRows)) serverRows.forEach(push);
-    if (Array.isArray(pendingRows)) pendingRows.forEach(push);
-    return out;
-  }
-
   function applyFilterLocally(rows) {
     const list = Array.isArray(rows) ? rows : [];
     if (!normalizedIdentifier && !rawIdentifier) return list;
@@ -1065,19 +722,15 @@ async function getScheduledAssembliesByCep(userCep) {
 
   try {
     const data = await supabaseFetch('/scheduled_assemblies?select=*&order=date.asc,start_time.asc');
-    const pending = loadPendingAssembliesForCep(normalizedIdentifier);
-    const merged = mergeDedupe(Array.isArray(data) ? data : [], pending);
-    return applyFilterLocally(merged);
+    return applyFilterLocally(data);
   } catch (error) {
     console.error('Erro ao buscar assembleias agendadas:', error);
     try {
       const fallback = await getScheduledAssemblies();
-      const pending = loadPendingAssembliesForCep(normalizedIdentifier);
-      const merged = mergeDedupe(Array.isArray(fallback) ? fallback : [], pending);
-      return applyFilterLocally(merged);
+      return applyFilterLocally(fallback);
     } catch (fallbackError) {
       console.error('Erro ao aplicar fallback de assembleias:', fallbackError);
-      return applyFilterLocally(loadPendingAssembliesForCep(normalizedIdentifier));
+      return [];
     }
   }
 }
@@ -1330,8 +983,6 @@ window.refreshCurrentUserFromDb = refreshCurrentUserFromDb;
 window.getNormalizedUserType = getNormalizedUserType;
 window.fetchUserByCpf = fetchUserByCpf;
 window.fetchUsersByCpfs = fetchUsersByCpfs;
-window.fetchUserByEmail = fetchUserByEmail;
-window.fetchUserByAuthUserId = fetchUserByAuthUserId;
 window.createVisitor = createVisitor;
 window.getVisitorsByResponsibleCpf = getVisitorsByResponsibleCpf;
 window.getVisitorsForCondominium = getVisitorsForCondominium;
