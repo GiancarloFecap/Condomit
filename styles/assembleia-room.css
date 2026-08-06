@@ -10,11 +10,6 @@
   --call-warning: #f59e0b;
 }
 
-.Logo {
-  width: 2000px;
-  height: 2000px;
-}
-
 body {
   background: var(--call-bg);
 }
