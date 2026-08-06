@@ -92,16 +92,54 @@
   }
 
   async function requestLivekitToken(assemblyId) {
-    if (!assemblyId) throw new Error('assemblyId é obrigatório');
-    try {
-      return await apiFetch('/.netlify/functions/livekit-token', {
-        method: 'POST',
-        body: JSON.stringify({ assembly_id: assemblyId })
-      });
-    } catch (e) {
-      return await supabaseRpc('get_livekit_token', { assembly_id: assemblyId });
-    }
+  const normalizedAssemblyId = Number.parseInt(
+    String(assemblyId || ''),
+    10
+  );
+
+  if (
+    !Number.isInteger(normalizedAssemblyId) ||
+    normalizedAssemblyId <= 0
+  ) {
+    throw new Error(
+      'ID da assembleia inválido.'
+    );
   }
+
+  try {
+    return await apiFetch(
+      '/.netlify/functions/livekit-token',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          assembly_id: normalizedAssemblyId
+        })
+      }
+    );
+  } catch (error) {
+    console.error(
+      'Erro ao solicitar token do LiveKit:',
+      {
+        message:
+          error && error.message,
+
+        status:
+          error && error.status,
+
+        data:
+          error && error.data
+      }
+    );
+
+    /*
+     * Não executar fallback para:
+     * public.get_livekit_token
+     *
+     * O token precisa ser gerado pela Netlify Function.
+     */
+    throw error;
+  }
+}
 
   async function requestAssemblyAction(action, payload) {
     if (!action) throw new Error('action é obrigatória');

@@ -70,12 +70,32 @@ function bindControls() {
     setPanelOpen(!state.panelOpen);
   });
   $('btn-leave')?.addEventListener('click', async () => {
-    const ok = window.confirm('Deseja sair da assembleia?');
-    if (!ok) return;
-    try { await presenceLeave(); } catch (_) {}
-    try { await disconnectRoom(); } catch (_) {}
-    window.location.href = `assembleia-detalhes.html?id=${encodeURIComponent(String(state.assemblyId))}`;
-  });
+  const ok = window.confirm('Deseja sair da assembleia?');
+
+  if (!ok) {
+    return;
+  }
+
+  try {
+    await presenceLeave();
+  } catch (error) {
+    console.warn(
+      'Não foi possível registrar a saída:',
+      error
+    );
+  }
+
+  try {
+    await disconnectRoom();
+  } catch (error) {
+    console.warn(
+      'Não foi possível desconectar do LiveKit:',
+      error
+    );
+  }
+
+  window.location.href = 'assembleia.html';
+});
   $('call-open-details')?.addEventListener('click', () => {
     window.location.href = `assembleia-detalhes.html?id=${encodeURIComponent(String(state.assemblyId))}`;
   });
