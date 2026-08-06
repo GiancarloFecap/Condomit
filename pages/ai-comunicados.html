@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - IA - Comunicados Automáticos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/chat.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/Logo-Lado.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>IA - Comunicados Automáticos</h1>
+                    <p>Descreva o que quer comunicar e deixe a IA escrever para você.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button" aria-label="Histórico"><i class="fas fa-clock-rotate-left"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Notificações"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn" type="button" id="topUserBtn" aria-label="Editar perfil"><i class="fas fa-user"></i></button>
+                    </div>
+                    <div class="user-profile-small" id="topProfileBlock">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Síndico</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="ai-comunicados-page">
+                <div class="ai-comunicados-layout">
+                    <div class="ai-main-col">
+                        <div class="ai-card">
+                            <div class="step-badge">
+                                <span class="step-num">1</span>
+                                Descreva o comunicado
+                            </div>
+                            <h2>O que você quer comunicar hoje?</h2>
+                            <p class="card-subtitle">Descreva em poucas palavras o objetivo do comunicado. A IA irá gerar um texto profissional, claro e adequado para os moradores.</p>
+                            <textarea class="ai-textarea" id="promptInput" rows="5" placeholder="Ex: Manutenção do elevador do bloco A amanhã das 8h às 12h. Pedimos que os moradores utilizem o elevador social. Agradecemos a compreensão."></textarea>
+                            <div class="ai-input-footer">
+                                <span class="char-count" id="promptCharCount">0/500</span>
+                                <button class="btn-primary-ai" id="generateBtn" type="button">
+                                    <i class="fas fa-wand-magic-sparkles"></i>
+                                    Gerar rascunho com IA
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="ai-card">
+                            <div class="step-badge success" id="step2Badge">
+                                <span class="step-num">2</span>
+                                Resultado da IA
+                            </div>
+                            <h2>Rascunho do comunicado</h2>
+                            <p class="card-subtitle">Confira o comunicado gerado. Você pode refinar, copiar o texto ou enviar diretamente para o mural de avisos.</p>
+                            <div class="result-box" id="resultBox">
+                                <h4 class="result-title">
+                                    <i class="fas fa-memo-circle-info"></i>
+                                    <span id="resultTitle">Título aparecerá aqui</span>
+                                </h4>
+                                <div class="result-content" id="resultContent">
+Descreva o comunicado no passo acima para que a IA gere um rascunho profissional e personalizado para o seu condomínio.
+
+Você pode incluir detalhes como:
+• Data, horário e local do evento ou manutenção
+• Bloco e apartamento afetados (se aplicável)
+• Prazo para resposta ou ação dos moradores
+• Tom do comunicado (formal, amigável, urgente)
+                                </div>
+                            </div>
+                            <div class="result-actions">
+                                <button class="btn-secondary-ai" id="refineBtn" type="button" disabled>
+                                    <i class="fas fa-rotate"></i>
+                                    Refinar
+                                </button>
+                                <button class="btn-outline-ai" id="copyBtn" type="button" disabled>
+                                    <i class="fas fa-copy"></i>
+                                    Copiar texto
+                                </button>
+                                <button class="btn-primary-ai" id="sendBtn" type="button" disabled style="background:linear-gradient(135deg,#16a34a,#059669);box-shadow:0 2px 10px rgba(22,163,74,0.25);">
+                                    <i class="fas fa-paper-plane"></i>
+                                    Enviar comunicado
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ai-side-col">
+                        <div class="ai-card">
+                            <div class="step-badge" style="background:#ecfdf5;color:#059669;">
+                                <span class="step-num"><i class="fas fa-clock" style="font-size:10px;"></i></span>
+                                Histórico
+                            </div>
+                            <h2>Comunicados recentes</h2>
+                            <p class="card-subtitle">Acesse os últimos comunicados gerados pela IA.</p>
+                            <div id="historyList">
+                                <div class="history-empty">
+                                    <i class="fas fa-inbox" style="font-size:24px;margin-bottom:8px;display:block;opacity:0.4;"></i>
+                                    Nenhum comunicado gerado ainda.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ai-card">
+                            <div class="step-badge" style="background:#fffbeb;color:#b45309;">
+                                <span class="step-num" style="background:#b45309;"><i class="fas fa-lightbulb" style="font-size:10px;"></i></span>
+                                Dicas
+                            </div>
+                            <h2>Sugestões de uso</h2>
+                            <p class="card-subtitle">Saiba como aproveitar melhor a IA para seus comunicados.</p>
+                            <ul class="tips-list">
+                                <li>Inclua datas e horários para maior clareza</li>
+                                <li>Especifique o bloco/apartamento se for algo pontual</li>
+                                <li>Use o botão "Refinar" para ajustar o tom do texto</li>
+                                <li>Sempre revise antes de enviar para os moradores</li>
+                                <li>Categorize: Manutenção, Eventos, Avisos, Regras, etc.</li>
+                                <li>Para comunicados urgentes, mencione "urgente" na descrição</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/ai-comunicados.js"></script>
+</body>
+</html>

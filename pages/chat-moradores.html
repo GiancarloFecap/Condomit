@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Chat com Moradores</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/chat.css">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/Logo-Lado.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Chat com Moradores</h1>
+                    <p>Converse diretamente com os moradores do condomínio.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button" aria-label="Buscar"><i class="fas fa-search"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Notificações"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn" type="button" id="topUserBtn" aria-label="Editar perfil"><i class="fas fa-user"></i></button>
+                    </div>
+                    <div class="user-profile-small" id="topProfileBlock">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Síndico</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="chat-page">
+                <div class="chat-layout">
+                    <div class="chat-panel conversations">
+                        <div class="conversations-list">
+                            <div class="conversations-header">
+                                <div class="conversations-title-row">
+                                    <h3>Conversas</h3>
+                                    <button class="new-chat-btn" type="button" title="Nova conversa"><i class="fas fa-plus"></i></button>
+                                </div>
+                                <div class="search-input-wrapper">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" class="search-input" id="searchConversations" placeholder="Buscar conversa...">
+                                </div>
+                            </div>
+                            <div class="conversations-scroll" id="conversationsList"></div>
+                        </div>
+                    </div>
+
+                    <div class="chat-panel chat-main">
+                        <div class="chat-header">
+                            <div class="chat-header-left" id="activeChatHeader">
+                                <div class="chat-avatar-lg" id="activeChatAvatar">
+                                    JM
+                                    <span class="status-dot"></span>
+                                </div>
+                                <div class="chat-header-info">
+                                    <h3 class="chat-header-name" id="activeChatName">Selecione uma conversa</h3>
+                                    <p class="chat-header-detail" id="activeChatDetail">
+                                        <span class="status-indicator">Escolha um morador para começar</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="chat-header-actions">
+                                <button class="icon-chat-btn" type="button" title="Ligar"><i class="fas fa-phone"></i></button>
+                                <button class="icon-chat-btn" type="button" title="Vídeo chamada"><i class="fas fa-video"></i></button>
+                                <button class="icon-chat-btn" type="button" title="Mais opções"><i class="fas fa-ellipsis-v"></i></button>
+                            </div>
+                        </div>
+                        <div class="messages-container" id="messagesContainer">
+                            <div class="message-divider">
+                                <span>Hoje</span>
+                            </div>
+                            <div class="empty-state" id="chatEmptyState" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px 20px;text-align:center;">
+                                <i class="fas fa-comments" style="font-size:36px;color:#cbd5e1;"></i>
+                                <div>
+                                    <h3 style="margin:0 0 4px 0;font-size:15px;color:var(--text-secondary,#64748b);">Nenhuma conversa selecionada</h3>
+                                    <p style="margin:0;font-size:13px;color:var(--text-tertiary,#94a3b8);">Escolha um morador na lista ao lado para começar a conversar.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-input-area">
+                            <div class="chat-input-wrapper">
+                                <button class="chat-tool-btn" type="button" title="Anexar arquivo"><i class="fas fa-paperclip"></i></button>
+                                <button class="chat-tool-btn" type="button" title="Emoji"><i class="fas fa-face-smile"></i></button>
+                                <textarea class="chat-textarea" id="chatInput" placeholder="Digite sua mensagem..." rows="1"></textarea>
+                                <button class="chat-send-btn" id="sendBtn" type="button" title="Enviar"><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/sidebar-links.js"></script>
+    <script src="../scripts/chat-moradores.js"></script>
+</body>
+</html>

@@ -87,49 +87,19 @@
     }
 
     function getDefaultNotifications() {
-        const now = Date.now();
-        return [
-            {
-                id: `notif-${now - 1}`,
-                category: 'Avisos',
-                title: 'Festa de confraternização do condomínio',
-                message: 'Convidamos todos os moradores para a festa do condomínio no salão de festas no próximo sábado às 18h.',
-                createdAt: new Date(now - 1000 * 60 * 25).toISOString(),
-                author: 'Administração',
-                createdByType: 'sindico'
-            },
-            {
-                id: `notif-${now - 2}`,
-                category: 'Reservas',
-                title: 'Reserva confirmada',
-                message: 'Sua reserva do salão de festas foi confirmada para o dia 15/08 das 19h às 23h.',
-                createdAt: new Date(now - 1000 * 60 * 90).toISOString(),
-                author: 'Sistema',
-                createdByType: 'system'
-            },
-            {
-                id: `notif-${now - 3}`,
-                category: 'Assembleias',
-                title: 'Assembleia ordinária amanhã',
-                message: 'A assembleia ordinária acontecerá amanhã às 19h. Os documentos já estão disponíveis na área de assembleias.',
-                createdAt: new Date(now - 1000 * 60 * 60 * 5).toISOString(),
-                author: 'Síndico',
-                createdByType: 'sindico'
-            },
-            {
-                id: `notif-${now - 4}`,
-                category: 'Entregas',
-                title: 'Entrega recebida na portaria',
-                message: 'Há uma encomenda aguardando retirada na portaria em seu nome.',
-                createdAt: new Date(now - 1000 * 60 * 60 * 26).toISOString(),
-                author: 'Portaria',
-                createdByType: 'porteiro'
-            }
-        ];
+        return [];
     }
 
     function getNotifications(user = getCurrentUser()) {
         const key = getNotificationsKey(user);
+        const clearedKey = `${key}.cleared`;
+        try {
+            const hasCleared = localStorage.getItem(clearedKey) === '1';
+            if (!hasCleared) {
+                localStorage.removeItem(key);
+                localStorage.setItem(clearedKey, '1');
+            }
+        } catch (_) {}
         let items = getStorageJson(key, null);
         if (!Array.isArray(items) || !items.length) {
             items = getDefaultNotifications();
@@ -138,6 +108,11 @@
         return items
             .slice()
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    function clearAllNotifications(user = getCurrentUser()) {
+        setStorageJson(getNotificationsKey(user), []);
+        return true;
     }
 
     function createNotification(data, user = getCurrentUser()) {
@@ -394,6 +369,7 @@
     window.communityHub = {
         CATEGORY_IMAGES,
         buildUnitLabel,
+        clearAllNotifications,
         createMarketplaceItem,
         createAssemblyNotification,
         createNotification,

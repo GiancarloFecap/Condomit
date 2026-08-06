@@ -668,3 +668,259 @@ html[data-theme="dark"] .modal-btn-primary:hover {
     background: #1D4ED8;
     box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
 }
+
+html[data-theme="dark"] .config-card {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+}
+
+html[data-theme="dark"] .config-card h2,
+html[data-theme="dark"] .config-card h3 {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .config-card p,
+html[data-theme="dark"] .config-card span,
+html[data-theme="dark"] .config-card label {
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .config-card .muted,
+html[data-theme="dark"] .config-card .help-text,
+html[data-theme="dark"] .config-card small {
+    color: var(--text-tertiary);
+}
+
+html[data-theme="dark"] .theme-btn {
+    background: var(--surface-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    transition: all 0.15s ease;
+}
+
+html[data-theme="dark"] .theme-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--border-strong);
+}
+
+html[data-theme="dark"] .theme-btn.active,
+html[data-theme="dark"] .theme-btn.selected {
+    background: var(--primary-fill);
+    color: #FFFFFF;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+html[data-theme="dark"] .config-option,
+html[data-theme="dark"] .radio-option {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .config-option:hover,
+html[data-theme="dark"] .radio-option:hover {
+    background: var(--hover-bg);
+    border-color: var(--border-strong);
+}
+
+html[data-theme="dark"] .config-option.selected,
+html[data-theme="dark"] .radio-option.selected {
+    background: var(--selected-bg);
+    border-color: var(--primary-color);
+}
+
+html[data-theme="dark"] .section-header {
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .section-header h2,
+html[data-theme="dark"] .section-header h3 {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .profile-block,
+html[data-theme="dark"] .profile-card {
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .avatar-upload {
+    background: var(--surface-elevated);
+    border: 1px dashed var(--border-strong);
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .avatar-upload:hover {
+    background: var(--hover-bg);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .config-switch,
+html[data-theme="dark"] .switch {
+    background: var(--surface-elevated);
+    border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .config-switch.checked,
+html[data-theme="dark"] .switch.checked {
+    background: var(--primary-fill);
+}
+
+html[data-theme="dark"] .btn-outline {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .btn-outline:hover {
+    background: var(--hover-bg);
+    border-color: var(--border-strong);
+}
+
+html[data-theme="dark"] .quick-action-btn {
+    background: var(--surface-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .quick-action-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+html[data-theme="dark"] .comm-btn {
+    background: var(--surface-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .comm-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--border-strong);
+}
+
+html[data-theme="dark"] .overview-strip,
+html[data-theme="dark"] .overview-card {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .overview-card span {
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .overview-card strong {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .quick-card,
+html[data-theme="dark"] .info-card,
+html[data-theme="dark"] .section-block .quick-card {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+}
+
+html[data-theme="dark"] .quick-card h3,
+html[data-theme="dark"] .info-card h3 {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .quick-card p,
+html[data-theme="dark"] .info-card p {
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .quick-icon {
+    background: var(--selected-bg);
+    color: var(--primary-color);
+}
+
+html[data-theme="dark"] .ghost-btn {
+    background: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .ghost-btn:hover {
+    background: var(--selected-bg);
+    border-color: var(--primary-color);
+}
+
+html[data-theme="dark"] .danger-btn {
+    background: var(--danger-bg);
+    color: var(--danger-color);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+html[data-theme="dark"] .danger-btn:hover {
+    background: #7F1D1D;
+    color: #FCA5A5;
+}
+
+html[data-theme="dark"] .card-label {
+    background: var(--surface-elevated);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .card-label.danger {
+    background: var(--danger-bg);
+    color: var(--danger-color);
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
+html[data-theme="dark"] .simple-list li {
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .simple-list li::before {
+    color: var(--primary-color);
+}
+
+html[data-theme="dark"] .status-item {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .status-item i {
+    color: var(--primary-color);
+}
+
+html[data-theme="dark"] .summary-stat,
+html[data-theme="dark"] .stat {
+    background: var(--surface-secondary);
+    border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .stat-label {
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .stat-value {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .maintenance-item {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+html[data-theme="dark"] .maintenance-item i {
+    color: var(--warning-color);
+}
+
+html[data-theme="dark"] .communication-actions,
+html[data-theme="dark"] .quick-actions-grid {
+    background: var(--card-bg);
+}

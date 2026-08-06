@@ -40,6 +40,24 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
     }
+
+    const userType = typeof getNormalizedUserType === 'function'
+        ? getNormalizedUserType(currentUser)
+        : String(currentUser.type || 'sindico').trim().toLowerCase();
+
+    if (typeof applyGlobalAppLanguage === 'function') {
+        try {
+            applyGlobalAppLanguage(currentUser, userType);
+        } catch (_) {}
+    } else if (typeof renderSidebar === 'function') {
+        try {
+            renderSidebar(currentUser, userType, window.location.pathname.split('/').pop() || 'index.html');
+        } catch (_) {}
+    }
+
+    if (typeof bindSupportButtons === 'function') {
+        try { bindSupportButtons('mailto:contato.condomit@gmail.com?subject=Contato%20Condomit'); } catch (_) {}
+    }
     
     // Update user info
     const userName = currentUser.name || 'Síndico';
@@ -107,6 +125,48 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadUpcomingAssembly(currentUser.condominium.cep);
         loadPendingNotices(currentUser.condominium.cep);
     }
+
+    const userProfileSmall = document.querySelector('.user-profile-small');
+    if (userProfileSmall) {
+        userProfileSmall.style.cursor = 'pointer';
+        userProfileSmall.addEventListener('click', () => {
+            window.location.href = 'configuracoes.html';
+        });
+    }
+
+    const iconBtns = document.querySelectorAll('.top-icons .icon-btn');
+    if (iconBtns && iconBtns.length > 0) {
+        const lastIconBtn = iconBtns[iconBtns.length - 1];
+        if (lastIconBtn) {
+            lastIconBtn.addEventListener('click', () => {
+                window.location.href = 'configuracoes.html#editar-perfil';
+            });
+        }
+    }
+
+    const quickActionBtns = document.querySelectorAll('.quick-action-btn');
+    quickActionBtns.forEach((btn) => {
+        const text = btn.textContent.toLowerCase();
+        if (text.includes('enviar aviso') || text.includes('aviso')) {
+            btn.addEventListener('click', () => {
+                window.location.href = 'notificacoes.html';
+            });
+        } else if (text.includes('agendar reunião') || text.includes('agendar reuniao') || text.includes('reunião') || text.includes('reuniao')) {
+            btn.addEventListener('click', () => {
+                window.location.href = 'assembleia.html';
+            });
+        }
+    });
+
+    const commBtns = document.querySelectorAll('.comm-btn');
+    commBtns.forEach((btn) => {
+        const text = btn.textContent.toLowerCase();
+        if (text.includes('e-mail') || text.includes('email') || text.includes('mail')) {
+            btn.addEventListener('click', () => {
+                window.location.href = 'mailto:contato.condomit@gmail.com?subject=Contato%20Condomit';
+            });
+        }
+    });
 });
 
 async function loadResidents(cep) {

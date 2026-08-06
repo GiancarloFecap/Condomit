@@ -44,6 +44,8 @@ const sidebarI18n = {
         ai_notices: 'IA - Comunicados Automáticos',
         notifications: 'Notificações',
         mail: 'Correio',
+        reservations: 'Reservas',
+        documents: 'Documentos',
         visitor_release: 'Liberação de Visitantes',
         register_visitor: 'Registrar Visitante',
         visitor_entry_exit: 'Registro de Entrada e Saída',
@@ -90,6 +92,8 @@ const sidebarI18n = {
         ai_notices: 'AI - Automatic Notices',
         notifications: 'Notifications',
         mail: 'Mail',
+        reservations: 'Reservations',
+        documents: 'Documents',
         visitor_release: 'Visitor Release',
         register_visitor: 'Register Visitor',
         visitor_entry_exit: 'Entry and Exit Log',
@@ -316,26 +320,23 @@ function getTargetForRoute(routeKey, userType) {
         notificacoes: 'notificacoes.html',
         correio: 'notificacoes.html',
         indicacoes: 'notificacoes.html',
-        'chat-sindico': 'ai-condomit.html',
-        'chat-moradores': 'ai-condomit.html',
-        'chat-porteiro': 'index-porteiro.html',
-        'chat-portaria': 'index-porteiro.html',
+        'chat-sindico': 'chat-sindico.html',
+        'chat-moradores': 'chat-moradores.html',
+        'chat-porteiro': 'chat-porteiro.html',
+        'chat-portaria': 'chat-porteiro.html',
         'achados-perdidos': 'achados-perdidos.html',
         marketplace: 'marketplace.html',
         assembleias: 'assembleia.html',
-        chamadas: 'assembleia.html',
-        'avisos-assembleia': 'assembleia.html',
         'gestao-moradores': 'gestao-moradores.html',
         reservas: 'reservas.html',
         manutencao: 'manutencao-preventiva.html',
         'ia-duvidas': 'ai-condomit.html',
-        comunicados: 'ai-condomit.html',
+        comunicados: 'ai-comunicados.html',
         configuracoes: 'configuracoes.html',
         'porteiro-liberacao': 'liberacao-visitantes.html',
         'porteiro-registrar': 'registrar-visitantes.html',
         'porteiro-registro': 'registro-entrada-saida.html',
         'porteiro-visitantes': 'visitantes-liberados.html',
-        'sindico-visitantes-liberados': 'visitantes-liberados.html',
         'porteiro-historico': 'registro-entrada-saida.html',
         'porteiro-emergencia': 'index-porteiro.html#emergencia',
         'porteiro-entregas': 'autorizacao-entregas.html',
@@ -412,27 +413,34 @@ function getSidebarConfig(userType) {
         return [
             { items: [{ labelKey: 'home', icon: 'fas fa-home', route: 'inicio' }] },
             {
+                titleKey: 'notices_communications',
+                items: [
+                    { labelKey: 'mural', icon: 'fas fa-bell', route: 'mural' }
+                ]
+            },
+            {
                 titleKey: 'access_control',
                 items: [
-                    { labelKey: 'visitor_release', icon: 'fas fa-user-check', route: 'porteiro-liberacao' },
-                    { labelKey: 'register_visitor', icon: 'fas fa-user-plus', route: 'porteiro-registrar' },
-                    { labelKey: 'visitor_entry_exit', icon: 'fas fa-right-left', route: 'porteiro-registro' },
-                    { labelKey: 'released_visitors', icon: 'fas fa-circle-check', route: 'porteiro-visitantes' }
+                    { labelKey: 'visitor_release', icon: 'fas fa-user-group', route: 'porteiro-liberacao' },
+                    { labelKey: 'released_visitors', icon: 'fas fa-shield-check', route: 'porteiro-visitantes' },
+                    { labelKey: 'provider_control', icon: 'fas fa-file-contract', route: 'porteiro-prestadores' }
                 ]
             },
             {
                 titleKey: 'relationships',
                 items: [
-                    { labelKey: 'chat_residents', icon: 'fas fa-comments', route: 'chat-moradores' },
-                    { labelKey: 'chat_syndic', icon: 'fas fa-user-tie', route: 'chat-sindico' }
+                    { labelKey: 'chat_porter', icon: 'fas fa-comments', route: 'chat-porteiro' }
                 ]
             },
             {
-                titleKey: 'emergency_services',
                 items: [
-                    { labelKey: 'emergency_button', icon: 'fas fa-bell', route: 'porteiro-emergencia' },
-                    { labelKey: 'deliveries_authorization', icon: 'fas fa-box-open', route: 'porteiro-entregas' },
-                    { labelKey: 'provider_control', icon: 'fas fa-user-gear', route: 'porteiro-prestadores' }
+                    { labelKey: 'assembly_plural', icon: 'fas fa-calendar-days', route: 'assembleias' },
+                    { labelKey: 'reservations', icon: 'fas fa-calendar-check', route: 'reservas' }
+                ]
+            },
+            {
+                items: [
+                    { labelKey: 'documents', icon: 'fas fa-file-lines', route: 'configuracoes' }
                 ]
             },
             {
@@ -465,9 +473,7 @@ function getSidebarConfig(userType) {
             {
                 titleKey: 'assemblies',
                 items: [
-                    { labelKey: 'assembly_plural', icon: 'fas fa-calendar-check', route: 'assembleias' },
-                    { labelKey: 'calls', icon: 'fas fa-video', route: 'chamadas' },
-                    { labelKey: 'assembly_notices', icon: 'fas fa-comment-dots', route: 'avisos-assembleia' }
+                    { labelKey: 'assembly_plural', icon: 'fas fa-calendar-check', route: 'assembleias' }
                 ]
             },
             {
@@ -511,23 +517,12 @@ function getSidebarConfig(userType) {
         },
         {
             items: [
-                { labelKey: 'assembly', icon: 'fas fa-calendar-check', route: 'assembleias' },
-                { labelKey: 'calls', icon: 'fas fa-video', route: 'chamadas' },
-                { labelKey: 'assembly_notices', icon: 'fas fa-comment-dots', route: 'avisos-assembleia' }
+                { labelKey: 'assembly', icon: 'fas fa-calendar-check', route: 'assembleias' }
             ]
         },
         {
             titleKey: 'resident_management',
             items: [{ labelKey: 'resident_management_link', icon: 'fas fa-users-cog', route: 'gestao-moradores' }]
-        },
-        {
-            titleKey: 'access_control',
-            items: [
-                { labelKey: 'visitor_release', icon: 'fas fa-user-check', route: 'porteiro-liberacao' },
-                { labelKey: 'register_visitor', icon: 'fas fa-user-plus', route: 'porteiro-registrar' },
-                { labelKey: 'visitor_entry_exit', icon: 'fas fa-right-left', route: 'porteiro-registro' },
-                { labelKey: 'released_visitors', icon: 'fas fa-circle-check', route: 'sindico-visitantes-liberados' }
-            ]
         },
         {
             titleKey: 'reservations_maintenance',
@@ -540,7 +535,7 @@ function getSidebarConfig(userType) {
             titleKey: 'ai_automation',
             items: [
                 { labelKey: 'ai_questions', icon: 'fas fa-robot', route: 'ia-duvidas' },
-                { labelKey: 'ai_notices', icon: 'fas fa-bell', route: 'comunicados' }
+                { labelKey: 'ai_notices', icon: 'fas fa-magic', route: 'comunicados' }
             ]
         },
         {

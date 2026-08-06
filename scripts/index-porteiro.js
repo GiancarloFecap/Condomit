@@ -90,6 +90,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     bindQuickActions();
+
+    const dangerBtn = document.querySelector('.danger-btn');
+    if (dangerBtn) {
+        dangerBtn.addEventListener('click', () => {
+            window.location.href = 'tel:+5511974409806';
+        });
+    }
+
+    const topProfileBlock = document.getElementById('topProfileBlock');
+    if (topProfileBlock) {
+        topProfileBlock.style.cursor = 'pointer';
+        topProfileBlock.addEventListener('click', () => {
+            window.location.href = 'configuracoes.html';
+        });
+    }
+
+    const topUserBtn = document.getElementById('topUserBtn');
+    if (topUserBtn) {
+        topUserBtn.addEventListener('click', () => {
+            window.location.href = 'configuracoes.html#editar-perfil';
+        });
+    }
 });
 
 function bindQuickActions() {
