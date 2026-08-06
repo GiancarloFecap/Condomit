@@ -150,10 +150,82 @@
             return null;
         }
 
+        const currentUser = getCurrentUser();
+        const condoIdentifiers = new Set(
+            [
+                currentUser?.condominium?.cep,
+                currentUser?.condominium?.condominium_id,
+                currentUser?.condominium?.condominiumId,
+                currentUser?.condominium?.id,
+                currentUser?.cep,
+                currentUser?.condominium_id,
+                currentUser?.condominiumId
+            ]
+                .map((x) => String(x || '').replace(/\D/g, ''))
+                .filter(Boolean)
+        );
+
         setFeedback(form, 'Buscando responsável...', 'info');
-        const user = typeof window.fetchUserByCpf === 'function'
-            ? await window.fetchUserByCpf(normalizedCpf)
-            : null;
+
+        let user = null;
+        if (typeof window.fetchUserByCpf === 'function') {
+            try {
+                user = await window.fetchUserByCpf(normalizedCpf);
+            } catch (fetchErr) {
+                console.warn('Erro ao buscar responsável por CPF:', fetchErr?.message || fetchErr);
+                user = null;
+            }
+        }
+
+        if (user) {
+            try {
+                const responsibleIdentifiers = new Set(
+                    [
+                        user.condominium?.cep,
+                        user.condominium?.condominium_id,
+                        user.condominium?.condominiumId,
+                        user.condominium?.id,
+                        user.cep,
+                        user.condominium_id,
+                        user.condominiumId
+                    ]
+                        .map((x) => String(x || '').replace(/\D/g, ''))
+                        .filter(Boolean)
+                );
+
+                const userCondo = user?.condominium && typeof user.condominium === 'string'
+                    ? (() => { try { return JSON.parse(user.condominium); } catch (_) { return null; } })()
+                    : (user?.condominium || null);
+                if (userCondo && !responsibleIdentifiers.size) {
+                    [
+                        userCondo.cep,
+                        userCondo.condominium_id,
+                        userCondo.condominiumId,
+                        userCondo.id
+                    ].forEach((val) => {
+                        const cleaned = String(val || '').replace(/\D/g, '');
+                        if (cleaned) responsibleIdentifiers.add(cleaned);
+                    });
+                }
+
+                const belongsToCondo =
+                    condoIdentifiers.size === 0 ||
+                    responsibleIdentifiers.size === 0 ||
+                    [...condoIdentifiers].some((x) => responsibleIdentifiers.has(x));
+
+                if (!belongsToCondo) {
+                    setFeedback(form, 'CPF do responsável não pertence a este condomínio.', 'error');
+                    setValue(form.responsibleName, '');
+                    setValue(form.responsiblePhone, '');
+                    setValue(form.responsibleApartment, '');
+                    setValue(form.responsibleBlock, '');
+                    return null;
+                }
+                if (userCondo && !user.condominium) user.condominium = userCondo;
+            } catch (_) {
+                console.warn('Aviso: não foi possível validar condomínio do responsável.', _?.message || _);
+            }
+        }
 
         if (!user) {
             setValue(form.responsibleName, '');
@@ -225,7 +297,12 @@
                 throw new Error('Função de cadastro de visitantes não disponível.');
             }
 
-            const created = await window.createVisitor(payload);
+            const created = typeof window.createVisitor === 'function'
+                ? await window.createVisitor(payload, currentUser)
+                : null;
+            if (!created) {
+                throw new Error('Não foi possível salvar o visitante no banco de dados. Tente novamente.');
+            }
             pushRecentLog(buildRecentLog(form, currentUser), currentUser);
             setFeedback(form, 'Visitante registrado com sucesso.', 'success');
 

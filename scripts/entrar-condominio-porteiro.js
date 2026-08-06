@@ -47,6 +47,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            const hasStrongCondoLink =
+                !!(currentUser.condominium && (currentUser.condominium.condominium_id || currentUser.condominium.cep));
+
+            if (hasStrongCondoLink) {
+                const email = String(currentUser.email || '').toLowerCase();
+                const todayStr = new Date().toISOString().slice(0, 10);
+                const sessionKey = `porteiro:session:${email}:${todayStr}`;
+                const condoId = currentUser.condominium.condominium_id || currentUser.condominium.cep || '';
+                const everKey = `porteiro:entry:${email}:${condoId}`;
+                const boundPersistenceKey = `porteiro:confirmed-entry:${email}:${condoId}`;
+                try {
+                    sessionStorage.setItem(sessionKey, '1');
+                    if (condoId) {
+                        sessionStorage.setItem(everKey, '1');
+                        try { localStorage.setItem(boundPersistenceKey, '1'); } catch (_) {}
+                    }
+                } catch (_) {}
+                window.location.href = 'index-porteiro.html';
+                return;
+            }
+
             if (currentUser.condominium) {
                 let boundOk = false;
                 try {
@@ -61,14 +82,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 const hasCondoId = !!currentUser.condominium.condominium_id;
 
                 if (boundOk || hasCondoId) {
+                    const email = String(currentUser.email || '').toLowerCase();
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    const sessionKey = `porteiro:session:${email}:${todayStr}`;
+                    const condoId = currentUser.condominium.condominium_id || currentUser.condominium.cep || '';
+                    const everKey = `porteiro:entry:${email}:${condoId}`;
+                    const boundPersistenceKey = `porteiro:confirmed-entry:${email}:${condoId}`;
                     try {
-                        const email = String(currentUser.email || '').toLowerCase();
-                        const todayStr = new Date().toISOString().slice(0, 10);
-                        const sessionKey = `porteiro:session:${email}:${todayStr}`;
-                        const condoId = currentUser.condominium.condominium_id || currentUser.condominium.cep || '';
-                        const everKey = `porteiro:entry:${email}:${condoId}`;
                         sessionStorage.setItem(sessionKey, '1');
-                        if (condoId) sessionStorage.setItem(everKey, '1');
+                        if (condoId) {
+                            sessionStorage.setItem(everKey, '1');
+                            try { localStorage.setItem(boundPersistenceKey, '1'); } catch (_) {}
+                        }
                     } catch (_) {}
                     window.location.href = 'index-porteiro.html';
                     return;
