@@ -48,18 +48,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (currentUser.condominium) {
+                let boundOk = false;
                 try {
                     const boundResponse = await proxyFetch(
                         `/api/user_condominiums?user_email=eq.${encodeURIComponent(currentUser.email)}`
                     );
-                    if (boundResponse && boundResponse.length > 0) {
-                        window.location.href = 'index-porteiro.html';
-                        return;
-                    }
+                    boundOk = !!(boundResponse && boundResponse.length > 0);
                 } catch (err) {
                     console.warn('Erro ao verificar vinculo existente:', err.message);
                 }
-                if (currentUser.condominium.condominium_id) {
+
+                const hasCondoId = !!currentUser.condominium.condominium_id;
+
+                if (boundOk || hasCondoId) {
+                    try {
+                        const email = String(currentUser.email || '').toLowerCase();
+                        const todayStr = new Date().toISOString().slice(0, 10);
+                        const sessionKey = `porteiro:session:${email}:${todayStr}`;
+                        const condoId = currentUser.condominium.condominium_id || currentUser.condominium.cep || '';
+                        const everKey = `porteiro:entry:${email}:${condoId}`;
+                        sessionStorage.setItem(sessionKey, '1');
+                        if (condoId) sessionStorage.setItem(everKey, '1');
+                    } catch (_) {}
                     window.location.href = 'index-porteiro.html';
                     return;
                 }

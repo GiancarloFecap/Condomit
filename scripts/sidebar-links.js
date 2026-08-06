@@ -386,7 +386,8 @@ function buildSidebarNav(userType, currentPage, lang = getAppLanguage()) {
 }
 
 function renderSidebarSection(section, userType, currentPage, lang = getAppLanguage()) {
-    const title = section.titleKey
+    const hasTitle = !!section.titleKey;
+    const title = hasTitle
         ? `<div class="nav-section-title">${escapeSidebarHtml(t(section.titleKey, lang))}</div>`
         : '';
 
@@ -405,7 +406,8 @@ function renderSidebarSection(section, userType, currentPage, lang = getAppLangu
         `;
     }).join('');
 
-    return `<div class="nav-section">${title}${items}</div>`;
+    const sectionClass = 'nav-section' + (hasTitle ? '' : ' nav-section--plain');
+    return `<div class="${sectionClass}">${title}${items}</div>`;
 }
 
 function getSidebarConfig(userType) {

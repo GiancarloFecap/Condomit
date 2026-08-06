@@ -413,35 +413,67 @@ Administração.`
     }
 
     function sendComunicado() {
-        const title = document.getElementById('resultTitle').textContent;
-        const content = document.getElementById('resultContent').textContent;
-        if (!title || !content || content.length < 30) return;
+        const title = (document.getElementById('resultTitle').textContent || '').trim();
+        const content = (document.getElementById('resultContent').textContent || '').trim();
+        if (!title || !content || content.length < 20) {
+            if (typeof showToast === 'function') {
+                showToast('Gere um rascunho antes de enviar.', 'warning');
+            }
+            return;
+        }
 
         const btn = document.getElementById('sendBtn');
+        if (!btn || btn.disabled) return;
         btn.disabled = true;
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spin fa-spinner"></i> Enviando...';
 
         setTimeout(() => {
+            let created = false;
             try {
-                if (window.communityHub && window.communityHub.createNotification) {
+                if (window.communityHub && typeof window.communityHub.createNotification === 'function') {
+                    const preview = content.length > 160 ? content.slice(0, 157) + '...' : content;
                     window.communityHub.createNotification({
                         category: 'Avisos',
-                        title,
-                        message: content.slice(0, 140) + (content.length > 140 ? '...' : ''),
-                        details: content
+                        title: title,
+                        message: preview,
+                        details: content,
+                        metadata: { source: 'ai-comunicados', generatedAt: new Date().toISOString() }
                     }, state.currentUser);
+                    created = true;
                 }
-            } catch (_) {}
-            if (typeof showToast === 'function') {
-                showToast('Comunicado enviado para o Mural de Avisos!', 'success');
+            } catch (err) {
+                console.warn('Falha ao criar notificacao:', err);
             }
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            if (created) {
                 document.getElementById('promptInput').value = '';
                 updateCharCount();
-            }, 1200);
+                updateActionButtons(false);
+                if (typeof showToast === 'function') {
+                    showToast('Comunicado enviado para o Mural de Avisos! Clique para abrir.', 'success');
+                    try {
+                        const toastEl = document.querySelector('.toast, .toast-success, [class*="toast"]');
+                        if (toastEl) {
+                            toastEl.style.cursor = 'pointer';
+                            toastEl.addEventListener('click', () => {
+                                window.location.href = 'notificacoes.html';
+                            }, { once: true });
+                        }
+                    } catch (_) {}
+                }
+                setTimeout(() => {
+                    const open = window.confirm ? confirm('Comunicado publicado! Deseja abrir o Mural de Avisos para visualizar?') : false;
+                    if (open) window.location.href = 'notificacoes.html';
+                }, 600);
+            } else {
+                if (typeof showToast === 'function') {
+                    showToast('Não foi possível publicar o comunicado. Tente novamente.', 'error');
+                }
+            }
         }, 900);
     }
 

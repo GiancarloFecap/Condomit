@@ -43,7 +43,7 @@
             <section class="ai-comunicados-page">
                 <div class="ai-comunicados-layout">
                     <div class="ai-main-col">
-                        <div class="ai-card">
+                        <div class="ai-card ai-card--step1">
                             <div class="step-badge">
                                 <span class="step-num">1</span>
                                 Descreva o comunicado
@@ -60,7 +60,7 @@
                             </div>
                         </div>
 
-                        <div class="ai-card">
+                        <div class="ai-card ai-card--step2">
                             <div class="step-badge success" id="step2Badge">
                                 <span class="step-num">2</span>
                                 Resultado da IA
@@ -72,15 +72,13 @@
                                     <i class="fas fa-memo-circle-info"></i>
                                     <span id="resultTitle">Título aparecerá aqui</span>
                                 </h4>
-                                <div class="result-content" id="resultContent">
-Descreva o comunicado no passo acima para que a IA gere um rascunho profissional e personalizado para o seu condomínio.
+                                <div class="result-content" id="resultContent">Descreva o comunicado no passo acima para que a IA gere um rascunho profissional e personalizado para o seu condomínio.
 
 Você pode incluir detalhes como:
 • Data, horário e local do evento ou manutenção
 • Bloco e apartamento afetados (se aplicável)
 • Prazo para resposta ou ação dos moradores
-• Tom do comunicado (formal, amigável, urgente)
-                                </div>
+• Tom do comunicado (formal, amigável, urgente)</div>
                             </div>
                             <div class="result-actions">
                                 <button class="btn-secondary-ai" id="refineBtn" type="button" disabled>
@@ -100,14 +98,14 @@ Você pode incluir detalhes como:
                     </div>
 
                     <div class="ai-side-col">
-                        <div class="ai-card">
+                        <div class="ai-card ai-card--history">
                             <div class="step-badge" style="background:#ecfdf5;color:#059669;">
                                 <span class="step-num"><i class="fas fa-clock" style="font-size:10px;"></i></span>
                                 Histórico
                             </div>
                             <h2>Comunicados recentes</h2>
                             <p class="card-subtitle">Acesse os últimos comunicados gerados pela IA.</p>
-                            <div id="historyList">
+                            <div class="history-scroll" id="historyList">
                                 <div class="history-empty">
                                     <i class="fas fa-inbox" style="font-size:24px;margin-bottom:8px;display:block;opacity:0.4;"></i>
                                     Nenhum comunicado gerado ainda.
@@ -115,7 +113,7 @@ Você pode incluir detalhes como:
                             </div>
                         </div>
 
-                        <div class="ai-card">
+                        <div class="ai-card ai-card--tips">
                             <div class="step-badge" style="background:#fffbeb;color:#b45309;">
                                 <span class="step-num" style="background:#b45309;"><i class="fas fa-lightbulb" style="font-size:10px;"></i></span>
                                 Dicas
@@ -138,6 +136,7 @@ Você pode incluir detalhes como:
     </div>
 
     <script src="../scripts/supabase-client.js"></script>
+    <script src="../scripts/community-hub.js"></script>
     <script src="../scripts/sidebar-links.js"></script>
     <script src="../scripts/ai-comunicados.js"></script>
 </body>
