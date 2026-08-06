@@ -586,6 +586,8 @@ async function scheduleAssemblyDb(assembly) {
   delete safeAssembly.condominiumCep;
   if (!safeAssembly.status) safeAssembly.status = 'agendada';
   if (!safeAssembly.updated_at) safeAssembly.updated_at = new Date().toISOString();
+  if (!safeAssembly.created_at) safeAssembly.created_at = new Date().toISOString();
+  if (!safeAssembly.assembly_type) safeAssembly.assembly_type = 'ordinaria';
   const validStatuses = ['agendada', 'em_andamento', 'encerrada', 'cancelada'];
   if (!validStatuses.includes(String(safeAssembly.status).toLowerCase())) {
     safeAssembly.status = 'agendada';
@@ -626,7 +628,13 @@ async function scheduleAssemblyDb(assembly) {
     if (!row.cep && cepClean) row.cep = cepClean;
     if (!row.status) row.status = 'agendada';
     if (!row.updated_at) row.updated_at = new Date().toISOString();
+    if (!row.created_at) row.created_at = row.updated_at || new Date().toISOString();
+    if (!row.assembly_type) row.assembly_type = 'ordinaria';
     if (row.condominium_cep && !row.cep) row.cep = row.condominium_cep;
+    const returnedCep = String(row.cep || '').replace(/\D/g, '');
+    if (returnedCep && returnedCep !== cepClean && cepClean) {
+      if (!row._raw_cep) row._raw_cep = returnedCep;
+    }
     return row;
   }
 
@@ -649,6 +657,12 @@ async function scheduleAssemblyDb(assembly) {
     }
     if (proxyResponse.ok && proxyData) {
       return postProcessRow(Array.isArray(proxyData) ? proxyData[0] : proxyData);
+    }
+    if (!proxyResponse.ok) {
+      const proxyErrMsg = proxyData && typeof proxyData === 'object' && proxyData.error
+        ? String(proxyData.error)
+        : (typeof proxyData === 'string' ? proxyData : `HTTP ${proxyResponse.status}`);
+      console.warn('[scheduleAssemblyDb] Proxy /api/assemblies rejeitou:', proxyErrMsg || `status ${proxyResponse.status}`);
     }
   } catch (proxyError) {
     console.warn('scheduleAssemblyDb API proxy falhou:', proxyError?.message || proxyError);

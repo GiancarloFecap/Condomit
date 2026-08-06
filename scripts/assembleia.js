@@ -1642,13 +1642,18 @@ async function scheduleAssembly(event) {
         date,
         start_time: startTime,
         end_time: startTime,
-        created_by: assemblyState.currentUser.email
+        created_by: assemblyState.currentUser.email,
+        assembly_type: 'ordinaria',
+        status: 'agendada',
+        updated_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
     };
 
     try {
-        const savedAssembly = typeof scheduleAssemblyDb === 'function'
-            ? await scheduleAssemblyDb(payload)
-            : payload;
+        if (typeof scheduleAssemblyDb !== 'function') {
+            throw new Error('Funcao scheduleAssemblyDb nao foi carregada. Recarregue a pagina.');
+        }
+        const savedAssembly = await scheduleAssemblyDb(payload);
 
         scheduledAssemblies.push(savedAssembly);
         scheduledAssemblies.sort((left, right) => {
