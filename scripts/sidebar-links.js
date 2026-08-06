@@ -351,6 +351,8 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
     if (!sidebar) return;
 
     sidebar.classList.toggle('porteiro-sidebar', userType === 'porteiro');
+    sidebar.classList.toggle('sindico-sidebar', userType !== 'porteiro' && userType !== 'morador');
+    sidebar.classList.toggle('morador-sidebar', userType === 'morador');
     sidebar.innerHTML = `
         <div class="sidebar-header">
             <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
@@ -415,19 +417,12 @@ function getSidebarConfig(userType) {
         return [
             { items: [{ labelKey: 'home', icon: 'fas fa-home', route: 'inicio' }] },
             {
-                titleKey: 'notices_communications',
-                items: [
-                    { labelKey: 'mural', icon: 'fas fa-bell', route: 'mural' }
-                ]
-            },
-            {
                 titleKey: 'access_control',
                 items: [
                     { labelKey: 'visitor_release', icon: 'fas fa-user-group', route: 'porteiro-liberacao' },
                     { labelKey: 'register_visitor', icon: 'fas fa-user-plus', route: 'porteiro-registrar' },
                     { labelKey: 'visitor_entry_exit', icon: 'fas fa-right-to-bracket', route: 'porteiro-registro' },
-                    { labelKey: 'released_visitors', icon: 'fas fa-shield-check', route: 'porteiro-visitantes' },
-                    { labelKey: 'access_history', icon: 'fas fa-clock-rotate-left', route: 'porteiro-historico' },
+                    { labelKey: 'released_visitors', icon: 'fas fa-users-check', route: 'porteiro-visitantes' },
                     { labelKey: 'deliveries_authorization', icon: 'fas fa-box', route: 'porteiro-entregas' },
                     { labelKey: 'provider_control', icon: 'fas fa-file-contract', route: 'porteiro-prestadores' }
                 ]
@@ -441,12 +436,8 @@ function getSidebarConfig(userType) {
             {
                 titleKey: 'relationships',
                 items: [
+                    { labelKey: 'chat_syndic', icon: 'fas fa-comments', route: 'chat-sindico' },
                     { labelKey: 'chat_residents', icon: 'fas fa-comments', route: 'chat-moradores' }
-                ]
-            },
-            {
-                items: [
-                    { labelKey: 'assembly_plural', icon: 'fas fa-calendar-days', route: 'assembleias' }
                 ]
             },
             {

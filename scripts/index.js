@@ -155,6 +155,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             btn.addEventListener('click', () => {
                 window.location.href = 'assembleia.html';
             });
+        } else if (text.trim() === 'chat' || /(^|\s)chat(\s|$)/i.test(btn.textContent)) {
+            btn.addEventListener('click', () => {
+                window.location.href = 'chat-moradores.html';
+            });
         }
     });
 

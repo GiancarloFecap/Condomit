@@ -100,6 +100,62 @@ body {
     text-align: center;
 }
 
+.sidebar.sindico-sidebar {
+    padding: 14px 12px 12px;
+}
+
+.sidebar.sindico-sidebar .sidebar-header {
+    padding: 4px 8px 16px;
+    margin-bottom: 12px;
+}
+
+.sidebar.sindico-sidebar .sidebar-logo {
+    width: 38px;
+    height: 38px;
+}
+
+.sidebar.sindico-sidebar .condo-name {
+    font-size: 0.95rem;
+    margin-top: 6px;
+}
+
+.sidebar.sindico-sidebar .nav-section {
+    margin-bottom: 8px;
+}
+
+.sidebar.sindico-sidebar .nav-section--plain {
+    margin-bottom: 4px;
+}
+
+.sidebar.sindico-sidebar .nav-section-title {
+    margin: 4px 10px 4px;
+    font-size: 0.68rem;
+}
+
+.sidebar.sindico-sidebar .nav-item {
+    padding: 7px 10px;
+    gap: 9px;
+    margin-bottom: 1px;
+    font-size: 0.9rem;
+    border-radius: 7px;
+}
+
+.sidebar.sindico-sidebar .nav-item i {
+    font-size: 0.95em;
+    width: 18px;
+}
+
+.sidebar.sindico-sidebar .sidebar-footer {
+    padding-top: 10px;
+    margin-top: 6px;
+    gap: 7px;
+}
+
+.sidebar.sindico-sidebar .btn-support {
+    padding: 10px;
+    font-size: 0.85rem;
+}
+
 .sidebar-footer {
     padding-top: 15px;
     margin-top: 10px;

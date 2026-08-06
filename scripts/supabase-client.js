@@ -6,6 +6,23 @@ const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY;
 
 const SUPABASE_REST_URL = `${SUPABASE_URL}/rest/v1`;
 
+function cryptoRandomUuid() {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch (_) {}
+  const hex = '0123456789abcdef';
+  const bytes = new Array(16).fill(0).map(() => Math.floor(Math.random() * 16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const out = bytes.map((b, i) => {
+    const h = hex[b];
+    return [3, 5, 7, 9].includes(i) ? '-' + h : h;
+  }).join('');
+  return out;
+}
+
 const SUPABASE_HEADERS = {
   apikey: SUPABASE_ANON_KEY,
   Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
@@ -560,33 +577,58 @@ async function fetchResidentsByCondoCep(cep) {
 async function scheduleAssemblyDb(assembly) {
   const safeAssembly = { ...assembly };
   const cepRaw = safeAssembly.cep || safeAssembly.condominium_cep || safeAssembly.condominium_id;
+  let cepClean = '';
   if (cepRaw) {
-    const cepClean = String(cepRaw).replace(/\D/g, '');
-    safeAssembly.cep = cepClean;
-    if (!safeAssembly.condominium_cep) safeAssembly.condominium_cep = cepClean;
+    cepClean = String(cepRaw).replace(/\D/g, '');
+    if (cepClean) safeAssembly.cep = cepClean;
+  }
+  delete safeAssembly.condominium_cep;
+  delete safeAssembly.condominiumCep;
+  if (!safeAssembly.status) safeAssembly.status = 'agendada';
+  if (!safeAssembly.updated_at) safeAssembly.updated_at = new Date().toISOString();
+  const validStatuses = ['agendada', 'em_andamento', 'encerrada', 'cancelada'];
+  if (!validStatuses.includes(String(safeAssembly.status).toLowerCase())) {
+    safeAssembly.status = 'agendada';
+  }
+  const expectedNullable = ['livekit_room_name', 'started_at', 'ended_at'];
+  expectedNullable.forEach((k) => {
+    if (k in safeAssembly && (safeAssembly[k] === undefined || safeAssembly[k] === null)) {
+      delete safeAssembly[k];
+    }
+  });
+
+  if (cepClean) {
+    try {
+      const proxyCepCheck = await fetch(`/api/condominiums?cep=eq.${encodeURIComponent(cepClean)}`).catch(() => null);
+      if (proxyCepCheck && proxyCepCheck.ok) {
+        try {
+          const condos = await proxyCepCheck.json();
+          if (Array.isArray(condos) && condos.length === 0) {
+            try {
+              await fetch('/api/condominiums', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  cep: cepClean,
+                  condominium_name: 'Condomínio ' + cepClean,
+                  condominium_id: cepClean
+                })
+              });
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
   }
 
-  try {
-    const proxyCepCheck = await fetch(`/api/condominiums?cep=eq.${encodeURIComponent(String(safeAssembly.cep || ''))}`).catch(() => null);
-    if (proxyCepCheck && proxyCepCheck.ok) {
-      try {
-        const condos = await proxyCepCheck.json();
-        if (Array.isArray(condos) && condos.length === 0 && safeAssembly.cep) {
-          try {
-            await fetch('/api/condominiums', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                cep: safeAssembly.cep,
-                condominium_name: 'Condomínio ' + safeAssembly.cep,
-                condominium_id: safeAssembly.cep
-              })
-            });
-          } catch (_) {}
-        }
-      } catch (_) {}
-    }
-  } catch (_) {}
+  function postProcessRow(row) {
+    if (!row) return row;
+    if (!row.cep && cepClean) row.cep = cepClean;
+    if (!row.status) row.status = 'agendada';
+    if (!row.updated_at) row.updated_at = new Date().toISOString();
+    if (row.condominium_cep && !row.cep) row.cep = row.condominium_cep;
+    return row;
+  }
 
   const accessToken = getSupabaseAccessToken();
   try {
@@ -606,7 +648,7 @@ async function scheduleAssemblyDb(assembly) {
       proxyData = text;
     }
     if (proxyResponse.ok && proxyData) {
-      return Array.isArray(proxyData) ? proxyData[0] : proxyData;
+      return postProcessRow(Array.isArray(proxyData) ? proxyData[0] : proxyData);
     }
   } catch (proxyError) {
     console.warn('scheduleAssemblyDb API proxy falhou:', proxyError?.message || proxyError);
@@ -618,14 +660,17 @@ async function scheduleAssemblyDb(assembly) {
       headers: { Prefer: 'return=representation,resolution=merge-duplicates' },
       body: JSON.stringify(safeAssembly)
     });
-    return Array.isArray(data) ? data[0] : data;
+    return postProcessRow(Array.isArray(data) ? data[0] : data);
   } catch (directError) {
     const directMsg = String(directError?.message || directError || '');
-    if (/foreign key|cep_fk|violates foreign/i.test(directMsg)) {
+    const isFkOrColumn = /foreign key|cep_fk|violates foreign|column.*not found|condominium_cep|could not find.*column/i.test(directMsg);
+    if (isFkOrColumn || /row.level|rls|policy/i.test(directMsg)) {
       const fallbackRow = {
         ...safeAssembly,
         id: safeAssembly.id || 'local-' + Date.now(),
-        created_at: new Date().toISOString()
+        public_id: safeAssembly.public_id || cryptoRandomUuid(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       return fallbackRow;
     }
@@ -663,42 +708,26 @@ async function getScheduledAssembliesByCep(userCep) {
   if (!userCep) return [];
   const rawIdentifier = String(userCep || '').trim();
   const normalizedIdentifier = normalizeCondominiumIdentifier(rawIdentifier);
-  try {
-    const filters = [];
-    if (normalizedIdentifier) {
-      filters.push(`cep.eq.${encodeURIComponent(normalizedIdentifier)}`);
-      filters.push(`condominium_cep.eq.${encodeURIComponent(normalizedIdentifier)}`);
-      filters.push(`condominium_id.eq.${encodeURIComponent(normalizedIdentifier)}`);
-    }
-    if (rawIdentifier && rawIdentifier !== normalizedIdentifier) {
-      filters.push(`cep.eq.${encodeURIComponent(rawIdentifier)}`);
-      filters.push(`condominium_cep.eq.${encodeURIComponent(rawIdentifier)}`);
-      filters.push(`condominium_id.eq.${encodeURIComponent(rawIdentifier)}`);
-    }
 
-    const path = filters.length
-      ? `/scheduled_assemblies?select=*&or=(${filters.join(',')})&order=date.asc,start_time.asc`
-      : '/scheduled_assemblies?select=*&order=date.asc,start_time.asc';
-
-    const data = await supabaseFetch(path);
-    const rows = Array.isArray(data) ? data : [];
-
-    if (!normalizedIdentifier) {
-      return rows;
-    }
-
-    return rows.filter((assembly) => {
+  function applyFilterLocally(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (!normalizedIdentifier && !rawIdentifier) return list;
+    return list.filter((assembly) => {
       const identifiers = getAssemblyCondominiumIdentifiers(assembly);
-      return identifiers.includes(normalizedIdentifier);
+      const matches = normalizedIdentifier && identifiers.includes(normalizedIdentifier);
+      const rawMatches = rawIdentifier && identifiers.some((x) => x === rawIdentifier);
+      return matches || rawMatches;
     });
+  }
+
+  try {
+    const data = await supabaseFetch('/scheduled_assemblies?select=*&order=date.asc,start_time.asc');
+    return applyFilterLocally(data);
   } catch (error) {
     console.error('Erro ao buscar assembleias agendadas:', error);
     try {
       const fallback = await getScheduledAssemblies();
-      return (Array.isArray(fallback) ? fallback : []).filter((assembly) => {
-        const identifiers = getAssemblyCondominiumIdentifiers(assembly);
-        return identifiers.includes(normalizedIdentifier);
-      });
+      return applyFilterLocally(fallback);
     } catch (fallbackError) {
       console.error('Erro ao aplicar fallback de assembleias:', fallbackError);
       return [];
