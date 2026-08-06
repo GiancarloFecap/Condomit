@@ -424,25 +424,29 @@ function getSidebarConfig(userType) {
                 titleKey: 'access_control',
                 items: [
                     { labelKey: 'visitor_release', icon: 'fas fa-user-group', route: 'porteiro-liberacao' },
+                    { labelKey: 'register_visitor', icon: 'fas fa-user-plus', route: 'porteiro-registrar' },
+                    { labelKey: 'visitor_entry_exit', icon: 'fas fa-right-to-bracket', route: 'porteiro-registro' },
                     { labelKey: 'released_visitors', icon: 'fas fa-shield-check', route: 'porteiro-visitantes' },
+                    { labelKey: 'access_history', icon: 'fas fa-clock-rotate-left', route: 'porteiro-historico' },
+                    { labelKey: 'deliveries_authorization', icon: 'fas fa-box', route: 'porteiro-entregas' },
                     { labelKey: 'provider_control', icon: 'fas fa-file-contract', route: 'porteiro-prestadores' }
+                ]
+            },
+            {
+                titleKey: 'emergency_services',
+                items: [
+                    { labelKey: 'emergency_button', icon: 'fas fa-triangle-exclamation', route: 'porteiro-emergencia' }
                 ]
             },
             {
                 titleKey: 'relationships',
                 items: [
-                    { labelKey: 'chat_porter', icon: 'fas fa-comments', route: 'chat-porteiro' }
+                    { labelKey: 'chat_residents', icon: 'fas fa-comments', route: 'chat-moradores' }
                 ]
             },
             {
                 items: [
-                    { labelKey: 'assembly_plural', icon: 'fas fa-calendar-days', route: 'assembleias' },
-                    { labelKey: 'reservations', icon: 'fas fa-calendar-check', route: 'reservas' }
-                ]
-            },
-            {
-                items: [
-                    { labelKey: 'documents', icon: 'fas fa-file-lines', route: 'configuracoes' }
+                    { labelKey: 'assembly_plural', icon: 'fas fa-calendar-days', route: 'assembleias' }
                 ]
             },
             {
