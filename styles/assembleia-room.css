@@ -780,6 +780,182 @@ body {
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
+/* ============================================================
+   ESTILOS GERAIS DE BOTÕES (fora do modal também)
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 120ms ease, box-shadow 120ms ease;
+  font-family: inherit;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border-color: #1d4ed8;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  border-color: #1e40af;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: #334155;
+  color: #f1f5f9;
+  border-color: #475569;
+}
+
+.btn-secondary:hover {
+  background: #475569;
+  border-color: #64748b;
+  color: #ffffff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.btn-ghost:hover {
+  background: rgba(148, 163, 184, 0.12);
+  color: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.btn-outline {
+  background: transparent;
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.btn-outline:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.btn-inline-add {
+  gap: 4px;
+  padding: 7px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff !important;
+  border-color: #1d4ed8;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+  font-weight: 700;
+}
+
+.btn-inline-add:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  color: #ffffff !important;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.55);
+  transform: translateY(-1px);
+}
+
+.btn-inline-add i {
+  font-size: 11px;
+  color: #ffffff;
+}
+
+.chat-send-round {
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex: 0 0 40px;
+}
+
+/* Form layouts */
+.modal-root .inline-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.modal-root .chip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-root .chip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-root .chip-row input {
+  flex: 1;
+}
+
+.modal-root .chip-row button {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.modal-root .chip-row button:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #ffffff;
+}
+
+@media (max-width: 560px) {
+  .modal-root .inline-fields {
+    grid-template-columns: 1fr;
+  }
+  .btn-inline-add {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}
+
 .modal-root .field input:focus,
 .modal-root .field textarea:focus,
 .modal-root .field select:focus {

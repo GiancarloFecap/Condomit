@@ -392,6 +392,37 @@ async function createCondominium(condo) {
 }
 
 async function createVisitor(visitor) {
+  const currentUserStr = sessionStorage.getItem('condominiumUser');
+  let currentUser = null;
+  try {
+    if (currentUserStr) currentUser = JSON.parse(currentUserStr);
+  } catch (_) {}
+
+  function normalizeCep(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length !== 8) return String(value || '').trim() || null;
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  }
+
+  const condominium = currentUser?.condominium || {};
+  const cepCandidates = [
+    condominium?.cep,
+    condominium?.condominium_cep,
+    condominium?.condominium_id,
+    condominium?.condominiumId,
+    currentUser?.cep,
+    currentUser?.condominium_cep,
+    currentUser?.condominium_id,
+    currentUser?.condominiumId,
+    ...(getUserCondominiumIdentifiers(currentUser || {}) || [])
+  ];
+  let cep = null;
+  for (const c of cepCandidates) {
+    if (!c) continue;
+    const normalized = normalizeCep(c);
+    if (normalized) { cep = normalized; break; }
+  }
+
   const payload = {
     cpf: String(visitor?.cpf || '').replace(/\D/g, ''),
     full_name: String(visitor?.full_name || '').trim(),
@@ -400,6 +431,8 @@ async function createVisitor(visitor) {
     email: String(visitor?.email || '').trim() || null,
     responsible_cpf: String(visitor?.responsible_cpf || '').replace(/\D/g, '')
   };
+
+  if (cep) payload.cep = cep;
 
   const data = await supabaseFetch('/visitors', {
     method: 'POST',

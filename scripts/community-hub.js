@@ -90,17 +90,33 @@
         return [];
     }
 
-    function getUserCepForDb(user = getCurrentUser()) {
-        const ids = typeof window.getUserCondominiumIdentifiers === 'function'
-            ? window.getUserCondominiumIdentifiers(user)
-            : [];
-        for (const id of ids) {
-            if (id && typeof id === 'string') {
-                return id.replace(/\D/g, '');
-            }
+    function normalizeCepForDb(value) {
+        const digits = String(value || '').replace(/\D/g, '');
+        if (digits.length !== 8) {
+            return String(value || '').trim();
         }
-        const direct = getCondominiumKey(user);
-        return String(direct || '').replace(/\D/g, '');
+        return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    }
+
+    function getUserCepForDb(user = getCurrentUser()) {
+        const condominium = user?.condominium || {};
+        const candidates = [
+            condominium?.cep,
+            condominium?.condominium_cep,
+            condominium?.condominium_id,
+            condominium?.condominiumId,
+            user?.cep,
+            user?.condominium_cep,
+            user?.condominium_id,
+            user?.condominiumId,
+            getCondominiumKey(user)
+        ];
+        for (const c of candidates) {
+            if (!c || typeof c !== 'string') continue;
+            const normalized = normalizeCepForDb(c);
+            if (normalized) return normalized;
+        }
+        return '';
     }
 
     async function fetchNotificationsFromSupabase(user = getCurrentUser()) {

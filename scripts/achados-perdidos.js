@@ -118,14 +118,38 @@ function dbItemTypeToType(dbType) {
     return dbType === 'Perdido' ? 'perdido' : 'encontrado';
 }
 
+function normalizeLostFoundCepForDb(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length !== 8) return String(value || '').trim();
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
 function getLostFoundUserCep() {
+    const user = lostFoundState.currentUser;
+    const condominium = user?.condominium || {};
+    const candidates = [
+        condominium?.cep,
+        condominium?.condominium_cep,
+        condominium?.condominium_id,
+        condominium?.condominiumId,
+        user?.cep,
+        user?.condominium_cep,
+        user?.condominium_id,
+        user?.condominiumId,
+        window.communityHub?.getCondominiumKey?.(user)
+    ];
     if (typeof window.getUserCondominiumIdentifiers === 'function') {
-        const ids = window.getUserCondominiumIdentifiers(lostFoundState.currentUser) || [];
+        const ids = window.getUserCondominiumIdentifiers(user) || [];
         for (const id of ids) {
-            if (id && typeof id === 'string') return id.replace(/\D/g, '');
+            if (id && typeof id === 'string') candidates.unshift(id);
         }
     }
-    return String(window.communityHub?.getCondominiumKey?.(lostFoundState.currentUser) || '').replace(/\D/g, '');
+    for (const c of candidates) {
+        if (!c || typeof c !== 'string') continue;
+        const normalized = normalizeLostFoundCepForDb(c);
+        if (normalized) return normalized;
+    }
+    return '';
 }
 
 async function fetchLostFoundFromSupabase() {

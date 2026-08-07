@@ -1,6 +1,14 @@
 import { state } from './state.js';
 import { renderChatMessage, renderSimpleList } from './ui.js';
 
+function normalizeCepForDatabase(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length !== 8) {
+    return String(value || '').trim();
+  }
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
 function escapeText(value) {
   if (window.AssemblyUtils?.escapeHtml) return window.AssemblyUtils.escapeHtml(String(value ?? ''));
   return String(value ?? '');
@@ -57,7 +65,7 @@ export function subscribeChat() {
 export async function sendChat(text) {
   const message = safeText(text).slice(0, 800);
   if (!message) return;
-  const cep = state.tokenInfo?.user?.cep || state.assembly?.cep;
+  const cep = normalizeCepForDatabase(state.tokenInfo?.user?.cep || state.assembly?.cep);
   try {
     await window.AssemblyAPI.sendChatMessage(state.assemblyId, cep, message);
   } catch (e) {
@@ -179,7 +187,7 @@ export async function vote(pollId, optionId) {
       throw new Error('Esta votação já foi encerrada ou expirada.');
     }
   }
-  const cep = state.tokenInfo?.user?.cep || state.assembly?.cep;
+  const cep = normalizeCepForDatabase(state.tokenInfo?.user?.cep || state.assembly?.cep);
   try {
     await window.AssemblyAPI.votePoll(pollId, optionId, state.assemblyId, cep);
   } catch (e) {
@@ -237,7 +245,7 @@ export function formatCountdown(targetISO) {
 
 export async function createAgendaItem(payload) {
   if (!state.assemblyId) throw new Error('Assembly ausente');
-  const cep = String(state.tokenInfo?.user?.cep || state.assembly?.cep || '').replace(/\D/g, '');
+  const cep = normalizeCepForDatabase(state.tokenInfo?.user?.cep || state.assembly?.cep || '');
   const title = safeText(payload?.title || '').slice(0, 255);
   if (!title) throw new Error('Informe o título da pauta.');
   const description = payload?.description != null ? safeText(payload.description) : null;
@@ -261,7 +269,7 @@ export async function createAgendaItem(payload) {
 
 export async function createDocument(payload) {
   if (!state.assemblyId) throw new Error('Assembly ausente');
-  const cep = String(state.tokenInfo?.user?.cep || state.assembly?.cep || '').replace(/\D/g, '');
+  const cep = normalizeCepForDatabase(state.tokenInfo?.user?.cep || state.assembly?.cep || '');
   const title = safeText(payload?.title || '').slice(0, 255);
   if (!title) throw new Error('Informe o título do documento.');
   const url = safeText(payload?.document_url || payload?.url || '');
@@ -290,7 +298,7 @@ export async function createDocument(payload) {
 
 export async function createPollWithDuration(payload, durationMinutes) {
   if (!state.assemblyId) throw new Error('Assembly ausente');
-  const cep = String(state.tokenInfo?.user?.cep || state.assembly?.cep || '').replace(/\D/g, '');
+  const cep = normalizeCepForDatabase(state.tokenInfo?.user?.cep || state.assembly?.cep || '');
   const title = safeText(payload?.title || '').slice(0, 255);
   if (title.length < 3) throw new Error('Título da votação deve ter ao menos 3 caracteres.');
   const options = (Array.isArray(payload?.options) ? payload.options : [])
@@ -340,7 +348,7 @@ export async function createPollWithDuration(payload, durationMinutes) {
 }
 
 export async function toggleHand(raised) {
-  const cep = state.tokenInfo?.user?.cep || state.assembly?.cep;
+  const cep = normalizeCepForDatabase(state.tokenInfo?.user?.cep || state.assembly?.cep);
   try {
     await window.AssemblyAPI.raiseHand(state.assemblyId, cep);
     return;
