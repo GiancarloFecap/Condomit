@@ -172,6 +172,13 @@ export function subscribePolls(onChange) {
 }
 
 export async function vote(pollId, optionId) {
+  const poll = await findPollById(pollId);
+  if (poll) {
+    const open = isPollOpen(poll);
+    if (!open) {
+      throw new Error('Esta votação já foi encerrada ou expirada.');
+    }
+  }
   const cep = state.tokenInfo?.user?.cep || state.assembly?.cep;
   try {
     await window.AssemblyAPI.votePoll(pollId, optionId, state.assemblyId, cep);
@@ -186,6 +193,150 @@ export async function vote(pollId, optionId) {
     });
     if (error) throw new Error(error.message || 'Erro ao registrar voto');
   }
+}
+
+export async function findPollById(pollId) {
+  try {
+    const list = await loadPolls();
+    return list.find(p => String(p.id) === String(pollId)) || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function isPollOpen(poll) {
+  if (!poll) return false;
+  const status = safeText(poll.status || '').toLowerCase();
+  if (status === 'encerrada' || status === 'cancelada') return false;
+  const now = Date.now();
+  if (poll.start_at) {
+    const start = new Date(poll.start_at).getTime();
+    if (!Number.isNaN(start) && now < start) return false;
+  }
+  if (poll.end_at) {
+    const end = new Date(poll.end_at).getTime();
+    if (!Number.isNaN(end) && now >= end) return false;
+  }
+  return true;
+}
+
+export function formatCountdown(targetISO) {
+  if (!targetISO) return '';
+  const target = new Date(targetISO).getTime();
+  if (Number.isNaN(target)) return '';
+  const diff = target - Date.now();
+  if (diff <= 0) return 'Encerrada';
+  const totalSec = Math.floor(diff / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`;
+  if (m > 0) return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${s}s`;
+}
+
+export async function createAgendaItem(payload) {
+  if (!state.assemblyId) throw new Error('Assembly ausente');
+  const cep = String(state.tokenInfo?.user?.cep || state.assembly?.cep || '').replace(/\D/g, '');
+  const title = safeText(payload?.title || '').slice(0, 255);
+  if (!title) throw new Error('Informe o título da pauta.');
+  const description = payload?.description != null ? safeText(payload.description) : null;
+  const order = typeof payload?.display_order === 'number' ? payload.display_order : 0;
+  const estimated = typeof payload?.estimated_minutes === 'number' && payload.estimated_minutes > 0
+    ? payload.estimated_minutes
+    : null;
+  const supabase = ensureSupabase();
+  const { data, error } = await supabase.from('assembly_agenda_items').insert({
+    assembly_id: state.assemblyId,
+    cep,
+    title,
+    description,
+    display_order: order,
+    estimated_minutes: estimated,
+    status: 'nao_iniciada'
+  }).select().limit(1);
+  if (error) throw new Error(error.message || 'Erro ao criar pauta');
+  return Array.isArray(data) && data.length ? data[0] : null;
+}
+
+export async function createDocument(payload) {
+  if (!state.assemblyId) throw new Error('Assembly ausente');
+  const cep = String(state.tokenInfo?.user?.cep || state.assembly?.cep || '').replace(/\D/g, '');
+  const title = safeText(payload?.title || '').slice(0, 255);
+  if (!title) throw new Error('Informe o título do documento.');
+  const url = safeText(payload?.document_url || payload?.url || '');
+  if (!url) throw new Error('Documento não anexado.');
+  const docType = ['edital', 'ata', 'pauta', 'balanco', 'contrato', 'projeto', 'outro']
+    .includes(safeText(payload?.document_type || '').toLowerCase())
+    ? safeText(payload.document_type).toLowerCase()
+    : 'outro';
+  const description = payload?.description != null ? safeText(payload.description) : null;
+  const fileSize = typeof payload?.file_size_bytes === 'number' ? payload.file_size_bytes : null;
+  const uploadedBy = state.tokenInfo?.user?.email || null;
+  const supabase = ensureSupabase();
+  const { data, error } = await supabase.from('assembly_documents').insert({
+    assembly_id: state.assemblyId,
+    cep,
+    title,
+    description,
+    document_url: url,
+    document_type: docType,
+    file_size_bytes: fileSize,
+    uploaded_by: uploadedBy
+  }).select().limit(1);
+  if (error) throw new Error(error.message || 'Erro ao enviar documento');
+  return Array.isArray(data) && data.length ? data[0] : null;
+}
+
+export async function createPollWithDuration(payload, durationMinutes) {
+  if (!state.assemblyId) throw new Error('Assembly ausente');
+  const cep = String(state.tokenInfo?.user?.cep || state.assembly?.cep || '').replace(/\D/g, '');
+  const title = safeText(payload?.title || '').slice(0, 255);
+  if (title.length < 3) throw new Error('Título da votação deve ter ao menos 3 caracteres.');
+  const options = (Array.isArray(payload?.options) ? payload.options : [])
+    .map(o => safeText(o).slice(0, 255))
+    .filter(o => o.length >= 1);
+  if (options.length < 2) throw new Error('Informe ao menos 2 opções para a votação.');
+  const duration = Number(durationMinutes || 0);
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw new Error('Informe uma duração válida para a votação.');
+  }
+  const description = payload?.description != null ? safeText(payload.description) : null;
+  const createdBy = state.tokenInfo?.user?.email || null;
+  const startAt = new Date();
+  const endAt = new Date(startAt.getTime() + Math.round(duration * 60 * 1000));
+
+  const supabase = ensureSupabase();
+  const { data: polls, error: pollErr } = await supabase.from('assembly_polls').insert({
+    assembly_id: state.assemblyId,
+    cep,
+    title,
+    description,
+    status: 'aberta',
+    created_by: createdBy,
+    start_at: startAt.toISOString(),
+    end_at: endAt.toISOString(),
+    show_results_immediately: true,
+    allow_abstention: true,
+    quorum_required: 1
+  }).select().limit(1);
+  if (pollErr) throw new Error(pollErr.message || 'Erro ao criar votação');
+  const poll = Array.isArray(polls) && polls.length ? polls[0] : null;
+  if (!poll) throw new Error('Erro ao criar votação (sem retorno).');
+
+  const optionRows = options.map((optionText, idx) => ({
+    poll_id: poll.id,
+    cep,
+    option_text: optionText,
+    display_order: idx
+  }));
+
+  const { error: optsErr } = await supabase.from('assembly_poll_options').insert(optionRows);
+  if (optsErr) {
+    await supabase.from('assembly_polls').delete().eq('id', poll.id).catch(() => {});
+    throw new Error(optsErr.message || 'Erro ao criar opções da votação');
+  }
+  return poll;
 }
 
 export async function toggleHand(raised) {
@@ -298,45 +449,124 @@ export function buildDocItem(item) {
   return node;
 }
 
-export function buildPollItem(poll, options, onVote) {
+export function buildPollItem(poll, options, onVote, getCurrentVotes) {
   const node = document.createElement('div');
   node.className = 'panel-item';
+  node.style.flexDirection = 'column';
+  node.style.alignItems = 'stretch';
+  node.style.gap = '10px';
+
+  const header = document.createElement('div');
+  header.style.display = 'flex';
+  header.style.alignItems = 'flex-start';
+  header.style.justifyContent = 'space-between';
+  header.style.width = '100%';
+  header.style.gap = '10px';
 
   const info = document.createElement('div');
   info.className = 'panel-item-info';
+  info.style.minWidth = 0;
 
   const title = document.createElement('div');
   title.className = 'panel-item-name';
   title.textContent = safeText(poll?.title || 'Votação');
 
+  const pollOpen = isPollOpen(poll);
+  const subParts = [];
+  const statusTxt = pollOpen ? 'Aberta' : safeText(poll?.status || 'Encerrada');
+  subParts.push(statusTxt);
+  if (poll?.description) subParts.push(safeText(poll.description));
   const sub = document.createElement('div');
   sub.className = 'panel-item-sub';
-  sub.textContent = [safeText(poll?.status), safeText(poll?.description)].filter(Boolean).join(' • ');
+  sub.textContent = subParts.filter(Boolean).join(' • ');
 
   info.appendChild(title);
   info.appendChild(sub);
 
-  node.appendChild(info);
+  header.appendChild(info);
 
-  const status = safeText(poll?.status || '');
-  if (status === 'aberta' && Array.isArray(options) && options.length) {
-    const actions = document.createElement('div');
-    actions.style.display = 'flex';
-    actions.style.flexDirection = 'column';
-    actions.style.gap = '6px';
-    actions.style.alignItems = 'stretch';
+  if (poll?.end_at) {
+    const timer = document.createElement('span');
+    timer.className = 'poll-timer';
+    if (!pollOpen) timer.classList.add('ended');
+    timer.dataset.countdown = String(poll.end_at);
+    timer.innerHTML = `<i class="far fa-clock"></i><span>${pollOpen ? formatCountdown(poll.end_at) : 'Encerrada'}</span>`;
+    header.appendChild(timer);
+  }
+
+  node.appendChild(header);
+
+  const actions = document.createElement('div');
+  actions.style.display = 'flex';
+  actions.style.flexDirection = 'column';
+  actions.style.gap = '6px';
+  actions.style.alignItems = 'stretch';
+  actions.style.width = '100%';
+
+  if (pollOpen && Array.isArray(options) && options.length) {
     options.forEach((opt) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'btn btn-outline btn-sm';
-      b.textContent = safeText(opt?.label || opt?.title || opt?.option_text || 'Opção');
+      b.style.justifyContent = 'flex-start';
+      b.style.textAlign = 'left';
+      const label = safeText(opt?.label || opt?.title || opt?.option_text || 'Opção');
+      b.textContent = label;
       b.addEventListener('click', () => onVote?.(poll, opt));
       actions.appendChild(b);
     });
+  } else if (!pollOpen && Array.isArray(options) && options.length) {
+    const votesMap = (typeof getCurrentVotes === 'function' ? getCurrentVotes(poll, options) : null) || {};
+    const totals = (options || []).reduce((acc, o) => acc + (Number(votesMap[o.id] || votesMap[String(o.id)] || 0) || 0), 0);
+    (options || []).forEach((opt) => {
+      const row = document.createElement('div');
+      row.className = 'poll-result-row';
+      const label = safeText(opt?.label || opt?.title || opt?.option_text || 'Opção');
+      const count = Number(votesMap[opt.id] || votesMap[String(opt.id)] || 0) || 0;
+      const percent = totals > 0 ? Math.round((count / totals) * 100) : 0;
+      const labelEl = document.createElement('div');
+      labelEl.style.flex = '0 0 auto';
+      labelEl.style.minWidth = '110px';
+      labelEl.innerHTML = `${label} <span class="poll-option-badge">${count} voto${count === 1 ? '' : 's'} • ${percent}%</span>`;
+      const barWrap = document.createElement('div');
+      barWrap.className = 'poll-result-bar';
+      const fill = document.createElement('span');
+      fill.className = 'poll-result-fill';
+      fill.style.width = `${percent}%`;
+      barWrap.appendChild(fill);
+      row.appendChild(labelEl);
+      row.appendChild(barWrap);
+      actions.appendChild(row);
+    });
+    if (totals === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'panel-item-sub';
+      empty.textContent = 'Nenhum voto registrado.';
+      actions.appendChild(empty);
+    }
+  }
+
+  if (actions.childElementCount) {
     node.appendChild(actions);
   }
 
   return node;
+}
+
+export async function loadVotes(pollIds) {
+  const supabase = ensureSupabase();
+  const ids = (Array.isArray(pollIds) ? pollIds : []).filter(Boolean);
+  if (!ids.length) return [];
+  try {
+    const { data, error } = await supabase
+      .from('assembly_votes')
+      .select('*')
+      .in('poll_id', ids);
+    if (error) return [];
+    return Array.isArray(data) ? data : [];
+  } catch (_) {
+    return [];
+  }
 }
 
 export async function refreshLists() {
@@ -348,12 +578,34 @@ export async function refreshLists() {
   ]);
 
   const pollOptions = await loadPollOptions(polls.map(p => p.id)).catch(() => []);
+  const votes = await loadVotes(polls.map(p => p.id)).catch(() => []);
+
   const optionsByPoll = new Map();
   pollOptions.forEach((opt) => {
     const list = optionsByPoll.get(opt.poll_id) || [];
     list.push(opt);
     optionsByPoll.set(opt.poll_id, list);
   });
+
+  const votesByOption = new Map();
+  const votesByPollAndUser = new Map();
+  votes.forEach((v) => {
+    const count = Number(votesByOption.get(String(v.option_id)) || 0) + 1;
+    votesByOption.set(String(v.option_id), count);
+    if (v.poll_id && v.user_email) {
+      votesByPollAndUser.set(`${String(v.poll_id)}::${String(v.user_email).toLowerCase()}`, true);
+    }
+  });
+
+  const currentUserEmail = state.tokenInfo?.user?.email ? String(state.tokenInfo.user.email).toLowerCase() : null;
+  const getCurrentVotes = (poll, _opts) => {
+    const map = {};
+    const opts = optionsByPoll.get(poll.id) || [];
+    opts.forEach((o) => { map[String(o.id)] = votesByOption.get(String(o.id)) || 0; });
+    return map;
+  };
+  state._votesByPollAndUser = votesByPollAndUser;
+  state._currentUserEmail = currentUserEmail;
 
   state.raisedHands.clear();
   hands
@@ -366,12 +618,37 @@ export async function refreshLists() {
   renderSimpleList('agenda-list', 'agenda-count', agenda, buildAgendaItem);
   renderSimpleList('docs-list', 'docs-count', docs, buildDocItem);
 
+  const votedBadgeAdded = new Set();
   renderSimpleList('polls-list', 'polls-count', polls, (poll) => {
     const opts = optionsByPoll.get(poll.id) || [];
-    return buildPollItem(poll, opts, async (_poll, opt) => {
+    const item = buildPollItem(poll, opts, async (_poll, opt) => {
+      const key = `${String(poll.id)}::${currentUserEmail}`;
+      if (currentUserEmail && votesByPollAndUser.has(key)) {
+        if (window.AssemblyUtils?.showToast) window.AssemblyUtils.showToast('Você já votou nesta votação.', 'warning');
+        return;
+      }
       await vote(poll.id, opt.id);
       if (window.AssemblyUtils?.showToast) window.AssemblyUtils.showToast('Voto registrado', 'success');
-    });
+      votesByPollAndUser.set(key, true);
+    }, getCurrentVotes);
+
+    if (currentUserEmail) {
+      const key = `${String(poll.id)}::${currentUserEmail}`;
+      if (votesByPollAndUser.has(key) && !votedBadgeAdded.has(poll.id)) {
+        votedBadgeAdded.add(poll.id);
+        const info = item.querySelector('.panel-item-info');
+        if (info) {
+          const sub = info.querySelector('.panel-item-sub');
+          if (sub) {
+            const votedBadge = ' ✅ Seu voto registrado';
+            if (!sub.textContent.includes('Seu voto registrado')) {
+              sub.textContent = sub.textContent + votedBadge;
+            }
+          }
+        }
+      }
+    }
+    return item;
   });
 }
 

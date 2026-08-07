@@ -80,7 +80,7 @@ function setupNotificationActions() {
     document.getElementById('closeNotificationDetailModal')?.addEventListener('click', closeNotificationDetailModal);
     document.getElementById('closeNotificationDetailAction')?.addEventListener('click', closeNotificationDetailModal);
 
-    document.getElementById('notificationForm')?.addEventListener('submit', (event) => {
+    document.getElementById('notificationForm')?.addEventListener('submit', async (event) => {
         event.preventDefault();
         const category = document.getElementById('notificationCategory').value;
         const title = document.getElementById('notificationTitle').value.trim();
@@ -88,7 +88,7 @@ function setupNotificationActions() {
 
         if (!title || !message) return;
 
-        window.communityHub.createNotification({
+        await window.communityHub.createNotification({
             category,
             title,
             message,
@@ -97,12 +97,12 @@ function setupNotificationActions() {
         closeNotificationModal();
         event.target.reset();
         notificationState.activeCategory = 'Todas';
-        renderNotificationsPage();
+        await renderNotificationsPage();
     });
 }
 
-function renderNotificationsPage() {
-    const allNotifications = window.communityHub.getNotifications(notificationState.currentUser);
+async function renderNotificationsPage() {
+    const allNotifications = await window.communityHub.getNotifications(notificationState.currentUser);
     const filteredNotifications = notificationState.activeCategory === 'Todas'
         ? allNotifications
         : allNotifications.filter((item) => item.category === notificationState.activeCategory);

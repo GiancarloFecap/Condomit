@@ -90,7 +90,43 @@
         return [];
     }
 
-    function getNotifications(user = getCurrentUser()) {
+    function getUserCepForDb(user = getCurrentUser()) {
+        const ids = typeof window.getUserCondominiumIdentifiers === 'function'
+            ? window.getUserCondominiumIdentifiers(user)
+            : [];
+        for (const id of ids) {
+            if (id && typeof id === 'string') {
+                return id.replace(/\D/g, '');
+            }
+        }
+        const direct = getCondominiumKey(user);
+        return String(direct || '').replace(/\D/g, '');
+    }
+
+    async function fetchNotificationsFromSupabase(user = getCurrentUser()) {
+        if (typeof window.supabaseFetch !== 'function') return [];
+        const cep = getUserCepForDb(user);
+        if (!cep) return [];
+        try {
+            const rows = await window.supabaseFetch(`/notifications?select=*&cep=eq.${encodeURIComponent(cep)}&order=created_at.desc`);
+            if (!Array.isArray(rows)) return [];
+            return rows.map((row) => ({
+                id: `db-notif-${row.id}`,
+                category: row.category || 'Avisos',
+                title: row.title || '',
+                message: row.description || '',
+                details: row.description || '',
+                createdAt: row.created_at || new Date().toISOString(),
+                author: 'Síndico',
+                createdByType: 'sindico'
+            }));
+        } catch (err) {
+            console.warn('fetchNotificationsFromSupabase falhou:', err?.message || err);
+            return [];
+        }
+    }
+
+    async function getNotifications(user = getCurrentUser()) {
         const key = getNotificationsKey(user);
         const clearedKey = `${key}.cleared`;
         try {
@@ -100,12 +136,18 @@
                 localStorage.setItem(clearedKey, '1');
             }
         } catch (_) {}
-        let items = getStorageJson(key, null);
-        if (!Array.isArray(items) || !items.length) {
-            items = getDefaultNotifications();
-            setStorageJson(key, items);
+        let localItems = getStorageJson(key, null);
+        if (!Array.isArray(localItems)) localItems = [];
+        const remoteItems = await fetchNotificationsFromSupabase(user);
+        const seen = new Set();
+        const merged = [];
+        for (const item of [...remoteItems, ...localItems]) {
+            const k = `${String(item.title || '').trim().toLowerCase()}|${String(item.message || '').trim().toLowerCase()}|${String(new Date(item.createdAt || 0).getTime())}`;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            merged.push(item);
         }
-        return items
+        return merged
             .slice()
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
@@ -115,21 +157,50 @@
         return true;
     }
 
-    function createNotification(data, user = getCurrentUser()) {
-        const notifications = getNotifications(user);
+    async function saveNotificationToSupabase(data, user = getCurrentUser()) {
+        if (typeof window.supabaseFetch !== 'function') return null;
+        const cep = getUserCepForDb(user);
+        if (!cep) return null;
+        const payload = {
+            cep,
+            category: data.category || 'Avisos',
+            title: String(data.title || '').trim(),
+            description: String(data.details || data.message || '').trim()
+        };
+        try {
+            const rows = await window.supabaseFetch('/notifications', {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
+            });
+            if (Array.isArray(rows) && rows.length) {
+                return rows[0];
+            }
+            return null;
+        } catch (err) {
+            console.warn('saveNotificationToSupabase falhou (RLS?):', err?.message || err);
+            return null;
+        }
+    }
+
+    async function createNotification(data, user = getCurrentUser()) {
+        const saved = await saveNotificationToSupabase(data, user);
+        const key = getNotificationsKey(user);
+        let localItems = getStorageJson(key, null);
+        if (!Array.isArray(localItems)) localItems = [];
         const notification = {
-            id: `notif-${Date.now()}`,
+            id: saved && saved.id ? `db-notif-${saved.id}` : `notif-${Date.now()}`,
             category: data.category || 'Avisos',
             title: String(data.title || '').trim(),
             message: String(data.message || '').trim(),
             details: String(data.details || data.message || '').trim(),
-            createdAt: new Date().toISOString(),
+            createdAt: saved && saved.created_at ? saved.created_at : new Date().toISOString(),
             author: user?.name || 'Síndico',
             createdByType: getUserType(user),
             metadata: data.metadata && typeof data.metadata === 'object' ? data.metadata : null
         };
-        notifications.unshift(notification);
-        setStorageJson(getNotificationsKey(user), notifications);
+        localItems.unshift(notification);
+        setStorageJson(key, localItems);
         return notification;
     }
 
@@ -189,119 +260,119 @@
         return `condomit.marketplace.favorite.${getCondominiumKey(user)}.${user?.email || 'anon'}`;
     }
 
-    function getDefaultMarketplaceItems() {
-        const now = Date.now();
-        return [
-            {
-                id: `item-${now - 1}`,
-                title: 'Sofá 3 lugares',
-                description: 'Sofá em ótimo estado, tecido resistente e muito confortável.',
-                category: 'moveis',
-                categoryLabel: 'Móveis',
-                price: 450,
-                seller: 'Mariana Santos',
-                sellerUnit: 'Bloco A - Apto 102',
-                createdAt: new Date(now - 1000 * 60 * 60 * 2).toISOString(),
-                status: 'Disponível',
-                image: CATEGORY_IMAGES.moveis
-            },
-            {
-                id: `item-${now - 2}`,
-                title: 'Geladeira Brastemp',
-                description: 'Funcionando perfeitamente, 380L, sem avarias.',
-                category: 'eletrodomesticos',
-                categoryLabel: 'Eletrodomésticos',
-                price: 1200,
-                seller: 'Carlos Mendes',
-                sellerUnit: 'Bloco B - Apto 204',
-                createdAt: new Date(now - 1000 * 60 * 60 * 5).toISOString(),
-                status: 'Disponível',
-                image: CATEGORY_IMAGES.eletrodomesticos
-            },
-            {
-                id: `item-${now - 3}`,
-                title: 'Bicicleta aro 29',
-                description: 'Bicicleta revisada, pneus novos e quadro em alumínio.',
-                category: 'esportes',
-                categoryLabel: 'Esportes',
-                price: 600,
-                seller: 'Rafael Souza',
-                sellerUnit: 'Bloco C - Apto 301',
-                createdAt: new Date(now - 1000 * 60 * 60 * 26).toISOString(),
-                status: 'Disponível',
-                image: CATEGORY_IMAGES.esportes
-            },
-            {
-                id: `item-${now - 4}`,
-                title: 'Brinquedos diversos',
-                description: 'Lote com brinquedos infantis bem conservados.',
-                category: 'infantil',
-                categoryLabel: 'Infantil',
-                price: 80,
-                seller: 'Fernanda Lima',
-                sellerUnit: 'Bloco A - Apto 105',
-                createdAt: new Date(now - 1000 * 60 * 60 * 30).toISOString(),
-                status: 'Disponível',
-                image: CATEGORY_IMAGES.infantil
-            },
-            {
-                id: `item-${now - 5}`,
-                title: 'Livros variados',
-                description: 'Coleção com romances, negócios e literatura brasileira.',
-                category: 'livros',
-                categoryLabel: 'Livros',
-                price: 30,
-                seller: 'Ana Costa',
-                sellerUnit: 'Bloco A - Apto 101',
-                createdAt: new Date(now - 1000 * 60 * 60 * 72).toISOString(),
-                status: 'Disponível',
-                image: CATEGORY_IMAGES.livros
-            },
-            {
-                id: `item-${now - 6}`,
-                title: 'Smart TV 50"',
-                description: 'TV 4K com controle remoto original e ótimo som.',
-                category: 'eletronicos',
-                categoryLabel: 'Eletrônicos',
-                price: 1000,
-                seller: 'João Silva',
-                sellerUnit: 'Bloco B - Apto 203',
-                createdAt: new Date(now - 1000 * 60 * 60 * 48).toISOString(),
-                status: 'Disponível',
-                image: CATEGORY_IMAGES.eletronicos
-            }
-        ];
+    function categoryToDbCategory(categoryKey) {
+        const map = {
+            moveis: 'Móveis',
+            eletrodomesticos: 'Eletrodomésticos',
+            eletronicos: 'Eletrônicos',
+            infantil: 'Infantil',
+            esportes: 'Esportes',
+            livros: 'Livros',
+            outros: 'Outros'
+        };
+        return map[categoryKey] || 'Outros';
     }
 
-    function getMarketplaceItems(user = getCurrentUser()) {
-        const key = getMarketplaceKey(user);
-        let items = getStorageJson(key, null);
-        if (!Array.isArray(items) || !items.length) {
-            items = getDefaultMarketplaceItems();
-            setStorageJson(key, items);
+    function dbCategoryToCategoryLabel(dbCategory) {
+        return dbCategory || 'Outros';
+    }
+
+    function getDefaultMarketplaceItems() {
+        return [];
+    }
+
+    async function fetchMarketplaceFromSupabase(user = getCurrentUser()) {
+        if (typeof window.supabaseFetch !== 'function') return [];
+        const cep = getUserCepForDb(user);
+        if (!cep) return [];
+        try {
+            const rows = await window.supabaseFetch(`/marketplace_items?select=*&cep=eq.${encodeURIComponent(cep)}&order=created_at.desc`);
+            if (!Array.isArray(rows)) return [];
+            return rows.map((row) => ({
+                id: `db-mp-${row.id}`,
+                title: row.title || '',
+                description: row.description || '',
+                category: row.category || 'Outros',
+                categoryLabel: dbCategoryToCategoryLabel(row.category),
+                price: Number(row.price || 0),
+                seller: row.user_name || 'Morador',
+                sellerUnit: 'Condomínio',
+                createdAt: row.created_at || new Date().toISOString(),
+                status: 'Disponível',
+                image: row.image_url || CATEGORY_IMAGES.outros
+            }));
+        } catch (err) {
+            console.warn('fetchMarketplaceFromSupabase falhou:', err?.message || err);
+            return [];
         }
-        return items
+    }
+
+    async function saveMarketplaceToSupabase(data, user = getCurrentUser()) {
+        if (typeof window.supabaseFetch !== 'function') return null;
+        const cep = getUserCepForDb(user);
+        if (!cep) return null;
+        const payload = {
+            cep,
+            user_name: user?.name || 'Morador',
+            title: String(data.title || '').trim(),
+            category: data.categoryLabel || categoryToDbCategory(data.category),
+            price: Number(data.price || 0),
+            description: String(data.description || '').trim(),
+            image_url: data.image || CATEGORY_IMAGES[data.category] || CATEGORY_IMAGES.outros
+        };
+        try {
+            const rows = await window.supabaseFetch('/marketplace_items', {
+                method: 'POST',
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
+            });
+            if (Array.isArray(rows) && rows.length) return rows[0];
+            return null;
+        } catch (err) {
+            console.warn('saveMarketplaceToSupabase falhou:', err?.message || err);
+            return null;
+        }
+    }
+
+    async function getMarketplaceItems(user = getCurrentUser()) {
+        const key = getMarketplaceKey(user);
+        let localItems = getStorageJson(key, null);
+        if (!Array.isArray(localItems)) localItems = [];
+        const remoteItems = await fetchMarketplaceFromSupabase(user);
+        const seen = new Set();
+        const merged = [];
+        for (const item of [...remoteItems, ...localItems]) {
+            const k = `${String(item.title || '').trim().toLowerCase()}|${Number(item.price || 0)}|${String(new Date(item.createdAt || 0).getTime())}`;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            merged.push(item);
+        }
+        return merged
             .slice()
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
-    function createMarketplaceItem(data, user = getCurrentUser()) {
-        const items = getMarketplaceItems(user);
+    async function createMarketplaceItem(data, user = getCurrentUser()) {
+        const saved = await saveMarketplaceToSupabase(data, user);
+        const key = getMarketplaceKey(user);
+        let items = getStorageJson(key, null);
+        if (!Array.isArray(items)) items = [];
+        const dbCategory = data.categoryLabel || categoryToDbCategory(data.category);
         const item = {
-            id: `item-${Date.now()}`,
+            id: saved && saved.id ? `db-mp-${saved.id}` : `item-${Date.now()}`,
             title: String(data.title || '').trim(),
             description: String(data.description || '').trim(),
             category: data.category || 'outros',
-            categoryLabel: data.categoryLabel || 'Outros',
+            categoryLabel: dbCategory,
             price: Number(data.price || 0),
             seller: user?.name || 'Morador',
             sellerUnit: buildUnitLabel(user),
-            createdAt: new Date().toISOString(),
+            createdAt: saved && saved.created_at ? saved.created_at : new Date().toISOString(),
             status: 'Disponível',
             image: data.image || CATEGORY_IMAGES[data.category] || CATEGORY_IMAGES.outros
         };
         items.unshift(item);
-        setStorageJson(getMarketplaceKey(user), items);
+        setStorageJson(key, items);
         return item;
     }
 

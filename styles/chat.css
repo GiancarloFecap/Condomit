@@ -800,7 +800,7 @@ html[data-theme="dark"] .chat-textarea::placeholder {
     border-radius: 14px;
     border: 1px solid #e5e7eb;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    padding: 14px 16px;
+    padding: 18px 20px;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -1041,11 +1041,12 @@ html[data-theme="dark"] .btn-outline-ai:hover {
 .result-box {
     background: #fafbff;
     border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 10px 12px;
-    margin-bottom: 10px;
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 320px;
+    max-height: 520px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1057,15 +1058,15 @@ html[data-theme="dark"] .result-box {
 }
 
 .result-title {
-    font-size: 13.5px;
+    font-size: 15.5px;
     font-weight: 700;
     color: var(--text-primary, #111827);
-    margin: 0 0 8px 0;
-    padding-bottom: 8px;
+    margin: 0 0 10px 0;
+    padding-bottom: 10px;
     border-bottom: 1px solid #e5e7eb;
     display: flex;
     align-items: center;
-    gap: 7px;
+    gap: 8px;
     flex-shrink: 0;
 }
 
@@ -1075,17 +1076,18 @@ html[data-theme="dark"] .result-title {
 
 .result-title i {
     color: #7c3aed;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .result-content {
-    font-size: 12.5px;
-    line-height: 1.55;
+    font-size: 14.5px;
+    line-height: 1.7;
     color: var(--text-primary, #1f2937);
     white-space: pre-wrap;
     overflow-y: auto;
-    min-height: 0;
-    padding-right: 4px;
+    min-height: 240px;
+    padding-right: 6px;
+    flex: 1 1 auto;
 }
 
 .result-content strong {

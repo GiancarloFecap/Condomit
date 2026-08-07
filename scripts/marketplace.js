@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     marketplaceState.currentUser = currentUser;
     setupMarketplaceShell(currentUser);
     setupMarketplaceActions();
-    renderMarketplacePage();
+    await renderMarketplacePage();
 });
 
 async function loadMarketplaceUser() {
@@ -50,19 +50,19 @@ function setupMarketplaceShell(currentUser) {
 }
 
 function setupMarketplaceActions() {
-    document.getElementById('marketplaceSearch')?.addEventListener('input', (event) => {
+    document.getElementById('marketplaceSearch')?.addEventListener('input', async (event) => {
         marketplaceState.search = event.target.value.trim().toLowerCase();
-        renderMarketplacePage();
+        await renderMarketplacePage();
     });
 
-    document.getElementById('marketplaceCategory')?.addEventListener('change', (event) => {
+    document.getElementById('marketplaceCategory')?.addEventListener('change', async (event) => {
         marketplaceState.category = event.target.value;
-        renderMarketplacePage();
+        await renderMarketplacePage();
     });
 
-    document.getElementById('toggleFavoritesBtn')?.addEventListener('click', () => {
+    document.getElementById('toggleFavoritesBtn')?.addEventListener('click', async () => {
         marketplaceState.favoritesOnly = !marketplaceState.favoritesOnly;
-        renderMarketplacePage();
+        await renderMarketplacePage();
     });
 
     document.getElementById('createItemBtn')?.addEventListener('click', openMarketplaceModal);
@@ -75,7 +75,7 @@ function setupMarketplaceActions() {
         }
     });
 
-    document.getElementById('marketplaceForm')?.addEventListener('submit', (event) => {
+    document.getElementById('marketplaceForm')?.addEventListener('submit', async (event) => {
         event.preventDefault();
         const category = document.getElementById('itemCategory').value;
         const categoryLabel = document.getElementById('itemCategory').selectedOptions[0]?.textContent || 'Outros';
@@ -86,7 +86,7 @@ function setupMarketplaceActions() {
 
         if (!title || !description) return;
 
-        const item = window.communityHub.createMarketplaceItem({
+        const item = await window.communityHub.createMarketplaceItem({
             title,
             category,
             categoryLabel,
@@ -99,12 +99,12 @@ function setupMarketplaceActions() {
         closeMarketplaceModal();
         event.target.reset();
         resetMarketplaceImagePreview();
-        renderMarketplacePage();
+        await renderMarketplacePage();
     });
 }
 
-function renderMarketplacePage() {
-    const allItems = window.communityHub.getMarketplaceItems(marketplaceState.currentUser);
+async function renderMarketplacePage() {
+    const allItems = await window.communityHub.getMarketplaceItems(marketplaceState.currentUser);
     const favorites = new Set(window.communityHub.getFavoriteMarketplaceItems(marketplaceState.currentUser));
     const filteredItems = allItems.filter((item) => {
         const matchesCategory = marketplaceState.category === 'todos' || item.category === marketplaceState.category;

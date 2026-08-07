@@ -606,3 +606,287 @@ body {
   }
 }
 
+/* =========================================================
+   Assembly Room - Chat send rounded button + add actions
+   ========================================================= */
+
+.chat-send-round {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0;
+}
+
+.chat-send-round i {
+  margin: 0 !important;
+  font-size: 14px;
+}
+
+.panel-section-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-inline-add {
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.btn-inline-add i {
+  font-size: 11px;
+}
+
+/* Timer badge for polls */
+.poll-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #60a5fa;
+}
+
+.poll-timer.ended {
+  background: rgba(148, 163, 184, 0.18);
+  color: #94a3b8;
+}
+
+/* Poll results mini bar */
+.poll-result-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--call-text, #e2e8f0);
+}
+
+.poll-result-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.poll-result-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  transition: width 300ms ease;
+}
+
+/* Modal root styles for assembly modals */
+.modal-root .simple-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.modal-root .simple-modal {
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: #e2e8f0;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.modal-root .simple-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-root .simple-modal-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.modal-root .simple-modal-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms ease;
+}
+
+.modal-root .simple-modal-close:hover {
+  background: rgba(148, 163, 184, 0.14);
+  color: #f8fafc;
+}
+
+.modal-root .simple-modal-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-root .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-root .field label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.modal-root .field input,
+.modal-root .field textarea,
+.modal-root .field select {
+  background: rgba(2, 6, 23, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #f8fafc;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.modal-root .field input:focus,
+.modal-root .field textarea:focus,
+.modal-root .field select:focus {
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+}
+
+.modal-root .field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.modal-root .inline-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.modal-root .chip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-root .chip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-root .chip-row input {
+  flex: 1;
+}
+
+.modal-root .chip-row button {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.modal-root .simple-modal-footer {
+  padding: 14px 20px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.modal-root .btn {
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 120ms ease;
+}
+
+.modal-root .btn-ghost {
+  background: transparent;
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.modal-root .btn-ghost:hover {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.modal-root .btn-primary {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.modal-root .btn-primary:hover {
+  background: #2563eb;
+}
+
+.modal-root .btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.modal-root .btn-secondary {
+  background: rgba(59, 130, 246, 0.14);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.28);
+  font-size: 12px;
+  padding: 7px 10px;
+}
+
+.modal-root .btn-secondary:hover {
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.poll-option-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.16);
+  color: #cbd5e1;
+}
+

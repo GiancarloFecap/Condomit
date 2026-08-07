@@ -107,119 +107,104 @@ function getLostFoundStorageKey(user = lostFoundState.currentUser) {
 }
 
 function getDefaultLostFoundItems() {
-    return [
-        {
-            id: `lf-${Date.now()}-1`,
-            title: 'Chave de carro',
-            description: 'Encontrada próxima ao salão de festas durante a noite.',
-            location: 'Salão de festas',
-            date: '2026-05-25',
-            status: 'disponivel',
-            type: 'encontrado',
-            author: 'Portaria',
-            image: LOST_FOUND_IMAGES.chaves
-        },
-        {
-            id: `lf-${Date.now()}-2`,
-            title: 'Carteira de couro',
-            description: 'Carteira marrom encontrada ao lado da academia.',
-            location: 'Academia',
-            date: '2026-05-24',
-            status: 'disponivel',
-            type: 'encontrado',
-            author: 'Administração',
-            image: LOST_FOUND_IMAGES.carteira
-        },
-        {
-            id: `lf-${Date.now()}-3`,
-            title: 'iPhone preto',
-            description: 'Celular perdido na área da piscina, capa escura.',
-            location: 'Área da piscina',
-            date: '2026-05-24',
-            status: 'em-analise',
-            type: 'perdido',
-            author: 'Morador',
-            image: LOST_FOUND_IMAGES.celular
-        },
-        {
-            id: `lf-${Date.now()}-4`,
-            title: 'Mochila preta',
-            description: 'Mochila encontrada na brinquedoteca.',
-            location: 'Brinquedoteca',
-            date: '2026-05-23',
-            status: 'disponivel',
-            type: 'encontrado',
-            author: 'Portaria',
-            image: LOST_FOUND_IMAGES.mochila
-        },
-        {
-            id: `lf-${Date.now()}-5`,
-            title: 'Óculos de grau',
-            description: 'Óculos deixados na portaria 1.',
-            location: 'Portaria 1',
-            date: '2026-05-23',
-            status: 'disponivel',
-            type: 'encontrado',
-            author: 'Recepção',
-            image: LOST_FOUND_IMAGES.oculos
-        },
-        {
-            id: `lf-${Date.now()}-6`,
-            title: 'Fone de ouvido',
-            description: 'Estojo de fones sem identificação encontrado na quadra.',
-            location: 'Quadra poliesportiva',
-            date: '2026-05-22',
-            status: 'devolvido',
-            type: 'encontrado',
-            author: 'Portaria',
-            image: LOST_FOUND_IMAGES.fone
-        },
-        {
-            id: `lf-${Date.now()}-7`,
-            title: 'Garrafa térmica',
-            description: 'Garrafa metálica esquecida após evento no salão.',
-            location: 'Salão de jogos',
-            date: '2026-05-22',
-            status: 'disponivel',
-            type: 'encontrado',
-            author: 'Administração',
-            image: LOST_FOUND_IMAGES.garrafa
-        },
-        {
-            id: `lf-${Date.now()}-8`,
-            title: 'Ursinho de pelúcia',
-            description: 'Brinquedo perdido no playground.',
-            location: 'Playground',
-            date: '2026-05-21',
-            status: 'disponivel',
-            type: 'perdido',
-            author: 'Morador',
-            image: LOST_FOUND_IMAGES.pelucia
-        }
-    ];
+    return [];
 }
 
-function getLostFoundItems() {
-    const key = getLostFoundStorageKey();
-    let items = [];
+function typeToDbItemType(type) {
+    return type === 'perdido' ? 'Perdido' : 'Encontrado';
+}
+
+function dbItemTypeToType(dbType) {
+    return dbType === 'Perdido' ? 'perdido' : 'encontrado';
+}
+
+function getLostFoundUserCep() {
+    if (typeof window.getUserCondominiumIdentifiers === 'function') {
+        const ids = window.getUserCondominiumIdentifiers(lostFoundState.currentUser) || [];
+        for (const id of ids) {
+            if (id && typeof id === 'string') return id.replace(/\D/g, '');
+        }
+    }
+    return String(window.communityHub?.getCondominiumKey?.(lostFoundState.currentUser) || '').replace(/\D/g, '');
+}
+
+async function fetchLostFoundFromSupabase() {
+    if (typeof window.supabaseFetch !== 'function') return [];
+    const cep = getLostFoundUserCep();
+    if (!cep) return [];
     try {
-        items = JSON.parse(localStorage.getItem(key) || '[]');
+        const rows = await window.supabaseFetch(`/lost_and_found_items?select=*&cep=eq.${encodeURIComponent(cep)}&order=item_date.desc,created_at.desc`);
+        if (!Array.isArray(rows)) return [];
+        return rows.map((row) => ({
+            id: `db-lf-${row.id}`,
+            title: row.item_name || '',
+            description: row.item_name || '',
+            location: row.location || '',
+            date: row.item_date || new Date().toISOString().slice(0, 10),
+            status: 'disponivel',
+            type: dbItemTypeToType(row.item_type),
+            author: 'Condomínio',
+            image: row.image_url || LOST_FOUND_IMAGES.default
+        }));
+    } catch (err) {
+        console.warn('fetchLostFoundFromSupabase falhou:', err?.message || err);
+        return [];
+    }
+}
+
+async function saveLostFoundToSupabase(item) {
+    if (typeof window.supabaseFetch !== 'function') return null;
+    const cep = getLostFoundUserCep();
+    if (!cep) return null;
+    const payload = {
+        cep,
+        item_type: typeToDbItemType(item.type),
+        item_name: String(item.title || '').trim(),
+        location: String(item.location || '').trim(),
+        item_date: String(item.date || new Date().toISOString().slice(0, 10)),
+        image_url: item.image || LOST_FOUND_IMAGES.default
+    };
+    try {
+        const rows = await window.supabaseFetch('/lost_and_found_items', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
+        });
+        if (Array.isArray(rows) && rows.length) return rows[0];
+        return null;
+    } catch (err) {
+        console.warn('saveLostFoundToSupabase falhou:', err?.message || err);
+        return null;
+    }
+}
+
+async function getLostFoundItems() {
+    const key = getLostFoundStorageKey();
+    let localItems = [];
+    try {
+        localItems = JSON.parse(localStorage.getItem(key) || '[]');
     } catch (_) {
-        items = [];
+        localItems = [];
     }
-    if (!Array.isArray(items) || !items.length) {
-        items = getDefaultLostFoundItems();
-        localStorage.setItem(key, JSON.stringify(items));
+    if (!Array.isArray(localItems)) localItems = [];
+    const remoteItems = await fetchLostFoundFromSupabase();
+    const seen = new Set();
+    const merged = [];
+    for (const item of [...remoteItems, ...localItems]) {
+        const k = `${String(item.title || '').trim().toLowerCase()}|${String(item.location || '').trim().toLowerCase()}|${String(item.date || '')}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        merged.push(item);
     }
-    return items.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return merged.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 function setLostFoundItems(items) {
     localStorage.setItem(getLostFoundStorageKey(), JSON.stringify(items));
 }
 
-function renderLostFoundPage() {
-    const items = getLostFoundItems().filter((item) => {
+async function renderLostFoundPage() {
+    const items = (await getLostFoundItems()).filter((item) => {
         const matchesType = lostFoundState.type === 'todos' || item.type === lostFoundState.type;
         const matchesStatus = lostFoundState.status === 'todos' || item.status === lostFoundState.status;
         const haystack = `${item.title} ${item.location} ${item.description} ${item.date}`.toLowerCase();
@@ -322,7 +307,7 @@ function resetLostFoundPreview() {
     if (input) input.value = '';
 }
 
-function saveLostFoundItem() {
+async function saveLostFoundItem() {
     const title = document.getElementById('lostFoundTitle')?.value.trim();
     const type = document.getElementById('lostFoundTypeInput')?.value || 'encontrado';
     const location = document.getElementById('lostFoundLocation')?.value.trim();
@@ -331,9 +316,7 @@ function saveLostFoundItem() {
 
     if (!title || !location || !date || !description) return;
 
-    const items = getLostFoundItems();
-    items.unshift({
-        id: `lf-${Date.now()}`,
+    const draftItem = {
         title,
         type,
         location,
@@ -342,6 +325,22 @@ function saveLostFoundItem() {
         status: 'disponivel',
         author: lostFoundState.currentUser?.name || 'Usuário',
         image: lostFoundState.draftImage || LOST_FOUND_IMAGES.default
+    };
+    const saved = await saveLostFoundToSupabase(draftItem);
+    const key = getLostFoundStorageKey();
+    let items = [];
+    try { items = JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { items = []; }
+    if (!Array.isArray(items)) items = [];
+    items.unshift({
+        id: saved && saved.id ? `db-lf-${saved.id}` : `lf-${Date.now()}`,
+        title,
+        type,
+        location,
+        date: saved && saved.item_date ? saved.item_date : date,
+        description,
+        status: 'disponivel',
+        author: lostFoundState.currentUser?.name || 'Usuário',
+        image: saved && saved.image_url ? saved.image_url : draftItem.image
     });
     setLostFoundItems(items);
 
@@ -350,7 +349,7 @@ function saveLostFoundItem() {
     if (typeFilter) typeFilter.value = type;
     syncTypeCards();
     closeLostFoundModal();
-    renderLostFoundPage();
+    await renderLostFoundPage();
 }
 
 function getStatusLabel(status) {

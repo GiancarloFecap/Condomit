@@ -495,7 +495,10 @@
     background: white;
     border-radius: 18px;
     width: 100%;
-    max-width: 560px;
+    max-width: 780px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
     transform: translateY(20px) scale(0.96);
     transition: all 0.3s ease;
@@ -542,7 +545,10 @@
 }
 
 .modal-body {
-    padding: 28px;
+    padding: 24px 28px 28px 28px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    max-height: calc(92vh - 130px);
 }
 
 .form-group {

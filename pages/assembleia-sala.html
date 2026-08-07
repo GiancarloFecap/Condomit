@@ -89,9 +89,8 @@
             <div class="panel-chat-messages" id="chat-messages"></div>
             <form class="panel-chat-form" id="chat-form">
               <input class="panel-chat-input" id="chat-input" type="text" maxlength="800" placeholder="Digite sua mensagem..." aria-label="Mensagem do chat" />
-              <button class="btn btn-primary btn-sm" type="submit" id="chat-send">
+              <button class="btn btn-primary btn-sm chat-send-round" type="submit" id="chat-send" aria-label="Enviar mensagem">
                 <i class="fas fa-paper-plane"></i>
-                Enviar
               </button>
             </form>
           </section>
@@ -99,7 +98,13 @@
           <section class="panel-section" data-panel="agenda" role="tabpanel">
             <div class="panel-section-header">
               <div class="panel-section-title">Pautas</div>
-              <div class="panel-section-badge" id="agenda-count">0</div>
+              <div class="panel-section-header-actions">
+                <button class="btn btn-primary btn-sm btn-inline-add" type="button" id="btn-add-agenda" style="display:none;">
+                  <i class="fas fa-plus"></i>
+                  Pauta
+                </button>
+                <div class="panel-section-badge" id="agenda-count">0</div>
+              </div>
             </div>
             <div class="panel-list" id="agenda-list"></div>
           </section>
@@ -107,7 +112,13 @@
           <section class="panel-section" data-panel="polls" role="tabpanel">
             <div class="panel-section-header">
               <div class="panel-section-title">Votações</div>
-              <div class="panel-section-badge" id="polls-count">0</div>
+              <div class="panel-section-header-actions">
+                <button class="btn btn-primary btn-sm btn-inline-add" type="button" id="btn-add-poll" style="display:none;">
+                  <i class="fas fa-plus"></i>
+                  Votação
+                </button>
+                <div class="panel-section-badge" id="polls-count">0</div>
+              </div>
             </div>
             <div class="panel-list" id="polls-list"></div>
           </section>
@@ -115,7 +126,13 @@
           <section class="panel-section" data-panel="docs" role="tabpanel">
             <div class="panel-section-header">
               <div class="panel-section-title">Documentos</div>
-              <div class="panel-section-badge" id="docs-count">0</div>
+              <div class="panel-section-header-actions">
+                <button class="btn btn-primary btn-sm btn-inline-add" type="button" id="btn-add-doc" style="display:none;">
+                  <i class="fas fa-cloud-upload-alt"></i>
+                  Doc
+                </button>
+                <div class="panel-section-badge" id="docs-count">0</div>
+              </div>
             </div>
             <div class="panel-list" id="docs-list"></div>
           </section>
