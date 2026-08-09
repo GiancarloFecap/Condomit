@@ -99,12 +99,24 @@ exports.handler = async (event) => {
   if (assemblyError || !assembly) {
     return httpError(404, 'Assembleia não encontrada.');
   }
-  if (assembly.cep !== auth.userCEP) {
-    return httpError(403, 'Esta assembleia pertence a outro condomínio.');
-  }
-  if (assembly.status !== 'em_andamento') {
-    return httpError(409, 'Chat disponível somente durante a assembleia.');
-  }
+  if (
+  normalizeCep(assembly.cep) !==
+  normalizeCep(auth.userCEP)
+) {
+  return httpError(
+    403,
+    'Esta assembleia pertence a outro condomínio.'
+  );
+}
+  if (
+  !['agendada', 'em_andamento']
+    .includes(assembly.status)
+) {
+  return httpError(
+    409,
+    'Chat indisponível para o status atual da assembleia.'
+  );
+}
 
   const now = new Date().toISOString();
 

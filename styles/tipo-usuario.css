@@ -143,10 +143,10 @@ body {
 }
 
 .brand-logo-img {
-    max-height: 150px;
+    max-height: 200px;
     height: auto;
     width: auto;
-    max-width: 560px;
+    max-width: 700px;
     filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35));
 }
 

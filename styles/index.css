@@ -34,7 +34,7 @@ body {
 }
 
 .sidebar-logo {
-    height: 130px;
+    height: 160px;
     width: auto;
     margin-bottom: 10px;
 }
@@ -110,8 +110,8 @@ body {
 }
 
 .sidebar.sindico-sidebar .sidebar-logo {
-    width: 58px;
-    height: 58px;
+    width: 84px;
+    height: 84px;
 }
 
 .sidebar.sindico-sidebar .condo-name {

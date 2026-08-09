@@ -176,30 +176,88 @@ async function fetchLostFoundFromSupabase() {
     }
 }
 
-async function saveLostFoundToSupabase(item) {
-    if (typeof window.supabaseFetch !== 'function') return null;
-    const cep = getLostFoundUserCep();
-    if (!cep) return null;
-    const payload = {
-        cep,
-        item_type: typeToDbItemType(item.type),
-        item_name: String(item.title || '').trim(),
-        location: String(item.location || '').trim(),
-        item_date: String(item.date || new Date().toISOString().slice(0, 10)),
-        image_url: item.image || LOST_FOUND_IMAGES.default
-    };
-    try {
-        const rows = await window.supabaseFetch('/lost_and_found_items', {
-            method: 'POST',
-            body: JSON.stringify(payload),
-            headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
-        });
-        if (Array.isArray(rows) && rows.length) return rows[0];
-        return null;
-    } catch (err) {
-        console.warn('saveLostFoundToSupabase falhou:', err?.message || err);
-        return null;
-    }
+async function saveLostFoundToSupabase(
+  item
+) {
+  if (
+    typeof window.supabaseFetch !==
+    'function'
+  ) {
+    throw new Error(
+      'Supabase não está disponível nesta página.'
+    );
+  }
+
+  const cep =
+    getLostFoundUserCep();
+
+  if (!cep) {
+    throw new Error(
+      'Não foi possível identificar o condomínio do usuário.'
+    );
+  }
+
+  const payload = {
+    cep,
+
+    item_type:
+      typeToDbItemType(
+        item.type
+      ),
+
+    item_name:
+      String(
+        item.title || ''
+      ).trim(),
+
+    location:
+      String(
+        item.location || ''
+      ).trim(),
+
+    item_date:
+      String(
+        item.date ||
+        new Date()
+          .toISOString()
+          .slice(0, 10)
+      ),
+
+    image_url:
+      item.image ||
+      LOST_FOUND_IMAGES.default
+  };
+
+  const rows =
+    await window.supabaseFetch(
+      '/lost_and_found_items',
+      {
+        method: 'POST',
+
+        body:
+          JSON.stringify(payload),
+
+        headers: {
+          'Content-Type':
+            'application/json',
+
+          Prefer:
+            'return=representation'
+        }
+      }
+    );
+
+  if (
+    !Array.isArray(rows) ||
+    !rows.length ||
+    !rows[0]?.id
+  ) {
+    throw new Error(
+      'O Supabase não confirmou o salvamento do registro.'
+    );
+  }
+
+  return rows[0];
 }
 
 async function getLostFoundItems() {
