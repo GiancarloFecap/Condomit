@@ -32,6 +32,200 @@
         }
     }
 
+    async function findResponsibleByCpf(cpf) {
+        const normalizedCpf = normalizeCpf(cpf);
+
+        if (normalizedCpf.length !== 11) {
+            return null;
+        }
+
+        if (typeof window.supabaseFetch !== 'function') {
+            throw new Error('Supabase não está disponível nesta página.');
+        }
+
+        const rows = await window.supabaseFetch(
+            '/rpc/condomit_find_responsible_by_cpf',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    target_cpf: normalizedCpf
+                })
+            }
+        );
+
+        return Array.isArray(rows)
+            ? (rows[0] || null)
+            : (rows || null);
+    }
+
+    async function resolveCurrentCondominiumCep(currentUser) {
+        if (
+            typeof window.resolveUserCondominiumCep === 'function'
+        ) {
+            const resolved = await window.resolveUserCondominiumCep(
+                currentUser
+            );
+
+            if (resolved) {
+                return resolved;
+            }
+        }
+
+        let condominium = currentUser?.condominium || {};
+
+        if (typeof condominium === 'string') {
+            try {
+                condominium = JSON.parse(condominium);
+            } catch (_) {
+                condominium = {};
+            }
+        }
+
+        const candidates = [
+            condominium?.cep,
+            condominium?.condominium_cep,
+            condominium?.condominium_id,
+            condominium?.condominiumId,
+            currentUser?.cep,
+            currentUser?.condominium_cep,
+            currentUser?.condominium_id,
+            currentUser?.condominiumId
+        ];
+
+        for (const candidate of candidates) {
+            const digits = String(candidate || '').replace(/\D/g, '');
+
+            if (digits.length === 8) {
+                return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+            }
+        }
+
+        return '';
+    }
+
+    async function createVisitorSafe(visitor, responsibleUser, currentUser) {
+        if (typeof window.supabaseFetch !== 'function') {
+            throw new Error('Supabase não está disponível nesta página.');
+        }
+
+        if (
+            typeof window.resolveSupabaseAccessToken === 'function'
+        ) {
+            const token = await window.resolveSupabaseAccessToken();
+
+            if (!token) {
+                throw new Error(
+                    'Sua sessão expirou. Saia da conta, entre novamente e tente cadastrar o visitante.'
+                );
+            }
+        }
+
+        const cep = await resolveCurrentCondominiumCep(currentUser);
+
+        if (!cep) {
+            throw new Error(
+                'Não foi possível identificar o CEP do condomínio do usuário.'
+            );
+        }
+
+        const visitorCpf = normalizeCpf(visitor?.cpf);
+        const responsibleCpf = String(
+            responsibleUser?.cpf || ''
+        ).trim();
+
+        if (visitorCpf.length !== 11) {
+            throw new Error(
+                'Informe um CPF válido para o visitante.'
+            );
+        }
+
+        if (!responsibleCpf) {
+            throw new Error(
+                'CPF do responsável não encontrado neste condomínio.'
+            );
+        }
+
+        const payload = {
+            cep,
+            cpf: visitorCpf,
+            full_name: String(visitor?.full_name || '').trim(),
+            rg: String(visitor?.rg || '').trim(),
+            phone: String(visitor?.phone || '').trim() || null,
+            email: String(visitor?.email || '').trim().toLowerCase() || null,
+
+            /*
+             * Mantém exatamente o formato salvo em users.cpf.
+             * Isso é necessário porque visitors.responsible_cpf é FK.
+             */
+            responsible_cpf: responsibleCpf
+        };
+
+        if (!payload.full_name) {
+            throw new Error(
+                'Informe o nome completo do visitante.'
+            );
+        }
+
+        if (!payload.rg) {
+            throw new Error(
+                'Informe o RG do visitante.'
+            );
+        }
+
+        try {
+            const data = await window.supabaseFetch(
+                '/visitors',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Prefer: 'return=representation'
+                    },
+                    body: JSON.stringify(payload)
+                }
+            );
+
+            const saved = Array.isArray(data)
+                ? (data[0] || null)
+                : (data || null);
+
+            if (!saved) {
+                throw new Error(
+                    'O Supabase não confirmou o cadastro do visitante.'
+                );
+            }
+
+            return saved;
+        } catch (error) {
+            const message = String(
+                error?.message || error || ''
+            );
+
+            if (
+                message.includes('visitors_responsible_cpf_fkey') ||
+                message.toLowerCase().includes('foreign key')
+            ) {
+                throw new Error(
+                    'O CPF do responsável não corresponde a um usuário cadastrado.'
+                );
+            }
+
+            if (
+                message.includes('23505') ||
+                message.toLowerCase().includes('duplicate key')
+            ) {
+                throw new Error(
+                    'Já existe um visitante cadastrado com este CPF.'
+                );
+            }
+
+            throw error;
+        }
+    }
+
     function getCondominiumKey(user) {
         const condominium = user?.condominium && typeof user.condominium === 'object'
             ? user.condominium
@@ -142,6 +336,7 @@
 
     async function fillResponsibleByCpf(form, cpf) {
         const normalizedCpf = normalizeCpf(cpf);
+
         if (normalizedCpf.length !== 11) {
             setValue(form.responsibleName, '');
             setValue(form.responsiblePhone, '');
@@ -150,27 +345,84 @@
             return null;
         }
 
-        setFeedback(form, 'Buscando responsável...', 'info');
-        const user = typeof window.fetchUserByCpf === 'function'
-            ? await window.fetchUserByCpf(normalizedCpf)
-            : null;
+        setFeedback(
+            form,
+            'Buscando responsável...',
+            'info'
+        );
 
-        if (!user) {
+        try {
+            const user = await findResponsibleByCpf(
+                normalizedCpf
+            );
+
+            if (!user) {
+                setValue(form.responsibleName, '');
+                setValue(form.responsiblePhone, '');
+                setValue(form.responsibleApartment, '');
+                setValue(form.responsibleBlock, '');
+
+                setFeedback(
+                    form,
+                    'CPF do responsável não encontrado neste condomínio.',
+                    'error'
+                );
+
+                return null;
+            }
+
+            const responsible =
+                extractResponsibleData(user);
+
+            setValue(
+                form.responsibleName,
+                responsible.name
+            );
+
+            setValue(
+                form.responsiblePhone,
+                formatPhone(
+                    responsible.phone
+                )
+            );
+
+            setValue(
+                form.responsibleApartment,
+                responsible.apartment
+            );
+
+            setValue(
+                form.responsibleBlock,
+                responsible.block
+            );
+
+            setFeedback(
+                form,
+                '',
+                'info'
+            );
+
+            return user;
+        } catch (error) {
+            console.error(
+                'Erro ao buscar responsável:',
+                error
+            );
+
             setValue(form.responsibleName, '');
             setValue(form.responsiblePhone, '');
             setValue(form.responsibleApartment, '');
             setValue(form.responsibleBlock, '');
-            setFeedback(form, 'CPF do responsável não encontrado.', 'error');
+
+            setFeedback(
+                form,
+                error?.message ||
+                    'Não foi possível buscar o responsável.',
+                'error'
+            );
+
             return null;
         }
-
-        const responsible = extractResponsibleData(user);
-        setValue(form.responsibleName, responsible.name);
-        setValue(form.responsiblePhone, formatPhone(responsible.phone));
-        setValue(form.responsibleApartment, responsible.apartment);
-        setValue(form.responsibleBlock, responsible.block);
-        setFeedback(form, '', 'info');
-        return user;
     }
 
     function buildRecentLog(form, currentUser) {
@@ -188,77 +440,222 @@
     }
 
     async function submitVisitorForm(form, options = {}) {
-        const currentUser = options.currentUser || getCurrentUser();
+        const currentUser =
+            options.currentUser ||
+            getCurrentUser();
+
         const payload = {
-            cpf: form.visitorCpf?.value || '',
-            full_name: form.visitorFullName?.value || '',
-            rg: form.visitorRg?.value || '',
-            phone: form.visitorPhone?.value || '',
-            email: form.visitorEmail?.value || '',
-            responsible_cpf: form.responsibleCpf?.value || ''
+            cpf:
+                form.visitorCpf?.value ||
+                '',
+
+            full_name:
+                form.visitorFullName?.value ||
+                '',
+
+            rg:
+                form.visitorRg?.value ||
+                '',
+
+            phone:
+                form.visitorPhone?.value ||
+                '',
+
+            email:
+                form.visitorEmail?.value ||
+                '',
+
+            responsible_cpf:
+                form.responsibleCpf?.value ||
+                ''
         };
 
-        if (!payload.full_name.trim() || !normalizeCpf(payload.cpf) || !payload.rg.trim() || !normalizeCpf(payload.responsible_cpf)) {
-            setFeedback(form, 'Preencha os campos obrigatórios do visitante e do responsável.', 'error');
+        if (
+            !payload.full_name.trim() ||
+            !normalizeCpf(payload.cpf) ||
+            !payload.rg.trim() ||
+            !normalizeCpf(payload.responsible_cpf)
+        ) {
+            setFeedback(
+                form,
+                'Preencha os campos obrigatórios do visitante e do responsável.',
+                'error'
+            );
+
             return null;
         }
 
-        if (normalizeCpf(payload.cpf).length !== 11) {
-            setFeedback(form, 'O CPF do visitante deve ter 11 dígitos.', 'error');
+        if (
+            normalizeCpf(payload.cpf).length !==
+            11
+        ) {
+            setFeedback(
+                form,
+                'O CPF do visitante deve ter 11 dígitos.',
+                'error'
+            );
+
             return null;
         }
 
-        if (normalizeCpf(payload.responsible_cpf).length !== 11) {
-            setFeedback(form, 'O CPF do responsável deve ter 11 dígitos.', 'error');
+        if (
+            normalizeCpf(
+                payload.responsible_cpf
+            ).length !== 11
+        ) {
+            setFeedback(
+                form,
+                'O CPF do responsável deve ter 11 dígitos.',
+                'error'
+            );
+
             return null;
         }
 
         if (form.submit) {
-            form.submit.disabled = true;
-            form.submit.classList.add('loading');
+            form.submit.disabled =
+                true;
+
+            form.submit.classList
+                .add('loading');
         }
 
-        setFeedback(form, 'Registrando visitante...', 'info');
+        setFeedback(
+            form,
+            'Validando responsável...',
+            'info'
+        );
 
         try {
-            if (typeof window.createVisitor !== 'function') {
-                throw new Error('Função de cadastro de visitantes não disponível.');
+            /*
+             * Busca o responsável pelo CPF ignorando
+             * pontuação e recupera o valor EXATO de users.cpf.
+             */
+            const responsibleUser =
+                await findResponsibleByCpf(
+                    payload.responsible_cpf
+                );
+
+            if (!responsibleUser?.cpf) {
+                throw new Error(
+                    'CPF do responsável não encontrado neste condomínio.'
+                );
             }
 
-            const created = await window.createVisitor(payload);
-            pushRecentLog(buildRecentLog(form, currentUser), currentUser);
-            setFeedback(form, 'Visitante registrado com sucesso.', 'success');
+            setFeedback(
+                form,
+                'Registrando visitante...',
+                'info'
+            );
 
-            if (!options.preserveResponsible) {
+            const created =
+                await createVisitorSafe(
+                    payload,
+                    responsibleUser,
+                    currentUser
+                );
+
+            pushRecentLog(
+                buildRecentLog(
+                    form,
+                    currentUser
+                ),
+                currentUser
+            );
+
+            setFeedback(
+                form,
+                'Visitante registrado com sucesso.',
+                'success'
+            );
+
+            if (
+                !options
+                    .preserveResponsible
+            ) {
                 form.root.reset();
             } else {
                 form.root.reset();
-                applyLockedResponsible(form, {
-                    ...(currentUser || {}),
-                    cpf: payload.responsible_cpf,
-                    phone: options.lockedResponsible?.phone || currentUser?.phone || '',
-                    name: options.lockedResponsible?.name || currentUser?.name || '',
-                    condominium: {
-                        ...(currentUser?.condominium || {}),
-                        apartment: options.lockedResponsible?.apartment || '',
-                        block: options.lockedResponsible?.block || ''
+
+                applyLockedResponsible(
+                    form,
+                    {
+                        ...(currentUser || {}),
+
+                        cpf:
+                            responsibleUser.cpf,
+
+                        phone:
+                            options
+                                .lockedResponsible
+                                ?.phone ||
+                            currentUser
+                                ?.phone ||
+                            '',
+
+                        name:
+                            options
+                                .lockedResponsible
+                                ?.name ||
+                            currentUser
+                                ?.name ||
+                            '',
+
+                        condominium: {
+                            ...(currentUser
+                                ?.condominium ||
+                                {}),
+
+                            apartment:
+                                options
+                                    .lockedResponsible
+                                    ?.apartment ||
+                                '',
+
+                            block:
+                                options
+                                    .lockedResponsible
+                                    ?.block ||
+                                ''
+                        }
                     }
-                });
+                );
             }
 
-            if (typeof options.onSuccess === 'function') {
-                options.onSuccess(created);
+            if (
+                typeof options
+                    .onSuccess ===
+                'function'
+            ) {
+                options.onSuccess(
+                    created
+                );
             }
 
             return created;
+
         } catch (error) {
-            console.error('Erro ao registrar visitante:', error);
-            setFeedback(form, error?.message || 'Não foi possível registrar o visitante.', 'error');
+            console.error(
+                'Erro ao registrar visitante:',
+                error
+            );
+
+            setFeedback(
+                form,
+                error?.message ||
+                    'Não foi possível registrar o visitante.',
+                'error'
+            );
+
             return null;
+
         } finally {
             if (form.submit) {
-                form.submit.disabled = false;
-                form.submit.classList.remove('loading');
+                form.submit.disabled =
+                    false;
+
+                form.submit.classList
+                    .remove('loading');
             }
         }
     }
@@ -323,6 +720,8 @@
         formatPhone,
         normalizeCpf,
         fillResponsibleByCpf,
+        findResponsibleByCpf,
+        createVisitorSafe,
         getRecentLogs,
         syncLockedResponsible(root, currentUser = getCurrentUser()) {
             if (!root) return null;
