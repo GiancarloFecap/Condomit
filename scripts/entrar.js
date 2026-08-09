@@ -254,97 +254,227 @@ document.addEventListener('DOMContentLoaded', async function() {
                 });
 
             if (authError) {
-                const errCode = String(authError.code || '').toLowerCase();
-                const errMsg = String(authError.message || '').toLowerCase();
+    console.error(
+        '[LOGIN] Erro retornado pelo Supabase Auth:',
+        {
+            message: authError.message,
+            code: authError.code,
+            status: authError.status,
+            name: authError.name
+        }
+    );
 
-                if (
-                    errCode === 'email_not_confirmed' ||
-                    errMsg.includes('email not confirmed') ||
-                    errMsg.includes('email_not_confirmed')
-                ) {
-                    setLoginSubmitting(false);
-                    showEmailNotConfirmedModal(email);
-                    return;
-                }
+    const errCode =
+        String(
+            authError.code || ''
+        )
+            .trim()
+            .toLowerCase();
 
-                if (
-                    errCode === 'invalid_credentials' ||
-                    errMsg.includes('invalid') ||
-                    errMsg.includes('incorrect') ||
-                    errMsg.includes('credentials') ||
-                    (authError.status && authError.status >= 400 && authError.status < 500)
-                ) {
-                    const probeResult = await checkDeletedUserOfferReactivate(email);
+    const errMsg =
+        String(
+            authError.message || ''
+        )
+            .trim()
+            .toLowerCase();
 
-                    if (probeResult?.exists && probeResult?.deleted) {
-                        setLoginSubmitting(false);
-                        showModal({
-                            title: 'Esta conta foi removida',
-                            message:
-                                `Detectamos que o e-mail <strong>${email}</strong> já teve uma conta cadastrada anteriormente mas ela foi inativada.<br><br>` +
-                                'Deseja <strong>reativar a conta</strong> e receber um e-mail para recuperar o acesso?',
-                            type: 'warning',
-                            confirmText: 'Reativar e enviar e-mail',
-                            cancelText: 'Não, voltar',
-                            onConfirm: async () => {
-                                const emailRedirectTo =
-                                    `${window.location.origin}/pages/entrar.html`;
-                                const reactivateResult = await tryReactivateDeletedUser({
+    /*
+     * E-mail ainda não confirmado
+     */
+    if (
+        errCode === 'email_not_confirmed' ||
+        errMsg.includes(
+            'email not confirmed'
+        ) ||
+        errMsg.includes(
+            'email_not_confirmed'
+        )
+    ) {
+        setLoginSubmitting(false);
+
+        showEmailNotConfirmedModal(
+            email
+        );
+
+        return;
+    }
+
+    /*
+     * Limite de tentativas
+     */
+    if (
+        errCode.includes(
+            'rate'
+        ) ||
+        errMsg.includes(
+            'too many'
+        ) ||
+        errMsg.includes(
+            'rate limit'
+        ) ||
+        Number(
+            authError.status
+        ) === 429
+    ) {
+        showToast(
+            'Muitas tentativas de login recentes. Aguarde alguns minutos e tente novamente.',
+            'error'
+        );
+
+        return;
+    }
+
+    /*
+     * Credenciais realmente inválidas.
+     *
+     * IMPORTANTE:
+     * não considerar qualquer 4xx
+     * como senha incorreta.
+     */
+    const invalidCredentials =
+        errCode ===
+            'invalid_credentials' ||
+        errMsg.includes(
+            'invalid login credentials'
+        ) ||
+        errMsg.includes(
+            'invalid credentials'
+        );
+
+    if (invalidCredentials) {
+        const probeResult =
+            await checkDeletedUserOfferReactivate(
+                email
+            );
+
+        if (
+            probeResult?.exists &&
+            probeResult?.deleted
+        ) {
+            setLoginSubmitting(
+                false
+            );
+
+            showModal({
+                title:
+                    'Esta conta foi removida',
+
+                message:
+                    `Detectamos que o e-mail ${email} já teve uma conta cadastrada anteriormente, mas ela foi inativada.`,
+
+                type:
+                    'warning',
+
+                confirmText:
+                    'Reativar e enviar e-mail',
+
+                cancelText:
+                    'Não, voltar',
+
+                onConfirm:
+                    async () => {
+                        const emailRedirectTo =
+                            `${window.location.origin}/pages/entrar.html`;
+
+                        const reactivateResult =
+                            await tryReactivateDeletedUser(
+                                {
                                     email,
+                                    password,
                                     emailRedirectTo
-                                });
-
-                                if (reactivateResult?.data?.reactivated === true) {
-                                    showModal({
-                                        title: 'Conta reativada!',
-                                        message:
-                                            'A sua conta foi reativada com sucesso. Enviamos um e-mail para ' +
-                                            `<strong>${email}</strong> com um link para cadastrar uma nova senha.<br><br>` +
-                                            'Verifique também a pasta de <strong>spam</strong> ou <strong>lixo eletrônico</strong>.',
-                                        type: 'success',
-                                        confirmText: 'Entendido'
-                                    });
-                                } else if (reactivateResult?.data?.status === 'already-active') {
-                                    showToast('Esta conta já está ativa. Apenas efetue o login.', 'info');
-                                } else {
-                                    showToast(
-                                        'Não foi possível reativar a conta agora. Tente novamente mais tarde.',
-                                        'error'
-                                    );
                                 }
-                            }
-                        });
-                        return;
+                            );
+
+                        if (
+                            reactivateResult
+                                ?.data
+                                ?.reactivated ===
+                            true
+                        ) {
+                            showModal({
+                                title:
+                                    'Conta reativada!',
+
+                                message:
+                                    'A conta foi reativada. Verifique seu e-mail para recuperar o acesso.',
+
+                                type:
+                                    'success',
+
+                                confirmText:
+                                    'Entendido'
+                            });
+
+                        } else if (
+                            reactivateResult
+                                ?.data
+                                ?.status ===
+                            'already-active'
+                        ) {
+                            showToast(
+                                'Esta conta já está ativa.',
+                                'info'
+                            );
+
+                        } else {
+                            showToast(
+                                'Não foi possível reativar a conta.',
+                                'error'
+                            );
+                        }
                     }
+            });
 
-                    showToast('E-mail ou senha incorretos.', 'error');
-                    return;
-                }
+            return;
+        }
 
-                if (
-                    errMsg.includes('too many') ||
-                    errMsg.includes('rate limit')
-                ) {
-                    showToast(
-                        'Muitas tentativas de login recentes. Aguarde alguns minutos e tente novamente.',
-                        'error'
-                    );
-                    return;
-                }
+        showToast(
+            'E-mail ou senha incorretos.',
+            'error'
+        );
 
-                if (
-                    errMsg.includes('network') ||
-                    errMsg.includes('fetch')
-                ) {
-                    showToast(
-                        'Falha de conexão. Verifique sua internet e tente novamente.',
-                        'error'
-                    );
-                    return;
-                }
+        return;
+    }
 
-                throw authError;
-            }
+    /*
+     * Problema de internet
+     */
+    if (
+        errMsg.includes(
+            'network'
+        ) ||
+        errMsg.includes(
+            'fetch'
+        )
+    ) {
+        showToast(
+            'Falha de conexão. Verifique sua internet e tente novamente.',
+            'error'
+        );
+
+        return;
+    }
+
+    /*
+     * Qualquer outro erro:
+     * NÃO dizer que a senha está errada.
+     */
+    console.error(
+        '[LOGIN] Falha de autenticação não reconhecida:',
+        authError
+    );
+
+    showToast(
+        `Falha na autenticação: ${
+            authError.message ||
+            authError.code ||
+            'erro desconhecido'
+        }`,
+        'error'
+    );
+
+    return;
+}
 
             if (!authData?.session || !authData?.user) {
                 throw new Error('O Supabase não retornou uma sessão válida.');
