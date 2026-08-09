@@ -1,5 +1,5 @@
 window.SUPABASE_URL = 'https://zoplefkruidaxeapnrjp.supabase.co';
-window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InpvcGxlZmtydWlkYXhlYXBucmpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MTUwNjQsImV4cCI6MjA5NTk5MTA2NH0.WTk0rZaTsPvs30uEWDfylc-z6L3G8IUb_J73oYtjuWU';
+window.SUPABASE_ANON_KEY = 'sb_publishable_z9bRGucN09k7_E6taywKIg_FUpIEzaR';
 
 const SUPABASE_URL = window.SUPABASE_URL;
 const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY;
@@ -40,7 +40,6 @@ function cryptoRandomUuid() {
 
 const SUPABASE_HEADERS = {
   apikey: SUPABASE_ANON_KEY,
-  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
   'Content-Type': 'application/json'
 };
 
@@ -485,6 +484,240 @@ const SUPABASE_HEADERS = {
    AUTENTICAÇÃO / SESSÃO SUPABASE
 ============================================================ */
 
+function decodeJwtPayload(token) {
+  const raw =
+    String(
+      token || ''
+    ).trim();
+
+  if (
+    raw.split('.').length !== 3
+  ) {
+    return null;
+  }
+
+  try {
+    const payloadPart =
+      raw
+        .split('.')[1]
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const padding =
+      '='.repeat(
+        (
+          4 -
+          (
+            payloadPart.length %
+            4
+          )
+        ) %
+        4
+      );
+
+    const decoded =
+      atob(
+        payloadPart +
+        padding
+      );
+
+    const json =
+      decodeURIComponent(
+        Array.prototype.map
+          .call(
+            decoded,
+            (char) =>
+              '%' +
+              char
+                .charCodeAt(0)
+                .toString(16)
+                .padStart(2, '0')
+          )
+          .join('')
+      );
+
+    return JSON.parse(
+      json
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
+function getSupabaseProjectRef() {
+  try {
+    return (
+      new URL(
+        SUPABASE_URL
+      )
+        .hostname
+        .split('.')[0] ||
+      ''
+    );
+  } catch (_) {
+    return '';
+  }
+}
+
+function validateSupabasePublicKeyConfiguration() {
+  const key =
+    String(
+      SUPABASE_ANON_KEY ||
+      ''
+    ).trim();
+
+  if (
+    !key ||
+    key.includes(
+      'COLE_AQUI_'
+    )
+  ) {
+    return {
+      ok: false,
+
+      message:
+        'A chave pública do Supabase não foi configurada. Copie a Publishable key do seu projeto em Supabase > Project Settings > API Keys.'
+    };
+  }
+
+  if (
+    key.startsWith(
+      'sb_secret_'
+    )
+  ) {
+    return {
+      ok: false,
+
+      message:
+        'Uma chave secreta do Supabase foi colocada no frontend. Use somente a Publishable key.'
+    };
+  }
+
+  if (
+    key.startsWith(
+      'sb_publishable_'
+    )
+  ) {
+    return {
+      ok: true,
+      type: 'publishable'
+    };
+  }
+
+  const payload =
+    decodeJwtPayload(
+      key
+    );
+
+  if (!payload) {
+    return {
+      ok: false,
+
+      message:
+        'A chave pública do Supabase é inválida. Copie novamente a Publishable key do projeto.'
+    };
+  }
+
+  const projectRef =
+    getSupabaseProjectRef();
+
+  const isLegacyAnon =
+    payload.role ===
+      'anon' &&
+
+    payload.iss ===
+      'supabase' &&
+
+    (
+      !projectRef ||
+      payload.ref ===
+        projectRef
+    ) &&
+
+    (
+      !payload.exp ||
+
+      Number(
+        payload.exp
+      ) >
+      Math.floor(
+        Date.now() /
+        1000
+      )
+    );
+
+  if (!isLegacyAnon) {
+    return {
+      ok: false,
+
+      message:
+        'A anon key configurada é inválida ou não pertence a este projeto. Copie a Publishable key atual no painel do Supabase.'
+    };
+  }
+
+  return {
+    ok: true,
+    type: 'legacy-anon'
+  };
+}
+
+function isUsableSupabaseUserToken(
+  token
+) {
+  const raw =
+    String(
+      token || ''
+    ).trim();
+
+  const payload =
+    decodeJwtPayload(
+      raw
+    );
+
+  if (!payload) {
+    return false;
+  }
+
+  if (
+    payload.role !==
+    'authenticated'
+  ) {
+    return false;
+  }
+
+  const now =
+    Math.floor(
+      Date.now() /
+      1000
+    );
+
+  if (
+    payload.exp &&
+    Number(
+      payload.exp
+    ) <= now + 5
+  ) {
+    return false;
+  }
+
+  const projectRef =
+    getSupabaseProjectRef();
+
+  if (
+    projectRef &&
+    payload.iss &&
+    !String(
+      payload.iss
+    ).includes(
+      projectRef
+    )
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function parseStoredJson(
   rawValue
 ) {
@@ -520,12 +753,10 @@ function extractAccessToken(
     const trimmed =
       value.trim();
 
-    /*
-     * Um JWT possui normalmente:
-     * header.payload.signature
-     */
     if (
-      trimmed.split('.').length === 3
+      isUsableSupabaseUserToken(
+        trimmed
+      )
     ) {
       return trimmed;
     }
@@ -567,14 +798,27 @@ function extractAccessToken(
     return null;
   }
 
-  return (
-    value.access_token ||
-    value.accessToken ||
-    value.token ||
-    value?.session?.access_token ||
-    value?.currentSession?.access_token ||
-    null
-  );
+  const candidates = [
+    value.access_token,
+    value.accessToken,
+    value.token,
+    value?.session?.access_token,
+    value?.currentSession?.access_token
+  ];
+
+  for (
+    const candidate of candidates
+  ) {
+    if (
+      isUsableSupabaseUserToken(
+        candidate
+      )
+    ) {
+      return candidate;
+    }
+  }
+
+  return null;
 }
 
 function getSupabaseAccessToken() {
@@ -611,17 +855,15 @@ function getSupabaseAccessToken() {
   for (
     const storage of storages
   ) {
-    /*
-     * Primeiro tenta as chaves
-     * personalizadas do projeto.
-     */
     for (
       const key of preferredKeys
     ) {
       try {
         const token =
           extractAccessToken(
-            storage.getItem(key)
+            storage.getItem(
+              key
+            )
           );
 
         if (token) {
@@ -630,25 +872,22 @@ function getSupabaseAccessToken() {
       } catch (_) {}
     }
 
-    /*
-     * Supabase JS v2 geralmente utiliza:
-     *
-     * sb-<project-ref>-auth-token
-     */
     try {
       for (
         let index = 0;
-        index < storage.length;
+        index <
+        storage.length;
         index += 1
       ) {
         const key =
-          storage.key(index);
+          storage.key(
+            index
+          );
 
         if (
           !key ||
-          !/^sb-.*-auth-token$/i.test(
-            key
-          )
+          !/^sb-.*-auth-token$/i
+            .test(key)
         ) {
           continue;
         }
@@ -671,28 +910,14 @@ function getSupabaseAccessToken() {
 }
 
 async function resolveSupabaseAccessToken() {
-  /*
-   * Primeira tentativa:
-   * sessionStorage/localStorage.
-   */
-  const storedToken =
-    getSupabaseAccessToken();
-
-  if (storedToken) {
-    return storedToken;
-  }
-
-  /*
-   * Segunda tentativa:
-   * cliente oficial Supabase.
-   */
   try {
     const authClient =
       window.supabase?.auth;
 
     if (
       authClient &&
-      typeof authClient.getSession ===
+      typeof authClient
+        .getSession ===
         'function'
     ) {
       const {
@@ -702,19 +927,18 @@ async function resolveSupabaseAccessToken() {
         await authClient
           .getSession();
 
+      const token =
+        data
+          ?.session
+          ?.access_token ||
+        null;
+
       if (
         !error &&
-        data?.session
-          ?.access_token
+        isUsableSupabaseUserToken(
+          token
+        )
       ) {
-        const token =
-          data.session
-            .access_token;
-
-        /*
-         * Mantém compatibilidade
-         * com o restante do projeto.
-         */
         try {
           sessionStorage.setItem(
             'sb-access-token',
@@ -734,9 +958,20 @@ async function resolveSupabaseAccessToken() {
     }
   } catch (error) {
     console.warn(
-      'Não foi possível recuperar a sessão do Supabase:',
+      'Não foi possível recuperar a sessão oficial do Supabase:',
       error
     );
+  }
+
+  const storedToken =
+    getSupabaseAccessToken();
+
+  if (
+    isUsableSupabaseUserToken(
+      storedToken
+    )
+  ) {
+    return storedToken;
   }
 
   return null;
@@ -746,6 +981,15 @@ async function supabaseFetch(
   path,
   options = {}
 ) {
+  const keyStatus =
+    validateSupabasePublicKeyConfiguration();
+
+  if (!keyStatus.ok) {
+    throw new Error(
+      keyStatus.message
+    );
+  }
+
   const accessToken =
     await resolveSupabaseAccessToken();
 
@@ -763,13 +1007,10 @@ async function supabaseFetch(
       'PATCH',
       'PUT',
       'DELETE'
-    ].includes(method);
+    ].includes(
+      method
+    );
 
-  /*
-   * INSERT, UPDATE e DELETE em tabelas
-   * protegidas por RLS não devem ser
-   * realizados apenas com anon key.
-   */
   if (
     requiresAuthenticatedSession &&
     !accessToken
@@ -779,26 +1020,29 @@ async function supabaseFetch(
     );
   }
 
+  const headers = {
+    ...SUPABASE_HEADERS,
+
+    ...(
+      options.headers ||
+      {}
+    )
+  };
+
+  if (accessToken) {
+    headers.Authorization =
+      `Bearer ${accessToken}`;
+  } else {
+    delete headers.Authorization;
+  }
+
   const response =
     await fetch(
       `${SUPABASE_REST_URL}${path}`,
       {
         ...options,
-
-        headers: {
-          ...SUPABASE_HEADERS,
-
-          Authorization:
-            `Bearer ${
-              accessToken ||
-              SUPABASE_ANON_KEY
-            }`,
-
-          ...(
-            options.headers ||
-            {}
-          )
-        }
+        method,
+        headers
       }
     );
 
@@ -810,7 +1054,9 @@ async function supabaseFetch(
   try {
     data =
       text
-        ? JSON.parse(text)
+        ? JSON.parse(
+            text
+          )
         : null;
   } catch (_) {
     data = text;
@@ -819,13 +1065,15 @@ async function supabaseFetch(
   if (!response.ok) {
     const errorCode =
       data &&
-      typeof data === 'object'
+      typeof data ===
+        'object'
         ? data.code
         : null;
 
     const errorMessage =
       data &&
-      typeof data === 'object'
+      typeof data ===
+        'object'
         ? (
             data.message ||
             data.error ||
@@ -842,7 +1090,9 @@ async function supabaseFetch(
       );
 
     const error =
-      new Error(message);
+      new Error(
+        message
+      );
 
     error.status =
       response.status;
@@ -854,20 +1104,41 @@ async function supabaseFetch(
       data;
 
     if (
-      response.status === 401 ||
-      errorCode === '42501' ||
+      /invalid api key/i
+        .test(
+          message
+        )
+    ) {
+      console.error(
+        'A chave pública configurada em window.SUPABASE_ANON_KEY foi recusada pelo Supabase.'
+      );
+    }
+
+    if (
+      response.status ===
+        401 ||
+
+      errorCode ===
+        '42501' ||
+
       /row-level security|policy/i
-        .test(message)
+        .test(
+          message
+        )
     ) {
       console.error(
         'Operação bloqueada pelo Supabase. Verifique a sessão autenticada e as policies RLS.',
         {
           path,
+
           method,
+
           status:
             response.status,
+
           code:
             errorCode,
+
           data
         }
       );
@@ -1426,10 +1697,6 @@ function normalizeCepStrict(
     String(value || '')
       .replace(/\D/g, '');
 
-  /*
-   * Não retornar o texto original.
-   * Um CEP inválido deve ser recusado.
-   */
   if (
     digits.length !== 8
   ) {
@@ -1507,10 +1774,6 @@ async function resolveUserCondominiumCep(
     )
   ];
 
-  /*
-   * Primeiro tenta encontrar o CEP
-   * no objeto do usuário.
-   */
   for (
     const candidate of
     cepCandidates
@@ -1525,9 +1788,6 @@ async function resolveUserCondominiumCep(
     }
   }
 
-  /*
-   * Depois consulta user_condominiums.
-   */
   const email =
     String(
       user?.email || ''
@@ -1577,10 +1837,6 @@ async function resolveUserCondominiumCep(
 async function createVisitor(
   visitor
 ) {
-  /*
-   * Garante que o INSERT não seja
-   * executado somente como anon.
-   */
   const accessToken =
     await resolveSupabaseAccessToken();
 
@@ -2043,12 +2299,7 @@ async function fetchPendingNoticesCount(
       ) {
         return data.length;
       }
-    } catch (_) {
-      /*
-       * A tabela pode não existir.
-       * Tenta a próxima.
-       */
-    }
+    } catch (_) {}
   }
 
   return 0;
@@ -2565,7 +2816,9 @@ async function refreshCurrentUserFromDb() {
   }
 
   const user =
-    JSON.parse(cached);
+    JSON.parse(
+      cached
+    );
 
   if (!user?.email) {
     return user;
@@ -2588,10 +2841,11 @@ async function refreshCurrentUserFromDb() {
         ...fresh
       };
 
-      if (user.password) {
-        merged.password =
-          user.password;
-      }
+      /*
+       * Nunca manter senha em
+       * sessionStorage.
+       */
+      delete merged.password;
 
       if (!merged.type) {
         merged.type =
@@ -3149,10 +3403,6 @@ async function createServiceProvider(
       );
     }
 
-    /*
-     * Não fingir que salvou quando
-     * a policy RLS bloqueou.
-     */
     if (
       msg
         .toLowerCase()
@@ -3324,6 +3574,12 @@ window.getVisitorsForCondominium =
 
 window.getUserCondominiumIdentifiers =
   getUserCondominiumIdentifiers;
+
+window.validateSupabasePublicKeyConfiguration =
+  validateSupabasePublicKeyConfiguration;
+
+window.isUsableSupabaseUserToken =
+  isUsableSupabaseUserToken;
 
 window.getSupabaseAccessToken =
   getSupabaseAccessToken;
@@ -3971,11 +4227,6 @@ document.addEventListener(
       savedFontSize
     );
 
-    /*
-     * Recupera sessão logo no carregamento.
-     * Isso ajuda páginas protegidas por RLS
-     * a terem o JWT disponível.
-     */
     try {
       await resolveSupabaseAccessToken();
     } catch (error) {
@@ -3985,9 +4236,6 @@ document.addEventListener(
       );
     }
 
-    /*
-     * Atualiza dados do usuário.
-     */
     try {
       const stored =
         sessionStorage.getItem(
@@ -4027,9 +4275,6 @@ document.addEventListener(
       );
     }
 
-    /*
-     * Intercepta links de Início.
-     */
     document.addEventListener(
       'click',
       function (e) {
