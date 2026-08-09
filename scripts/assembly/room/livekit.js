@@ -4,7 +4,9 @@ import {
   Track
 } from 'https://esm.sh/livekit-client@2.21.0';
 
-import { state } from './state.js';
+import {
+  state
+} from './state.js';
 
 import {
   renderGrid,
@@ -18,150 +20,576 @@ import {
   setConnectionReconnecting
 } from './ui.js';
 
-/*
- * Permite diferenciar uma saída intencional,
- * feita pelo botão de sair, de uma queda de conexão.
- */
-let intentionalDisconnect = false;
+let intentionalDisconnect =
+  false;
 
-function safeText(value) {
-  return String(value ?? '').trim();
+function safeText(
+  value
+) {
+  return String(
+    value ?? ''
+  ).trim();
 }
 
-function escapeCssSelector(value) {
-  const text = safeText(value);
+function escapeCssSelector(
+  value
+) {
+  const text =
+    safeText(
+      value
+    );
 
-  if (window.CSS?.escape) {
-    return window.CSS.escape(text);
+  if (
+    window.CSS?.escape
+  ) {
+    return window.CSS
+      .escape(
+        text
+      );
   }
 
-  return text.replace(/["\\]/g, '\\$&');
+  return text.replace(
+    /["\\]/g,
+    '\\$&'
+  );
 }
 
-function logLiveKit(message, details = null) {
+function logLiveKit(
+  message,
+  details = null
+) {
   if (details) {
-    console.log(`[LiveKit] ${message}`, details);
+    console.log(
+      `[LiveKit] ${message}`,
+      details
+    );
+
     return;
   }
 
-  console.log(`[LiveKit] ${message}`);
+  console.log(
+    `[LiveKit] ${message}`
+  );
 }
 
-function warnLiveKit(message, details = null) {
+function warnLiveKit(
+  message,
+  details = null
+) {
   if (details) {
-    console.warn(`[LiveKit] ${message}`, details);
+    console.warn(
+      `[LiveKit] ${message}`,
+      details
+    );
+
     return;
   }
 
-  console.warn(`[LiveKit] ${message}`);
+  console.warn(
+    `[LiveKit] ${message}`
+  );
 }
 
-function getParticipantInfo(participant) {
+function getParticipantInfo(
+  participant
+) {
   if (!participant) {
     return null;
   }
 
   return {
-    identity: participant.identity,
-    name: participant.name || '',
-    metadata: participant.metadata || '',
-    isSpeaking: participant.isSpeaking || false
+    identity:
+      participant.identity,
+
+    name:
+      participant.name ||
+      '',
+
+    metadata:
+      participant.metadata ||
+      '',
+
+    isSpeaking:
+      participant.isSpeaking ||
+      false,
+
+    microphoneEnabled:
+      participant
+        .isMicrophoneEnabled ??
+      false,
+
+    cameraEnabled:
+      participant
+        .isCameraEnabled ??
+      false,
+
+    screenShareEnabled:
+      participant
+        .isScreenShareEnabled ??
+      false
   };
 }
 
-function getTileMedia(identity) {
-  const escapedIdentity = escapeCssSelector(identity);
+function getAllParticipants(
+  room
+) {
+  const participants =
+    [];
 
-  const tile = document.querySelector(
-    `.call-tile[data-identity="${escapedIdentity}"]`
-  );
+  if (
+    room?.localParticipant
+  ) {
+    participants.push(
+      room.localParticipant
+    );
+  }
 
-  return tile?.querySelector('.tile-media') || null;
+  room
+    ?.remoteParticipants
+    ?.forEach(
+      (participant) => {
+        participants.push(
+          participant
+        );
+      }
+    );
+
+  return participants;
 }
 
-function getTrackIdentifier(track) {
-  return (
-    safeText(track?.sid) ||
-    safeText(track?.mediaStreamTrack?.id)
-  );
-}
-
-function attachCameraTrack(identity, track) {
-  const media = getTileMedia(identity);
-
-  if (!media || !track) {
+function forEachPublication(
+  participant,
+  callback
+) {
+  if (
+    !participant
+      ?.trackPublications
+  ) {
     return;
   }
 
-  const existingVideo =
-    media.querySelector('video');
+  participant
+    .trackPublications
+    .forEach(
+      (publication) => {
+        callback(
+          publication
+        );
+      }
+    );
+}
 
-  const previousTrack =
-    media.__livekitCameraTrack || null;
+/*
+ * ESSENCIAL:
+ *
+ * Uma publication pode continuar
+ * tendo .track mesmo quando está
+ * mutada.
+ *
+ * Não podemos tratar esse track
+ * como câmera ativa.
+ */
+function isPublicationUsable(
+  publication
+) {
+  return Boolean(
+    publication &&
+    publication.track &&
+    publication.isMuted !==
+      true
+  );
+}
+
+function getTileMedia(
+  identity
+) {
+  const escapedIdentity =
+    escapeCssSelector(
+      identity
+    );
+
+  const tile =
+    document.querySelector(
+      `.call-tile[data-identity="${escapedIdentity}"]`
+    );
+
+  return (
+    tile?.querySelector(
+      '.tile-media'
+    ) ||
+    null
+  );
+}
+
+/*
+ * ============================================================
+ * COMPARTILHAMENTO DE TELA
+ * ============================================================
+ *
+ * Ao compartilhar:
+ * - esconde grade de câmeras
+ * - ocupa todo o palco
+ * - object-fit contain
+ *
+ * Ao parar:
+ * - esconde completamente container
+ * - volta imediatamente para grade
+ */
+function renderScreenShareFixed(
+  track,
+  ownerName = ''
+) {
+  renderScreenShare(
+    track,
+    ownerName
+  );
+
+  const container =
+    document.getElementById(
+      'call-screen-share'
+    );
+
+  const surface =
+    document.getElementById(
+      'screen-share-surface'
+    );
+
+  const grid =
+    document.getElementById(
+      'call-grid'
+    );
+
+  const stopButton =
+    document.getElementById(
+      'btn-stop-screen-share'
+    );
+
+  if (
+    !container ||
+    !surface
+  ) {
+    return;
+  }
 
   /*
-   * Evita desconectar e anexar novamente a mesma faixa.
-   * Reanexar o mesmo vídeo provoca uma piscada perceptível.
+   * NÃO HÁ MAIS
+   * COMPARTILHAMENTO.
    */
+  if (!track) {
+    container.style
+      .display =
+      'none';
+
+    container.style
+      .height =
+      '';
+
+    container.style
+      .minHeight =
+      '';
+
+    container.style
+      .marginBottom =
+      '';
+
+    container.style
+      .flexDirection =
+      '';
+
+    surface.style
+      .display =
+      '';
+
+    surface.style
+      .flex =
+      '';
+
+    surface.style
+      .height =
+      '';
+
+    surface.style
+      .minHeight =
+      '';
+
+    surface.style
+      .aspectRatio =
+      '';
+
+    surface.style
+      .alignItems =
+      '';
+
+    surface.style
+      .justifyContent =
+      '';
+
+    surface.style
+      .overflow =
+      '';
+
+    surface.style
+      .background =
+      '';
+
+    if (grid) {
+      grid.style.display =
+        'grid';
+    }
+
+    if (stopButton) {
+      stopButton.style
+        .display =
+        'none';
+    }
+
+    return;
+  }
+
+  /*
+   * HÁ COMPARTILHAMENTO.
+   */
+  container.style
+    .display =
+    'flex';
+
+  container.style
+    .flexDirection =
+    'column';
+
+  container.style
+    .height =
+    '100%';
+
+  container.style
+    .minHeight =
+    '0';
+
+  container.style
+    .marginBottom =
+    '0';
+
+  surface.style
+    .display =
+    'flex';
+
+  surface.style
+    .flex =
+    '1 1 auto';
+
+  surface.style
+    .height =
+    '100%';
+
+  surface.style
+    .minHeight =
+    '0';
+
+  /*
+   * Remove o 16:9 fixo
+   * enquanto compartilha.
+   */
+  surface.style
+    .aspectRatio =
+    'auto';
+
+  surface.style
+    .alignItems =
+    'center';
+
+  surface.style
+    .justifyContent =
+    'center';
+
+  surface.style
+    .overflow =
+    'hidden';
+
+  surface.style
+    .background =
+    '#000';
+
+  const video =
+    surface.querySelector(
+      'video'
+    );
+
+  if (video) {
+    video.style.width =
+      '100%';
+
+    video.style.height =
+      '100%';
+
+    video.style.display =
+      'block';
+
+    /*
+     * IMPORTANTE:
+     * contain mostra a tela inteira.
+     */
+    video.style.objectFit =
+      'contain';
+
+    video.style
+      .objectPosition =
+      'center center';
+
+    video.style
+      .background =
+      '#000';
+  }
+
+  /*
+   * Durante o compartilhamento,
+   * a tela ocupa o palco principal.
+   */
+  if (grid) {
+    grid.style.display =
+      'none';
+  }
+
+  /*
+   * Somente quem compartilha
+   * vê o botão Parar.
+   */
+  if (stopButton) {
+    const localIdentity =
+      state.room
+        ?.localParticipant
+        ?.identity ||
+      '';
+
+    stopButton.style
+      .display =
+      (
+        localIdentity &&
+        state.screenShareOwner ===
+          localIdentity
+      )
+        ? ''
+        : 'none';
+  }
+}
+
+function clearCameraElement(
+  identity
+) {
+  const media =
+    getTileMedia(
+      identity
+    );
+
+  if (!media) {
+    return;
+  }
+
+  media
+    .querySelectorAll(
+      'video[data-assembly-camera="1"]'
+    )
+    .forEach(
+      (element) =>
+        element.remove()
+    );
+}
+
+function attachCameraTrack(
+  identity,
+  track
+) {
+  const media =
+    getTileMedia(
+      identity
+    );
+
   if (
-    existingVideo &&
-    previousTrack === track
+    !media ||
+    !track
   ) {
     return;
   }
 
-  if (
-    existingVideo &&
-    previousTrack &&
-    previousTrack !== track
+  /*
+   * Só removemos o avatar se
+   * realmente existe câmera ativa.
+   */
+  while (
+    media.firstChild
   ) {
-    try {
-      previousTrack.detach(existingVideo);
-    } catch (_) {
-      existingVideo.remove();
-    }
-  }
-
-  while (media.firstChild) {
-    media.removeChild(media.firstChild);
+    media.removeChild(
+      media.firstChild
+    );
   }
 
   try {
-    const element = track.attach();
+    /*
+     * Evita múltiplos vídeos
+     * do mesmo track.
+     */
+    try {
+      track
+        .detach?.()
+        .forEach?.(
+          (element) =>
+            element.remove?.()
+        );
+    } catch (_) {}
 
-    element.playsInline = true;
-    element.autoplay = true;
-    element.dataset.lkVideo = '1';
+    const element =
+      track.attach();
 
-    const trackIdentifier =
-      getTrackIdentifier(track);
+    element.playsInline =
+      true;
 
-    if (trackIdentifier) {
-      element.dataset.lkTrackId =
-        trackIdentifier;
-    }
+    element.autoplay =
+      true;
+
+    element.dataset
+      .assemblyCamera =
+      '1';
+
+    element.style.width =
+      '100%';
+
+    element.style.height =
+      '100%';
+
+    element.style.objectFit =
+      'cover';
+
+    element.style
+      .objectPosition =
+      'center center';
 
     /*
-     * A câmera local precisa ficar sem áudio para evitar eco.
+     * Câmera local sem áudio.
      */
     element.muted =
-      identity === state.room?.localParticipant?.identity;
+      identity ===
+      state.room
+        ?.localParticipant
+        ?.identity;
 
-    media.__livekitCameraTrack = track;
-    media.appendChild(element);
+    media.appendChild(
+      element
+    );
 
-    const playPromise = element.play?.();
+    const playPromise =
+      element.play?.();
 
-    if (playPromise?.catch) {
-      playPromise.catch(() => {
-        warnLiveKit(
-          'O navegador bloqueou a reprodução automática do vídeo.'
-        );
-      });
+    if (
+      playPromise?.catch
+    ) {
+      playPromise.catch(
+        () => {
+          warnLiveKit(
+            'O navegador bloqueou a reprodução automática do vídeo.'
+          );
+        }
+      );
     }
   } catch (error) {
-    delete media.__livekitCameraTrack;
-
     warnLiveKit(
       'Não foi possível anexar a câmera do participante.',
       {
@@ -172,119 +600,136 @@ function attachCameraTrack(identity, track) {
   }
 }
 
-function detachCameraTrack(identity) {
-  const media = getTileMedia(identity);
-
-  if (!media) {
-    return;
-  }
-
-  const video =
-    media.querySelector('video');
-
-  const attachedTrack =
-    media.__livekitCameraTrack || null;
-
-  if (video && attachedTrack) {
-    try {
-      attachedTrack.detach(video);
-    } catch (_) {
-      video.remove();
-    }
-  } else if (video) {
-    video.remove();
-  }
-
-  delete media.__livekitCameraTrack;
-
-  if (media.querySelector('.tile-avatar')) {
-    return;
-  }
-
-  const avatar = document.createElement('div');
-
-  avatar.className = 'tile-avatar';
-
-  avatar.textContent = (
-    window.AssemblyUtils?.getInitials?.(identity) || 'US'
-  ).slice(0, 2);
-
-  media.appendChild(avatar);
+function getAudioTrackIdentifier(
+  track
+) {
+  return (
+    safeText(
+      track?.sid
+    ) ||
+    safeText(
+      track
+        ?.mediaStreamTrack
+        ?.id
+    )
+  );
 }
 
-function attachAudio(track, participant = null) {
+function attachAudio(
+  track,
+  participant = null
+) {
   if (!track) {
     return;
   }
 
   try {
     const trackIdentifier =
-      safeText(track.sid) ||
-      safeText(track.mediaStreamTrack?.id);
-
-    if (trackIdentifier) {
-      const escapedIdentifier =
-        escapeCssSelector(trackIdentifier);
-
-      const existingAudio = document.querySelector(
-        `[data-lk-track-id="${escapedIdentifier}"]`
+      getAudioTrackIdentifier(
+        track
       );
+
+    if (
+      trackIdentifier
+    ) {
+      const escapedIdentifier =
+        escapeCssSelector(
+          trackIdentifier
+        );
+
+      const existingAudio =
+        document.querySelector(
+          `[data-lk-track-id="${escapedIdentifier}"]`
+        );
 
       if (existingAudio) {
         return;
       }
     }
 
-    const element = track.attach();
+    const element =
+      track.attach();
 
-    element.autoplay = true;
-    element.playsInline = true;
-    element.dataset.lkAudio = '1';
-    element.style.display = 'none';
+    element.autoplay =
+      true;
 
-    if (trackIdentifier) {
-      element.dataset.lkTrackId =
+    element.playsInline =
+      true;
+
+    element.dataset.lkAudio =
+      '1';
+
+    element.style.display =
+      'none';
+
+    if (
+      trackIdentifier
+    ) {
+      element.dataset
+        .lkTrackId =
         trackIdentifier;
     }
 
-    if (participant?.identity) {
-      element.dataset.lkParticipant =
+    if (
+      participant?.identity
+    ) {
+      element.dataset
+        .lkParticipant =
         participant.identity;
     }
 
-    document.body.appendChild(element);
+    document.body
+      .appendChild(
+        element
+      );
 
-    const playPromise = element.play?.();
+    const playPromise =
+      element.play?.();
 
-    if (playPromise?.catch) {
-      playPromise.catch(() => {
-        warnLiveKit(
-          'O navegador bloqueou a reprodução automática do áudio.',
-          getParticipantInfo(participant)
-        );
-      });
+    if (
+      playPromise?.catch
+    ) {
+      playPromise.catch(
+        () => {
+          warnLiveKit(
+            'O navegador bloqueou a reprodução automática do áudio.',
+            getParticipantInfo(
+              participant
+            )
+          );
+        }
+      );
     }
   } catch (error) {
     warnLiveKit(
       'Não foi possível anexar o áudio remoto.',
       {
         participant:
-          getParticipantInfo(participant),
+          getParticipantInfo(
+            participant
+          ),
+
         error
       }
     );
   }
 }
 
-function detachAudio(track) {
+function detachAudio(
+  track
+) {
   if (!track) {
     return;
   }
 
   try {
-    track.detach().forEach((element) => {
-      element.remove();
-    });
+    track
+      .detach()
+      .forEach(
+        (element) => {
+          element.remove();
+        }
+      );
   } catch (error) {
     warnLiveKit(
       'Não foi possível remover o áudio remoto.',
@@ -295,163 +740,342 @@ function detachAudio(track) {
 
 function removeAllAttachedAudio() {
   document
-    .querySelectorAll('[data-lk-audio="1"]')
-    .forEach((element) => {
-      element.remove();
-    });
-}
-
-function updateActiveSpeakers(speakers) {
-  const nextActiveSpeakers = new Set(
-    (speakers || [])
-      .map((participant) =>
-        safeText(participant?.identity)
-      )
-      .filter(Boolean)
-  );
-
-  state.activeSpeakers.clear();
-
-  nextActiveSpeakers.forEach((identity) => {
-    state.activeSpeakers.add(identity);
-  });
-
-  /*
-   * ActiveSpeakersChanged é disparado repetidamente enquanto
-   * alguém fala. Não recrie a grade nem os elementos <video>.
-   * Apenas altere a classe visual do participante existente.
-   */
-  document
     .querySelectorAll(
-      '.call-tile[data-identity]'
+      '[data-lk-audio="1"]'
     )
-    .forEach((tile) => {
-      const identity =
-        safeText(tile.dataset.identity);
-
-      tile.classList.toggle(
-        'active-speaker',
-        state.activeSpeakers.has(identity)
-      );
-    });
+    .forEach(
+      (element) => {
+        element.remove();
+      }
+    );
 }
 
-function attachKnownTracks() {
-  if (!state.room) {
+function syncRemoteAudio(
+  room
+) {
+  if (!room) {
     return;
   }
 
-  const participants = [];
-
-  if (state.room.localParticipant) {
-    participants.push(
-      state.room.localParticipant
+  room
+    .remoteParticipants
+    ?.forEach(
+      (participant) => {
+        forEachPublication(
+          participant,
+          (publication) => {
+            if (
+              publication.kind ===
+                Track.Kind.Audio &&
+              isPublicationUsable(
+                publication
+              )
+            ) {
+              attachAudio(
+                publication.track,
+                participant
+              );
+            }
+          }
+        );
+      }
     );
-  }
+}
 
-  state.room.remoteParticipants?.forEach(
+/*
+ * Não recria mais toda a grade
+ * quando muda o participante falando.
+ *
+ * Isso evita flicker e reanexação
+ * incorreta da câmera.
+ */
+function updateActiveSpeakerClasses(
+  speakers
+) {
+  state.activeSpeakers
+    .clear();
+
+  (
+    speakers ||
+    []
+  ).forEach(
     (participant) => {
-      participants.push(participant);
+      if (
+        participant?.identity
+      ) {
+        state.activeSpeakers
+          .add(
+            participant.identity
+          );
+      }
     }
   );
 
-  participants.forEach((participant) => {
-    participant.trackPublications.forEach(
-      (publication) => {
-        if (!publication.track) {
-          return;
-        }
+  document
+    .querySelectorAll(
+      '.call-tile'
+    )
+    .forEach(
+      (tile) => {
+        const identity =
+          tile.dataset
+            .identity ||
+          '';
 
-        /*
-         * O áudio remoto é anexado no evento TrackSubscribed.
-         * Não anexamos áudio local.
-         */
-        if (
-          publication.kind ===
-          Track.Kind.Audio
-        ) {
-          return;
-        }
-
-        if (
-          publication.source ===
-          Track.Source.Camera
-        ) {
-          state.cameraTracks.set(
-            participant.identity,
-            publication.track
+        tile.classList
+          .toggle(
+            'active-speaker',
+            state
+              .activeSpeakers
+              .has(
+                identity
+              )
           );
-
-          attachCameraTrack(
-            participant.identity,
-            publication.track
-          );
-        }
-
-        if (
-          publication.source ===
-          Track.Source.ScreenShare
-        ) {
-          state.screenShareTrack =
-            publication.track;
-
-          state.screenShareOwner =
-            participant.identity;
-        }
       }
     );
-  });
-
-  if (state.screenShareTrack) {
-    const owner = participants.find(
-      (participant) =>
-        participant.identity ===
-        state.screenShareOwner
-    );
-
-    renderScreenShare(
-      state.screenShareTrack,
-      owner?.name || ''
-    );
-  } else {
-    renderScreenShare(null, '');
-  }
 }
 
-function refreshRoomInterface(room) {
-  renderGrid(room);
-  attachKnownTracks();
-  renderParticipantsList(room);
+function findActiveMedia(
+  room
+) {
+  const cameras =
+    new Map();
+
+  let screenTrack =
+    null;
+
+  let screenOwner =
+    null;
+
+  let screenOwnerName =
+    '';
+
+  getAllParticipants(
+    room
+  ).forEach(
+    (participant) => {
+      forEachPublication(
+        participant,
+        (publication) => {
+          if (
+            !isPublicationUsable(
+              publication
+            )
+          ) {
+            return;
+          }
+
+          /*
+           * CÂMERA
+           */
+          if (
+            publication.source ===
+              Track.Source.Camera &&
+            participant
+              .isCameraEnabled !==
+              false
+          ) {
+            cameras.set(
+              participant.identity,
+              publication.track
+            );
+          }
+
+          /*
+           * SCREEN SHARE
+           */
+          if (
+            !screenTrack &&
+            publication.source ===
+              Track.Source.ScreenShare &&
+            participant
+              .isScreenShareEnabled !==
+              false
+          ) {
+            screenTrack =
+              publication.track;
+
+            screenOwner =
+              participant.identity;
+
+            screenOwnerName =
+              participant.name ||
+              '';
+          }
+        }
+      );
+    }
+  );
+
+  return {
+    cameras,
+    screenTrack,
+    screenOwner,
+    screenOwnerName
+  };
+}
+
+/*
+ * Sincroniza a UI com o estado REAL
+ * atual do LiveKit.
+ */
+function syncMediaFromRoom(
+  room
+) {
+  if (!room) {
+    state.cameraTracks
+      .clear();
+
+    state.screenShareTrack =
+      null;
+
+    state.screenShareOwner =
+      null;
+
+    renderScreenShareFixed(
+      null,
+      ''
+    );
+
+    return;
+  }
+
+  const media =
+    findActiveMedia(
+      room
+    );
+
+  state.cameraTracks
+    .clear();
+
+  media.cameras
+    .forEach(
+      (
+        track,
+        identity
+      ) => {
+        state.cameraTracks
+          .set(
+            identity,
+            track
+          );
+      }
+    );
+
+  state.screenShareTrack =
+    media.screenTrack;
+
+  state.screenShareOwner =
+    media.screenOwner;
+
+  /*
+   * Primeiro cria os tiles.
+   *
+   * renderGrid() cria o avatar
+   * automaticamente.
+   */
+  renderGrid(
+    room
+  );
+
+  /*
+   * Depois substitui avatar por
+   * vídeo SOMENTE se a câmera
+   * estiver realmente ativa.
+   */
+  state.cameraTracks
+    .forEach(
+      (
+        track,
+        identity
+      ) => {
+        attachCameraTrack(
+          identity,
+          track
+        );
+      }
+    );
+
+  renderScreenShareFixed(
+    state.screenShareTrack,
+    media.screenOwnerName
+  );
+
+  renderParticipantsList(
+    room
+  );
+
+  /*
+   * Mantém indicação visual
+   * de quem está falando.
+   */
+  document
+    .querySelectorAll(
+      '.call-tile'
+    )
+    .forEach(
+      (tile) => {
+        const identity =
+          tile.dataset
+            .identity ||
+          '';
+
+        tile.classList
+          .toggle(
+            'active-speaker',
+            state
+              .activeSpeakers
+              .has(
+                identity
+              )
+          );
+      }
+    );
+
+  syncRemoteAudio(
+    room
+  );
 }
 
 function getInitialDevicePrefs() {
   const preferences = {
-    cameraOn: true,
-    micOn: true,
-    cameraDeviceId: null,
-    micDeviceId: null
+    cameraOn:
+      true,
+
+    micOn:
+      true,
+
+    cameraDeviceId:
+      null,
+
+    micDeviceId:
+      null
   };
 
   try {
     preferences.cameraOn =
       sessionStorage.getItem(
         'prep_camera_on'
-      ) !== '0';
+      ) !==
+      '0';
 
     preferences.micOn =
       sessionStorage.getItem(
         'prep_mic_on'
-      ) !== '0';
+      ) !==
+      '0';
 
     preferences.cameraDeviceId =
       sessionStorage.getItem(
         'prep_camera_dev'
-      ) || null;
+      ) ||
+      null;
 
     preferences.micDeviceId =
       sessionStorage.getItem(
         'prep_mic_dev'
-      ) || null;
+      ) ||
+      null;
   } catch (error) {
     warnLiveKit(
       'Não foi possível recuperar as preferências dos dispositivos.',
@@ -468,14 +1092,17 @@ async function enableInitialMicrophone(
 ) {
   try {
     const options =
-      preferences.micDeviceId
+      preferences
+        .micDeviceId
         ? {
             deviceId:
-              preferences.micDeviceId
+              preferences
+                .micDeviceId
           }
         : undefined;
 
-    await room.localParticipant
+    await room
+      .localParticipant
       .setMicrophoneEnabled(
         preferences.micOn,
         options
@@ -491,14 +1118,12 @@ async function enableInitialMicrophone(
       false
     );
 
-    if (
-      window.AssemblyUtils?.showToast
-    ) {
-      window.AssemblyUtils.showToast(
+    window
+      .AssemblyUtils
+      ?.showToast?.(
         'Não foi possível acessar o microfone.',
         'warning'
       );
-    }
   }
 }
 
@@ -508,14 +1133,17 @@ async function enableInitialCamera(
 ) {
   try {
     const options =
-      preferences.cameraDeviceId
+      preferences
+        .cameraDeviceId
         ? {
             deviceId:
-              preferences.cameraDeviceId
+              preferences
+                .cameraDeviceId
           }
         : undefined;
 
-    await room.localParticipant
+    await room
+      .localParticipant
       .setCameraEnabled(
         preferences.cameraOn,
         options
@@ -531,15 +1159,47 @@ async function enableInitialCamera(
       false
     );
 
-    if (
-      window.AssemblyUtils?.showToast
-    ) {
-      window.AssemblyUtils.showToast(
+    window
+      .AssemblyUtils
+      ?.showToast?.(
         'Não foi possível acessar a câmera.',
         'warning'
       );
-    }
   }
+}
+
+function handlePublicationStateChanged(
+  room,
+  publication,
+  participant
+) {
+  logLiveKit(
+    'Estado de faixa alterado.',
+    {
+      participant:
+        getParticipantInfo(
+          participant
+        ),
+
+      source:
+        publication?.source,
+
+      kind:
+        publication?.kind,
+
+      muted:
+        publication?.isMuted,
+
+      trackSid:
+        publication
+          ?.trackSid ||
+        null
+    }
+  );
+
+  syncMediaFromRoom(
+    room
+  );
 }
 
 export async function connectToRoom(
@@ -554,26 +1214,26 @@ export async function connectToRoom(
     );
   }
 
-  /*
-   * Evita manter uma conexão anterior aberta.
-   */
   if (state.room) {
     try {
-      state.room.disconnect();
+      state.room
+        .disconnect();
     } catch (_) {}
 
-    state.room = null;
+    state.room =
+      null;
   }
 
-  intentionalDisconnect = false;
+  intentionalDisconnect =
+    false;
 
   setConnectionConnecting();
-  showBanner('', 'info');
 
-  /*
-   * Nunca registre tokenInfo.token no console.
-   * O token permite acesso temporário à sala.
-   */
+  showBanner(
+    '',
+    'info'
+  );
+
   logLiveKit(
     'Iniciando conexão.',
     {
@@ -582,37 +1242,45 @@ export async function connectToRoom(
 
       room:
         tokenInfo.room ||
-        tokenInfo.roomName ||
+        tokenInfo
+          .roomName ||
         null,
 
       identity:
         tokenInfo.identity ||
-        tokenInfo.participantIdentity ||
+        tokenInfo
+          .participantIdentity ||
         null
     }
   );
 
-  const room = new Room({
-    adaptiveStream: true,
-    dynacast: true,
+  const room =
+    new Room({
+      adaptiveStream:
+        true,
 
-    publishDefaults: {
-      videoCodec: 'vp8',
-      simulcast: true,
-      dtx: true
-    }
-  });
+      dynacast:
+        true,
 
-  state.room = room;
+      publishDefaults: {
+        videoCodec:
+          'vp8',
+
+        simulcast:
+          true,
+
+        dtx:
+          true
+      }
+    });
+
+  state.room =
+    room;
 
   room
     .on(
       RoomEvent.Reconnecting,
       () => {
-        logLiveKit(
-          'Tentando reconectar à sala.'
-        );
-
         setConnectionReconnecting();
 
         showBanner(
@@ -625,36 +1293,33 @@ export async function connectToRoom(
     .on(
       RoomEvent.Reconnected,
       () => {
-        logLiveKit(
-          'Conexão restabelecida.',
-          {
-            room:
-              room.name,
-
-            identity:
-              room.localParticipant
-                ?.identity
-          }
-        );
-
-        state.connected = true;
+        state.connected =
+          true;
 
         setConnectionConnected();
-        showBanner('', 'info');
 
-        refreshRoomInterface(room);
+        showBanner(
+          '',
+          'info'
+        );
+
+        syncMediaFromRoom(
+          room
+        );
       }
     )
 
     .on(
       RoomEvent.Disconnected,
       (reason) => {
-        state.connected = false;
+        state.connected =
+          false;
 
         logLiveKit(
           'Desconectado da sala.',
           {
             reason,
+
             intentional:
               intentionalDisconnect,
 
@@ -662,15 +1327,21 @@ export async function connectToRoom(
               room.name,
 
             identity:
-              room.localParticipant
+              room
+                .localParticipant
                 ?.identity
           }
         );
 
         setConnectionDisconnected();
 
-        if (intentionalDisconnect) {
-          showBanner('', 'info');
+        if (
+          intentionalDisconnect
+        ) {
+          showBanner(
+            '',
+            'info'
+          );
         } else {
           showBanner(
             'Você foi desconectado da assembleia.',
@@ -679,89 +1350,106 @@ export async function connectToRoom(
         }
 
         removeAllAttachedAudio();
-        renderParticipantsList(room);
+
+        state.cameraTracks
+          .clear();
+
+        state.screenShareTrack =
+          null;
+
+        state.screenShareOwner =
+          null;
+
+        renderScreenShareFixed(
+          null,
+          ''
+        );
+
+        renderParticipantsList(
+          room
+        );
       }
     )
 
     .on(
-      RoomEvent.ActiveSpeakersChanged,
+      RoomEvent
+        .ActiveSpeakersChanged,
       (speakers) => {
-        updateActiveSpeakers(
+        updateActiveSpeakerClasses(
           speakers
         );
       }
     )
 
     .on(
-      RoomEvent.ParticipantConnected,
+      RoomEvent
+        .ParticipantConnected,
       (participant) => {
         logLiveKit(
           'Participante conectado.',
-          {
-            participant:
-              getParticipantInfo(
-                participant
-              ),
-
-            room:
-              room.name,
-
-            totalRemote:
-              room.remoteParticipants
-                .size
-          }
+          getParticipantInfo(
+            participant
+          )
         );
 
-        refreshRoomInterface(room);
+        syncMediaFromRoom(
+          room
+        );
       }
     )
 
     .on(
-      RoomEvent.ParticipantDisconnected,
+      RoomEvent
+        .ParticipantDisconnected,
       (participant) => {
         logLiveKit(
           'Participante desconectado.',
-          {
-            participant:
-              getParticipantInfo(
-                participant
-              ),
-
-            room:
-              room.name,
-
-            totalRemote:
-              room.remoteParticipants
-                .size
-          }
+          getParticipantInfo(
+            participant
+          )
         );
 
-        state.cameraTracks.delete(
-          participant.identity
-        );
+        state.cameraTracks
+          .delete(
+            participant.identity
+          );
 
         if (
           state.screenShareOwner ===
           participant.identity
         ) {
-          state.screenShareOwner =
-            null;
-
           state.screenShareTrack =
             null;
 
-          renderScreenShare(
+          state.screenShareOwner =
+            null;
+
+          renderScreenShareFixed(
             null,
             ''
           );
         }
 
-        refreshRoomInterface(room);
+        document
+          .querySelectorAll(
+            `[data-lk-participant="${escapeCssSelector(
+              participant.identity
+            )}"]`
+          )
+          .forEach(
+            (element) =>
+              element.remove()
+          );
+
+        syncMediaFromRoom(
+          room
+        );
       }
     )
 
     .on(
-      RoomEvent.TrackSubscribed,
+      RoomEvent
+        .TrackSubscribed,
       (
         track,
         publication,
@@ -779,10 +1467,12 @@ export async function connectToRoom(
               track.kind,
 
             source:
-              publication.source,
+              publication
+                .source,
 
             trackSid:
-              publication.trackSid ||
+              publication
+                .trackSid ||
               null
           }
         );
@@ -795,64 +1485,17 @@ export async function connectToRoom(
             track,
             participant
           );
-
-          renderParticipantsList(
-            room
-          );
-
-          return;
         }
 
-        if (
-          publication.source ===
-          Track.Source.Camera
-        ) {
-          state.cameraTracks.set(
-            participant.identity,
-            track
-          );
-
-          /*
-           * O participante normalmente já possui um tile desde
-           * ParticipantConnected. Só recrie a grade se ele ainda
-           * não existir e anexe apenas a nova câmera.
-           */
-          if (
-            !getTileMedia(
-              participant.identity
-            )
-          ) {
-            renderGrid(room);
-          }
-
-          attachCameraTrack(
-            participant.identity,
-            track
-          );
-        }
-
-        if (
-          publication.source ===
-          Track.Source.ScreenShare
-        ) {
-          state.screenShareTrack =
-            track;
-
-          state.screenShareOwner =
-            participant.identity;
-
-          renderScreenShare(
-            track,
-            participant.name || ''
-          );
-        }
-
-        renderParticipantsList(room);
+        syncMediaFromRoom(
+          room
+        );
       }
     )
 
     .on(
-      RoomEvent.TrackUnsubscribed,
+      RoomEvent
+        .TrackUnsubscribed,
       (
         track,
         publication,
@@ -870,10 +1513,12 @@ export async function connectToRoom(
               track.kind,
 
             source:
-              publication.source,
+              publication
+                .source,
 
             trackSid:
-              publication.trackSid ||
+              publication
+                .trackSid ||
               null
           }
         );
@@ -882,26 +1527,148 @@ export async function connectToRoom(
           track.kind ===
           Track.Kind.Audio
         ) {
-          detachAudio(track);
-
-          renderParticipantsList(
-            room
+          detachAudio(
+            track
           );
-
-          return;
         }
 
         if (
           publication.source ===
           Track.Source.Camera
         ) {
-          state.cameraTracks.delete(
-            participant.identity
-          );
+          state.cameraTracks
+            .delete(
+              participant.identity
+            );
 
-          detachCameraTrack(
+          clearCameraElement(
             participant.identity
           );
+        }
+
+        if (
+          publication.source ===
+            Track.Source
+              .ScreenShare &&
+          state.screenShareOwner ===
+            participant.identity
+        ) {
+          state.screenShareTrack =
+            null;
+
+          state.screenShareOwner =
+            null;
+
+          renderScreenShareFixed(
+            null,
+            ''
+          );
+        }
+
+        syncMediaFromRoom(
+          room
+        );
+      }
+    )
+
+    /*
+     * MUITO IMPORTANTE:
+     *
+     * setCameraEnabled(false)
+     * frequentemente MUTA a faixa.
+     */
+    .on(
+      RoomEvent.TrackMuted,
+      (
+        publication,
+        participant
+      ) => {
+        handlePublicationStateChanged(
+          room,
+          publication,
+          participant
+        );
+      }
+    )
+
+    .on(
+      RoomEvent.TrackUnmuted,
+      (
+        publication,
+        participant
+      ) => {
+        handlePublicationStateChanged(
+          room,
+          publication,
+          participant
+        );
+      }
+    )
+
+    .on(
+      RoomEvent
+        .LocalTrackPublished,
+      (publication) => {
+        logLiveKit(
+          'Faixa local publicada.',
+          {
+            kind:
+              publication
+                .kind,
+
+            source:
+              publication
+                .source,
+
+            trackSid:
+              publication
+                .trackSid ||
+              null
+          }
+        );
+
+        syncMediaFromRoom(
+          room
+        );
+      }
+    )
+
+    .on(
+      RoomEvent
+        .LocalTrackUnpublished,
+      (publication) => {
+        logLiveKit(
+          'Faixa local removida.',
+          {
+            kind:
+              publication
+                .kind,
+
+            source:
+              publication
+                .source,
+
+            trackSid:
+              publication
+                .trackSid ||
+              null
+          }
+        );
+
+        const localIdentity =
+          room
+            .localParticipant
+            ?.identity;
+
+        if (
+          publication.source ===
+            Track.Source.Camera &&
+          localIdentity
+        ) {
+          state.cameraTracks
+            .delete(
+              localIdentity
+            );
         }
 
         if (
@@ -914,57 +1681,15 @@ export async function connectToRoom(
           state.screenShareOwner =
             null;
 
-          renderScreenShare(
+          renderScreenShareFixed(
             null,
             ''
           );
         }
 
-        renderParticipantsList(room);
-      }
-    )
-
-    .on(
-      RoomEvent.LocalTrackPublished,
-      (publication) => {
-        logLiveKit(
-          'Faixa local publicada.',
-          {
-            kind:
-              publication.kind,
-
-            source:
-              publication.source,
-
-            trackSid:
-              publication.trackSid ||
-              null
-          }
+        syncMediaFromRoom(
+          room
         );
-
-        refreshRoomInterface(room);
-      }
-    )
-
-    .on(
-      RoomEvent.LocalTrackUnpublished,
-      (publication) => {
-        logLiveKit(
-          'Faixa local removida.',
-          {
-            kind:
-              publication.kind,
-
-            source:
-              publication.source,
-
-            trackSid:
-              publication.trackSid ||
-              null
-          }
-        );
-
-        refreshRoomInterface(room);
       }
     );
 
@@ -973,14 +1698,20 @@ export async function connectToRoom(
       tokenInfo.url,
       tokenInfo.token,
       {
-        autoSubscribe: true
+        autoSubscribe:
+          true
       }
     );
 
-    state.connected = true;
+    state.connected =
+      true;
 
     setConnectionConnected();
-    showBanner('', 'info');
+
+    showBanner(
+      '',
+      'info'
+    );
 
     logLiveKit(
       'Conectado com sucesso.',
@@ -989,20 +1720,26 @@ export async function connectToRoom(
           room.name,
 
         identity:
-          room.localParticipant
+          room
+            .localParticipant
             .identity,
 
         name:
-          room.localParticipant
-            .name || '',
+          room
+            .localParticipant
+            .name ||
+          '',
 
         remoteParticipants:
-          room.remoteParticipants
+          room
+            .remoteParticipants
             .size,
 
         totalParticipants:
-          room.remoteParticipants
-            .size + 1
+          room
+            .remoteParticipants
+            .size +
+          1
       }
     );
 
@@ -1019,34 +1756,36 @@ export async function connectToRoom(
       preferences
     );
 
-    /*
-     * Utiliza o estado real retornado pelo LiveKit,
-     * e não apenas a preferência armazenada.
-     */
     setControlActive(
       'btn-mic',
-      room.localParticipant
+      room
+        .localParticipant
         .isMicrophoneEnabled ??
-        false
+      false
     );
 
     setControlActive(
       'btn-camera',
-      room.localParticipant
+      room
+        .localParticipant
         .isCameraEnabled ??
-        false
+      false
     );
 
     setControlActive(
       'btn-screen',
-      room.localParticipant
+      room
+        .localParticipant
         .isScreenShareEnabled ??
-        false
+      false
     );
 
-    refreshRoomInterface(room);
+    syncMediaFromRoom(
+      room
+    );
   } catch (error) {
-    state.connected = false;
+    state.connected =
+      false;
 
     setConnectionDisconnected();
 
@@ -1064,8 +1803,12 @@ export async function connectToRoom(
       room.disconnect();
     } catch (_) {}
 
-    if (state.room === room) {
-      state.room = null;
+    if (
+      state.room ===
+      room
+    ) {
+      state.room =
+        null;
     }
 
     throw error;
@@ -1073,7 +1816,8 @@ export async function connectToRoom(
 }
 
 export async function toggleMicrophone() {
-  const room = state.room;
+  const room =
+    state.room;
 
   if (
     !room ||
@@ -1082,45 +1826,50 @@ export async function toggleMicrophone() {
     return;
   }
 
-  const enabled = !(
-    room.localParticipant
-      .isMicrophoneEnabled ??
-    false
-  );
+  const enabled =
+    !(
+      room
+        .localParticipant
+        .isMicrophoneEnabled ??
+      false
+    );
 
   try {
-    await room.localParticipant
+    await room
+      .localParticipant
       .setMicrophoneEnabled(
         enabled
       );
 
     setControlActive(
       'btn-mic',
-      room.localParticipant
+      room
+        .localParticipant
         .isMicrophoneEnabled ??
-        enabled
+      enabled
     );
 
-    renderParticipantsList(room);
+    renderParticipantsList(
+      room
+    );
   } catch (error) {
     console.error(
       '[LiveKit] Erro ao alterar microfone:',
       error
     );
 
-    if (
-      window.AssemblyUtils?.showToast
-    ) {
-      window.AssemblyUtils.showToast(
+    window
+      .AssemblyUtils
+      ?.showToast?.(
         'Não foi possível alterar o microfone.',
         'error'
       );
-    }
   }
 }
 
 export async function toggleCamera() {
-  const room = state.room;
+  const room =
+    state.room;
 
   if (
     !room ||
@@ -1129,49 +1878,56 @@ export async function toggleCamera() {
     return;
   }
 
-  const enabled = !(
-    room.localParticipant
-      .isCameraEnabled ??
-    false
-  );
+  const enabled =
+    !(
+      room
+        .localParticipant
+        .isCameraEnabled ??
+      false
+    );
 
   try {
-    await room.localParticipant
+    await room
+      .localParticipant
       .setCameraEnabled(
         enabled
       );
 
     setControlActive(
       'btn-camera',
-      room.localParticipant
+      room
+        .localParticipant
         .isCameraEnabled ??
-        enabled
+      enabled
     );
 
     /*
-     * LocalTrackPublished/LocalTrackUnpublished já atualizam
-     * a grade. Aqui atualizamos apenas a lista lateral.
+     * Imediatamente refaz tile.
+     *
+     * Se câmera desligada:
+     * avatar volta ao centro.
      */
-    renderParticipantsList(room);
+    syncMediaFromRoom(
+      room
+    );
   } catch (error) {
     console.error(
       '[LiveKit] Erro ao alterar câmera:',
       error
     );
 
-    if (
-      window.AssemblyUtils?.showToast
-    ) {
-      window.AssemblyUtils.showToast(
+    window
+      .AssemblyUtils
+      ?.showToast?.(
         'Não foi possível alterar a câmera.',
         'error'
       );
-    }
   }
 }
 
 export async function toggleScreenShare() {
-  const room = state.room;
+  const room =
+    state.room;
 
   if (
     !room ||
@@ -1184,35 +1940,66 @@ export async function toggleScreenShare() {
     !state.permissions
       ?.canScreenShare
   ) {
-    if (
-      window.AssemblyUtils?.showToast
-    ) {
-      window.AssemblyUtils.showToast(
+    window
+      .AssemblyUtils
+      ?.showToast?.(
         'Você não possui permissão para compartilhar tela.',
         'warning'
       );
-    }
 
     return;
   }
 
-  const enabled = !(
-    room.localParticipant
-      .isScreenShareEnabled ??
-    false
-  );
+  const enabled =
+    !(
+      room
+        .localParticipant
+        .isScreenShareEnabled ??
+      false
+    );
 
   try {
-    await room.localParticipant
+    /*
+     * Se está PARANDO:
+     * limpa a UI antes do LiveKit.
+     *
+     * Isso elimina a tela vazia
+     * da imagem 4.
+     */
+    if (!enabled) {
+      state.screenShareTrack =
+        null;
+
+      state.screenShareOwner =
+        null;
+
+      renderScreenShareFixed(
+        null,
+        ''
+      );
+
+      setControlActive(
+        'btn-screen',
+        false
+      );
+    }
+
+    await room
+      .localParticipant
       .setScreenShareEnabled(
         enabled
       );
 
     setControlActive(
       'btn-screen',
-      room.localParticipant
+      room
+        .localParticipant
         .isScreenShareEnabled ??
-        enabled
+      enabled
+    );
+
+    syncMediaFromRoom(
+      room
     );
   } catch (error) {
     console.error(
@@ -1220,34 +2007,46 @@ export async function toggleScreenShare() {
       error
     );
 
-    if (
-      window.AssemblyUtils?.showToast
-    ) {
-      window.AssemblyUtils.showToast(
-        'Não foi possível compartilhar tela.',
-        'error'
-      );
-    }
+    state.screenShareTrack =
+      null;
+
+    state.screenShareOwner =
+      null;
+
+    renderScreenShareFixed(
+      null,
+      ''
+    );
 
     setControlActive(
       'btn-screen',
       false
     );
+
+    window
+      .AssemblyUtils
+      ?.showToast?.(
+        'Não foi possível compartilhar tela.',
+        'error'
+      );
   }
 }
 
 export async function disconnectRoom() {
-  const room = state.room;
+  const room =
+    state.room;
 
   if (!room) {
-    state.connected = false;
+    state.connected =
+      false;
 
     setConnectionDisconnected();
 
     return;
   }
 
-  intentionalDisconnect = true;
+  intentionalDisconnect =
+    true;
 
   logLiveKit(
     'Saindo da sala.',
@@ -1256,7 +2055,8 @@ export async function disconnectRoom() {
         room.name,
 
       identity:
-        room.localParticipant
+        room
+          .localParticipant
           ?.identity
     }
   );
@@ -1271,14 +2071,23 @@ export async function disconnectRoom() {
   } finally {
     removeAllAttachedAudio();
 
-    state.cameraTracks.clear();
-    state.activeSpeakers.clear();
+    state.cameraTracks
+      .clear();
 
-    state.screenShareTrack = null;
-    state.screenShareOwner = null;
+    state.activeSpeakers
+      .clear();
 
-    state.connected = false;
-    state.room = null;
+    state.screenShareTrack =
+      null;
+
+    state.screenShareOwner =
+      null;
+
+    state.connected =
+      false;
+
+    state.room =
+      null;
 
     setControlActive(
       'btn-mic',
@@ -1295,7 +2104,7 @@ export async function disconnectRoom() {
       false
     );
 
-    renderScreenShare(
+    renderScreenShareFixed(
       null,
       ''
     );
