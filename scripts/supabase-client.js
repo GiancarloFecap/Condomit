@@ -2153,6 +2153,37 @@ async function fetchUsersByCpfs(
 async function getVisitorsForCondominium(
   user
 ) {
+  /*
+   * A partir da migration 010, esta RPC é a fonte principal.
+   * Ela filtra diretamente por visitors.cep e pelo condomínio do usuário
+   * autenticado, então um visitante cadastrado por morador, síndico ou
+   * porteiro aparece para qualquer porteiro vinculado ao mesmo CEP.
+   */
+  try {
+    const rows =
+      await supabaseFetch(
+        '/rpc/condomit_list_visitors_for_current_condominium',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+          body: '{}'
+        }
+      );
+
+    if (Array.isArray(rows)) {
+      return rows;
+    }
+  } catch (rpcError) {
+    console.warn(
+      'RPC de visitantes do condomínio indisponível; usando compatibilidade anterior:',
+      rpcError?.message || rpcError
+    );
+  }
+
+  /* Compatibilidade com bancos que ainda não executaram a migration 010. */
   const condominiumIdentifiers =
     getUserCondominiumIdentifiers(
       user
@@ -2240,6 +2271,21 @@ async function getVisitorsForCondominium(
       )
       .filter(
         (visitor) => {
+          const visitorCep =
+            String(
+              visitor?.cep || ''
+            )
+              .replace(/\D/g, '');
+
+          if (
+            visitorCep &&
+            condominiumIdentifiers.includes(
+              visitorCep
+            )
+          ) {
+            return true;
+          }
+
           const responsibleIdentifiers =
             getUserCondominiumIdentifiers(
               visitor?.responsible
@@ -2263,6 +2309,71 @@ async function getVisitorsForCondominium(
 
     return [];
   }
+}
+
+async function setVisitorReleaseStatus(
+  visitorCpf,
+  nextStatus
+) {
+  const normalizedCpf =
+    String(visitorCpf || '')
+      .replace(/\D/g, '');
+
+  if (normalizedCpf.length !== 11) {
+    throw new Error(
+      'CPF do visitante inválido.'
+    );
+  }
+
+  const normalizedStatus =
+    String(nextStatus || '')
+      .trim()
+      .toLowerCase();
+
+  if (!normalizedStatus) {
+    throw new Error(
+      'Informe o novo status do visitante.'
+    );
+  }
+
+  const data =
+    await supabaseFetch(
+      '/rpc/condomit_set_visitor_release_status',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+        body: JSON.stringify({
+          target_cpf: normalizedCpf,
+          next_status: normalizedStatus
+        })
+      }
+    );
+
+  return Array.isArray(data)
+    ? data[0] || null
+    : data;
+}
+
+async function getVisitorAccessLogsForCondominium() {
+  const data =
+    await supabaseFetch(
+      '/rpc/condomit_list_visitor_access_logs',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+        body: '{}'
+      }
+    );
+
+  return Array.isArray(data)
+    ? data
+    : [];
 }
 
 /* ============================================================
@@ -3571,6 +3682,12 @@ window.getVisitorsByResponsibleCpf =
 
 window.getVisitorsForCondominium =
   getVisitorsForCondominium;
+
+window.setVisitorReleaseStatus =
+  setVisitorReleaseStatus;
+
+window.getVisitorAccessLogsForCondominium =
+  getVisitorAccessLogsForCondominium;
 
 window.getUserCondominiumIdentifiers =
   getUserCondominiumIdentifiers;

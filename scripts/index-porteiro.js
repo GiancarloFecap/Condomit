@@ -119,7 +119,7 @@ function bindQuickActions() {
         'liberacao-visitantes': 'liberacao-visitantes.html',
         'registrar-visitante': 'registrar-visitantes.html',
         'registro-acesso': 'registro-entrada-saida.html',
-        'visitantes-liberados': 'liberacao-visitantes.html?tab=liberados',
+        'visitantes-liberados': 'visitantes-liberados.html',
         'historico-acesso': 'registro-entrada-saida.html'
     };
 

@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom } from './livekit.js';
-import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, renderGrid, renderParticipantsList, renderChatMessage } from './ui.js';
+import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js';
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js';
 
@@ -57,7 +57,7 @@ function bindControls() {
       const raised = identity ? state.raisedHands.has(identity) : false;
       await toggleHand(!raised);
       await refreshLists().catch(() => {});
-      renderGrid(state.room);
+      updateHandIndicators(state.room);
       renderParticipantsList(state.room);
     } catch (e) {
       toast(e.message || 'Não foi possível atualizar a mão', 'error');
@@ -130,7 +130,7 @@ async function initLists() {
   await refreshLists().catch(() => {});
   const refresh = async () => {
     await refreshLists().catch(() => {});
-    renderGrid(state.room);
+    updateHandIndicators(state.room);
     renderParticipantsList(state.room);
   };
   subscribeAgenda(refresh);

@@ -17,6 +17,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAccessPageShell(currentUser);
     bindAccessPageControls();
     await loadAccessMovements();
+
+    // Atualiza o histórico quando outra aba/dispositivo libera ou revoga um acesso.
+    window.setInterval(() => {
+        if (!document.hidden) loadAccessMovements();
+    }, 10000);
 });
 
 async function loadPorterUser() {
@@ -24,7 +29,7 @@ async function loadPorterUser() {
     try {
         currentUser = typeof refreshCurrentUserFromDb === 'function'
             ? await refreshCurrentUserFromDb()
-            : JSON.parse(sessionStorage.getItem('condominiumUser'));
+            : JSON.parse(sessionStorage.getItem('condominiumUser') || 'null');
     } catch (_) {
         currentUser = null;
     }
@@ -36,14 +41,11 @@ async function loadPorterUser() {
 
     const userType = typeof getNormalizedUserType === 'function'
         ? getNormalizedUserType(currentUser)
-        : String(currentUser.type || '').trim().toLowerCase();
+        : String(currentUser.user_type || currentUser.type || '').trim().toLowerCase();
 
     if (userType !== 'porteiro') {
-        if (typeof redirectToHome === 'function') {
-            redirectToHome();
-        } else {
-            window.location.href = 'index.html';
-        }
+        if (typeof redirectToHome === 'function') redirectToHome();
+        else window.location.href = 'index.html';
         return null;
     }
 
@@ -52,14 +54,13 @@ async function loadPorterUser() {
 
 function initAccessPageShell(currentUser) {
     const sidebarApartment = document.getElementById('sidebarApartment');
-    const exportButton = document.getElementById('accessLogExportBtn');
     const accessDateFilter = document.getElementById('accessDateFilter');
 
     if (sidebarApartment && currentUser.condominium?.name) {
-        const words = currentUser.condominium.name.split(' ');
+        const words = String(currentUser.condominium.name).split(' ');
         sidebarApartment.innerHTML = words.length > 2
-            ? `${words.slice(0, 2).join(' ')}<br>${words.slice(2).join(' ')}`
-            : currentUser.condominium.name;
+            ? `${escapeHtml(words.slice(0, 2).join(' '))}<br>${escapeHtml(words.slice(2).join(' '))}`
+            : escapeHtml(currentUser.condominium.name);
     }
 
     if (accessDateFilter) {
@@ -67,9 +68,7 @@ function initAccessPageShell(currentUser) {
         accessLogState.filters.date = accessDateFilter.value;
     }
 
-    exportButton?.addEventListener('click', () => {
-        loadAccessMovements();
-    });
+    document.getElementById('accessLogExportBtn')?.addEventListener('click', loadAccessMovements);
 
     if (typeof window.initPorterTopBar === 'function') {
         window.initPorterTopBar(currentUser);
@@ -77,45 +76,36 @@ function initAccessPageShell(currentUser) {
 }
 
 function bindAccessPageControls() {
-    const accessSearchInput = document.getElementById('accessSearchInput');
-    const accessTypeFilter = document.getElementById('accessTypeFilter');
-    const accessBlockFilter = document.getElementById('accessBlockFilter');
-    const accessDateFilter = document.getElementById('accessDateFilter');
-    const clearAccessFiltersBtn = document.getElementById('clearAccessFiltersBtn');
+    const searchInput = document.getElementById('accessSearchInput');
+    const typeFilter = document.getElementById('accessTypeFilter');
+    const blockFilter = document.getElementById('accessBlockFilter');
+    const dateFilter = document.getElementById('accessDateFilter');
+    const clearButton = document.getElementById('clearAccessFiltersBtn');
 
-    accessSearchInput?.addEventListener('input', (event) => {
+    searchInput?.addEventListener('input', (event) => {
         accessLogState.filters.search = event.target.value.trim().toLowerCase();
         renderAccessPage();
     });
-
-    accessTypeFilter?.addEventListener('change', (event) => {
+    typeFilter?.addEventListener('change', (event) => {
         accessLogState.filters.type = event.target.value;
         syncQuickFilterState(event.target.value);
         renderAccessPage();
     });
-
-    accessBlockFilter?.addEventListener('change', (event) => {
+    blockFilter?.addEventListener('change', (event) => {
         accessLogState.filters.block = event.target.value;
         renderAccessPage();
     });
-
-    accessDateFilter?.addEventListener('change', (event) => {
+    dateFilter?.addEventListener('change', (event) => {
         accessLogState.filters.date = event.target.value;
         renderAccessPage();
     });
 
-    clearAccessFiltersBtn?.addEventListener('click', () => {
-        accessLogState.filters = {
-            search: '',
-            type: 'all',
-            block: 'all',
-            date: ''
-        };
-
-        if (accessSearchInput) accessSearchInput.value = '';
-        if (accessTypeFilter) accessTypeFilter.value = 'all';
-        if (accessBlockFilter) accessBlockFilter.value = 'all';
-        if (accessDateFilter) accessDateFilter.value = '';
+    clearButton?.addEventListener('click', () => {
+        accessLogState.filters = { search: '', type: 'all', block: 'all', date: '' };
+        if (searchInput) searchInput.value = '';
+        if (typeFilter) typeFilter.value = 'all';
+        if (blockFilter) blockFilter.value = 'all';
+        if (dateFilter) dateFilter.value = '';
         syncQuickFilterState('all');
         renderAccessPage();
     });
@@ -124,7 +114,7 @@ function bindAccessPageControls() {
         button.addEventListener('click', () => {
             const nextType = button.dataset.quickFilter || 'all';
             accessLogState.filters.type = nextType;
-            if (accessTypeFilter) accessTypeFilter.value = nextType;
+            if (typeFilter) typeFilter.value = nextType;
             syncQuickFilterState(nextType);
             renderAccessPage();
         });
@@ -132,21 +122,76 @@ function bindAccessPageControls() {
 }
 
 async function loadAccessMovements() {
-    const visitorRecords = typeof window.getVisitorsForCondominium === 'function'
-        ? await window.getVisitorsForCondominium(accessLogState.currentUser)
-        : [];
+    let dbLogs = [];
+
+    if (typeof window.getVisitorAccessLogsForCondominium === 'function') {
+        try {
+            dbLogs = await window.getVisitorAccessLogsForCondominium();
+        } catch (error) {
+            console.warn('Histórico compartilhado ainda não disponível:', error?.message || error);
+        }
+    }
+
+    let movements = buildMovementsFromDatabaseLogs(dbLogs);
+
+    /*
+     * Compatibilidade com registros criados antes da migration 010.
+     * Eles continuam visíveis, mas toda nova liberação/revogação passa a ser
+     * persistida no banco e compartilhada entre dispositivos.
+     */
+    const legacyGatehouse = getStoredAccessLogs(accessLogState.currentUser);
     const localRegistrationLogs = window.visitorRegistration && typeof window.visitorRegistration.getRecentLogs === 'function'
         ? window.visitorRegistration.getRecentLogs(accessLogState.currentUser)
         : [];
-    const gatehouseLogs = getStoredAccessLogs(accessLogState.currentUser);
 
-    accessLogState.movements = [
-        ...buildMovementsFromRegistrations(localRegistrationLogs),
-        ...buildMovementsFromGatehouseLogs(gatehouseLogs, visitorRecords)
-    ].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+    movements = [
+        ...movements,
+        ...buildMovementsFromLegacyGatehouseLogs(legacyGatehouse),
+        ...buildMovementsFromRegistrations(localRegistrationLogs)
+    ];
+
+    const seen = new Set();
+    accessLogState.movements = movements
+        .filter((movement) => {
+            const key = `${movement.id || ''}|${movement.createdAt}|${normalizeCpf(movement.cpf)}|${movement.originLabel}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     populateAccessBlockOptions();
     renderAccessPage();
+}
+
+function buildMovementsFromDatabaseLogs(logs) {
+    return (Array.isArray(logs) ? logs : []).map((log) => {
+        const action = String(log?.action || '').toLowerCase();
+        const movementType = log?.movement_type === 'exit' ? 'exit' : 'entry';
+        const originLabel = action === 'revogacao'
+            ? 'Entrada revogada'
+            : action === 'recusa'
+                ? 'Entrada recusada'
+                : 'Entrada liberada';
+        const statusBadge = action === 'revogacao'
+            ? 'Revogado'
+            : action === 'recusa'
+                ? 'Recusado'
+                : 'Liberado';
+
+        return {
+            id: `db-${log?.id || `${log?.visitor_cpf}-${log?.created_at}`}`,
+            createdAt: log?.created_at || new Date().toISOString(),
+            movementType,
+            fullName: log?.visitor_name || 'Visitante',
+            cpf: log?.visitor_cpf || '',
+            apartment: log?.apartment || '',
+            block: log?.block || '',
+            responsibleName: log?.responsible_name || '',
+            originLabel,
+            badges: ['Visitante', statusBadge]
+        };
+    });
 }
 
 function getCondominiumKey(user = accessLogState.currentUser) {
@@ -156,16 +201,30 @@ function getCondominiumKey(user = accessLogState.currentUser) {
     return identifiers[0] || 'geral';
 }
 
-function getAccessLogStorageKey(user = accessLogState.currentUser) {
-    return `condomit.access-log.${getCondominiumKey(user)}`;
-}
-
 function getStoredAccessLogs(user = accessLogState.currentUser) {
     try {
-        return JSON.parse(localStorage.getItem(getAccessLogStorageKey(user)) || '[]');
+        return JSON.parse(localStorage.getItem(`condomit.access-log.${getCondominiumKey(user)}`) || '[]');
     } catch (_) {
         return [];
     }
+}
+
+function buildMovementsFromLegacyGatehouseLogs(logs) {
+    return (Array.isArray(logs) ? logs : []).map((log, index) => {
+        const movementType = log?.movementType === 'exit' ? 'exit' : 'entry';
+        return {
+            id: `legacy-${index}-${log?.createdAt || ''}`,
+            createdAt: log?.createdAt || new Date().toISOString(),
+            movementType,
+            fullName: log?.fullName || 'Visitante',
+            cpf: log?.cpf || '',
+            apartment: log?.apartment || '',
+            block: log?.block || '',
+            responsibleName: log?.responsibleName || '',
+            originLabel: movementType === 'entry' ? 'Liberação antiga' : 'Alteração antiga',
+            badges: ['Visitante', movementType === 'entry' ? 'Liberado' : 'Recusado']
+        };
+    });
 }
 
 function buildMovementsFromRegistrations(logs) {
@@ -178,67 +237,39 @@ function buildMovementsFromRegistrations(logs) {
         apartment: log.apartment || '',
         block: log.block || '',
         responsibleName: log.responsibleName || '',
-        originLabel: 'Cadastro',
+        originLabel: 'Cadastro local',
         badges: ['Visitante']
     }));
 }
 
-function buildMovementsFromGatehouseLogs(logs, visitors) {
-    const visitorsByCpf = new Map(
-        (Array.isArray(visitors) ? visitors : []).map((visitor) => [
-            String(visitor?.cpf || '').replace(/\D/g, ''),
-            visitor
-        ])
-    );
-
-    return (Array.isArray(logs) ? logs : []).map((log, index) => {
-        const visitor = visitorsByCpf.get(String(log?.cpf || '').replace(/\D/g, '')) || {};
-        const movementType = log?.movementType === 'exit' ? 'exit' : 'entry';
-        return {
-            id: `gatehouse-${index}-${log.createdAt || ''}`,
-            createdAt: log?.createdAt || new Date().toISOString(),
-            movementType,
-            fullName: log?.fullName || visitor?.full_name || 'Visitante',
-            cpf: log?.cpf || visitor?.cpf || '',
-            apartment: log?.apartment || visitor?.responsible?.condominium?.apartment || '',
-            block: log?.block || visitor?.responsible?.condominium?.block || '',
-            responsibleName: log?.responsibleName || visitor?.responsible?.name || '',
-            originLabel: movementType === 'entry' ? 'Liberação' : 'Recusa',
-            badges: ['Visitante', movementType === 'entry' ? 'Liberado' : 'Recusado']
-        };
-    });
-}
-
 function populateAccessBlockOptions() {
-    const accessBlockFilter = document.getElementById('accessBlockFilter');
-    if (!accessBlockFilter) return;
+    const blockFilter = document.getElementById('accessBlockFilter');
+    if (!blockFilter) return;
 
     const blocks = [...new Set(
         accessLogState.movements
-            .map((movement) => String(movement?.block || '').trim())
+            .map((movement) => String(movement.block || '').trim())
             .filter(Boolean)
-            .sort((left, right) => left.localeCompare(right, 'pt-BR'))
+            .sort((a, b) => a.localeCompare(b, 'pt-BR'))
     )];
 
-    accessBlockFilter.innerHTML = `
+    const selected = accessLogState.filters.block;
+    blockFilter.innerHTML = `
         <option value="all">Todos os blocos</option>
         ${blocks.map((block) => `<option value="${escapeHtml(block)}">${escapeHtml(block)}</option>`).join('')}
     `;
-
-    if (accessLogState.filters.block !== 'all' && blocks.includes(accessLogState.filters.block)) {
-        accessBlockFilter.value = accessLogState.filters.block;
-    }
+    if (blocks.includes(selected)) blockFilter.value = selected;
 }
 
 function renderAccessPage() {
-    const filteredMovements = applyAccessFilters(accessLogState.movements);
+    const filtered = applyAccessFilters(accessLogState.movements);
     updateAccessMetrics(accessLogState.movements);
-    renderAccessTable(filteredMovements);
+    renderAccessTable(filtered);
 }
 
 function applyAccessFilters(movements) {
     return movements.filter((movement) => {
-        const normalizedSearchBase = [
+        const searchBase = [
             movement.fullName,
             formatCpf(movement.cpf),
             movement.responsibleName,
@@ -247,7 +278,7 @@ function applyAccessFilters(movements) {
             movement.originLabel
         ].join(' ').toLowerCase();
 
-        const matchesSearch = !accessLogState.filters.search || normalizedSearchBase.includes(accessLogState.filters.search);
+        const matchesSearch = !accessLogState.filters.search || searchBase.includes(accessLogState.filters.search);
         const matchesType = accessLogState.filters.type === 'all' || movement.movementType === accessLogState.filters.type;
         const matchesBlock = accessLogState.filters.block === 'all' || String(movement.block || '') === accessLogState.filters.block;
         const matchesDate = !accessLogState.filters.date || buildDateKey(movement.createdAt) === accessLogState.filters.date;
@@ -257,25 +288,25 @@ function applyAccessFilters(movements) {
 }
 
 function updateAccessMetrics(movements) {
-    const todayKey = new Date().toISOString().slice(0, 10);
-    const todayMovements = movements.filter((movement) => buildDateKey(movement.createdAt) === todayKey);
-    const todayEntries = todayMovements.filter((movement) => movement.movementType === 'entry');
-    const todayExits = todayMovements.filter((movement) => movement.movementType === 'exit');
-    const uniqueVisitors = new Set(todayMovements.map((movement) => String(movement.cpf || movement.fullName || ''))).size;
+    const todayKey = buildDateKey(new Date());
+    const today = movements.filter((movement) => buildDateKey(movement.createdAt) === todayKey);
+    const entries = today.filter((movement) => movement.movementType === 'entry');
+    const exits = today.filter((movement) => movement.movementType === 'exit');
+    const uniqueVisitors = new Set(today.map((movement) => normalizeCpf(movement.cpf) || movement.fullName)).size;
 
-    setText('entriesTodayCount', todayEntries.length);
-    setText('exitsTodayCount', todayExits.length);
-    setText('movementsTodayCount', todayMovements.length);
-    setText('peakHourLabel', getPeakHourLabel(todayMovements));
-    setText('legendEntriesCount', todayEntries.length);
-    setText('legendExitsCount', todayExits.length);
+    setText('entriesTodayCount', entries.length);
+    setText('exitsTodayCount', exits.length);
+    setText('movementsTodayCount', today.length);
+    setText('peakHourLabel', getPeakHourLabel(today));
+    setText('legendEntriesCount', entries.length);
+    setText('legendExitsCount', exits.length);
     setText('legendVisitorsCount', uniqueVisitors);
 
     const chart = document.getElementById('accessDonutChart');
     if (chart) {
         chart.style.background = buildDonutGradient([
-            { value: todayEntries.length, color: '#0ea5a4' },
-            { value: todayExits.length, color: '#f59e0b' },
+            { value: entries.length, color: '#0ea5a4' },
+            { value: exits.length, color: '#f59e0b' },
             { value: uniqueVisitors, color: '#6366f1' }
         ]);
     }
@@ -283,45 +314,23 @@ function updateAccessMetrics(movements) {
 
 function renderAccessTable(movements) {
     const tableBody = document.getElementById('accessLogTableBody');
-    const accessLogSummary = document.getElementById('accessLogSummary');
-    if (!tableBody || !accessLogSummary) return;
+    const summary = document.getElementById('accessLogSummary');
+    if (!tableBody || !summary) return;
 
-    accessLogSummary.textContent = `Mostrando ${movements.length} registro${movements.length === 1 ? '' : 's'}`;
+    summary.textContent = `Mostrando ${movements.length} registro${movements.length === 1 ? '' : 's'}`;
 
     if (!movements.length) {
         tableBody.innerHTML = `
-            <tr>
-                <td colspan="8">
-                    <div class="empty-state">
-                        <strong>Nenhum registro encontrado</strong>
-                        <p>Cadastros de visitantes e liberações feitas pelo porteiro aparecerão aqui.</p>
-                    </div>
-                </td>
-            </tr>
+            <tr><td colspan="8"><div class="empty-state"><strong>Nenhum registro encontrado</strong><p>Liberações e revogações de visitantes do condomínio aparecerão aqui.</p></div></td></tr>
         `;
         return;
     }
 
     tableBody.innerHTML = movements.map((movement) => `
         <tr>
-            <td>
-                <strong>${formatTime(movement.createdAt)}</strong><br>
-                <span class="legend-note">${formatDate(movement.createdAt)}</span>
-            </td>
-            <td>
-                <span class="movement-chip ${movement.movementType}">
-                    <i class="fas ${movement.movementType === 'entry' ? 'fa-right-to-bracket' : 'fa-right-from-bracket'}"></i>
-                    ${movement.movementType === 'entry' ? 'Entrada' : 'Saída'}
-                </span>
-            </td>
-            <td>
-                <div class="table-name">
-                    <strong>${escapeHtml(movement.fullName || 'Visitante')}</strong>
-                    <div class="table-badges">
-                        ${(movement.badges || []).map((badge) => `<span class="pill ${badge === 'Liberado' ? 'success' : badge === 'Recusado' ? 'danger' : 'info'}">${escapeHtml(badge)}</span>`).join('')}
-                    </div>
-                </div>
-            </td>
+            <td><strong>${formatTime(movement.createdAt)}</strong><br><span class="legend-note">${formatDate(movement.createdAt)}</span></td>
+            <td><span class="movement-chip ${movement.movementType}"><i class="fas ${movement.movementType === 'entry' ? 'fa-right-to-bracket' : 'fa-right-from-bracket'}"></i>${movement.movementType === 'entry' ? 'Entrada' : 'Saída'}</span></td>
+            <td><div class="table-name"><strong>${escapeHtml(movement.fullName || 'Visitante')}</strong><span class="legend-note">${escapeHtml(movement.originLabel || '')}</span><div class="table-badges">${(movement.badges || []).map((badge) => `<span class="pill ${badge === 'Liberado' ? 'success' : ['Recusado', 'Revogado'].includes(badge) ? 'danger' : 'info'}">${escapeHtml(badge)}</span>`).join('')}</div></div></td>
             <td>${escapeHtml(formatCpf(movement.cpf || '--'))}</td>
             <td>${escapeHtml(String(movement.apartment || '--'))}</td>
             <td>${escapeHtml(String(movement.block || '--'))}</td>
@@ -333,15 +342,15 @@ function renderAccessTable(movements) {
 
 function getPeakHourLabel(movements) {
     if (!movements.length) return '--:--';
-
-    const hourCounts = new Map();
+    const counts = new Map();
     movements.forEach((movement) => {
-        const hour = new Date(movement.createdAt).toTimeString().slice(0, 2);
-        hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
+        const date = new Date(movement.createdAt);
+        if (Number.isNaN(date.getTime())) return;
+        const hour = String(date.getHours()).padStart(2, '0');
+        counts.set(hour, (counts.get(hour) || 0) + 1);
     });
-
-    const [peakHour] = [...hourCounts.entries()].sort((left, right) => right[1] - left[1])[0] || [];
-    return peakHour ? `${peakHour}:00` : '--:--';
+    const [hour] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] || [];
+    return hour ? `${hour}:00` : '--:--';
 }
 
 function syncQuickFilterState(activeFilter) {
@@ -357,7 +366,8 @@ function buildIsoDate(visitDate, visitTime, fallback) {
 }
 
 function buildDateKey(value) {
-    const date = new Date(value);
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -367,16 +377,37 @@ function buildDateKey(value) {
 function buildDonutGradient(parts) {
     const total = parts.reduce((sum, part) => sum + Math.max(0, Number(part.value) || 0), 0);
     if (!total) return 'conic-gradient(#e2e8f0 0deg 360deg)';
-
     let accumulated = 0;
-    const slices = parts.map((part) => {
+    return `conic-gradient(${parts.map((part) => {
         const start = (accumulated / total) * 360;
         accumulated += Math.max(0, Number(part.value) || 0);
         const end = (accumulated / total) * 360;
         return `${part.color} ${start}deg ${end}deg`;
-    });
+    }).join(', ')})`;
+}
 
-    return `conic-gradient(${slices.join(', ')})`;
+function normalizeCpf(value) {
+    return String(value || '').replace(/\D/g, '').slice(0, 11);
+}
+
+function formatCpf(value) {
+    const digits = normalizeCpf(value);
+    if (digits.length !== 11) return value || '--';
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function formatDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '--' : date.toLocaleDateString('pt-BR');
+}
+
+function formatTime(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '--:--' : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function getInitials(name) {
+    return String(name || '').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').toUpperCase().slice(0, 2) || 'AC';
 }
 
 function setText(id, value) {
@@ -384,37 +415,8 @@ function setText(id, value) {
     if (element) element.textContent = String(value);
 }
 
-function formatDate(value) {
-    return new Date(value).toLocaleDateString('pt-BR');
-}
-
-function formatTime(value) {
-    return new Date(value).toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function formatCpf(value) {
-    const digits = String(value || '').replace(/\D/g, '').slice(0, 11);
-    if (digits.length > 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-    if (digits.length > 6) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-    if (digits.length > 3) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-    return digits || '--';
-}
-
-function getInitials(name) {
-    return String(name || '')
-        .split(' ')
-        .filter(Boolean)
-        .map((part) => part[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2) || 'AC';
-}
-
-function escapeHtml(text) {
-    return String(text || '')
+function escapeHtml(value) {
+    return String(value ?? '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
@@ -423,7 +425,10 @@ function escapeHtml(text) {
 }
 
 function logout() {
-    if (typeof window.performFullLogout === 'function') { window.performFullLogout(); return; }
+    if (typeof window.performFullLogout === 'function') {
+        window.performFullLogout();
+        return;
+    }
     sessionStorage.removeItem('condominiumUser');
     try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
     window.location.href = '../inicio.html';

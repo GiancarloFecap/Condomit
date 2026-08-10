@@ -226,6 +226,48 @@ export function renderGrid(room) {
   });
 }
 
+export function updateHandIndicators(room) {
+  if (!room) return;
+
+  const participants = [];
+  if (room.localParticipant) participants.push(room.localParticipant);
+  room.remoteParticipants?.forEach((participant) => participants.push(participant));
+
+  participants.forEach((participant) => {
+    const identity = safeText(participant?.identity || participant?.sid || '');
+    if (!identity) return;
+
+    const tile = document.querySelector(
+      `.call-tile[data-identity="${CSS.escape(identity)}"]`
+    );
+    if (!tile) return;
+
+    const icons = tile.querySelector('.tile-icons');
+    if (!icons) return;
+
+    const active = state.raisedHands.has(identity);
+    const existing = icons.querySelector('.tile-icon.hand');
+
+    if (active && !existing) {
+      const handIcon = document.createElement('div');
+      handIcon.className = 'tile-icon hand';
+      handIcon.title = 'Mão levantada';
+      handIcon.innerHTML = '<i class="fas fa-hand-paper"></i>';
+      icons.appendChild(handIcon);
+    } else if (!active && existing) {
+      existing.remove();
+    }
+  });
+
+  const localIdentity = safeText(
+    room.localParticipant?.identity || state.tokenInfo?.identity || ''
+  );
+  setControlActive(
+    'btn-hand',
+    !!localIdentity && state.raisedHands.has(localIdentity)
+  );
+}
+
 export function renderParticipantsList(room) {
   const list = el('participants-list');
   const badge = el('participants-count');

@@ -415,14 +415,19 @@ function renderSidebarSection(section, userType, currentPage, lang = getAppLangu
 function getSidebarConfig(userType) {
     if (userType === 'porteiro') {
         return [
-            { items: [{ labelKey: 'home', icon: 'fas fa-home', route: 'inicio' }] },
+            {
+                items: [
+                    { labelKey: 'home', icon: 'fas fa-home', route: 'inicio' },
+                    { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' }
+                ]
+            },
             {
                 titleKey: 'access_control',
                 items: [
                     { labelKey: 'visitor_release', icon: 'fas fa-user-group', route: 'porteiro-liberacao' },
                     { labelKey: 'register_visitor', icon: 'fas fa-user-plus', route: 'porteiro-registrar' },
                     { labelKey: 'visitor_entry_exit', icon: 'fas fa-right-to-bracket', route: 'porteiro-registro' },
-                    { labelKey: 'released_visitors', icon: 'fas fa-users-check', route: 'porteiro-visitantes' },
+                    { labelKey: 'released_visitors', icon: 'fas fa-user-check', route: 'porteiro-visitantes' },
                     { labelKey: 'deliveries_authorization', icon: 'fas fa-box', route: 'porteiro-entregas' },
                     { labelKey: 'provider_control', icon: 'fas fa-file-contract', route: 'porteiro-prestadores' }
                 ]

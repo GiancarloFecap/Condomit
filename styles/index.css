@@ -96,8 +96,12 @@ body {
 }
 
 .nav-item i {
-    width: 20px;
+    width: 22px;
+    min-width: 22px;
+    flex: 0 0 22px;
     text-align: center;
+    font-size: 1.05rem;
+    line-height: 1;
 }
 
 .sidebar.sindico-sidebar {
@@ -141,8 +145,11 @@ body {
 }
 
 .sidebar.sindico-sidebar .nav-item i {
-    font-size: 0.95em;
-    width: 18px;
+    width: 22px;
+    min-width: 22px;
+    flex: 0 0 22px;
+    font-size: 1.05rem;
+    line-height: 1;
 }
 
 .sidebar.sindico-sidebar .sidebar-footer {

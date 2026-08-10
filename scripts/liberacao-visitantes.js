@@ -2,6 +2,7 @@ const releaseState = {
     currentUser: null,
     visitors: [],
     currentModalVisitorRaw: null,
+    busyCpf: '',
     filters: {
         tab: 'pending',
         search: '',
@@ -18,14 +19,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     initReleasePageShell(currentUser);
     bindReleasePageControls();
     await loadVisitorsForRelease();
+
+    // Mantém a portaria sincronizada com cadastros feitos em outros dispositivos.
+    window.setInterval(() => {
+        if (!document.hidden && !releaseState.busyCpf) loadVisitorsForRelease();
+    }, 15000);
 });
 
 async function loadPorterUser() {
     let currentUser = null;
+
     try {
         currentUser = typeof refreshCurrentUserFromDb === 'function'
             ? await refreshCurrentUserFromDb()
-            : JSON.parse(sessionStorage.getItem('condominiumUser'));
+            : JSON.parse(sessionStorage.getItem('condominiumUser') || 'null');
     } catch (_) {
         currentUser = null;
     }
@@ -37,14 +44,11 @@ async function loadPorterUser() {
 
     const userType = typeof getNormalizedUserType === 'function'
         ? getNormalizedUserType(currentUser)
-        : String(currentUser.type || '').trim().toLowerCase();
+        : String(currentUser.type || currentUser.user_type || '').trim().toLowerCase();
 
     if (userType !== 'porteiro') {
-        if (typeof redirectToHome === 'function') {
-            redirectToHome();
-        } else {
-            window.location.href = 'index.html';
-        }
+        if (typeof redirectToHome === 'function') redirectToHome();
+        else window.location.href = 'index.html';
         return null;
     }
 
@@ -55,10 +59,10 @@ function initReleasePageShell(currentUser) {
     const sidebarApartment = document.getElementById('sidebarApartment');
 
     if (sidebarApartment && currentUser.condominium?.name) {
-        const words = currentUser.condominium.name.split(' ');
+        const words = String(currentUser.condominium.name).split(' ');
         sidebarApartment.innerHTML = words.length > 2
-            ? `${words.slice(0, 2).join(' ')}<br>${words.slice(2).join(' ')}`
-            : currentUser.condominium.name;
+            ? `${escapeHtml(words.slice(0, 2).join(' '))}<br>${escapeHtml(words.slice(2).join(' '))}`
+            : escapeHtml(currentUser.condominium.name);
     }
 
     if (typeof window.initPorterTopBar === 'function') {
@@ -67,33 +71,33 @@ function initReleasePageShell(currentUser) {
 }
 
 function bindReleasePageControls() {
-    const releaseSearchInput = document.getElementById('releaseSearchInput');
-    const releaseBlockFilter = document.getElementById('releaseBlockFilter');
-    const releasePeriodFilter = document.getElementById('releasePeriodFilter');
-    const clearReleaseFiltersBtn = document.getElementById('clearReleaseFiltersBtn');
+    const searchInput = document.getElementById('releaseSearchInput');
+    const blockFilter = document.getElementById('releaseBlockFilter');
+    const periodFilter = document.getElementById('releasePeriodFilter');
+    const clearButton = document.getElementById('clearReleaseFiltersBtn');
 
-    releaseSearchInput?.addEventListener('input', (event) => {
+    searchInput?.addEventListener('input', (event) => {
         releaseState.filters.search = event.target.value.trim().toLowerCase();
         renderReleasePage();
     });
 
-    releaseBlockFilter?.addEventListener('change', (event) => {
+    blockFilter?.addEventListener('change', (event) => {
         releaseState.filters.block = event.target.value;
         renderReleasePage();
     });
 
-    releasePeriodFilter?.addEventListener('change', (event) => {
+    periodFilter?.addEventListener('change', (event) => {
         releaseState.filters.period = event.target.value;
         renderReleasePage();
     });
 
-    clearReleaseFiltersBtn?.addEventListener('click', () => {
+    clearButton?.addEventListener('click', () => {
         releaseState.filters.search = '';
         releaseState.filters.block = 'all';
         releaseState.filters.period = 'all';
-        if (releaseSearchInput) releaseSearchInput.value = '';
-        if (releaseBlockFilter) releaseBlockFilter.value = 'all';
-        if (releasePeriodFilter) releasePeriodFilter.value = 'all';
+        if (searchInput) searchInput.value = '';
+        if (blockFilter) blockFilter.value = 'all';
+        if (periodFilter) periodFilter.value = 'all';
         renderReleasePage();
     });
 
@@ -103,14 +107,26 @@ function bindReleasePageControls() {
         releaseState.filters.tab = button.dataset.tab || 'pending';
         renderReleasePage();
     });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeReleaseVisitorProfileModal();
+    });
 }
 
 async function loadVisitorsForRelease() {
-    const visitors = typeof window.getVisitorsForCondominium === 'function'
-        ? await window.getVisitorsForCondominium(releaseState.currentUser)
-        : [];
+    try {
+        if (typeof window.getVisitorsForCondominium !== 'function') {
+            throw new Error('Função de visitantes do condomínio indisponível.');
+        }
 
-    releaseState.visitors = Array.isArray(visitors) ? visitors : [];
+        const visitors = await window.getVisitorsForCondominium(releaseState.currentUser);
+        releaseState.visitors = Array.isArray(visitors) ? visitors : [];
+    } catch (error) {
+        console.error('Erro ao carregar visitantes para liberação:', error);
+        releaseState.visitors = [];
+        notifyRelease(error?.message || 'Não foi possível carregar os visitantes.', 'error');
+    }
+
     hydrateInitialTabFromUrl();
     populateReleaseBlockOptions();
     renderReleasePage();
@@ -118,96 +134,82 @@ async function loadVisitorsForRelease() {
 
 function hydrateInitialTabFromUrl() {
     const tabParam = new URLSearchParams(window.location.search).get('tab');
-    if (tabParam === 'liberados' || tabParam === 'approved') {
-        releaseState.filters.tab = 'approved';
-    } else if (tabParam === 'recusados' || tabParam === 'rejected') {
-        releaseState.filters.tab = 'rejected';
-    }
+    if (tabParam === 'liberados' || tabParam === 'approved') releaseState.filters.tab = 'approved';
+    else if (tabParam === 'recusados' || tabParam === 'rejected') releaseState.filters.tab = 'rejected';
 }
 
-function getCondominiumKey(user = releaseState.currentUser) {
-    const identifiers = typeof window.getUserCondominiumIdentifiers === 'function'
-        ? window.getUserCondominiumIdentifiers(user)
-        : [];
-    return identifiers[0] || 'geral';
+function normalizeReleaseStatus(visitorOrStatus) {
+    const raw = typeof visitorOrStatus === 'object' && visitorOrStatus !== null
+        ? visitorOrStatus.release_status ?? visitorOrStatus.liberacao_status ?? visitorOrStatus.access_status ?? visitorOrStatus.status
+        : visitorOrStatus;
+    const status = String(raw || 'aguardando').trim().toLowerCase();
+
+    if (['liberado', 'approved', 'released', 'confirmed'].includes(status)) return 'approved';
+    if (['recusado', 'rejected', 'denied', 'negado'].includes(status)) return 'rejected';
+    return 'pending';
 }
 
-function getReleaseStorageKey(user = releaseState.currentUser) {
-    return `condomit.release-status.${getCondominiumKey(user)}`;
-}
-
-function getAccessLogStorageKey(user = releaseState.currentUser) {
-    return `condomit.access-log.${getCondominiumKey(user)}`;
-}
-
-function getStoredReleaseStatuses(user = releaseState.currentUser) {
-    try {
-        return JSON.parse(localStorage.getItem(getReleaseStorageKey(user)) || '{}');
-    } catch (_) {
-        return {};
-    }
-}
-
-function saveStoredReleaseStatuses(statuses, user = releaseState.currentUser) {
-    localStorage.setItem(getReleaseStorageKey(user), JSON.stringify(statuses));
-}
-
-function pushAccessLog(entry, user = releaseState.currentUser) {
-    try {
-        const currentLogs = JSON.parse(localStorage.getItem(getAccessLogStorageKey(user)) || '[]');
-        currentLogs.unshift(entry);
-        localStorage.setItem(getAccessLogStorageKey(user), JSON.stringify(currentLogs.slice(0, 200)));
-    } catch (_) {
-        // Ignore storage failures silently for this local dashboard cache
-    }
+function getRawStatusLabel(visitor) {
+    const raw = String(visitor?.release_status || '').trim().toLowerCase();
+    if (raw === 'revogado') return 'Revogado';
+    const normalized = normalizeReleaseStatus(visitor);
+    if (normalized === 'approved') return 'Liberado';
+    if (normalized === 'rejected') return 'Recusado';
+    return 'Aguardando';
 }
 
 function populateReleaseBlockOptions() {
-    const releaseBlockFilter = document.getElementById('releaseBlockFilter');
-    if (!releaseBlockFilter) return;
+    const filter = document.getElementById('releaseBlockFilter');
+    if (!filter) return;
 
     const blocks = [...new Set(
         releaseState.visitors
-            .map((visitor) => String(visitor?.responsible?.condominium?.block || '').trim())
+            .map((visitor) => getResponsibleCondo(visitor).block)
+            .map((value) => String(value || '').trim())
             .filter(Boolean)
-            .sort((left, right) => left.localeCompare(right, 'pt-BR'))
+            .sort((a, b) => a.localeCompare(b, 'pt-BR'))
     )];
 
-    releaseBlockFilter.innerHTML = `
+    const previous = releaseState.filters.block;
+    filter.innerHTML = `
         <option value="all">Todos os blocos</option>
         ${blocks.map((block) => `<option value="${escapeHtml(block)}">${escapeHtml(block)}</option>`).join('')}
     `;
+
+    if (blocks.includes(previous)) filter.value = previous;
+    else {
+        filter.value = 'all';
+        releaseState.filters.block = 'all';
+    }
 }
 
 function renderReleasePage() {
-    const statuses = getStoredReleaseStatuses();
     const visitors = [...releaseState.visitors];
-    const pending = visitors.filter((visitor) => getVisitorStatus(visitor, statuses) === 'pending');
-    const approved = visitors.filter((visitor) => getVisitorStatus(visitor, statuses) === 'approved');
-    const rejected = visitors.filter((visitor) => getVisitorStatus(visitor, statuses) === 'rejected');
+    const pending = visitors.filter((visitor) => normalizeReleaseStatus(visitor) === 'pending');
+    const approved = visitors.filter((visitor) => normalizeReleaseStatus(visitor) === 'approved');
+    const rejected = visitors.filter((visitor) => normalizeReleaseStatus(visitor) === 'rejected');
 
-    updateReleaseMetrics({ pending, approved, rejected, statuses });
+    updateReleaseMetrics({ pending, approved, rejected });
     updateReleaseTabs({ pending, approved, rejected });
-    renderReleaseList(applyReleaseFilters(visitors, statuses));
+    renderReleaseList(applyReleaseFilters(visitors));
 }
 
-function getVisitorStatus(visitor, statuses = getStoredReleaseStatuses()) {
-    const visitorCpf = String(visitor?.cpf || '').replace(/\D/g, '');
-    return statuses?.[visitorCpf]?.status || 'pending';
-}
-
-function applyReleaseFilters(visitors, statuses) {
+function applyReleaseFilters(visitors) {
     const now = Date.now();
+
     return visitors.filter((visitor) => {
-        const status = getVisitorStatus(visitor, statuses);
-        const block = String(visitor?.responsible?.condominium?.block || '').trim();
+        const status = normalizeReleaseStatus(visitor);
+        const responsible = visitor?.responsible || {};
+        const condo = getResponsibleCondo(visitor);
+        const block = String(condo.block || '').trim();
         const createdAt = new Date(visitor?.created_at || Date.now()).getTime();
         const searchBase = [
             visitor?.full_name,
             formatCpf(visitor?.cpf),
-            visitor?.responsible?.name,
-            visitor?.responsible?.condominium?.apartment,
-            visitor?.responsible?.condominium?.block
+            responsible?.name,
+            responsible?.email,
+            condo.apartment,
+            condo.block
         ].join(' ').toLowerCase();
 
         const matchesTab = releaseState.filters.tab === 'pending'
@@ -230,16 +232,17 @@ function applyReleaseFilters(visitors, statuses) {
     });
 }
 
-function updateReleaseMetrics({ pending, approved, rejected, statuses }) {
-    const todayPending = pending.filter((visitor) => isToday(visitor?.created_at)).length;
-    const todayApproved = approved.filter((visitor) => isToday(statuses[String(visitor?.cpf || '').replace(/\D/g, '')]?.updatedAt)).length;
-    const todayRejected = rejected.filter((visitor) => isToday(statuses[String(visitor?.cpf || '').replace(/\D/g, '')]?.updatedAt)).length;
-    const todayTotal = todayPending + todayApproved + todayRejected;
+function updateReleaseMetrics({ pending, approved, rejected }) {
+    const todayApproved = approved.filter((visitor) => isToday(visitor?.release_status_updated_at || visitor?.created_at)).length;
+    const todayRejected = rejected.filter((visitor) => isToday(visitor?.release_status_updated_at || visitor?.created_at)).length;
+    const todayVisitors = releaseState.visitors.filter((visitor) =>
+        isToday(visitor?.created_at) || isToday(visitor?.release_status_updated_at)
+    ).length;
 
     setText('pendingVisitorsCount', pending.length);
     setText('approvedVisitorsCount', todayApproved);
     setText('rejectedVisitorsCount', todayRejected);
-    setText('todayVisitorsTotal', todayTotal);
+    setText('todayVisitorsTotal', todayVisitors);
     setText('legendApprovedCount', approved.length);
     setText('legendPendingCount', pending.length);
     setText('legendRejectedCount', rejected.length);
@@ -272,52 +275,61 @@ function renderReleaseList(visitors) {
         list.innerHTML = `
             <div class="empty-state">
                 <strong>Nenhum visitante encontrado</strong>
-                <p>Os visitantes cadastrados para o mesmo condomínio do porteiro aparecerão aqui.</p>
+                <p>Todo visitante cadastrado com o mesmo CEP do porteiro aparecerá aqui.</p>
             </div>
         `;
         return;
     }
 
-    const statuses = getStoredReleaseStatuses();
     list.innerHTML = visitors.map((visitor) => {
-        const visitorCpf = String(visitor?.cpf || '').replace(/\D/g, '');
-        const status = getVisitorStatus(visitor, statuses);
-        const statusLabel = status === 'approved' ? 'Liberado' : status === 'rejected' ? 'Recusado' : 'Aguardando';
+        const visitorCpf = normalizeCpf(visitor?.cpf);
+        const status = normalizeReleaseStatus(visitor);
+        const statusLabel = getRawStatusLabel(visitor);
         const statusClass = status === 'approved' ? 'success' : status === 'rejected' ? 'danger' : 'warning';
-        const createdAt = new Date(visitor?.created_at || Date.now());
-        const apartment = visitor?.responsible?.condominium?.apartment || '--';
-        const block = visitor?.responsible?.condominium?.block || '--';
+        const createdAt = safeDate(visitor?.created_at);
+        const condo = getResponsibleCondo(visitor);
+        const apartment = condo.apartment || '--';
+        const block = condo.block || '--';
+        const isBusy = releaseState.busyCpf === visitorCpf;
+
+        const primaryAction = status === 'approved'
+            ? `<button class="danger-outline" type="button" data-action="revoke" data-cpf="${visitorCpf}" ${isBusy ? 'disabled' : ''}>
+                    <i class="fas fa-ban"></i><span>Revogar</span>
+               </button>`
+            : `<button class="primary-outline" type="button" data-action="approve" data-cpf="${visitorCpf}" ${isBusy ? 'disabled' : ''}>
+                    <i class="fas fa-circle-check"></i><span>Liberar</span>
+               </button>`;
+
+        const rejectAction = status === 'pending'
+            ? `<button class="danger-outline" type="button" data-action="reject" data-cpf="${visitorCpf}" ${isBusy ? 'disabled' : ''}>
+                    <i class="fas fa-circle-xmark"></i><span>Recusar</span>
+               </button>`
+            : '';
 
         return `
-            <article class="request-card">
+            <article class="request-card" data-action="profile" data-cpf="${visitorCpf}" role="button" tabindex="0" aria-label="Ver informações de ${escapeHtml(visitor?.full_name || 'visitante')}" style="cursor:pointer;">
                 <div class="request-time">
                     <strong>${createdAt.toLocaleDateString('pt-BR', { day: '2-digit' })}</strong>
                     <span>${createdAt.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase()}</span>
                     <span>${createdAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
                 <div class="request-main">
-                    <div class="request-avatar" style="cursor:pointer;" data-action="profile" data-cpf="${visitorCpf}" title="Ver perfil do visitante">${getInitials(visitor?.full_name)}</div>
+                    <div class="request-avatar">${getInitials(visitor?.full_name)}</div>
                     <div class="request-meta">
-                        <strong style="cursor:pointer;" data-action="profile" data-cpf="${visitorCpf}" title="Ver perfil do visitante">${escapeHtml(visitor?.full_name || 'Visitante')}</strong>
+                        <strong>${escapeHtml(visitor?.full_name || 'Visitante')}</strong>
                         <small>CPF: ${escapeHtml(formatCpf(visitor?.cpf))}</small>
                         <div class="badge-row">
                             <span class="pill info">Visita</span>
-                            <span class="pill ${statusClass}">${statusLabel}</span>
+                            <span class="pill ${statusClass}">${escapeHtml(statusLabel)}</span>
                         </div>
                         <small>Responsável: ${escapeHtml(visitor?.responsible?.name || '--')}</small>
                         <small>Apto ${escapeHtml(String(apartment))} - Bloco ${escapeHtml(String(block))}</small>
                     </div>
                 </div>
                 <div class="request-actions">
-                    <button class="primary-outline" type="button" data-action="approve" data-cpf="${visitorCpf}">
-                        <i class="fas fa-circle-check"></i>
-                        <span>Liberar</span>
-                    </button>
-                    <button class="danger-outline" type="button" data-action="reject" data-cpf="${visitorCpf}">
-                        <i class="fas fa-circle-xmark"></i>
-                        <span>Recusar</span>
-                    </button>
-                    <button class="icon-more" type="button" title="Perfil do visitante" data-action="profile" data-cpf="${visitorCpf}">
+                    ${primaryAction}
+                    ${rejectAction}
+                    <button class="icon-more" type="button" title="Ver informações" data-action="profile" data-cpf="${visitorCpf}">
                         <i class="fas fa-user"></i>
                     </button>
                 </div>
@@ -325,98 +337,262 @@ function renderReleaseList(visitors) {
         `;
     }).join('');
 
-    list.querySelectorAll('[data-action="approve"], [data-action="reject"]').forEach((button) => {
-        button.addEventListener('click', () => {
-            updateVisitorReleaseStatus(button.dataset.cpf, button.dataset.action === 'approve' ? 'approved' : 'rejected');
+    list.querySelectorAll('.request-card').forEach((card) => {
+        card.addEventListener('click', (event) => {
+            if (event.target.closest('button')) return;
+            openVisitorByCpf(card.dataset.cpf);
+        });
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openVisitorByCpf(card.dataset.cpf);
+            }
         });
     });
 
-    list.querySelectorAll('[data-action="profile"]').forEach((element) => {
-        element.addEventListener('click', () => {
-            const cpf = String(element.dataset.cpf || '').replace(/\D/g, '');
-            const visitor = releaseState.visitors.find((v) => String(v?.cpf || '').replace(/\D/g, '') === cpf);
-            if (visitor) openReleaseVisitorProfileModal(visitor);
+    list.querySelectorAll('button[data-action]').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const action = button.dataset.action;
+            const cpf = button.dataset.cpf;
+            if (action === 'profile') return openVisitorByCpf(cpf);
+            if (action === 'approve') return updateVisitorReleaseStatus(cpf, 'liberado');
+            if (action === 'revoke') return updateVisitorReleaseStatus(cpf, 'revogado');
+            if (action === 'reject') return updateVisitorReleaseStatus(cpf, 'recusado');
         });
     });
 }
 
-function updateVisitorReleaseStatus(visitorCpf, nextStatus) {
-    const statuses = getStoredReleaseStatuses();
-    const normalizedCpf = String(visitorCpf || '').replace(/\D/g, '');
-    const currentStatus = statuses?.[normalizedCpf]?.status || 'pending';
-    if (!normalizedCpf || currentStatus === nextStatus) return;
+function openVisitorByCpf(cpf) {
+    const normalized = normalizeCpf(cpf);
+    const visitor = releaseState.visitors.find((item) => normalizeCpf(item?.cpf) === normalized);
+    if (visitor) openReleaseVisitorProfileModal(visitor);
+}
 
-    statuses[normalizedCpf] = {
-        status: nextStatus,
-        updatedAt: new Date().toISOString()
-    };
-    saveStoredReleaseStatuses(statuses);
+async function updateVisitorReleaseStatus(visitorCpf, nextStatus) {
+    const normalizedCpf = normalizeCpf(visitorCpf);
+    if (!normalizedCpf || releaseState.busyCpf) return;
 
-    const visitor = releaseState.visitors.find((item) => String(item?.cpf || '').replace(/\D/g, '') === normalizedCpf);
-    if (visitor) {
-        pushAccessLog({
-            id: `${normalizedCpf}-${Date.now()}`,
-            createdAt: new Date().toISOString(),
-            movementType: nextStatus === 'approved' ? 'entry' : 'exit',
-            status: nextStatus,
-            fullName: visitor.full_name,
-            cpf: normalizedCpf,
-            apartment: visitor?.responsible?.condominium?.apartment || '',
-            block: visitor?.responsible?.condominium?.block || '',
-            responsibleName: visitor?.responsible?.name || '',
-            source: 'liberacao'
-        });
+    if (typeof window.setVisitorReleaseStatus !== 'function') {
+        notifyRelease('Execute a migration 010 para habilitar a liberação persistente de visitantes.', 'error');
+        return;
     }
 
+    releaseState.busyCpf = normalizedCpf;
     renderReleasePage();
+
+    try {
+        await window.setVisitorReleaseStatus(normalizedCpf, nextStatus);
+        await loadVisitorsForRelease();
+
+        const message = nextStatus === 'liberado'
+            ? 'Entrada liberada e registrada no histórico.'
+            : nextStatus === 'revogado'
+                ? 'Entrada revogada e registrada no histórico.'
+                : 'Entrada recusada e registrada no histórico.';
+        notifyRelease(message, 'success');
+    } catch (error) {
+        console.error('Erro ao atualizar liberação do visitante:', error);
+        notifyRelease(error?.message || 'Não foi possível alterar a liberação.', 'error');
+    } finally {
+        releaseState.busyCpf = '';
+        renderReleasePage();
+    }
+}
+
+function ensureReleaseModalStructure() {
+    if (document.getElementById('releaseVisitorModalBackdrop')) return;
+
+    const style = document.createElement('style');
+    style.id = 'releaseVisitorModalCss';
+    style.textContent = `
+        .modal-box.release-visitor-modal{max-width:820px}.release-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 28px}.release-modal-grid .info-col.full{grid-column:1/-1;border-top:1px solid #e5e7eb;padding-top:18px}.release-modal-grid .info-col{display:flex;flex-direction:column;gap:10px}.release-modal-grid .info-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#374151;margin:0 0 6px;padding-bottom:8px;border-bottom:1px solid #f3f4f6}.release-modal-grid .info-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;font-size:13.5px}.release-modal-grid .info-row>span:first-child{color:#6b7280}.release-modal-grid .info-row>strong{color:#111827;font-weight:500;text-align:right;word-break:break-word}.release-status{display:inline-flex;padding:4px 11px;border-radius:999px;font-size:12px;font-weight:700}.release-status.approved{background:#ecfdf5;color:#047857}.release-status.pending{background:#fef3c7;color:#b45309}.release-status.rejected{background:#fee2e2;color:#b91c1c}html[data-theme="dark"] .release-modal-grid .info-title,html[data-theme="dark"] .release-modal-grid .info-row>strong{color:#f8fafc}html[data-theme="dark"] .release-modal-grid .info-row>span:first-child{color:#94a3b8}@media(max-width:760px){.release-modal-grid{grid-template-columns:1fr}.release-modal-grid .info-col.full{grid-column:auto}}
+    `;
+    document.head.appendChild(style);
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.id = 'releaseVisitorModalBackdrop';
+    backdrop.style.display = 'none';
+    backdrop.innerHTML = `
+        <div class="modal-box release-visitor-modal" role="dialog" aria-modal="true" aria-labelledby="releaseVisitorTitle">
+            <div class="modal-header">
+                <div class="modal-icon modal-icon-info" id="releaseVisitorIcon"><i class="fas fa-user"></i></div>
+                <div class="modal-title-wrap">
+                    <h3 class="modal-title" id="releaseVisitorTitle">Informações do visitante</h3>
+                    <p style="color:#64748b;margin:4px 0 0;font-size:13px;">Dados salvos e situação da liberação</p>
+                </div>
+                <button class="modal-close" type="button" id="releaseVisitorClose" aria-label="Fechar" style="background:none;border:none;cursor:pointer;font-size:18px;color:#64748b;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="releaseVisitorBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn modal-btn-secondary" id="releaseVisitorCancel"><i class="fas fa-times"></i> Fechar</button>
+                <button type="button" class="modal-btn modal-btn-primary" id="releaseVisitorAction"></button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(backdrop);
+    backdrop.addEventListener('click', (event) => {
+        if (event.target === backdrop) closeReleaseVisitorProfileModal();
+    });
+    document.getElementById('releaseVisitorClose')?.addEventListener('click', closeReleaseVisitorProfileModal);
+    document.getElementById('releaseVisitorCancel')?.addEventListener('click', closeReleaseVisitorProfileModal);
+    document.getElementById('releaseVisitorAction')?.addEventListener('click', handleReleaseModalAction);
+}
+
+function openReleaseVisitorProfileModal(visitorRaw) {
+    ensureReleaseModalStructure();
+    releaseState.currentModalVisitorRaw = visitorRaw;
+
+    const responsible = visitorRaw?.responsible || {};
+    const condo = getResponsibleCondo(visitorRaw);
+    const status = normalizeReleaseStatus(visitorRaw);
+    const body = document.getElementById('releaseVisitorBody');
+    const actionButton = document.getElementById('releaseVisitorAction');
+    const { dateLabel, timeLabel } = formatReleaseDateTimeRange(visitorRaw);
+
+    body.innerHTML = `
+        <div class="release-modal-grid">
+            <div class="info-col">
+                <h4 class="info-title"><i class="fas fa-user-circle"></i> Visitante</h4>
+                <div class="info-row"><span>Nome completo</span><strong>${escapeHtml(visitorRaw?.full_name || '--')}</strong></div>
+                <div class="info-row"><span>CPF</span><strong>${escapeHtml(formatCpf(visitorRaw?.cpf) || '--')}</strong></div>
+                <div class="info-row"><span>RG</span><strong>${escapeHtml(visitorRaw?.rg || '--')}</strong></div>
+                <div class="info-row"><span>Telefone</span><strong>${escapeHtml(formatPhone(visitorRaw?.phone))}</strong></div>
+                <div class="info-row"><span>E-mail</span><strong>${escapeHtml(visitorRaw?.email || '--')}</strong></div>
+            </div>
+            <div class="info-col">
+                <h4 class="info-title"><i class="fas fa-house-user"></i> Responsável</h4>
+                <div class="info-row"><span>Nome</span><strong>${escapeHtml(responsible?.name || '--')}</strong></div>
+                <div class="info-row"><span>CPF</span><strong>${escapeHtml(formatCpf(responsible?.cpf || visitorRaw?.responsible_cpf) || '--')}</strong></div>
+                <div class="info-row"><span>Telefone</span><strong>${escapeHtml(formatPhone(responsible?.phone))}</strong></div>
+                <div class="info-row"><span>E-mail</span><strong>${escapeHtml(responsible?.email || '--')}</strong></div>
+                <div class="info-row"><span>Apartamento</span><strong>${escapeHtml(String(condo.apartment || '--'))}</strong></div>
+                <div class="info-row"><span>Bloco</span><strong>${escapeHtml(String(condo.block || '--'))}</strong></div>
+            </div>
+            <div class="info-col full">
+                <h4 class="info-title"><i class="fas fa-calendar-check"></i> Acesso</h4>
+                <div class="info-row"><span>Data do cadastro/visita</span><strong>${escapeHtml(dateLabel)}</strong></div>
+                <div class="info-row"><span>Horário</span><strong>${escapeHtml(timeLabel)}</strong></div>
+                <div class="info-row"><span>Condomínio/CEP</span><strong>${escapeHtml(String(visitorRaw?.cep || condo.cep || condo.condominium_id || '--'))}</strong></div>
+                <div class="info-row"><span>Status</span><strong><span class="release-status ${status}">${escapeHtml(getRawStatusLabel(visitorRaw))}</span></strong></div>
+            </div>
+        </div>
+    `;
+
+    if (status === 'approved') {
+        actionButton.dataset.nextStatus = 'revogado';
+        actionButton.innerHTML = '<i class="fas fa-ban"></i> Revogar entrada';
+        actionButton.style.background = 'linear-gradient(135deg,#dc2626 0%,#b91c1c 100%)';
+    } else {
+        actionButton.dataset.nextStatus = 'liberado';
+        actionButton.innerHTML = '<i class="fas fa-check-circle"></i> Liberar entrada';
+        actionButton.style.background = 'linear-gradient(135deg,#10b981 0%,#0f766e 100%)';
+    }
+
+    document.getElementById('releaseVisitorModalBackdrop').style.display = 'flex';
+}
+
+function closeReleaseVisitorProfileModal() {
+    const backdrop = document.getElementById('releaseVisitorModalBackdrop');
+    if (backdrop) backdrop.style.display = 'none';
+    releaseState.currentModalVisitorRaw = null;
+}
+
+async function handleReleaseModalAction() {
+    const visitor = releaseState.currentModalVisitorRaw;
+    const button = document.getElementById('releaseVisitorAction');
+    if (!visitor || !button) return;
+
+    button.disabled = true;
+    const nextStatus = button.dataset.nextStatus || 'liberado';
+    const cpf = visitor.cpf;
+    closeReleaseVisitorProfileModal();
+
+    try {
+        await updateVisitorReleaseStatus(cpf, nextStatus);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+function getResponsibleCondo(visitor) {
+    const condo = visitor?.responsible?.condominium;
+    if (condo && typeof condo === 'object') {
+        return {
+            ...condo,
+            apartment: condo.apartment || condo.apartamento || condo.unit || '',
+            block: condo.block || condo.bloco || ''
+        };
+    }
+    return {};
 }
 
 function buildDonutGradient(parts) {
     const total = parts.reduce((sum, part) => sum + Math.max(0, Number(part.value) || 0), 0);
-    if (!total) {
-        return 'conic-gradient(#e2e8f0 0deg 360deg)';
-    }
+    if (!total) return 'conic-gradient(#e2e8f0 0deg 360deg)';
 
     let accumulated = 0;
-    const slices = parts.map((part) => {
+    return `conic-gradient(${parts.map((part) => {
         const start = (accumulated / total) * 360;
         accumulated += Math.max(0, Number(part.value) || 0);
         const end = (accumulated / total) * 360;
         return `${part.color} ${start}deg ${end}deg`;
-    });
-
-    return `conic-gradient(${slices.join(', ')})`;
+    }).join(', ')})`;
 }
 
-function setText(id, value) {
-    const element = document.getElementById(id);
-    if (element) element.textContent = String(value);
+function formatReleaseDateTimeRange(visitor) {
+    const dateValue = visitor?.visit_date || visitor?.date || visitor?.created_at || visitor?.scheduled_at || '';
+    const startTime = visitor?.start_time || visitor?.visit_time || visitor?.time_from || '';
+    const endTime = visitor?.end_time || visitor?.time_until || '';
+    const date = safeDate(dateValue);
+    const dateLabel = dateValue ? date.toLocaleDateString('pt-BR') : '--';
+    let timeLabel = '--:--';
+    if (startTime && endTime) timeLabel = `${String(startTime).slice(0, 5)} - ${String(endTime).slice(0, 5)}`;
+    else if (startTime) timeLabel = String(startTime).slice(0, 5);
+    else if (dateValue) timeLabel = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return { dateLabel, timeLabel };
+}
+
+function safeDate(value) {
+    const date = new Date(value || Date.now());
+    return Number.isNaN(date.getTime()) ? new Date() : date;
 }
 
 function isSameDay(left, right) {
-    const leftDate = new Date(left);
-    const rightDate = new Date(right);
-    return leftDate.getFullYear() === rightDate.getFullYear()
-        && leftDate.getMonth() === rightDate.getMonth()
-        && leftDate.getDate() === rightDate.getDate();
+    const a = new Date(left);
+    const b = new Date(right);
+    return !Number.isNaN(a.getTime()) && !Number.isNaN(b.getTime())
+        && a.getFullYear() === b.getFullYear()
+        && a.getMonth() === b.getMonth()
+        && a.getDate() === b.getDate();
 }
 
 function isToday(value) {
-    if (!value) return false;
-    return isSameDay(value, Date.now());
+    return !!value && isSameDay(value, Date.now());
+}
+
+function normalizeCpf(value) {
+    return String(value || '').replace(/\D/g, '').slice(0, 11);
 }
 
 function formatCpf(value) {
-    const digits = String(value || '').replace(/\D/g, '').slice(0, 11);
-    if (digits.length > 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-    if (digits.length > 6) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-    if (digits.length > 3) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-    return digits;
+    const digits = normalizeCpf(value);
+    if (digits.length !== 11) return digits;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function formatPhone(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return value || '--';
 }
 
 function getInitials(name) {
     return String(name || '')
-        .split(' ')
+        .split(/\s+/)
         .filter(Boolean)
         .map((part) => part[0])
         .join('')
@@ -424,8 +600,13 @@ function getInitials(name) {
         .slice(0, 2) || 'VT';
 }
 
+function setText(id, value) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = String(value);
+}
+
 function escapeHtml(text) {
-    return String(text || '')
+    return String(text ?? '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
@@ -433,196 +614,10 @@ function escapeHtml(text) {
         .replaceAll("'", '&#39;');
 }
 
-function ensureReleaseModalCssInjected() {
-    if (document.getElementById('releaseModalCss')) return;
-    const style = document.createElement('style');
-    style.id = 'releaseModalCss';
-    style.textContent = `
-.modal-box.release-visitor-modal { max-width: 820px; }
-.release-modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 28px; }
-.release-modal-grid .info-col.full { grid-column: 1 / -1; border-top: 1px solid #e5e7eb; padding-top: 18px; }
-.info-col { display: flex; flex-direction: column; gap: 10px; }
-.info-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 6px 0; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
-.info-title i { color: #1e40af; font-size: 13px; }
-.info-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; font-size: 13.5px; }
-.info-row > span:first-child { color: #6b7280; font-weight: 400; flex-shrink: 0; }
-.info-row > strong { color: #111827; font-weight: 500; text-align: right; word-break: break-word; }
-.info-row .status-badge { display: inline-flex; align-items: center; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.status-badge.release-approved { background: rgba(14, 165, 164, 0.12); color: #0f766e; }
-.status-badge.release-rejected { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
-.status-badge.release-pending { background: rgba(245, 158, 11, 0.12); color: #b45309; }
-html[data-theme="dark"] .release-modal-grid .info-col.full { border-top-color: #2d3b50; }
-html[data-theme="dark"] .info-title { color: #e2e8f0; border-bottom-color: #1e293b; }
-html[data-theme="dark"] .info-title i { color: #60a5fa; }
-html[data-theme="dark"] .info-row > span:first-child { color: #94a3b8; }
-html[data-theme="dark"] .info-row > strong { color: #f8fafc; }
-@media (max-width: 760px) {
-.release-modal-grid { grid-template-columns: 1fr; }
-.release-modal-grid .info-col.full { border-top: none; padding-top: 0; }
-.info-col + .info-col:not(.full) { border-top: 1px solid #e5e7eb; padding-top: 16px; }
-html[data-theme="dark"] .info-col + .info-col:not(.full) { border-top-color: #2d3b50; }
-}
-`;
-    document.head.appendChild(style);
-}
-
-function formatReleasePhone(value) {
-    const d = String(value || '').replace(/\D/g, '');
-    if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-    if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-    return value || '--';
-}
-
-function formatReleaseDatePt(value) {
-    if (!value) return '--';
-    const d = new Date(value);
-    if (isNaN(d.getTime())) {
-        const parts = String(value).split(/[-/ T]/).filter(Boolean);
-        if (parts.length >= 3 && parts[0].length === 4) return `${parts[2].slice(0, 2)}/${parts[1]}/${parts[0]}`;
-        return String(value).slice(0, 10);
+function notifyRelease(message, type = 'info') {
+    if (typeof window.showToast === 'function') {
+        window.showToast(message, type);
+        return;
     }
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-}
-
-function formatReleaseDateTimeRange(visitorRaw) {
-    const dateValue = visitorRaw?.visit_date || visitorRaw?.date || visitorRaw?.created_at || visitorRaw?.scheduled_at || '';
-    const startTime = visitorRaw?.start_time || visitorRaw?.visit_time || visitorRaw?.time_from || (visitorRaw?.schedule && visitorRaw.schedule.start_time) || '';
-    const endTime = visitorRaw?.end_time || visitorRaw?.time_until || (visitorRaw?.schedule && visitorRaw.schedule.end_time) || '';
-    const dateLabel = formatReleaseDatePt(dateValue);
-    let timeLabel = '--:--';
-    if (startTime && endTime) timeLabel = `${String(startTime).slice(0, 5)} - ${String(endTime).slice(0, 5)}`;
-    else if (startTime) timeLabel = `${String(startTime).slice(0, 5)}`;
-    else if (dateValue) {
-        const d = new Date(dateValue);
-        if (!isNaN(d.getTime())) timeLabel = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    }
-    return { dateLabel, timeLabel };
-}
-
-function getReleaseStatusBadge(visitorRaw) {
-    const statuses = getStoredReleaseStatuses();
-    const cpf = String(visitorRaw?.cpf || '').replace(/\D/g, '');
-    const status = statuses?.[cpf]?.status || 'pending';
-    if (status === 'approved') return '<span class="status-badge release-approved">Liberado</span>';
-    if (status === 'rejected') return '<span class="status-badge release-rejected">Recusado</span>';
-    return '<span class="status-badge release-pending">Aguardando</span>';
-}
-
-function ensureReleaseModalStructure() {
-    ensureReleaseModalCssInjected();
-    if (document.getElementById('releaseVisitorModalBackdrop')) return;
-    const backdrop = document.createElement('div');
-    backdrop.className = 'modal-backdrop';
-    backdrop.id = 'releaseVisitorModalBackdrop';
-    backdrop.innerHTML = `
-<div class="modal-box release-visitor-modal" role="dialog" aria-modal="true" aria-labelledby="releaseVisitorTitle">
-  <div class="modal-header">
-    <div class="modal-icon modal-icon-info" id="releaseVisitorIcon"><i class="fas fa-user"></i></div>
-    <div class="modal-title-wrap">
-      <h3 class="modal-title" id="releaseVisitorTitle">Perfil do visitante</h3>
-      <p class="modal-sub" style="color:#64748B; margin:4px 0 0; font-size:13px;">Detalhes completos do acesso</p>
-    </div>
-    <button class="modal-close" type="button" id="releaseVisitorClose" aria-label="Fechar" style="background:none; border:none; cursor:pointer; font-size:18px; color:#64748B;">
-      <i class="fas fa-times"></i>
-    </button>
-  </div>
-  <div class="modal-body" id="releaseVisitorBody"></div>
-  <div class="modal-footer">
-    <button type="button" class="modal-btn modal-btn-secondary" id="releaseVisitorCancel">
-      <i class="fas fa-times"></i> Fechar
-    </button>
-    <button type="button" class="modal-btn modal-btn-primary" id="releaseVisitorLiberar" style="background: linear-gradient(135deg, #10b981 0%, #0f766e 100%);">
-      <i class="fas fa-check-circle"></i> Liberar visitante
-    </button>
-  </div>
-</div>`;
-    document.body.appendChild(backdrop);
-    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeReleaseVisitorProfileModal(); });
-    document.getElementById('releaseVisitorClose').addEventListener('click', closeReleaseVisitorProfileModal);
-    document.getElementById('releaseVisitorCancel').addEventListener('click', closeReleaseVisitorProfileModal);
-    document.getElementById('releaseVisitorLiberar').addEventListener('click', liberarFromReleaseModal);
-}
-
-function openReleaseVisitorProfileModal(visitorRaw) {
-    ensureReleaseModalStructure();
-    releaseState.currentModalVisitorRaw = visitorRaw;
-    const responsible = visitorRaw?.responsible || {};
-    const respCondo = responsible?.condominium || {};
-    const { dateLabel, timeLabel } = formatReleaseDateTimeRange(visitorRaw);
-    const body = document.getElementById('releaseVisitorBody');
-    const iconDiv = document.getElementById('releaseVisitorIcon');
-    const avatarColors = ['#1e40af','#86198f','#0f766e','#9d174d','#92400e','#155e75','#4c1d95','#065f46','#b45309','#1d4ed8','#0369a1'];
-    const seed = String(visitorRaw?.cpf || visitorRaw?.full_name || '').toLowerCase().replace(/\s+/g, '');
-    let sum = 0; for (let i = 0; i < seed.length; i++) sum += seed.charCodeAt(i);
-    const avatarColor = avatarColors[sum % avatarColors.length];
-    iconDiv.style.background = avatarColor;
-    iconDiv.innerHTML = `<span style="font-size:18px; font-weight:700;">${getInitials(visitorRaw?.full_name)}</span>`;
-    const apartment = respCondo?.apartment || respCondo?.unit || respCondo?.apartamento || '--';
-    const block = respCondo?.block || respCondo?.bloco || '--';
-    const respUnidade = (block !== '--' ? (String(block).startsWith('Bloco') ? block : `Bloco ${block}`) : '') +
-        (apartment !== '--' ? ` / Apto ${String(apartment).replace(/^Apto\s*/i, '')}` : '') || 'Unidade --';
-    const reason = visitorRaw?.reason || visitorRaw?.purpose || visitorRaw?.visit_reason || visitorRaw?.motivo || 'Visita';
-    const condoName = respCondo?.name || respCondo?.condominium_name || visitorRaw?.condominium?.name || '--';
-    body.innerHTML = `
-<div class="release-modal-grid">
-  <div class="info-col">
-    <h4 class="info-title"><i class="fas fa-user-circle"></i> Visitante</h4>
-    <div class="info-row"><span>Nome completo</span><strong>${escapeHtml(visitorRaw?.full_name || visitorRaw?.nome || visitorRaw?.name || '--')}</strong></div>
-    <div class="info-row"><span>CPF</span><strong>${formatCpf(visitorRaw?.cpf) || '--'}</strong></div>
-    <div class="info-row"><span>RG</span><strong>${escapeHtml(visitorRaw?.rg || '--')}</strong></div>
-    <div class="info-row"><span>Telefone</span><strong>${formatReleasePhone(visitorRaw?.phone || visitorRaw?.telefone)}</strong></div>
-    <div class="info-row"><span>E-mail</span><strong>${escapeHtml(visitorRaw?.email || '--')}</strong></div>
-  </div>
-  <div class="info-col">
-    <h4 class="info-title"><i class="fas fa-home"></i> Responsável</h4>
-    <div class="info-row"><span>Nome</span><strong>${escapeHtml(responsible?.name || responsible?.full_name || responsible?.nome || visitorRaw?.responsible_name || '--')}</strong></div>
-    <div class="info-row"><span>CPF</span><strong>${formatCpf(responsible?.cpf || visitorRaw?.responsible_cpf) || '--'}</strong></div>
-    <div class="info-row"><span>Telefone</span><strong>${formatReleasePhone(responsible?.phone || responsible?.telefone)}</strong></div>
-    <div class="info-row"><span>E-mail</span><strong>${escapeHtml(responsible?.email || '--')}</strong></div>
-    <div class="info-row"><span>Unidade</span><strong>${escapeHtml(respUnidade)}</strong></div>
-  </div>
-  <div class="info-col full">
-    <h4 class="info-title"><i class="fas fa-calendar-check"></i> Visita</h4>
-    <div class="info-row"><span>Data</span><strong>${dateLabel}</strong></div>
-    <div class="info-row"><span>Horário</span><strong>${timeLabel}</strong></div>
-    <div class="info-row"><span>Motivo</span><strong>${escapeHtml(reason)}</strong></div>
-    <div class="info-row"><span>Condomínio</span><strong>${escapeHtml(condoName)}</strong></div>
-    <div class="info-row"><span>Status</span><strong>${getReleaseStatusBadge(visitorRaw)}</strong></div>
-  </div>
-</div>`;
-    document.getElementById('releaseVisitorModalBackdrop').classList.add('open');
-}
-
-function closeReleaseVisitorProfileModal() {
-    const backdrop = document.getElementById('releaseVisitorModalBackdrop');
-    if (backdrop) backdrop.classList.remove('open');
-    releaseState.currentModalVisitorRaw = null;
-}
-
-function liberarFromReleaseModal() {
-    const v = releaseState.currentModalVisitorRaw;
-    if (!v) return;
-    const cpf = String(v?.cpf || '').replace(/\D/g, '');
-    const btn = document.getElementById('releaseVisitorLiberar');
-    btn.disabled = true;
-    try {
-        updateVisitorReleaseStatus(cpf, 'approved');
-        if (typeof window.showToast === 'function') {
-            window.showToast('Visitante liberado com sucesso!', 'success');
-        }
-        closeReleaseVisitorProfileModal();
-    } finally {
-        btn.disabled = false;
-    }
-}
-
-document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeReleaseVisitorProfileModal();
-});
-
-function logout() {
-    if (typeof window.performFullLogout === 'function') { window.performFullLogout(); return; }
-    sessionStorage.removeItem('condominiumUser');
-    try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
-    window.location.href = '../inicio.html';
+    console[type === 'error' ? 'error' : 'log'](message);
 }
