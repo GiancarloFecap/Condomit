@@ -33,7 +33,7 @@
                     </div>
                     <button class="soft-action" type="button" id="newDeliveryBtn">
                         <i class="fas fa-plus"></i>
-                        <span>Autorizar nova entrega</span>
+                        <span>Registrar encomenda</span>
                     </button>
                     <div class="user-profile-small" id="topProfileBlock">
                         <div class="user-info-small">
@@ -51,44 +51,44 @@
                         <div class="metric-head">
                             <div class="metric-icon"><i class="fas fa-truck"></i></div>
                             <div>
-                                <div class="metric-label">Entregas ativas</div>
+                                <div class="metric-label">Aguardando retirada</div>
                                 <div class="metric-value" id="activeDeliveriesCount">0</div>
                             </div>
                         </div>
-                        <div class="metric-caption">Autorizadas</div>
+                        <div class="metric-caption">Na portaria</div>
                     </article>
 
                     <article class="metric-card accent">
                         <div class="metric-head">
                             <div class="metric-icon"><i class="fas fa-clock"></i></div>
                             <div>
-                                <div class="metric-label">Agendadas para hoje</div>
+                                <div class="metric-label">Recebidas hoje</div>
                                 <div class="metric-value" id="scheduledTodayCount">0</div>
                             </div>
                         </div>
-                        <div class="metric-caption">Aguardando</div>
+                        <div class="metric-caption">Registradas hoje</div>
                     </article>
 
                     <article class="metric-card pending">
                         <div class="metric-head">
                             <div class="metric-icon"><i class="fas fa-circle-check"></i></div>
                             <div>
-                                <div class="metric-label">Concluídas hoje</div>
+                                <div class="metric-label">Retiradas hoje</div>
                                 <div class="metric-value" id="completedTodayCount">0</div>
                             </div>
                         </div>
-                        <div class="metric-caption">Entregues</div>
+                        <div class="metric-caption">Entregues ao morador</div>
                     </article>
 
                     <article class="metric-card danger">
                         <div class="metric-head">
                             <div class="metric-icon"><i class="fas fa-circle-xmark"></i></div>
                             <div>
-                                <div class="metric-label">Canceladas hoje</div>
+                                <div class="metric-label">Devolvidas hoje</div>
                                 <div class="metric-value" id="canceledTodayCount">0</div>
                             </div>
                         </div>
-                        <div class="metric-caption">Canceladas</div>
+                        <div class="metric-caption">Devolvidas</div>
                     </article>
                 </div>
 
@@ -104,10 +104,9 @@
                             <label class="select-field">
                                 <select id="deliveryStatusFilter">
                                     <option value="all">Todos os status</option>
-                                    <option value="active">Ativas</option>
-                                    <option value="scheduled">Agendadas</option>
-                                    <option value="completed">Concluídas</option>
-                                    <option value="canceled">Canceladas</option>
+                                    <option value="pending">Aguardando retirada</option>
+                                    <option value="picked">Retiradas</option>
+                                    <option value="returned">Devolvidas</option>
                                 </select>
                             </label>
                             <label class="select-field">
@@ -128,10 +127,9 @@
 
                     <div class="status-tabs" id="deliveryTabs">
                         <button class="status-tab active" type="button" data-tab="all">Todas</button>
-                        <button class="status-tab" type="button" data-tab="active">Ativas</button>
-                        <button class="status-tab" type="button" data-tab="scheduled">Agendadas</button>
-                        <button class="status-tab" type="button" data-tab="completed">Concluídas</button>
-                        <button class="status-tab" type="button" data-tab="canceled">Canceladas</button>
+                        <button class="status-tab" type="button" data-tab="pending">Aguardando retirada</button>
+                        <button class="status-tab" type="button" data-tab="picked">Retiradas</button>
+                        <button class="status-tab" type="button" data-tab="returned">Devolvidas</button>
                     </div>
 
                     <div class="table-wrap">
@@ -142,8 +140,8 @@
                                     <th>Morador</th>
                                     <th>Unidade</th>
                                     <th>Transportadora</th>
-                                    <th>Previsão</th>
-                                    <th>Autorizado por</th>
+                                    <th>Recebida em</th>
+                                    <th>Recebido por</th>
                                     <th>Status</th>
                                     <th>Ações</th>
                                 </tr>
@@ -191,7 +189,7 @@
         <div class="delivery-modal-card" role="dialog" aria-modal="true" aria-labelledby="deliveryModalTitle">
             <div class="delivery-modal-header">
                 <div>
-                    <h2 id="deliveryModalTitle">Autorizar nova entrega</h2>
+                    <h2 id="deliveryModalTitle">Registrar encomenda</h2>
                     <p>Registre uma entrega para o condomínio atual.</p>
                 </div>
                 <button class="icon-more" type="button" id="closeDeliveryModalBtn" aria-label="Fechar modal">
@@ -266,9 +264,9 @@
     </div>
 
     <script src="../scripts/supabase-client.js"></script>
-    <script src="../scripts/sidebar-links.js?v=011"></script>
+    <script src="../scripts/sidebar-links.js?v=012"></script>
     <script src="../scripts/porteiro-topbar.js"></script>
-    <script src="../scripts/autorizacao-entregas.js"></script>
-    <script src="../scripts/topbar-actions.js?v=011"></script>
+    <script src="../scripts/autorizacao-entregas.js?v=012"></script>
+    <script src="../scripts/topbar-actions.js?v=012"></script>
 </body>
 </html>

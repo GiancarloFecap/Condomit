@@ -117,7 +117,7 @@ async function restorePersistentLogin() {
             localStorage.removeItem('condominiumPersistentUser');
             return null;
         }
-        const user = { ...fresh, password: fresh.password || null };
+        const user = { ...fresh, profilePhoto: fresh.profile_photo || fresh.profilePhoto || null };
         try { sessionStorage.setItem('condominiumUser', JSON.stringify(user)); } catch(_) {}
         if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
         return user;
@@ -145,8 +145,9 @@ function updateUIWithUserData(currentUser) {
     // Top bar avatar
     const topAvatar = document.getElementById('user-avatar-top');
     if (topAvatar) {
-        if (currentUser.profilePhoto) {
-            topAvatar.innerHTML = `<img src="${currentUser.profilePhoto}" alt="Avatar" />`;
+        if (currentUser.profilePhoto || currentUser.profile_photo) {
+            const photo = currentUser.profilePhoto || currentUser.profile_photo;
+            topAvatar.innerHTML = `<img src="${photo}" alt="Avatar" />`;
             topAvatar.style.background = 'none';
         } else {
             topAvatar.textContent = initials;
@@ -172,8 +173,9 @@ function updateUIWithUserData(currentUser) {
     if (cardEmail) cardEmail.textContent = currentUser.email || 'Não informado';
 
     if (cardAvatar) {
-        if (currentUser.profilePhoto) {
-            cardAvatar.innerHTML = `<img src="${currentUser.profilePhoto}" alt="Avatar" />`;
+        if (currentUser.profilePhoto || currentUser.profile_photo) {
+            const photo = currentUser.profilePhoto || currentUser.profile_photo;
+            cardAvatar.innerHTML = `<img src="${photo}" alt="Avatar" />`;
             cardAvatar.style.background = 'none';
         } else {
             cardAvatar.textContent = initials;
@@ -507,7 +509,7 @@ async function saveProfileChanges() {
             email: newEmail,
             phone: newPhone
         };
-        if (pendingPhoto) patchPayload.profilePhoto = pendingPhoto;
+        if (pendingPhoto) patchPayload.profile_photo = pendingPhoto;
 
         const patchTarget = hasEmailChanged ? user.email : newEmail;
         let updatedRecord = await updateUserByEmail(patchTarget, patchPayload);
@@ -524,7 +526,7 @@ async function saveProfileChanges() {
 
         const mergedUser = { ...user, ...(updatedRecord || patchPayload), email: newEmail };
         if (pendingPhoto) mergedUser.profilePhoto = pendingPhoto;
-        else if (updatedRecord && updatedRecord.profilePhoto) mergedUser.profilePhoto = updatedRecord.profilePhoto;
+        else if (updatedRecord && (updatedRecord.profile_photo || updatedRecord.profilePhoto)) mergedUser.profilePhoto = updatedRecord.profile_photo || updatedRecord.profilePhoto;
         setCurrentUser(mergedUser);
 
         if (pendingPhoto && typeof profilePhotoEditor !== 'undefined' && profilePhotoEditor && typeof profilePhotoEditor.addToRecentAvatars === 'function') {
@@ -886,22 +888,27 @@ function ensureVisitorAccessModal() {
             try {
                 const ctx = await getAccessRegistrationContext();
                 const fullName = document.getElementById('dependentFullName')?.value.trim() || '';
+                const cpf = String(document.getElementById('dependentCpf')?.value || '').replace(/\D/g, '');
                 const relationship = document.getElementById('dependentRelationship')?.value.trim() || '';
-                if (!fullName || !relationship) throw new Error('Informe nome e parentesco.');
-                const rows = await window.supabaseFetch('/access_dependents', {
+                const phone = document.getElementById('dependentPhone')?.value.trim() || '';
+                const birthDate = document.getElementById('dependentBirthDate')?.value || '';
+                if (!fullName || cpf.length !== 11 || !relationship || !phone || !birthDate) {
+                    throw new Error('Preencha nome, CPF, parentesco, telefone e data de nascimento.');
+                }
+                const rows = await window.supabaseFetch('/dependents', {
                     method: 'POST',
                     headers: { Prefer: 'return=representation' },
                     body: JSON.stringify({
+                        cpf,
                         cep: ctx.cep,
-                        user_email: ctx.email,
+                        responsible_email: ctx.email,
                         full_name: fullName,
-                        cpf: document.getElementById('dependentCpf')?.value.trim() || null,
                         relationship,
-                        phone: document.getElementById('dependentPhone')?.value.trim() || null,
-                        birth_date: document.getElementById('dependentBirthDate')?.value || null
+                        phone,
+                        birth_date: birthDate
                     })
                 });
-                if (!Array.isArray(rows) || !rows[0]?.id) throw new Error('O banco não confirmou o dependente.');
+                if (!Array.isArray(rows) || !rows[0]?.cpf) throw new Error('O banco não confirmou o dependente.');
                 form.reset();
                 window.showToast?.('Dependente registrado com sucesso.', 'success');
                 closeVisitorAccessModal();
@@ -923,20 +930,22 @@ function ensureVisitorAccessModal() {
                 const ctx = await getAccessRegistrationContext();
                 const plate = document.getElementById('vehiclePlate')?.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') || '';
                 const model = document.getElementById('vehicleModel')?.value.trim() || '';
-                if (plate.length < 7 || !model) throw new Error('Informe uma placa e um modelo válidos.');
-                const rows = await window.supabaseFetch('/access_vehicles', {
+                const color = document.getElementById('vehicleColor')?.value.trim() || '';
+                const observations = document.getElementById('vehicleNotes')?.value.trim() || null;
+                if (plate.length < 7 || !model || !color) throw new Error('Informe placa, modelo e cor do veículo.');
+                const rows = await window.supabaseFetch('/vehicles', {
                     method: 'POST',
                     headers: { Prefer: 'return=representation' },
                     body: JSON.stringify({
-                        cep: ctx.cep,
-                        user_email: ctx.email,
                         plate,
+                        cep: ctx.cep,
+                        responsible_email: ctx.email,
                         model,
-                        color: document.getElementById('vehicleColor')?.value.trim() || null,
-                        notes: document.getElementById('vehicleNotes')?.value.trim() || null
+                        color,
+                        observations
                     })
                 });
-                if (!Array.isArray(rows) || !rows[0]?.id) throw new Error('O banco não confirmou o veículo.');
+                if (!Array.isArray(rows) || !rows[0]?.plate) throw new Error('O banco não confirmou o veículo.');
                 form.reset();
                 window.showToast?.('Carro registrado com sucesso.', 'success');
                 closeVisitorAccessModal();

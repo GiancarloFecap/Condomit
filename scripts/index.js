@@ -219,54 +219,55 @@ function escapeDashboardHtml(value) {
         .replaceAll("'", '&#39;');
 }
 
-async function loadResidents(cep) {
+async function loadResidents(_cep) {
     const tableBody = document.getElementById('residentsTableBody');
     const activeResidentsEl = document.querySelector('.status-item:nth-child(3) span');
 
     if (!tableBody) return;
 
-    if (!cep) {
-        tableBody.innerHTML = '<tr><td colspan="3">CEP do condomínio não encontrado.</td></tr>';
-        if (activeResidentsEl) activeResidentsEl.textContent = 'Moradores Ativos: 0';
-        return;
-    }
-
     try {
-        const residents = await fetchResidentsByCondoCep(cep);
-        const normalizedResidents = residents
-            .map((resident) => {
-                const condo = resident?.condominium && typeof resident.condominium === 'object'
-                    ? resident.condominium
-                    : {};
+        if (typeof window.supabaseFetch !== 'function') {
+            throw new Error('Supabase indisponível.');
+        }
 
-                return {
-                    apartment: condo.apartment ?? '-',
-                    block: condo.block ?? '-',
-                    name: resident?.name || 'Sem nome'
-                };
-            })
+        const rows = await window.supabaseFetch('/rpc/condomit_list_condo_residents', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
+        });
+
+        const residents = (Array.isArray(rows) ? rows : [])
+            .map((resident) => ({
+                apartment: String(resident?.apartment || '-').trim() || '-',
+                block: String(resident?.block || '-').trim() || '-',
+                name: resident?.name || resident?.email || 'Sem nome'
+            }))
             .sort((a, b) => {
-                const blockCompare = String(a.block).localeCompare(String(b.block), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                const blockCompare = a.block.localeCompare(b.block, 'pt-BR', { numeric: true, sensitivity: 'base' });
                 if (blockCompare !== 0) return blockCompare;
-                return String(a.apartment).localeCompare(String(b.apartment), 'pt-BR', { numeric: true, sensitivity: 'base' });
+                return a.apartment.localeCompare(b.apartment, 'pt-BR', { numeric: true, sensitivity: 'base' });
             });
-        if (activeResidentsEl) activeResidentsEl.textContent = `Moradores Ativos: ${normalizedResidents.length}`;
 
-        if (!normalizedResidents.length) {
-            tableBody.innerHTML = '<tr><td colspan="3">Nenhum morador cadastrado encontrado para este condomínio.</td></tr>';
+        // "Moradores ativos" significa moradores atualmente vinculados ao condomínio,
+        // independentemente de estarem com o site aberto.
+        if (activeResidentsEl) activeResidentsEl.textContent = `Moradores Ativos: ${residents.length}`;
+
+        if (!residents.length) {
+            tableBody.innerHTML = '<tr><td colspan="3">Nenhum morador entrou neste condomínio ainda.</td></tr>';
             return;
         }
 
-        tableBody.innerHTML = normalizedResidents.map((resident) => {
-            const apt = resident.apartment || '-';
-            const block = resident.block || '-';
-            const name = resident.name || 'Sem nome';
-            return `<tr><td>${apt}</td><td>${block}</td><td>${name}</td></tr>`;
-        }).join('');
+        tableBody.innerHTML = residents.map((resident) => `
+            <tr>
+                <td>${escapeDashboardHtml(resident.apartment)}</td>
+                <td>${escapeDashboardHtml(resident.block)}</td>
+                <td>${escapeDashboardHtml(resident.name)}</td>
+            </tr>
+        `).join('');
     } catch (error) {
-        console.error('Erro ao carregar moradores:', error);
-        tableBody.innerHTML = `<tr><td colspan="3">Erro ao carregar moradores: ${error.message || 'Falha na consulta'}</td></tr>`;
-        if (activeResidentsEl) activeResidentsEl.textContent = 'Moradores Ativos: erro';
+        console.error('Erro ao carregar moradores reais do condomínio:', error);
+        tableBody.innerHTML = '<tr><td colspan="3">Não foi possível carregar os moradores do condomínio.</td></tr>';
+        if (activeResidentsEl) activeResidentsEl.textContent = 'Moradores Ativos: 0';
     }
 }
 

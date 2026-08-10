@@ -2952,6 +2952,11 @@ async function refreshCurrentUserFromDb() {
         ...fresh
       };
 
+      if (fresh.profile_photo || fresh.profilePhoto) {
+        merged.profilePhoto = fresh.profile_photo || fresh.profilePhoto;
+        merged.profile_photo = fresh.profile_photo || fresh.profilePhoto;
+      }
+
       /*
        * Nunca manter senha em
        * sessionStorage.
@@ -3811,7 +3816,9 @@ function syncAllAvatars(
       : 'US';
 
   const profilePhoto =
-    currentUser.profilePhoto;
+    currentUser.profilePhoto ||
+    currentUser.profile_photo ||
+    null;
 
   const topSmallAvatar =
     document.querySelector(

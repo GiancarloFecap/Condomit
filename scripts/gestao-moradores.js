@@ -106,16 +106,32 @@ async function loadResidents() {
 }
 
 async function fetchResidentsFromApi() {
-    const response = await fetch('/api/users');
-    if (!response.ok) throw new Error('Não foi possível buscar os moradores.');
+    if (typeof window.supabaseFetch !== 'function') {
+        throw new Error('Supabase indisponível.');
+    }
 
-    const data = await response.json();
-    const allUsers = Array.isArray(data) ? data : [];
+    const rows = await window.supabaseFetch('/rpc/condomit_list_condo_residents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+    });
 
-    return allUsers
-        .map(normalizeResident)
-        .filter((resident) => resident.type === 'morador' && residentsBelongToCurrentCondominium(resident))
-        .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+    return (Array.isArray(rows) ? rows : [])
+        .map((resident) => ({
+            id: resident?.email || `resident-${Math.random().toString(36).slice(2, 8)}`,
+            name: resident?.name || resident?.email || 'Morador',
+            email: resident?.email || 'Não informado',
+            phone: resident?.phone || 'Não informado',
+            block: String(resident?.block || 'Sem bloco'),
+            apartment: String(resident?.apartment || '---'),
+            condominiumIdentifiers: [String(resident?.cep || '').replace(/\D/g, '')].filter(Boolean),
+            type: 'morador',
+            status: 'ativo',
+            role: 'Titular',
+            createdAt: null,
+            profilePhoto: resident?.profile_photo || null
+        }))
+        .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base' }));
 }
 
 function normalizeResident(user) {

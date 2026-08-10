@@ -39,43 +39,51 @@ document.addEventListener('DOMContentLoaded', function() {
             const userType = String(currentUser.type || currentUser.user_type || '').toLowerCase();
 
             if (userType !== 'porteiro') {
-                if (userType === 'morador') {
-                    window.location.href = 'entrar-condominio.html';
-                } else {
-                    window.location.href = 'tipo-usuario.html';
-                }
+                if (typeof redirectToHome === 'function') redirectToHome();
+                else window.location.href = userType === 'morador' ? 'index-morador.html' : 'index.html';
                 return;
             }
 
-            if (currentUser.condominium) {
-                let boundOk = false;
+            // Sempre consulta o vínculo real. A presença/ausência de condominium no
+            // sessionStorage não decide mais se o cadastro foi concluído.
+            let linkedCep = '';
+            try {
+                if (typeof window.supabaseFetch === 'function') {
+                    const value = await window.supabaseFetch('/rpc/condomit_current_user_cep', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: '{}'
+                    });
+                    if (typeof value === 'string') linkedCep = value;
+                }
+            } catch (error) {
+                console.warn('Erro ao consultar vínculo do porteiro por RPC:', error?.message || error);
+            }
+
+            if (!linkedCep) {
                 try {
                     const boundResponse = await proxyFetch(
                         `/api/user_condominiums?user_email=eq.${encodeURIComponent(currentUser.email)}`
                     );
-                    boundOk = !!(boundResponse && boundResponse.length > 0);
-                } catch (err) {
-                    console.warn('Erro ao verificar vinculo existente:', err.message);
-                }
-
-                const hasCondoId = !!currentUser.condominium.condominium_id;
-
-                if (boundOk || hasCondoId) {
-                    try {
-                        const email = String(currentUser.email || '').toLowerCase();
-                        const todayStr = new Date().toISOString().slice(0, 10);
-                        const sessionKey = `porteiro:session:${email}:${todayStr}`;
-                        const condoId = currentUser.condominium.condominium_id || currentUser.condominium.cep || '';
-                        const everKey = `porteiro:entry:${email}:${condoId}`;
-                        sessionStorage.setItem(sessionKey, '1');
-                        if (condoId) sessionStorage.setItem(everKey, '1');
-                    } catch (_) {}
-                    window.location.href = 'index-porteiro.html';
-                    return;
+                    const first = Array.isArray(boundResponse) ? boundResponse[0] : null;
+                    linkedCep = first?.condominium_id || '';
+                } catch (error) {
+                    console.warn('Erro ao verificar vínculo existente:', error?.message || error);
                 }
             }
+
+            if (linkedCep) {
+                currentUser.condominium = {
+                    ...(currentUser.condominium && typeof currentUser.condominium === 'object' ? currentUser.condominium : {}),
+                    cep: linkedCep,
+                    condominium_id: linkedCep
+                };
+                sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
+                window.location.href = 'index-porteiro.html';
+                return;
+            }
         } catch (error) {
-            console.error('Erro ao verificar autenticacao:', error);
+            console.error('Erro ao verificar autenticação:', error);
             window.location.href = 'entrar.html';
         }
     }
@@ -259,14 +267,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 name: condominium.condominium_name
             };
             sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
-
-            try {
-                const checkKey = `porteiro:entry:${currentUser.email}:${formData.condominiumId}`;
-                sessionStorage.setItem(checkKey, '1');
-                const todayStr = new Date().toISOString().slice(0, 10);
-                const sessionKey = `porteiro:session:${currentUser.email}:${todayStr}`;
-                sessionStorage.setItem(sessionKey, '1');
-            } catch(_) {}
 
             try {
                 const persistent = {

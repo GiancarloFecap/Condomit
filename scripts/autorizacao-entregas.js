@@ -1,487 +1,256 @@
 const deliveryState = {
     currentUser: null,
-    deliveries: [],
-    filters: {
-        tab: 'all',
-        search: '',
-        status: 'all',
-        block: 'all',
-        date: ''
-    }
+    packages: [],
+    filters: { tab: 'all', search: '', status: 'all', block: 'all', date: '' }
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const currentUser = await loadDeliveryUser();
-    if (!currentUser) return;
-
-    deliveryState.currentUser = currentUser;
-    initDeliveryPageShell(currentUser);
-    bindDeliveryPageControls();
-    loadDeliveries();
+    const user = await loadDeliveryUser();
+    if (!user) return;
+    deliveryState.currentUser = user;
+    initDeliveryShell(user);
+    bindDeliveryControls();
+    document.getElementById('deliveryModal')?.setAttribute('hidden', 'hidden');
+    await loadPackages();
+    window.setInterval(() => {
+        if (!document.hidden) loadPackages();
+    }, 15000);
 });
 
 async function loadDeliveryUser() {
-    let currentUser = null;
+    let user = null;
     try {
-        currentUser = typeof refreshCurrentUserFromDb === 'function'
+        user = typeof refreshCurrentUserFromDb === 'function'
             ? await refreshCurrentUserFromDb()
-            : JSON.parse(sessionStorage.getItem('condominiumUser'));
-    } catch (_) {
-        currentUser = null;
-    }
+            : JSON.parse(sessionStorage.getItem('condominiumUser') || 'null');
+    } catch (_) { user = null; }
 
-    if (!currentUser) {
+    if (!user) {
         window.location.href = 'entrar.html';
         return null;
     }
-
-    const userType = typeof getNormalizedUserType === 'function'
-        ? getNormalizedUserType(currentUser)
-        : String(currentUser.type || '').trim().toLowerCase();
-
-    if (userType !== 'porteiro') {
-        if (typeof redirectToHome === 'function') {
-            redirectToHome();
-        } else {
-            window.location.href = 'index.html';
-        }
-        return null;
-    }
-
-    return currentUser;
+    return user;
 }
 
-function initDeliveryPageShell(currentUser) {
-    const sidebarApartment = document.getElementById('sidebarApartment');
-    const deliveryDate = document.getElementById('deliveryDate');
-    const deliveryDateFilter = document.getElementById('deliveryDateFilter');
-
-    if (sidebarApartment && currentUser.condominium?.name) {
-        const words = currentUser.condominium.name.split(' ');
-        sidebarApartment.innerHTML = words.length > 2
-            ? `${words.slice(0, 2).join(' ')}<br>${words.slice(2).join(' ')}`
-            : currentUser.condominium.name;
-    }
-
-    const today = new Date().toISOString().slice(0, 10);
-    if (deliveryDate) deliveryDate.value = today;
-    if (deliveryDateFilter) deliveryDateFilter.value = today;
-    deliveryState.filters.date = today;
-
-    if (typeof window.initPorterTopBar === 'function') {
-        window.initPorterTopBar(currentUser);
-    }
+async function rpc(name, payload = {}) {
+    if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase indisponível.');
+    return window.supabaseFetch(`/rpc/${name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
 }
 
-function bindDeliveryPageControls() {
-    const deliverySearchInput = document.getElementById('deliverySearchInput');
-    const deliveryStatusFilter = document.getElementById('deliveryStatusFilter');
-    const deliveryBlockFilter = document.getElementById('deliveryBlockFilter');
-    const deliveryDateFilter = document.getElementById('deliveryDateFilter');
-    const clearDeliveryFiltersBtn = document.getElementById('clearDeliveryFiltersBtn');
-    const newDeliveryBtn = document.getElementById('newDeliveryBtn');
-    const closeDeliveryModalBtn = document.getElementById('closeDeliveryModalBtn');
-    const cancelDeliveryBtn = document.getElementById('cancelDeliveryBtn');
-    const deliveryModal = document.getElementById('deliveryModal');
-    const deliveryForm = document.getElementById('deliveryForm');
+function initDeliveryShell(user) {
+    const sidebar = document.getElementById('sidebarApartment');
+    let condo = user?.condominium || {};
+    if (typeof condo === 'string') {
+        try { condo = JSON.parse(condo); } catch (_) { condo = {}; }
+    }
+    if (sidebar && condo?.name) {
+        const words = String(condo.name).split(/\s+/).filter(Boolean);
+        sidebar.innerHTML = words.length > 2
+            ? `${escapeHtml(words.slice(0, 2).join(' '))}<br>${escapeHtml(words.slice(2).join(' '))}`
+            : escapeHtml(words.join(' '));
+    }
 
-    deliverySearchInput?.addEventListener('input', (event) => {
+    if (typeof window.initPorterTopBar === 'function') window.initPorterTopBar(user);
+    const dateLabel = document.getElementById('currentDateLabel');
+    if (dateLabel) dateLabel.textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+
+    document.getElementById('newDeliveryBtn')?.addEventListener('click', () => {
+        window.location.href = 'configuracoes.html#registrar-encomenda';
+    });
+}
+
+function bindDeliveryControls() {
+    document.getElementById('deliverySearchInput')?.addEventListener('input', (event) => {
         deliveryState.filters.search = event.target.value.trim().toLowerCase();
         renderDeliveryPage();
     });
-
-    deliveryStatusFilter?.addEventListener('change', (event) => {
+    document.getElementById('deliveryStatusFilter')?.addEventListener('change', (event) => {
         deliveryState.filters.status = event.target.value;
         renderDeliveryPage();
     });
-
-    deliveryBlockFilter?.addEventListener('change', (event) => {
+    document.getElementById('deliveryBlockFilter')?.addEventListener('change', (event) => {
         deliveryState.filters.block = event.target.value;
         renderDeliveryPage();
     });
-
-    deliveryDateFilter?.addEventListener('change', (event) => {
+    document.getElementById('deliveryDateFilter')?.addEventListener('change', (event) => {
         deliveryState.filters.date = event.target.value;
         renderDeliveryPage();
     });
-
-    clearDeliveryFiltersBtn?.addEventListener('click', () => {
-        deliveryState.filters.search = '';
-        deliveryState.filters.status = 'all';
-        deliveryState.filters.block = 'all';
-        deliveryState.filters.date = '';
-        if (deliverySearchInput) deliverySearchInput.value = '';
-        if (deliveryStatusFilter) deliveryStatusFilter.value = 'all';
-        if (deliveryBlockFilter) deliveryBlockFilter.value = 'all';
-        if (deliveryDateFilter) deliveryDateFilter.value = '';
-        setActiveDeliveryTab('all');
+    document.getElementById('clearDeliveryFiltersBtn')?.addEventListener('click', () => {
+        deliveryState.filters = { tab: 'all', search: '', status: 'all', block: 'all', date: '' };
+        const search = document.getElementById('deliverySearchInput');
+        const status = document.getElementById('deliveryStatusFilter');
+        const block = document.getElementById('deliveryBlockFilter');
+        const date = document.getElementById('deliveryDateFilter');
+        if (search) search.value = '';
+        if (status) status.value = 'all';
+        if (block) block.value = 'all';
+        if (date) date.value = '';
+        syncTabs();
         renderDeliveryPage();
     });
-
     document.getElementById('deliveryTabs')?.addEventListener('click', (event) => {
         const button = event.target.closest('[data-tab]');
         if (!button) return;
-        const nextTab = button.dataset.tab || 'all';
-        setActiveDeliveryTab(nextTab);
+        deliveryState.filters.tab = button.dataset.tab || 'all';
+        syncTabs();
         renderDeliveryPage();
     });
-
-    newDeliveryBtn?.addEventListener('click', openDeliveryModal);
-    closeDeliveryModalBtn?.addEventListener('click', closeDeliveryModal);
-    cancelDeliveryBtn?.addEventListener('click', closeDeliveryModal);
-    deliveryModal?.addEventListener('click', (event) => {
-        if (event.target === deliveryModal) closeDeliveryModal();
-    });
-    deliveryForm?.addEventListener('submit', handleDeliverySubmit);
 }
 
-function loadDeliveries() {
-    const stored = getStoredDeliveries();
-    deliveryState.deliveries = stored.length ? stored : buildDefaultDeliveries();
-    if (!stored.length) saveDeliveries();
-    populateDeliveryBlockOptions();
-    renderDeliveryPage();
-}
-
-function getCondominiumKey(user = deliveryState.currentUser) {
-    const identifiers = typeof window.getUserCondominiumIdentifiers === 'function'
-        ? window.getUserCondominiumIdentifiers(user)
-        : [];
-    return identifiers[0] || 'geral';
-}
-
-function getDeliveryStorageKey(user = deliveryState.currentUser) {
-    return `condomit.delivery-authorization.${getCondominiumKey(user)}`;
-}
-
-function getStoredDeliveries(user = deliveryState.currentUser) {
+async function loadPackages() {
     try {
-        return JSON.parse(localStorage.getItem(getDeliveryStorageKey(user)) || '[]');
-    } catch (_) {
-        return [];
+        const rows = await rpc('condomit_list_packages');
+        deliveryState.packages = Array.isArray(rows) ? rows : [];
+        populateBlocks();
+        renderDeliveryPage();
+    } catch (error) {
+        console.error('Erro ao carregar encomendas:', error);
+        deliveryState.packages = [];
+        renderDeliveryPage();
+        window.showToast?.(error?.message || 'Não foi possível carregar as encomendas.', 'error');
     }
 }
 
-function saveDeliveries(user = deliveryState.currentUser) {
-    localStorage.setItem(getDeliveryStorageKey(user), JSON.stringify(deliveryState.deliveries));
+function normalizeStatus(status) {
+    if (status === 'Retirada') return 'picked';
+    if (status === 'Devolvida') return 'returned';
+    return 'pending';
 }
 
-function buildDefaultDeliveries() {
-    const today = new Date();
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const userName = deliveryState.currentUser?.name || 'Porteiro';
-
-    return [
-        createDeliveryRecord({ code: '#98342', residentName: 'Mariana Costa', apartment: '203', block: 'A', carrier: 'Mercado Envios', carrierLine: 'Mercado Livre', date: toDateInput(today), timeWindow: '10:00 - 12:00', status: 'active', type: 'marketplace', authorizedBy: userName }),
-        createDeliveryRecord({ code: '#98122', residentName: 'Carlos Alberto', apartment: '101', block: 'A', carrier: 'Shopee Express', carrierLine: 'Shopee', date: toDateInput(today), timeWindow: '14:00 - 16:00', status: 'scheduled', type: 'store', authorizedBy: userName }),
-        createDeliveryRecord({ code: '#98011', residentName: 'Fernando Lima', apartment: '302', block: 'B', carrier: 'Loggi', carrierLine: 'Amazon', date: toDateInput(today), timeWindow: '09:00 - 11:00', status: 'active', type: 'service', authorizedBy: userName }),
-        createDeliveryRecord({ code: '#97901', residentName: 'Juliana Santos', apartment: '401', block: 'C', carrier: 'Rappi', carrierLine: 'Pão de Açúcar', date: toDateInput(today), timeWindow: '11:00 - 13:00', status: 'completed', type: 'food', authorizedBy: userName }),
-        createDeliveryRecord({ code: '#97823', residentName: 'Ricardo Ferreira', apartment: '104', block: 'C', carrier: 'Jadlog', carrierLine: 'Magazine Luiza', date: toDateInput(today), timeWindow: '15:00 - 17:00', status: 'completed', type: 'store', authorizedBy: userName }),
-        createDeliveryRecord({ code: '#97710', residentName: 'Ana Paula', apartment: '502', block: 'D', carrier: 'Total Express', carrierLine: 'Americanas', date: toDateInput(yesterday), timeWindow: '10:00 - 12:00', status: 'canceled', type: 'store', authorizedBy: userName })
-    ];
+function statusLabel(status) {
+    if (status === 'picked') return 'Retirada';
+    if (status === 'returned') return 'Devolvida';
+    return 'Aguardando retirada';
 }
 
-function createDeliveryRecord(values) {
-    return {
-        id: values.id || `delivery-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-        code: values.code || '#00000',
-        residentName: values.residentName || 'Morador',
-        apartment: values.apartment || '--',
-        block: values.block || '--',
-        carrier: values.carrier || 'Transportadora',
-        carrierLine: values.carrierLine || 'Plataforma',
-        date: values.date || new Date().toISOString().slice(0, 10),
-        timeWindow: values.timeWindow || '--:-- - --:--',
-        status: values.status || 'scheduled',
-        type: values.type || 'other',
-        authorizedBy: values.authorizedBy || 'Portaria',
-        notes: values.notes || '',
-        createdAt: values.createdAt || new Date().toISOString()
-    };
+function statusClass(status) {
+    if (status === 'picked') return 'completed';
+    if (status === 'returned') return 'canceled';
+    return 'scheduled';
 }
 
-function populateDeliveryBlockOptions() {
-    const deliveryBlockFilter = document.getElementById('deliveryBlockFilter');
-    if (!deliveryBlockFilter) return;
+function populateBlocks() {
+    const select = document.getElementById('deliveryBlockFilter');
+    if (!select) return;
+    const blocks = [...new Set(deliveryState.packages.map((pkg) => String(pkg?.block || '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+    const previous = deliveryState.filters.block;
+    select.innerHTML = '<option value="all">Todos os blocos</option>' + blocks.map((block) => `<option value="${escapeHtml(block)}">${escapeHtml(block)}</option>`).join('');
+    if (blocks.includes(previous)) select.value = previous;
+    else deliveryState.filters.block = 'all';
+}
 
-    const blocks = [...new Set(
-        deliveryState.deliveries
-            .map((delivery) => String(delivery?.block || '').trim())
-            .filter(Boolean)
-            .sort((left, right) => left.localeCompare(right, 'pt-BR'))
-    )];
-
-    deliveryBlockFilter.innerHTML = `
-        <option value="all">Todos os blocos</option>
-        ${blocks.map((block) => `<option value="${escapeHtml(block)}">${escapeHtml(block)}</option>`).join('')}
-    `;
-
-    if (deliveryState.filters.block !== 'all' && blocks.includes(deliveryState.filters.block)) {
-        deliveryBlockFilter.value = deliveryState.filters.block;
-    }
+function applyFilters() {
+    return deliveryState.packages.filter((pkg) => {
+        const normalized = normalizeStatus(pkg.status);
+        const searchBase = [pkg.id, pkg.tracking_code, pkg.package_description, pkg.recipient_name, pkg.recipient_email, pkg.carrier, pkg.apartment, pkg.block]
+            .join(' ').toLowerCase();
+        const date = toDateKey(pkg.received_at);
+        const tabOk = deliveryState.filters.tab === 'all' || normalized === deliveryState.filters.tab;
+        const statusOk = deliveryState.filters.status === 'all' || normalized === deliveryState.filters.status;
+        const searchOk = !deliveryState.filters.search || searchBase.includes(deliveryState.filters.search);
+        const blockOk = deliveryState.filters.block === 'all' || String(pkg.block || '') === deliveryState.filters.block;
+        const dateOk = !deliveryState.filters.date || date === deliveryState.filters.date;
+        return tabOk && statusOk && searchOk && blockOk && dateOk;
+    });
 }
 
 function renderDeliveryPage() {
-    const filtered = applyDeliveryFilters();
-    updateDeliveryMetrics();
-    renderDeliveryTable(filtered);
+    updateMetrics();
+    renderTable(applyFilters());
 }
 
-function updateDeliveryMetrics() {
-    const todayKey = new Date().toISOString().slice(0, 10);
-    const todayDeliveries = deliveryState.deliveries.filter((delivery) => delivery.date === todayKey);
-    setText('activeDeliveriesCount', deliveryState.deliveries.filter((delivery) => delivery.status === 'active').length);
-    setText('scheduledTodayCount', todayDeliveries.filter((delivery) => delivery.status === 'scheduled').length);
-    setText('completedTodayCount', todayDeliveries.filter((delivery) => delivery.status === 'completed').length);
-    setText('canceledTodayCount', todayDeliveries.filter((delivery) => delivery.status === 'canceled').length);
+function updateMetrics() {
+    const today = new Date().toISOString().slice(0, 10);
+    const pending = deliveryState.packages.filter((pkg) => normalizeStatus(pkg.status) === 'pending').length;
+    const receivedToday = deliveryState.packages.filter((pkg) => toDateKey(pkg.received_at) === today).length;
+    const pickedToday = deliveryState.packages.filter((pkg) => pkg.status === 'Retirada' && toDateKey(pkg.delivered_at) === today).length;
+    const returnedToday = deliveryState.packages.filter((pkg) => pkg.status === 'Devolvida' && toDateKey(pkg.delivered_at) === today).length;
+    setText('activeDeliveriesCount', pending);
+    setText('scheduledTodayCount', receivedToday);
+    setText('completedTodayCount', pickedToday);
+    setText('canceledTodayCount', returnedToday);
 }
 
-function applyDeliveryFilters() {
-    return deliveryState.deliveries.filter((delivery) => {
-        const searchBase = [
-            delivery.code,
-            delivery.residentName,
-            delivery.carrier,
-            delivery.carrierLine,
-            delivery.apartment,
-            delivery.block
-        ].join(' ').toLowerCase();
+function renderTable(packages) {
+    const tbody = document.getElementById('deliveryTableBody');
+    if (!tbody) return;
+    if (!packages.length) {
+        tbody.innerHTML = `
+            <tr><td colspan="8"><div class="empty-state">
+                <strong>Nenhuma encomenda encontrada</strong>
+                <p>As encomendas registradas no condomínio aparecerão aqui.</p>
+            </div></td></tr>`;
+        return;
+    }
 
-        const matchesTab = deliveryState.filters.tab === 'all' || delivery.status === deliveryState.filters.tab;
-        const matchesSearch = !deliveryState.filters.search || searchBase.includes(deliveryState.filters.search);
-        const matchesStatus = deliveryState.filters.status === 'all' || delivery.status === deliveryState.filters.status;
-        const matchesBlock = deliveryState.filters.block === 'all' || delivery.block === deliveryState.filters.block;
-        const matchesDate = !deliveryState.filters.date || delivery.date === deliveryState.filters.date;
-
-        return matchesTab && matchesSearch && matchesStatus && matchesBlock && matchesDate;
-    });
-}
-
-function renderDeliveryTable(deliveries) {
-    const tableBody = document.getElementById('deliveryTableBody');
-    if (!tableBody) return;
-
-    if (!deliveries.length) {
-        tableBody.innerHTML = `
+    tbody.innerHTML = packages.map((pkg) => {
+        const normalized = normalizeStatus(pkg.status);
+        const code = pkg.tracking_code || `#${pkg.id}`;
+        const received = formatDateTime(pkg.received_at);
+        const unit = [pkg.apartment ? `Apto ${pkg.apartment}` : '', pkg.block ? `Bloco ${pkg.block}` : ''].filter(Boolean);
+        return `
             <tr>
-                <td colspan="8">
-                    <div class="empty-state">
-                        <strong>Nenhuma entrega encontrada</strong>
-                        <p>Cadastre uma nova autorização ou ajuste os filtros para ver os registros do condomínio.</p>
-                    </div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
+                <td><div class="delivery-code"><strong>${escapeHtml(code)}</strong><small>${escapeHtml(pkg.package_description || 'Encomenda')}</small></div></td>
+                <td><div class="resident-cell"><span class="mini-avatar">${escapeHtml(getInitials(pkg.recipient_name))}</span><div><strong>${escapeHtml(pkg.recipient_name)}</strong><small>${escapeHtml(pkg.recipient_email || '')}</small></div></div></td>
+                <td>${unit.length ? unit.map(escapeHtml).join('<br>') : '--'}</td>
+                <td><strong>${escapeHtml(pkg.carrier || 'Não informada')}</strong></td>
+                <td><strong>${escapeHtml(received.date)}</strong><br><small>${escapeHtml(received.time)}</small></td>
+                <td><strong>${escapeHtml(pkg.received_by || '--')}</strong></td>
+                <td><span class="status-chip ${statusClass(normalized)}">${escapeHtml(statusLabel(normalized))}</span></td>
+                <td><div class="request-actions">
+                    ${normalized === 'pending' ? `<button class="icon-more" type="button" data-package-action="Retirada" data-id="${pkg.id}" title="Marcar como retirada"><i class="fas fa-check"></i></button>
+                    <button class="icon-more" type="button" data-package-action="Devolvida" data-id="${pkg.id}" title="Marcar como devolvida"><i class="fas fa-rotate-left"></i></button>` : '<span>—</span>'}
+                </div></td>
+            </tr>`;
+    }).join('');
 
-    tableBody.innerHTML = deliveries.map((delivery) => `
-        <tr>
-            <td>
-                <div class="delivery-code">
-                    <strong>Pedido ${escapeHtml(delivery.code)}</strong>
-                    <small>${escapeHtml(delivery.carrierLine)}</small>
-                </div>
-            </td>
-            <td>
-                <div class="resident-cell">
-                    <span class="mini-avatar">${getInitials(delivery.residentName)}</span>
-                    <div>
-                        <strong>${escapeHtml(delivery.residentName)}</strong>
-                        <div class="delivery-type-chip ${escapeHtml(delivery.type)}">${escapeHtml(getDeliveryTypeLabel(delivery.type))}</div>
-                    </div>
-                </div>
-            </td>
-            <td>
-                <strong>Apto ${escapeHtml(delivery.apartment)}</strong><br>
-                <small>Bloco ${escapeHtml(delivery.block)}</small>
-            </td>
-            <td>
-                <div class="carrier-cell">
-                    <strong>${escapeHtml(delivery.carrier)}</strong><br>
-                    <small>${escapeHtml(delivery.carrierLine)}</small>
-                </div>
-            </td>
-            <td>
-                <strong>${formatDate(delivery.date)}</strong><br>
-                <small>${escapeHtml(delivery.timeWindow)}</small>
-            </td>
-            <td>
-                <div class="authorizer-cell">
-                    <span class="mini-avatar">${getInitials(delivery.authorizedBy)}</span>
-                    <div>
-                        <strong>${escapeHtml(delivery.authorizedBy)}</strong><br>
-                        <small>Porteiro</small>
-                    </div>
-                </div>
-            </td>
-            <td><span class="status-chip ${escapeHtml(delivery.status)}">${escapeHtml(getStatusLabel(delivery.status))}</span></td>
-            <td>
-                <div class="request-actions">
-                    <button class="icon-more" type="button" data-action="cycle-status" data-id="${escapeHtml(delivery.id)}" title="Alterar status">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="icon-more" type="button" title="Detalhes">
-                        <i class="fas fa-ellipsis-vertical"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-
-    tableBody.querySelectorAll('[data-action="cycle-status"]').forEach((button) => {
-        button.addEventListener('click', () => {
-            cycleDeliveryStatus(button.dataset.id);
-        });
+    tbody.querySelectorAll('[data-package-action]').forEach((button) => {
+        button.addEventListener('click', () => changePackageStatus(Number(button.dataset.id), button.dataset.packageAction));
     });
 }
 
-function setActiveDeliveryTab(nextTab) {
-    deliveryState.filters.tab = nextTab;
-    document.querySelectorAll('#deliveryTabs .status-tab').forEach((button) => {
-        button.classList.toggle('active', button.dataset.tab === nextTab);
+async function changePackageStatus(id, status) {
+    try {
+        await rpc('condomit_set_package_status', { package_id: id, next_status: status });
+        window.showToast?.(`Encomenda marcada como ${status.toLowerCase()}.`, 'success');
+        await loadPackages();
+    } catch (error) {
+        window.showToast?.(error?.message || 'Não foi possível alterar a encomenda.', 'error');
+    }
+}
+
+function syncTabs() {
+    document.querySelectorAll('#deliveryTabs [data-tab]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.tab === deliveryState.filters.tab);
     });
 }
 
-function cycleDeliveryStatus(deliveryId) {
-    const sequence = ['scheduled', 'active', 'completed', 'canceled'];
-    const index = deliveryState.deliveries.findIndex((delivery) => delivery.id === deliveryId);
-    if (index === -1) return;
-    const current = deliveryState.deliveries[index].status;
-    const next = sequence[(sequence.indexOf(current) + 1) % sequence.length];
-    deliveryState.deliveries[index].status = next;
-    saveDeliveries();
-    renderDeliveryPage();
+function toDateKey(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
 }
 
-function handleDeliverySubmit(event) {
-    event.preventDefault();
-
-    const residentName = document.getElementById('deliveryResidentName')?.value.trim();
-    const code = document.getElementById('deliveryCode')?.value.trim();
-    const apartment = document.getElementById('deliveryApartment')?.value.trim();
-    const block = document.getElementById('deliveryBlock')?.value.trim();
-    const carrier = document.getElementById('deliveryCarrier')?.value.trim();
-    const type = document.getElementById('deliveryType')?.value;
-    const date = document.getElementById('deliveryDate')?.value;
-    const timeWindow = document.getElementById('deliveryWindow')?.value.trim();
-    const notes = document.getElementById('deliveryNotes')?.value.trim();
-    const feedback = document.getElementById('deliveryFeedback');
-
-    if (!residentName || !code || !apartment || !block || !carrier || !type || !date || !timeWindow) {
-        if (feedback) {
-            feedback.dataset.state = 'error';
-            feedback.textContent = 'Preencha todos os campos obrigatórios da entrega.';
-        }
-        return;
-    }
-
-    deliveryState.deliveries.unshift(createDeliveryRecord({
-        code,
-        residentName,
-        apartment,
-        block,
-        carrier,
-        carrierLine: 'Cadastro manual',
-        date,
-        timeWindow,
-        status: 'scheduled',
-        type,
-        authorizedBy: deliveryState.currentUser?.name || 'Porteiro',
-        notes
-    }));
-
-    saveDeliveries();
-    populateDeliveryBlockOptions();
-    renderDeliveryPage();
-    event.target.reset();
-    const deliveryDate = document.getElementById('deliveryDate');
-    if (deliveryDate) deliveryDate.value = new Date().toISOString().slice(0, 10);
-
-    if (feedback) {
-        feedback.dataset.state = 'success';
-        feedback.textContent = 'Entrega autorizada com sucesso.';
-    }
-
-    setTimeout(() => {
-        closeDeliveryModal();
-    }, 700);
-}
-
-function openDeliveryModal() {
-    const modal = document.getElementById('deliveryModal');
-    if (!modal) return;
-    modal.classList.add('active');
-    modal.setAttribute('aria-hidden', 'false');
-}
-
-function closeDeliveryModal() {
-    const modal = document.getElementById('deliveryModal');
-    const form = document.getElementById('deliveryForm');
-    const feedback = document.getElementById('deliveryFeedback');
-    if (feedback) {
-        feedback.textContent = '';
-        delete feedback.dataset.state;
-    }
-    form?.reset();
-    const deliveryDate = document.getElementById('deliveryDate');
-    if (deliveryDate) deliveryDate.value = new Date().toISOString().slice(0, 10);
-    if (!modal) return;
-    modal.classList.remove('active');
-    modal.setAttribute('aria-hidden', 'true');
-}
-
-function getStatusLabel(status) {
-    if (status === 'active') return 'Ativa';
-    if (status === 'scheduled') return 'Agendada';
-    if (status === 'completed') return 'Concluída';
-    return 'Cancelada';
-}
-
-function getDeliveryTypeLabel(type) {
-    if (type === 'marketplace') return 'Marketplace';
-    if (type === 'store') return 'Loja';
-    if (type === 'food') return 'Entrega';
-    if (type === 'service') return 'Serviço';
-    return 'Outros';
-}
-
-function toDateInput(value) {
-    return new Date(value).toISOString().slice(0, 10);
-}
-
-function setText(id, value) {
-    const element = document.getElementById(id);
-    if (element) element.textContent = String(value);
+function formatDateTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return { date: '--', time: '--' };
+    return {
+        date: date.toLocaleDateString('pt-BR'),
+        time: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
 }
 
 function getInitials(name) {
-    return String(name || '')
-        .split(' ')
-        .filter(Boolean)
-        .map((part) => part[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2) || 'ET';
+    return String(name || 'US').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').toUpperCase().slice(0, 2) || 'US';
 }
-
-function formatDate(value) {
-    const [year, month, day] = String(value || '').split('-');
-    return year && month && day ? `${day}/${month}/${year}` : '--/--/----';
-}
-
-function escapeHtml(text) {
-    return String(text || '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
-
-function logout() {
-    if (typeof window.performFullLogout === 'function') { window.performFullLogout(); return; }
-    sessionStorage.removeItem('condominiumUser');
-    try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
-    window.location.href = '../inicio.html';
+function setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = String(value); }
+function escapeHtml(value) {
+    return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 }

@@ -411,9 +411,22 @@ class ProfilePhotoEditor {
     }
 
     try {
-      await updateUserByEmail(currentUser.email, { profilePhoto: imageData });
+      if (typeof window.supabaseFetch === 'function') {
+        await window.supabaseFetch('/rpc/condomit_save_profile_photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photo_data: imageData })
+        });
+      } else if (typeof updateUserByEmail === 'function') {
+        await updateUserByEmail(currentUser.email, { profile_photo: imageData });
+      }
+      currentUser.profile_photo = imageData;
+      currentUser.profilePhoto = imageData;
+      sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
+      window.showToast?.('Foto de perfil salva.', 'success');
     } catch (error) {
       console.error('Erro ao salvar foto no banco de dados:', error);
+      window.showToast?.('A foto foi atualizada nesta sessão, mas não foi possível salvá-la no banco.', 'error');
     }
   }
 
@@ -436,6 +449,7 @@ let profilePhotoEditor;
 
 document.addEventListener('DOMContentLoaded', () => {
   profilePhotoEditor = new ProfilePhotoEditor();
+  window.profilePhotoEditor = profilePhotoEditor;
 
   const photoInput = document.getElementById('profile-photo-input');
   if (photoInput) {

@@ -47,6 +47,51 @@ document.addEventListener('DOMContentLoaded', async function() {
         return String(user.user_type || user.type || '').trim().toLowerCase();
     }
 
+    async function resolveCompletedCondominium(user) {
+        let cep = '';
+        try {
+            if (typeof window.supabaseFetch === 'function') {
+                const result = await window.supabaseFetch('/rpc/condomit_current_user_cep', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}'
+                });
+                if (typeof result === 'string') cep = result;
+            }
+        } catch (error) {
+            console.warn('[LOGIN] Não foi possível consultar o vínculo do condomínio:', error?.message || error);
+        }
+
+        if (!cep) return null;
+
+        let currentCondo = user?.condominium && typeof user.condominium === 'object'
+            ? { ...user.condominium }
+            : {};
+
+        try {
+            const rows = await window.supabaseFetch(
+                `/condominiums?select=cep,condominium_name&cep=eq.${encodeURIComponent(cep)}&limit=1`
+            );
+            const condo = Array.isArray(rows) ? rows[0] : rows;
+            if (condo) {
+                currentCondo = {
+                    ...currentCondo,
+                    cep: condo.cep || cep,
+                    condominium_id: condo.cep || cep,
+                    name: condo.condominium_name || currentCondo.name || 'Condomínio'
+                };
+            }
+        } catch (_) {
+            currentCondo = {
+                ...currentCondo,
+                cep,
+                condominium_id: cep
+            };
+        }
+
+        return currentCondo;
+    }
+
     async function redirectByUserType(user) {
         const type = getNormalizedUserType(user);
         user.type = type;
@@ -80,7 +125,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 window.location.href = 'entrar-condominio.html';
             }
         } else if (type === 'porteiro') {
-            if (user.condominium) {
+            // O porteiro só vai para a página de concluir cadastro quando realmente
+            // não existe vínculo em user_condominiums. Não usamos flags temporárias.
+            const linkedCondominium = await resolveCompletedCondominium(user);
+            if (linkedCondominium) {
+                user.condominium = linkedCondominium;
+                sessionStorage.setItem('condominiumUser', JSON.stringify(user));
                 window.location.href = 'index-porteiro.html';
             } else {
                 window.location.href = 'entrar-condominio-porteiro.html';
@@ -519,7 +569,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             const loadedUser = {
                 ...rawUser,
                 id: authData.user.id,
-                type: getNormalizedUserType(rawUser)
+                type: getNormalizedUserType(rawUser),
+                profilePhoto: rawUser.profile_photo || rawUser.profilePhoto || null
             };
 
             sessionStorage.setItem(
