@@ -3266,33 +3266,33 @@ async function performFullLogout(
 async function listServiceProvidersByCep(
   cep
 ) {
-  const cepClean =
-    String(
-      cep || ''
-    )
+  const cepDigits =
+    String(cep || '')
       .replace(/\D/g, '');
 
-  if (!cepClean) {
+  if (cepDigits.length !== 8) {
     return [];
   }
 
   try {
-    const data =
-      await supabaseFetch(
-        `/service_providers?select=*&cep=eq.${encodeURIComponent(
-          cepClean
-        )}&order=service_date.desc,created_at.desc`
-      );
+    /*
+     * A policy RLS já limita a leitura ao(s) condomínio(s) do usuário.
+     * Buscamos os registros permitidos e comparamos o CEP sem máscara
+     * para aceitar tanto 04284-070 quanto 04284070.
+     */
+    const data = await supabaseFetch(
+      '/service_providers?select=*&order=service_date.desc,created_at.desc'
+    );
 
-    return Array.isArray(data)
-      ? data
-      : [];
+    return (Array.isArray(data) ? data : [])
+      .filter((row) =>
+        String(row?.cep || '').replace(/\D/g, '') === cepDigits
+      );
   } catch (error) {
     console.error(
       'Erro ao listar prestadores por CEP:',
       error
     );
-
     return [];
   }
 }
@@ -3300,235 +3300,140 @@ async function listServiceProvidersByCep(
 async function createServiceProvider(
   payload
 ) {
-  const cepClean =
-    String(
-      payload?.cep || ''
-    )
+  const cepDigits =
+    String(payload?.cep || '')
       .replace(/\D/g, '');
 
+  const cep =
+    cepDigits.length === 8
+      ? `${cepDigits.slice(0, 5)}-${cepDigits.slice(5)}`
+      : '';
+
   const normalizedEmail =
-    String(
-      payload?.email || ''
-    )
+    String(payload?.email || '')
       .trim()
       .toLowerCase();
 
-  if (
-    !cepClean ||
-    !normalizedEmail
-  ) {
+  if (!cep || !normalizedEmail) {
     throw new Error(
       'CEP e e-mail são obrigatórios.'
     );
   }
 
-  const row = {
-    email:
-      normalizedEmail,
-
-    cep:
-      cepClean,
-
-    provider_name:
-      String(
-        payload?.provider_name ||
-        payload?.name ||
-        ''
-      ).trim(),
-
-    company:
-      String(
-        payload?.company ||
-        ''
-      ).trim(),
-
-    service:
-      String(
-        payload?.service ||
-        ''
-      ).trim(),
-
-    category:
-      String(
-        payload?.category ||
-        'cleaning'
-      ).trim(),
-
-    phone:
-      String(
-        payload?.phone ||
-        ''
-      ).trim(),
-
-    service_date:
-      String(
-        payload?.service_date ||
-        payload?.visitDate ||
-        new Date()
-          .toISOString()
-          .slice(0, 10)
-      ).slice(0, 10),
-
-    service_window:
-      String(
-        payload?.service_window ||
-        payload?.visitWindow ||
-        '--'
-      ).trim(),
-
-    initial_status:
-      String(
-        payload?.initial_status ||
-        payload?.status ||
-        'agendado'
-      ).trim()
+  const statusAliases = {
+    scheduled: 'agendado',
+    agendado: 'agendado',
+    active: 'em andamento',
+    in_progress: 'em andamento',
+    'em andamento': 'em andamento',
+    completed: 'concluído',
+    concluido: 'concluído',
+    'concluído': 'concluído',
+    inactive: 'cancelado',
+    blocked: 'cancelado',
+    cancelado: 'cancelado'
   };
 
-  const validStatuses = [
-    'agendado',
-    'em andamento',
-    'concluído',
-    'cancelado'
-  ];
-
-  if (
-    !validStatuses.includes(
-      row.initial_status
+  const requestedStatus =
+    String(
+      payload?.initial_status ||
+      payload?.status ||
+      'agendado'
     )
-  ) {
-    row.initial_status =
-      'agendado';
+      .trim()
+      .toLowerCase();
+
+  const row = {
+    email: normalizedEmail,
+    cep,
+    provider_name: String(
+      payload?.provider_name ||
+      payload?.name ||
+      ''
+    ).trim(),
+    company: String(payload?.company || '').trim(),
+    service: String(payload?.service || '').trim(),
+    category: String(payload?.category || 'cleaning').trim(),
+    phone: String(payload?.phone || '').trim(),
+    service_date: String(
+      payload?.service_date ||
+      payload?.visitDate ||
+      new Date().toISOString().slice(0, 10)
+    ).slice(0, 10),
+    service_window: String(
+      payload?.service_window ||
+      payload?.visitWindow ||
+      '--'
+    ).trim(),
+    initial_status:
+      statusAliases[requestedStatus] ||
+      'agendado'
+  };
+
+  if (!row.provider_name || !row.company || !row.service || !row.phone) {
+    throw new Error(
+      'Preencha todos os campos obrigatórios do prestador.'
+    );
   }
 
   const accessToken =
     await resolveSupabaseAccessToken();
 
-  try {
-    const proxyResponse =
-      await fetch(
-        '/api/service_providers',
-        {
-          method: 'POST',
-
-          headers: {
-            'Content-Type':
-              'application/json',
-
-            ...(
-              accessToken
-                ? {
-                    Authorization:
-                      `Bearer ${accessToken}`
-                  }
-                : {}
-            )
-          },
-
-          body:
-            JSON.stringify(
-              row
-            )
-        }
-      );
-
-    const proxyText =
-      await proxyResponse.text();
-
-    let proxyData;
-
-    try {
-      proxyData =
-        proxyText
-          ? JSON.parse(
-              proxyText
-            )
-          : null;
-    } catch (_) {
-      proxyData =
-        proxyText;
-    }
-
-    if (
-      proxyResponse.ok &&
-      proxyData
-    ) {
-      return Array.isArray(
-        proxyData
-      )
-        ? proxyData[0]
-        : proxyData;
-    }
-  } catch (proxyErr) {
-    console.warn(
-      'createServiceProvider API proxy falhou, tentando Supabase direto:',
-      proxyErr?.message ||
-      proxyErr
+  if (!accessToken) {
+    throw new Error(
+      'Sua sessão expirou. Entre novamente antes de cadastrar o prestador.'
     );
   }
 
   try {
-    const data =
-      await supabaseFetch(
-        '/service_providers',
-        {
-          method: 'POST',
+    const data = await supabaseFetch(
+      '/service_providers',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify(row)
+      }
+    );
 
-          headers: {
-            Prefer:
-              'return=representation'
-          },
-
-          body:
-            JSON.stringify(
-              row
-            )
-        }
-      );
-
-    return Array.isArray(data)
+    const saved = Array.isArray(data)
       ? data[0]
       : data;
-  } catch (error) {
-    const msg =
-      String(
-        error?.message ||
-        error ||
-        ''
+
+    if (!saved) {
+      throw new Error(
+        'O Supabase não confirmou o cadastro do prestador.'
       );
+    }
+
+    return saved;
+  } catch (error) {
+    const msg = String(
+      error?.message ||
+      error ||
+      ''
+    );
 
     if (
       msg.includes('23505') ||
-      msg
-        .toLowerCase()
-        .includes(
-          'duplicate'
-        ) ||
-      msg
-        .toLowerCase()
-        .includes(
-          'already exists'
-        )
+      /duplicate|already exists/i.test(msg)
     ) {
       throw new Error(
         'Já existe um prestador cadastrado com este e-mail.'
       );
     }
 
-    if (
-      msg
-        .toLowerCase()
-        .includes(
-          'row-level security'
-        ) ||
-      msg
-        .toLowerCase()
-        .includes('rls') ||
-      msg
-        .toLowerCase()
-        .includes('policy')
-    ) {
+    if (/row-level security|\brls\b|policy/i.test(msg)) {
       throw new Error(
-        'O Supabase bloqueou o cadastro do prestador pelas regras de segurança. Verifique a sessão e a policy RLS.'
+        'O Supabase bloqueou o cadastro do prestador. Execute a migration 011 e confirme que a conta pertence ao mesmo condomínio.'
+      );
+    }
+
+    if (/foreign key|cep.*not found|condomínio não encontrado/i.test(msg)) {
+      throw new Error(
+        'O CEP do condomínio não corresponde a um condomínio cadastrado.'
       );
     }
 

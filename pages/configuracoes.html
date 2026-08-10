@@ -6,8 +6,8 @@
     <title>Condomit - Configurações</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/index.css?v=010">
-    <link rel="stylesheet" href="../styles/configuracoes.css">
+    <link rel="stylesheet" href="../styles/index.css?v=011">
+    <link rel="stylesheet" href="../styles/configuracoes.css?v=011">
     <link rel="stylesheet" href="../styles/theme.css">
     <link rel="stylesheet" href="../styles/profile-photo-editor.css">
 </head>
@@ -385,9 +385,10 @@
     </div>
 
     <script src="../scripts/supabase-client.js"></script>
-    <script src="../scripts/sidebar-links.js?v=010"></script>
+    <script type="module" src="../scripts/supabase-auth.js"></script>
+    <script src="../scripts/sidebar-links.js?v=011"></script>
     <script src="../scripts/visitor-registration.js"></script>
-    <script src="../scripts/configuracoes.js"></script>
+    <script src="../scripts/configuracoes.js?v=011"></script>
     <script src="../scripts/profile-photo-editor.js"></script>
 
     <div class="reservas-modal-overlay" id="reservasModal">
@@ -436,56 +437,90 @@
         </div>
     </div>
 
-    <div class="reservas-modal-overlay" id="visitorAccessModal">
-        <div class="reservas-modal-card condo-modal-card">
+    <div class="reservas-modal-overlay" id="visitorAccessModal" aria-hidden="true">
+        <div class="reservas-modal-card condo-modal-card access-registration-modal">
             <div class="reservas-modal-header">
                 <div>
-                    <h3>Registrar visitante</h3>
-                    <p>Cadastre apenas as informações do visitante. O responsável será você.</p>
+                    <h3 id="accessRegistrationTitle">Controle de acesso</h3>
+                    <p id="accessRegistrationSubtitle">Escolha o que deseja registrar.</p>
                 </div>
                 <button type="button" class="reservas-modal-close" id="visitorAccessModalClose" aria-label="Fechar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="reservas-modal-body">
-                <form id="visitorAccessForm" class="visitor-access-form">
+                <section class="access-kind-selector" id="accessKindSelector">
+                    <button type="button" class="access-kind-card" data-access-kind="visitor">
+                        <i class="fas fa-user-plus"></i>
+                        <strong>Visitante</strong>
+                        <span>Autorize uma pessoa a visitar sua unidade.</span>
+                    </button>
+                    <button type="button" class="access-kind-card" data-access-kind="dependent">
+                        <i class="fas fa-people-roof"></i>
+                        <strong>Dependente</strong>
+                        <span>Cadastre um dependente ligado à sua unidade.</span>
+                    </button>
+                    <button type="button" class="access-kind-card" data-access-kind="vehicle">
+                        <i class="fas fa-car-side"></i>
+                        <strong>Carro</strong>
+                        <span>Cadastre um veículo autorizado no condomínio.</span>
+                    </button>
+                </section>
+
+                <form id="visitorAccessForm" class="visitor-access-form access-registration-form" hidden>
+                    <button type="button" class="access-back-btn" data-access-back><i class="fas fa-arrow-left"></i> Voltar</button>
                     <div class="visitor-access-grid">
-                        <label>
-                            <span>Nome completo</span>
-                            <input type="text" data-field="visitor-full-name" placeholder="Digite o nome completo" required>
-                        </label>
-                        <label>
-                            <span>CPF</span>
-                            <input type="text" data-field="visitor-cpf" placeholder="Digite o CPF" required>
-                        </label>
-                        <label>
-                            <span>RG</span>
-                            <input type="text" data-field="visitor-rg" placeholder="Digite o RG" required>
-                        </label>
-                        <label>
-                            <span>Telefone do visitante</span>
-                            <input type="text" data-field="visitor-phone" placeholder="(11) 99999-9999">
-                        </label>
-                        <label class="visitor-access-email">
-                            <span>E-mail</span>
-                            <input type="email" data-field="visitor-email" placeholder="visitante@email.com">
-                        </label>
+                        <label><span>Nome completo</span><input type="text" data-field="visitor-full-name" placeholder="Digite o nome completo" required></label>
+                        <label><span>CPF</span><input type="text" data-field="visitor-cpf" placeholder="Digite o CPF" required></label>
+                        <label><span>RG</span><input type="text" data-field="visitor-rg" placeholder="Digite o RG" required></label>
+                        <label><span>Telefone do visitante</span><input type="text" data-field="visitor-phone" placeholder="(11) 99999-9999"></label>
+                        <label class="visitor-access-email"><span>E-mail</span><input type="email" data-field="visitor-email" placeholder="visitante@email.com"></label>
                         <input type="hidden" data-field="responsible-cpf">
                         <input type="hidden" data-field="responsible-name">
                         <input type="hidden" data-field="responsible-phone">
                         <input type="hidden" data-field="responsible-apartment">
                         <input type="hidden" data-field="responsible-block">
                     </div>
-
                     <div class="visitor-feedback" data-role="visitor-feedback"></div>
-
                     <div class="reservas-modal-footer visitor-access-footer">
                         <button type="button" class="btn-edit-profile" data-action="cancel-visitor">Cancelar</button>
                         <button type="submit" class="btn-edit-profile visitor-submit-btn" data-action="submit-visitor">Registrar visitante</button>
                     </div>
                 </form>
+
+                <form id="dependentAccessForm" class="visitor-access-form access-registration-form" hidden>
+                    <button type="button" class="access-back-btn" data-access-back><i class="fas fa-arrow-left"></i> Voltar</button>
+                    <div class="visitor-access-grid">
+                        <label><span>Nome completo</span><input id="dependentFullName" type="text" maxlength="120" required></label>
+                        <label><span>CPF</span><input id="dependentCpf" type="text" maxlength="14" placeholder="000.000.000-00"></label>
+                        <label><span>Parentesco</span><input id="dependentRelationship" type="text" maxlength="60" placeholder="Ex.: Filho(a), responsável" required></label>
+                        <label><span>Telefone</span><input id="dependentPhone" type="text" maxlength="25" placeholder="(11) 99999-9999"></label>
+                        <label class="visitor-access-email"><span>Data de nascimento</span><input id="dependentBirthDate" type="date"></label>
+                    </div>
+                    <div class="visitor-feedback" data-role="dependent-feedback"></div>
+                    <div class="reservas-modal-footer visitor-access-footer">
+                        <button type="button" class="btn-edit-profile" data-access-back>Cancelar</button>
+                        <button type="submit" class="btn-edit-profile visitor-submit-btn">Registrar dependente</button>
+                    </div>
+                </form>
+
+                <form id="vehicleAccessForm" class="visitor-access-form access-registration-form" hidden>
+                    <button type="button" class="access-back-btn" data-access-back><i class="fas fa-arrow-left"></i> Voltar</button>
+                    <div class="visitor-access-grid">
+                        <label><span>Placa</span><input id="vehiclePlate" type="text" maxlength="10" placeholder="ABC1D23" required></label>
+                        <label><span>Modelo</span><input id="vehicleModel" type="text" maxlength="100" placeholder="Ex.: Honda Civic" required></label>
+                        <label><span>Cor</span><input id="vehicleColor" type="text" maxlength="50" placeholder="Ex.: Preto"></label>
+                        <label><span>Observações</span><input id="vehicleNotes" type="text" maxlength="180" placeholder="Opcional"></label>
+                    </div>
+                    <div class="visitor-feedback" data-role="vehicle-feedback"></div>
+                    <div class="reservas-modal-footer visitor-access-footer">
+                        <button type="button" class="btn-edit-profile" data-access-back>Cancelar</button>
+                        <button type="submit" class="btn-edit-profile visitor-submit-btn">Registrar carro</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+    <script src="../scripts/topbar-actions.js?v=011"></script>
 </body>
 </html>

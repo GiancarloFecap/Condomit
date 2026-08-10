@@ -791,6 +791,67 @@ function closeCondominiumInfoModal() {
 }
 
 let visitorAccessFormBound = false;
+let accessRegistrationBound = false;
+
+function setAccessFeedback(role, message = '', state = 'info') {
+    const el = document.querySelector(`[data-role="${role}"]`);
+    if (!el) return;
+    el.textContent = message;
+    el.dataset.state = state;
+    el.style.display = message ? 'block' : 'none';
+}
+
+function showAccessRegistrationStep(kind = 'selector') {
+    const selector = document.getElementById('accessKindSelector');
+    const visitorForm = document.getElementById('visitorAccessForm');
+    const dependentForm = document.getElementById('dependentAccessForm');
+    const vehicleForm = document.getElementById('vehicleAccessForm');
+    const title = document.getElementById('accessRegistrationTitle');
+    const subtitle = document.getElementById('accessRegistrationSubtitle');
+
+    if (selector) selector.hidden = kind !== 'selector';
+    if (visitorForm) visitorForm.hidden = kind !== 'visitor';
+    if (dependentForm) dependentForm.hidden = kind !== 'dependent';
+    if (vehicleForm) vehicleForm.hidden = kind !== 'vehicle';
+
+    const copy = {
+        selector: ['Controle de acesso', 'Escolha o que deseja registrar.'],
+        visitor: ['Registrar visitante', 'Cadastre o visitante. O responsável será você.'],
+        dependent: ['Registrar dependente', 'Cadastre uma pessoa vinculada à sua unidade.'],
+        vehicle: ['Registrar carro', 'Cadastre um veículo autorizado para sua unidade.']
+    }[kind] || ['Controle de acesso', 'Escolha o que deseja registrar.'];
+
+    if (title) title.textContent = copy[0];
+    if (subtitle) subtitle.textContent = copy[1];
+}
+
+async function getAccessRegistrationContext() {
+    const currentUser = getCurrentUser();
+    if (!currentUser?.email) {
+        throw new Error('Sessão inválida. Entre novamente.');
+    }
+
+    let cep = '';
+    if (typeof window.resolveUserCondominiumCep === 'function') {
+        cep = await window.resolveUserCondominiumCep(currentUser).catch(() => '');
+    }
+
+    if (!cep) {
+        const condo = typeof currentUser.condominium === 'object' ? currentUser.condominium : {};
+        const digits = String(condo?.cep || condo?.condominium_id || currentUser?.cep || '').replace(/\D/g, '');
+        if (digits.length === 8) cep = `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    }
+
+    if (!cep) {
+        throw new Error('Não foi possível identificar o condomínio da sua unidade.');
+    }
+
+    return {
+        currentUser,
+        email: String(currentUser.email).trim().toLowerCase(),
+        cep
+    };
+}
 
 function ensureVisitorAccessModal() {
     const modal = document.getElementById('visitorAccessModal');
@@ -802,11 +863,93 @@ function ensureVisitorAccessModal() {
             if (event.target === modal) closeVisitorAccessModal();
         });
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && modal.classList.contains('open')) {
-                closeVisitorAccessModal();
-            }
+            if (event.key === 'Escape' && modal.classList.contains('open')) closeVisitorAccessModal();
         });
         modal.dataset.bound = 'true';
+    }
+
+    if (!accessRegistrationBound) {
+        modal.querySelectorAll('[data-access-kind]').forEach((button) => {
+            button.addEventListener('click', () => showAccessRegistrationStep(button.dataset.accessKind));
+        });
+        modal.querySelectorAll('[data-access-back]').forEach((button) => {
+            button.addEventListener('click', () => showAccessRegistrationStep('selector'));
+        });
+
+        document.getElementById('dependentAccessForm')?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const submit = form.querySelector('button[type="submit"]');
+            const original = submit?.innerHTML;
+            if (submit) { submit.disabled = true; submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; }
+            setAccessFeedback('dependent-feedback');
+            try {
+                const ctx = await getAccessRegistrationContext();
+                const fullName = document.getElementById('dependentFullName')?.value.trim() || '';
+                const relationship = document.getElementById('dependentRelationship')?.value.trim() || '';
+                if (!fullName || !relationship) throw new Error('Informe nome e parentesco.');
+                const rows = await window.supabaseFetch('/access_dependents', {
+                    method: 'POST',
+                    headers: { Prefer: 'return=representation' },
+                    body: JSON.stringify({
+                        cep: ctx.cep,
+                        user_email: ctx.email,
+                        full_name: fullName,
+                        cpf: document.getElementById('dependentCpf')?.value.trim() || null,
+                        relationship,
+                        phone: document.getElementById('dependentPhone')?.value.trim() || null,
+                        birth_date: document.getElementById('dependentBirthDate')?.value || null
+                    })
+                });
+                if (!Array.isArray(rows) || !rows[0]?.id) throw new Error('O banco não confirmou o dependente.');
+                form.reset();
+                window.showToast?.('Dependente registrado com sucesso.', 'success');
+                closeVisitorAccessModal();
+            } catch (error) {
+                setAccessFeedback('dependent-feedback', error.message || 'Erro ao registrar dependente.', 'error');
+            } finally {
+                if (submit) { submit.disabled = false; submit.innerHTML = original || 'Registrar dependente'; }
+            }
+        });
+
+        document.getElementById('vehicleAccessForm')?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const submit = form.querySelector('button[type="submit"]');
+            const original = submit?.innerHTML;
+            if (submit) { submit.disabled = true; submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...'; }
+            setAccessFeedback('vehicle-feedback');
+            try {
+                const ctx = await getAccessRegistrationContext();
+                const plate = document.getElementById('vehiclePlate')?.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') || '';
+                const model = document.getElementById('vehicleModel')?.value.trim() || '';
+                if (plate.length < 7 || !model) throw new Error('Informe uma placa e um modelo válidos.');
+                const rows = await window.supabaseFetch('/access_vehicles', {
+                    method: 'POST',
+                    headers: { Prefer: 'return=representation' },
+                    body: JSON.stringify({
+                        cep: ctx.cep,
+                        user_email: ctx.email,
+                        plate,
+                        model,
+                        color: document.getElementById('vehicleColor')?.value.trim() || null,
+                        notes: document.getElementById('vehicleNotes')?.value.trim() || null
+                    })
+                });
+                if (!Array.isArray(rows) || !rows[0]?.id) throw new Error('O banco não confirmou o veículo.');
+                form.reset();
+                window.showToast?.('Carro registrado com sucesso.', 'success');
+                closeVisitorAccessModal();
+            } catch (error) {
+                const message = /duplicate|unique|23505/i.test(String(error?.message || ''))
+                    ? 'Este veículo já está cadastrado no condomínio.'
+                    : (error.message || 'Erro ao registrar veículo.');
+                setAccessFeedback('vehicle-feedback', message, 'error');
+            } finally {
+                if (submit) { submit.disabled = false; submit.innerHTML = original || 'Registrar carro'; }
+            }
+        });
+        accessRegistrationBound = true;
     }
 
     if (!visitorAccessFormBound && window.visitorRegistration) {
@@ -816,7 +959,8 @@ function ensureVisitorAccessModal() {
             window.visitorRegistration.initForm(form, {
                 currentUser,
                 lockResponsibleToCurrentUser: true,
-                onCancel: closeVisitorAccessModal
+                onCancel: () => showAccessRegistrationStep('selector'),
+                onSuccess: () => closeVisitorAccessModal()
             });
             visitorAccessFormBound = true;
         }
@@ -828,23 +972,22 @@ function ensureVisitorAccessModal() {
 function openVisitorAccessModal() {
     const modal = ensureVisitorAccessModal();
     if (!modal) return;
-    const form = document.getElementById('visitorAccessForm');
-    const currentUser = getCurrentUser();
-    form?.reset();
-    if (form && currentUser && window.visitorRegistration?.syncLockedResponsible) {
-        window.visitorRegistration.syncLockedResponsible(form, currentUser);
-    }
-    const feedback = form?.querySelector('[data-role="visitor-feedback"]');
-    if (feedback) {
-        feedback.textContent = '';
-        feedback.dataset.state = 'info';
-        feedback.style.display = 'none';
-    }
+    document.getElementById('visitorAccessForm')?.reset();
+    document.getElementById('dependentAccessForm')?.reset();
+    document.getElementById('vehicleAccessForm')?.reset();
+    setAccessFeedback('visitor-feedback');
+    setAccessFeedback('dependent-feedback');
+    setAccessFeedback('vehicle-feedback');
+    showAccessRegistrationStep('selector');
     modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
 }
 
 function closeVisitorAccessModal() {
-    document.getElementById('visitorAccessModal')?.classList.remove('open');
+    const modal = document.getElementById('visitorAccessModal');
+    modal?.classList.remove('open');
+    modal?.setAttribute('aria-hidden', 'true');
+    showAccessRegistrationStep('selector');
 }
 
 async function fetchCurrentCondominiumInfo() {

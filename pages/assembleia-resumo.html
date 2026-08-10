@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Ata da Assembleia</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css?v=011">
+    <link rel="stylesheet" href="../styles/theme.css">
+    <link rel="stylesheet" href="../styles/assembleia-resumo.css?v=011">
+</head>
+<body>
+<div class="dashboard-sindico">
+    <aside class="sidebar"><div class="sidebar-header"><img src="../assets/Logo-Lado.png" alt="Condomit" class="sidebar-logo"><h2 class="condo-name" id="sidebarApartment"></h2></div></aside>
+    <main class="main-content">
+        <header class="top-bar">
+            <div class="top-bar-left"><h1>Ata da Assembleia</h1><p>Histórico consolidado da reunião realizada.</p></div>
+            <div class="top-bar-right">
+                <div class="top-icons">
+                    <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                    <button class="icon-btn"><i class="fas fa-video"></i></button>
+                    <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                    <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                </div>
+                <div class="user-profile-small"><div class="user-info-small"><div class="name" id="profileNameTop">Usuário</div><div class="type" id="profileTypeTop">Morador</div></div><div class="avatar" id="profileAvatarTop">US</div></div>
+            </div>
+        </header>
+
+        <section class="assembly-summary-page">
+            <div class="summary-back-row"><a class="summary-back" href="assembleia.html"><i class="fas fa-arrow-left"></i> Voltar para assembleias</a></div>
+            <section class="summary-hero card-shell" id="assemblySummaryHero"><div class="summary-loading"><i class="fas fa-spinner fa-spin"></i> Carregando assembleia...</div></section>
+
+            <nav class="summary-tabs" aria-label="Seções da ata">
+                <button class="summary-tab active" type="button" data-summary-tab="ata">Resumo / Ata</button>
+                <button class="summary-tab" type="button" data-summary-tab="votacoes">Votações</button>
+                <button class="summary-tab" type="button" data-summary-tab="comentarios">Comentários</button>
+            </nav>
+
+            <section class="summary-panel active" data-summary-panel="ata">
+                <div class="card-shell summary-section"><div class="section-title"><div><h2>Ata da assembleia</h2><p>Eventos persistidos pelo Condomit em ordem cronológica.</p></div></div><div id="assemblyMinutes" class="minutes-content"></div></div>
+            </section>
+
+            <section class="summary-panel" data-summary-panel="votacoes">
+                <div class="card-shell summary-section"><div class="section-title"><div><h2>Votações realizadas</h2><p>Opções originais e totais registrados durante a assembleia.</p></div></div><div id="assemblyPollResults" class="poll-results-list"></div></div>
+            </section>
+
+            <section class="summary-panel" data-summary-panel="comentarios">
+                <div class="card-shell summary-section">
+                    <div class="section-title"><div><h2>Comentários após a reunião</h2><p>Comentários ficam identificados por autor e horário.</p></div></div>
+                    <form id="postAssemblyCommentForm" class="post-comment-form"><textarea id="postAssemblyComment" maxlength="1000" rows="3" placeholder="Escreva um comentário sobre a assembleia..." required></textarea><button type="submit" class="summary-primary"><i class="fas fa-paper-plane"></i> Comentar</button></form>
+                    <div id="assemblyPostComments" class="comments-list"></div>
+                </div>
+            </section>
+        </section>
+    </main>
+</div>
+<script src="../scripts/supabase-client.js"></script>
+<script type="module" src="../scripts/supabase-auth.js"></script>
+<script src="../scripts/sidebar-links.js?v=011"></script>
+<script src="../scripts/assembly/assembly-summary.js?v=011"></script>
+<script src="../scripts/topbar-actions.js?v=011"></script>
+</body>
+</html>

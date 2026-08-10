@@ -1513,8 +1513,16 @@ async function loadScheduledAssemblies() {
         rawList = rawList.filter(assemblyBelongsToCurrentCondominium);
 
         const todayIso = new Date().toISOString().split('T')[0];
-        scheduledAssemblies = rawList.filter(a => String(a.date || '').localeCompare(todayIso) >= 0);
-        pastAssemblies = rawList.filter(a => String(a.date || '').localeCompare(todayIso) < 0);
+        const isPastStatus = (assembly) => ['encerrada', 'finalizada', 'completed', 'cancelada', 'cancelled']
+            .includes(String(assembly?.status || '').trim().toLowerCase());
+
+        pastAssemblies = rawList.filter((assembly) =>
+            isPastStatus(assembly) || String(assembly.date || '').localeCompare(todayIso) < 0
+        );
+
+        scheduledAssemblies = rawList.filter((assembly) =>
+            !isPastStatus(assembly) && String(assembly.date || '').localeCompare(todayIso) >= 0
+        );
 
         renderScheduledAssemblies();
         renderPastAssemblies();
@@ -1604,7 +1612,7 @@ function renderPastAssemblies() {
                     <h3>${escapeHtml(assembly.title)}</h3>
                     <p><i class="far fa-calendar-alt"></i> <strong>Data:</strong> ${formatDate(assembly.date)}, as ${escapeHtml(timeValue)}</p>
                 </div>
-                <button class="btn btn-secondary" onclick="viewPastAssembly(${safeId})">
+                <button class="btn btn-primary past-details-btn" onclick="viewPastAssembly(${safeId})">
                     <i class="fas fa-eye"></i> Ver detalhes
                 </button>
             </div>
@@ -1769,32 +1777,11 @@ function resetVotePanel() {
 }
 
 function viewPastAssembly(id) {
-    const lookupId = Number(id);
-    let assembly = assemblyData[lookupId];
-    if (!assembly) {
-        const fromList = pastAssemblies.find(a => String(a.id) === String(lookupId)) ||
-            pastAssemblies.find(a => String(a.id) === String(id));
-        if (fromList) {
-            assemblyData[lookupId] = {
-                title: fromList.title || 'Assembleia',
-                summary: fromList.description
-                    ? `<p>${escapeHtml(fromList.description)}</p>`
-                    : '<p>Resumo da assembleia sera exibido aqui.</p>',
-                comments: []
-            };
-            assembly = assemblyData[lookupId];
-        }
-    }
-    if (!assembly) {
-        showToast('Detalhes da assembleia nao encontrados.', 'warning');
+    if (id === undefined || id === null || id === '') {
+        showToast('Assembleia inválida.', 'warning');
         return;
     }
-
-    assemblyState.viewingPastAssemblyId = id;
-    if ($('past-assembly-title')) $('past-assembly-title').textContent = assembly.title;
-    if ($('past-assembly-detail')) $('past-assembly-detail').classList.add('active');
-    resetVotePanel();
-    setPageScrollLocked(true);
+    window.location.href = `assembleia-resumo.html?id=${encodeURIComponent(String(id))}`;
 }
 
 function goBack() {
@@ -2036,6 +2023,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if ($('assembly-date')) $('assembly-date').setAttribute('min', today);
 
     await loadScheduledAssemblies();
+
+    // Mantém a separação entre agendadas e realizadas atualizada sem exigir F5.
+    window.setInterval(() => {
+        if (!document.hidden && !assemblyState.roomOpen && !assemblyState.preJoinOpen) {
+            loadScheduledAssemblies().catch((error) => {
+                console.warn('Não foi possível atualizar a lista de assembleias:', error);
+            });
+        }
+    }, 60000);
 });
 
 window.addEventListener('beforeunload', () => {

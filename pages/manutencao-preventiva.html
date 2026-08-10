@@ -6,9 +6,9 @@
     <title>Condomit - Manutenção Preventiva</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/index.css?v=010">
+    <link rel="stylesheet" href="../styles/index.css?v=011">
     <link rel="stylesheet" href="../styles/theme.css">
-    <link rel="stylesheet" href="../styles/manutencao-preventiva.css">
+    <link rel="stylesheet" href="../styles/manutencao-preventiva.css?v=011">
 </head>
 <body>
     <div class="dashboard-sindico">
@@ -158,57 +158,16 @@
                             <div class="calendar-head">
                                 <h3>Calendário</h3>
                                 <div class="calendar-nav">
-                                    <button type="button" class="calendar-btn"><i class="fas fa-chevron-left"></i></button>
-                                    <span>Maio 2024</span>
-                                    <button type="button" class="calendar-btn"><i class="fas fa-chevron-right"></i></button>
+                                    <button type="button" class="calendar-btn" id="maintenanceCalendarPrev" aria-label="Mês anterior"><i class="fas fa-chevron-left"></i></button>
+                                    <span id="maintenanceCalendarTitle"></span>
+                                    <button type="button" class="calendar-btn" id="maintenanceCalendarNext" aria-label="Próximo mês"><i class="fas fa-chevron-right"></i></button>
                                 </div>
                             </div>
+                            <button type="button" class="calendar-clear-filter" id="maintenanceCalendarClear" hidden>Mostrar todos os dias</button>
                             <div class="calendar-weekdays">
-                                <span>Dom</span>
-                                <span>Seg</span>
-                                <span>Ter</span>
-                                <span>Qua</span>
-                                <span>Qui</span>
-                                <span>Sex</span>
-                                <span>Sáb</span>
+                                <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
                             </div>
-                            <div class="calendar-grid">
-                                <span class="muted">28</span>
-                                <span class="muted">29</span>
-                                <span class="muted">30</span>
-                                <span>1</span>
-                                <span>2</span>
-                                <span>3</span>
-                                <span>4</span>
-                                <span>5</span>
-                                <span>6</span>
-                                <span>7</span>
-                                <span>8</span>
-                                <span>9</span>
-                                <span>10</span>
-                                <span>11</span>
-                                <span>12</span>
-                                <span>13</span>
-                                <span>14</span>
-                                <span>15</span>
-                                <span>16</span>
-                                <span>17</span>
-                                <span class="calendar-day active">18</span>
-                                <span>19</span>
-                                <span>20</span>
-                                <span>21</span>
-                                <span>22</span>
-                                <span>23</span>
-                                <span>24</span>
-                                <span>25</span>
-                                <span>26</span>
-                                <span>27</span>
-                                <span>28</span>
-                                <span>29</span>
-                                <span>30</span>
-                                <span>31</span>
-                                <span class="muted">1</span>
-                            </div>
+                            <div class="calendar-grid" id="maintenanceCalendarGrid"></div>
                             <div class="calendar-legend">
                                 <span><i class="legend-dot amber"></i>Pendentes</span>
                                 <span><i class="legend-dot red"></i>Atrasadas</span>
@@ -296,7 +255,9 @@
     </div>
 
     <script src="../scripts/supabase-client.js"></script>
-    <script src="../scripts/sidebar-links.js?v=010"></script>
-    <script src="../scripts/manutencao-preventiva.js"></script>
+    <script type="module" src="../scripts/supabase-auth.js"></script>
+    <script src="../scripts/sidebar-links.js?v=011"></script>
+    <script src="../scripts/manutencao-preventiva.js?v=011"></script>
+    <script src="../scripts/topbar-actions.js?v=011"></script>
 </body>
 </html>

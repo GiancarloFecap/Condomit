@@ -140,14 +140,15 @@ async function loadAccessMovements() {
      * persistida no banco e compartilhada entre dispositivos.
      */
     const legacyGatehouse = getStoredAccessLogs(accessLogState.currentUser);
-    const localRegistrationLogs = window.visitorRegistration && typeof window.visitorRegistration.getRecentLogs === 'function'
-        ? window.visitorRegistration.getRecentLogs(accessLogState.currentUser)
-        : [];
 
+    /*
+     * Cadastro não é entrada. O Registro de entrada e saída passa a mostrar
+     * somente mudanças reais de liberação/revogação/recusa do banco, mais
+     * o histórico legado já existente.
+     */
     movements = [
         ...movements,
-        ...buildMovementsFromLegacyGatehouseLogs(legacyGatehouse),
-        ...buildMovementsFromRegistrations(localRegistrationLogs)
+        ...buildMovementsFromLegacyGatehouseLogs(legacyGatehouse)
     ];
 
     const seen = new Set();

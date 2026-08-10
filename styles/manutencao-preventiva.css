@@ -580,3 +580,29 @@
         gap: 4px;
     }
 }
+
+/* Ajustes 011 - calendário como filtro */
+.calendar-grid .calendar-filter-day {
+    position: relative;
+    width: 100%;
+    min-height: 44px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+}
+.calendar-grid .calendar-filter-day:hover { background: #eff6ff; }
+.calendar-grid .calendar-filter-day.active { background: #1d4ed8; color: #fff; }
+.calendar-grid .calendar-filter-day.muted { opacity: .38; }
+.calendar-status-dots { min-height: 5px; display: flex; gap: 2px; }
+.calendar-status-dot { width: 4px; height: 4px; border-radius: 999px; display: inline-block; }
+.calendar-status-dot.amber { background: #f59e0b; }
+.calendar-status-dot.red { background: #ef4444; }
+.calendar-status-dot.green { background: #22c55e; }
+.calendar-clear-filter { margin: 8px 0 10px; border: 0; background: transparent; color: #2563eb; cursor: pointer; font-weight: 700; }

@@ -1092,3 +1092,15 @@ body {
   color: #cbd5e1;
 }
 
+
+/* Ajustes 011 - logo da sala maior e sem distorção */
+.call-brand img {
+    width: auto !important;
+    height: 58px !important;
+    max-width: 112px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    display: block;
+}
+.call-header { height: 74px !important; min-height: 74px; }
+.call-brand img { height: 62px !important; max-width: 120px !important; }

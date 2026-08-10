@@ -6,7 +6,7 @@
     <title>Condomit - Painel do Síndico</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/index.css?v=010">
+    <link rel="stylesheet" href="../styles/index.css?v=011">
     <link rel="stylesheet" href="../styles/theme.css">
 </head>
 <body>
@@ -228,18 +228,10 @@
                 <!-- Maintenance -->
                 <div class="card maintenance-card">
                     <h3>Manutenção</h3>
-                    <div class="maintenance-list">
+                    <div class="maintenance-list" id="dashboardMaintenanceList">
                         <div class="maintenance-item">
-                            <i class="fas fa-wrench"></i>
-                            <span>Reparo Elevador - Bloco A</span>
-                        </div>
-                        <div class="maintenance-item">
-                            <i class="fas fa-paint-roller"></i>
-                            <span>Pintura Hall Principal</span>
-                        </div>
-                        <div class="maintenance-item">
-                            <i class="fas fa-lightbulb"></i>
-                            <span>Troca Lâmpadas Área Comum</span>
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Carregando manutenções programadas...</span>
                         </div>
                     </div>
                 </div>
@@ -290,7 +282,9 @@
     </div>
 
     <script src="../scripts/supabase-client.js"></script>
-    <script src="../scripts/sidebar-links.js?v=010"></script>
-    <script src="../scripts/index.js"></script>
+    <script type="module" src="../scripts/supabase-auth.js"></script>
+    <script src="../scripts/sidebar-links.js?v=011"></script>
+    <script src="../scripts/index.js?v=011"></script>
+    <script src="../scripts/topbar-actions.js?v=011"></script>
 </body>
 </html>

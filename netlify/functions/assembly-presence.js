@@ -31,36 +31,51 @@ async function validateAuth(event) {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { error: httpError(401, 'Autenticação necessária.') };
   }
-  const token = authHeader.substring(7);
 
+  const token = authHeader.substring(7).trim();
   const { data: authData, error: authError } = await supabase.auth.getUser(token);
   if (authError || !authData?.user?.email) {
     return { error: httpError(401, 'Token de autenticação inválido ou expirado.') };
   }
-  const userEmail = authData.user.email;
 
+  const userEmail = String(authData.user.email).trim().toLowerCase();
   const { data: user, error: userError } = await supabase
     .from('users')
     .select('name, email, user_type, condominium')
     .eq('email', userEmail)
-    .single();
+    .maybeSingle();
 
   if (userError || !user) {
     return { error: httpError(401, 'Usuário não encontrado no sistema.') };
   }
 
-  const { data: userCondoData } = await supabase
+  const { data: links } = await supabase
     .from('user_condominiums')
     .select('condominium_id')
-    .eq('user_email', userEmail)
-    .maybeSingle();
+    .eq('user_email', userEmail);
 
-  const userCEP = userCondoData?.condominium_id || null;
-  if (!userCEP) {
+  const condoDigits = new Set();
+  (Array.isArray(links) ? links : []).forEach((row) => {
+    const digits = normalizeCep(row?.condominium_id);
+    if (digits) condoDigits.add(digits);
+  });
+
+  let condo = user.condominium;
+  if (typeof condo === 'string') {
+    try { condo = JSON.parse(condo); } catch (_) { condo = null; }
+  }
+  if (condo && typeof condo === 'object') {
+    [condo.cep, condo.condominium_id, condo.condominium_cep].forEach((value) => {
+      const digits = normalizeCep(value);
+      if (digits) condoDigits.add(digits);
+    });
+  }
+
+  if (!condoDigits.size) {
     return { error: httpError(403, 'Usuário não possui condomínio associado.') };
   }
 
-  return { user, userEmail, userCEP };
+  return { user, userEmail, condoDigits };
 }
 
 function normalizeCep(value) {
@@ -113,7 +128,7 @@ exports.handler = async (event) => {
   if (fetched.error) return fetched.error;
   const assembly = fetched.assembly;
 
-  if (normalizeCep(assembly.cep) !== normalizeCep(auth.userCEP)) {
+  if (!auth.condoDigits.has(normalizeCep(assembly.cep))) {
     return httpError(403, 'Esta assembleia pertence a outro condomínio.');
   }
 
@@ -132,7 +147,7 @@ exports.handler = async (event) => {
           user_email: auth.userEmail,
           participant_name: auth.user.name || auth.userEmail,
           participant_role: auth.user.user_type,
-          cep: auth.userCEP,
+          cep: assembly.cep,
           joined_at: now,
           last_heartbeat_at: now,
           presence_status: 'presente',
@@ -185,7 +200,7 @@ exports.handler = async (event) => {
   try {
     await supabase.from('assembly_event_logs').insert({
       assembly_id: assembly.id,
-      cep: auth.userCEP,
+      cep: assembly.cep,
       event_type: `presence_${eventType}`,
       event_payload: { identity },
       created_by: auth.userEmail,

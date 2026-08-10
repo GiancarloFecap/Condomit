@@ -355,7 +355,7 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
     sidebar.classList.toggle('morador-sidebar', userType === 'morador');
     sidebar.innerHTML = `
         <div class="sidebar-header">
-            <img src="../assets/logo-icon.png" alt="Condomit Icon" class="sidebar-logo">
+            <img src="../assets/Logo-Lado.png" alt="Condomit Icon" class="sidebar-logo">
             <h2 class="condo-name" id="sidebarApartment">${formatSidebarCondoName(getSidebarCondoName(currentUser, lang), lang)}</h2>
         </div>
         ${buildSidebarNav(userType, currentPage, lang)}

@@ -425,3 +425,66 @@
         align-items: stretch;
     }
 }
+
+
+/* ============================================================
+   Ajustes 011 - favoritos, imagens e modal
+============================================================ */
+#toggleFavoritesBtn.active {
+    color: #111827;
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+#toggleFavoritesBtn.active i,
+.favorite-btn.active {
+    color: #111827;
+}
+
+.favorite-btn.active {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+}
+
+.detail-image {
+    object-fit: contain;
+    object-position: center center;
+    background: #f8fafc;
+    padding: 8px;
+}
+
+#itemImagePreview {
+    object-fit: contain;
+    object-position: center center;
+    background: #f8fafc;
+}
+
+body.marketplace-modal-open {
+    overflow: hidden;
+}
+
+.modal-backdrop {
+    z-index: 20000;
+    align-items: center;
+    padding: 24px;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.modal-card {
+    margin: 0;
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+@media (max-width: 640px) {
+    .modal-backdrop {
+        align-items: flex-start;
+        padding: 12px;
+    }
+
+    .modal-card {
+        max-height: calc(100dvh - 24px);
+    }
+}

@@ -124,6 +124,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadResidents(currentUser.condominium.cep);
         loadUpcomingAssembly(currentUser.condominium.cep);
         loadPendingNotices(currentUser.condominium.cep);
+        loadDashboardMaintenance(currentUser.condominium.cep);
     }
 
     const userProfileSmall = document.querySelector('.user-profile-small');
@@ -172,6 +173,51 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 });
+
+
+async function loadDashboardMaintenance(cep) {
+    const container = document.getElementById('dashboardMaintenanceList');
+    if (!container) return;
+
+    const digits = String(cep || '').replace(/\D/g, '');
+    if (digits.length !== 8 || typeof window.supabaseFetch !== 'function') {
+        container.innerHTML = '<div class="maintenance-item"><i class="fas fa-calendar-xmark"></i><span>Nenhuma manutenção programada.</span></div>';
+        return;
+    }
+
+    try {
+        const rows = await window.supabaseFetch(
+            '/maintenance_items?select=id,cep,title,location,next_date,status&order=next_date.asc&limit=50'
+        );
+        const today = new Date().toISOString().slice(0, 10);
+        const items = (Array.isArray(rows) ? rows : [])
+            .filter((item) => String(item?.cep || '').replace(/\D/g, '') === digits)
+            .filter((item) => String(item.status || '').toLowerCase() !== 'concluida' && String(item.next_date || '') >= today)
+            .slice(0, 3);
+
+        if (!items.length) {
+            container.innerHTML = '<div class="maintenance-item"><i class="fas fa-calendar-check"></i><span>Nenhuma manutenção futura programada.</span></div>';
+            return;
+        }
+
+        container.innerHTML = items.map((item) => {
+            const date = item.next_date ? item.next_date.split('-').reverse().join('/') : '--';
+            return `<div class="maintenance-item"><i class="fas fa-wrench"></i><span>${escapeDashboardHtml(item.title)} - ${escapeDashboardHtml(item.location)} <small>(${date})</small></span></div>`;
+        }).join('');
+    } catch (error) {
+        console.error('Erro ao carregar manutenções do painel:', error);
+        container.innerHTML = '<div class="maintenance-item"><i class="fas fa-circle-exclamation"></i><span>Não foi possível carregar as manutenções.</span></div>';
+    }
+}
+
+function escapeDashboardHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
 
 async function loadResidents(cep) {
     const tableBody = document.getElementById('residentsTableBody');

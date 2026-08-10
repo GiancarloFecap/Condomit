@@ -974,12 +974,26 @@ function renderMarketplaceGrid(
     }
 
     if (favoritesButton) {
-        favoritesButton.classList
-            .toggle(
-                'active',
-                marketplaceState
-                    .favoritesOnly
-            );
+        const favoritesActive = Boolean(
+            marketplaceState.favoritesOnly
+        );
+
+        favoritesButton.classList.toggle(
+            'active',
+            favoritesActive
+        );
+
+        favoritesButton.setAttribute(
+            'aria-pressed',
+            favoritesActive ? 'true' : 'false'
+        );
+
+        const heartIcon = favoritesButton.querySelector('i');
+        if (heartIcon) {
+            heartIcon.classList.toggle('far', !favoritesActive);
+            heartIcon.classList.toggle('fas', favoritesActive);
+            heartIcon.classList.add('fa-heart');
+        }
     }
 
     if (!items.length) {
@@ -1343,23 +1357,27 @@ function renderMarketplaceDetail(
 }
 
 function openMarketplaceModal() {
-    document
-        .getElementById(
-            'marketplaceModal'
-        )
-        ?.classList.add(
-            'open'
-        );
+    const modal = document.getElementById('marketplaceModal');
+
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('marketplace-modal-open');
+
+    window.requestAnimationFrame(() => {
+        modal.querySelector('input, select, textarea, button')?.focus?.();
+    });
 }
 
 function closeMarketplaceModal() {
-    document
-        .getElementById(
-            'marketplaceModal'
-        )
-        ?.classList.remove(
-            'open'
-        );
+    const modal = document.getElementById('marketplaceModal');
+
+    modal?.classList.remove('open');
+    modal?.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('marketplace-modal-open');
 
     document
         .getElementById(

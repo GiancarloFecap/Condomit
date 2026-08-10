@@ -1884,3 +1884,11 @@ nav {
         min-width: 0;
     }
 }
+
+/* Ajuste 011 - ação de detalhes de assembleia realizada */
+.past-details-btn {
+    background: linear-gradient(135deg, #1d4ed8, #0f766e) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+}
+.past-details-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }

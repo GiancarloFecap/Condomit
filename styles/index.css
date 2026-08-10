@@ -570,3 +570,19 @@ body {
         padding: 0 20px 20px;
     }
 }
+
+/* ============================================================
+   Ajustes 011 - logo uniforme em todas as barras laterais
+============================================================ */
+.sidebar .sidebar-header .sidebar-logo,
+.sidebar.sindico-sidebar .sidebar-header .sidebar-logo,
+.sidebar.morador-sidebar .sidebar-header .sidebar-logo,
+.sidebar.porteiro-sidebar .sidebar-header .sidebar-logo {
+    width: auto !important;
+    height: 160px !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    display: block;
+    margin-inline: auto;
+}

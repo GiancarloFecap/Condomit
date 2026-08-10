@@ -1060,3 +1060,44 @@ html[data-theme="dark"] .detalhes-status-sindico select {
         align-items: stretch;
     }
 }
+
+
+/* ============================================================
+   Ajustes 011 - modal Nova sugestão mais compacto
+============================================================ */
+#novaSugestaoModal .modal-content,
+.modal-overlay .modal-content {
+    width: min(94vw, 640px);
+    max-height: calc(100dvh - 40px);
+}
+
+.modal-overlay .modal-header {
+    padding: 16px 20px;
+}
+
+.modal-overlay .modal-body {
+    padding: 16px 20px;
+}
+
+.modal-overlay .form-group {
+    margin-bottom: 12px;
+}
+
+.modal-overlay .form-group label {
+    margin-bottom: 5px;
+}
+
+.modal-overlay .form-input,
+.modal-overlay .form-select,
+.modal-overlay .form-textarea {
+    padding: 10px 12px;
+}
+
+.modal-overlay .form-textarea {
+    min-height: 105px;
+}
+
+.modal-overlay .modal-footer {
+    padding: 14px 20px;
+    gap: 10px;
+}

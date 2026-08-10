@@ -76,3 +76,7 @@
     Access-Control-Allow-Headers = "Content-Type, Authorization, apikey"
     Access-Control-Max-Age = "86400"
     Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate"
+
+# Verifica periodicamente assembleias que passaram 30 minutos sem participantes ativos.
+[functions."auto-end-assemblies"]
+  schedule = "*/5 * * * *"
