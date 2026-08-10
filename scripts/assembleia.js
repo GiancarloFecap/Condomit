@@ -435,6 +435,10 @@ function setPageScrollLocked(locked) {
 }
 
 function showToast(message, type = 'info') {
+    if (typeof window.showToast === 'function') {
+        return window.showToast(message, type);
+    }
+
     const container = $('toast-container');
     if (!container || !message) return;
 

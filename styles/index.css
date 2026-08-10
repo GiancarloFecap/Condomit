@@ -586,3 +586,128 @@ body {
     display: block;
     margin-inline: auto;
 }
+
+/* ============================================================
+   014 - Seletor rápido de chat
+============================================================ */
+.quick-chat-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 30000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, .54);
+    backdrop-filter: blur(6px);
+}
+
+.quick-chat-modal.open {
+    display: flex;
+}
+
+.quick-chat-card {
+    position: relative;
+    width: min(100%, 520px);
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 26px 70px rgba(15, 23, 42, .28);
+    padding: 28px;
+}
+
+.quick-chat-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.quick-chat-icon {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 1.35rem;
+    margin-bottom: 16px;
+}
+
+.quick-chat-card h3 {
+    margin: 0 0 6px;
+    color: #0f172a;
+    font-size: 1.35rem;
+}
+
+.quick-chat-card > p {
+    margin: 0 0 20px;
+    color: #64748b;
+}
+
+.quick-chat-options {
+    display: grid;
+    gap: 12px;
+}
+
+.quick-chat-options button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    gap: 14px;
+    align-items: center;
+    text-align: left;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #fff;
+    padding: 16px;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.quick-chat-options button:hover {
+    border-color: #93c5fd;
+    background: #f8fbff;
+    transform: translateY(-1px);
+}
+
+.quick-chat-options button > i {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.quick-chat-options span {
+    display: grid;
+    gap: 4px;
+}
+
+.quick-chat-options strong {
+    color: #0f172a;
+}
+
+.quick-chat-options small {
+    color: #64748b;
+    line-height: 1.45;
+}
+
+html[data-theme="dark"] .quick-chat-card,
+html[data-theme="dark"] .quick-chat-options button {
+    background: #111827;
+    border-color: #334155;
+}
+
+html[data-theme="dark"] .quick-chat-card h3,
+html[data-theme="dark"] .quick-chat-options strong {
+    color: #f8fafc;
+}

@@ -157,9 +157,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 window.location.href = 'assembleia.html';
             });
         } else if (text.trim() === 'chat' || /(^|\s)chat(\s|$)/i.test(btn.textContent)) {
-            btn.addEventListener('click', () => {
-                window.location.href = 'chat-moradores.html';
-            });
+            btn.addEventListener('click', openQuickChatChooser);
         }
     });
 
@@ -313,4 +311,65 @@ function logout() {
     sessionStorage.removeItem('condominiumUser');
     try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
     window.location.href = '../inicio.html';
+}
+
+
+function openQuickChatChooser() {
+    let modal = document.getElementById('quickChatChooserModal');
+
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'quickChatChooserModal';
+        modal.className = 'quick-chat-modal';
+        modal.setAttribute('aria-hidden', 'true');
+        modal.innerHTML = `
+            <div class="quick-chat-card" role="dialog" aria-modal="true" aria-labelledby="quickChatChooserTitle">
+                <button type="button" class="quick-chat-close" aria-label="Fechar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+                <div class="quick-chat-icon"><i class="fas fa-comments"></i></div>
+                <h3 id="quickChatChooserTitle">Abrir chat</h3>
+                <p>Com quem você deseja conversar?</p>
+                <div class="quick-chat-options">
+                    <button type="button" data-chat-target="residents">
+                        <i class="fas fa-users"></i>
+                        <span>
+                            <strong>Chat com os moradores</strong>
+                            <small>Converse individualmente com moradores do condomínio.</small>
+                        </span>
+                    </button>
+                    <button type="button" data-chat-target="porter">
+                        <i class="fas fa-user-shield"></i>
+                        <span>
+                            <strong>Chat com porteiro</strong>
+                            <small>Abra a conversa com a portaria do condomínio.</small>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const close = () => {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        };
+
+        modal.querySelector('.quick-chat-close')?.addEventListener('click', close);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close();
+        });
+        modal.querySelector('[data-chat-target="residents"]')?.addEventListener('click', () => {
+            window.location.href = 'chat-moradores.html';
+        });
+        modal.querySelector('[data-chat-target="porter"]')?.addEventListener('click', () => {
+            window.location.href = 'chat-porteiro.html';
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && modal.classList.contains('open')) close();
+        });
+    }
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
 }

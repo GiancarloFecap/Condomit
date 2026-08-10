@@ -645,27 +645,12 @@
                 user
             );
 
-        const clearedKey =
-            `${key}.cleared`;
-
-        try {
-            const hasCleared =
-                localStorage.getItem(
-                    clearedKey
-                ) === '1';
-
-            if (!hasCleared) {
-                localStorage.removeItem(
-                    key
-                );
-
-                localStorage.setItem(
-                    clearedKey,
-                    '1'
-                );
-            }
-        } catch (_) {}
-
+        /*
+         * Não apague notificações locais ao carregar a página.
+         * Elas pertencem ao condomínio e devem continuar disponíveis
+         * mesmo após logout/login. Os registros do Supabase continuam
+         * sendo mesclados normalmente abaixo.
+         */
         let localItems =
             getStorageJson(
                 key,
@@ -1365,6 +1350,14 @@
                 row?.user_name ||
                 'Morador',
 
+            sellerEmail:
+                String(
+                    row?.seller_email ||
+                    ''
+                )
+                    .trim()
+                    .toLowerCase(),
+
             sellerUnit:
                 'Condomínio',
 
@@ -1527,11 +1520,28 @@
             );
         }
 
+        const sellerEmail =
+            String(
+                user?.email ||
+                ''
+            )
+                .trim()
+                .toLowerCase();
+
+        if (!sellerEmail) {
+            throw new Error(
+                'Não foi possível identificar o e-mail do anunciante.'
+            );
+        }
+
         const payload = {
             cep,
 
             user_name:
                 userName,
+
+            seller_email:
+                sellerEmail,
 
             title,
 
@@ -1622,6 +1632,113 @@
         }
 
         return rows[0];
+    }
+
+
+    async function updateMarketplaceItem(
+        dbId,
+        data,
+        user = getCurrentUser()
+    ) {
+        await ensureMarketplaceSession();
+
+        const id = Number(dbId);
+        if (!Number.isFinite(id) || id <= 0) {
+            throw new Error('Anúncio inválido para edição.');
+        }
+
+        const sellerEmail =
+            String(user?.email || '')
+                .trim()
+                .toLowerCase();
+
+        if (!sellerEmail) {
+            throw new Error('Não foi possível identificar o anunciante.');
+        }
+
+        const title = String(data?.title || '').trim();
+        const description = String(data?.description || '').trim();
+        const price = Number(data?.price);
+        const categoryKey = normalizeMarketplaceCategoryKey(
+            data?.category || data?.categoryLabel
+        );
+        const imageUrl = String(
+            data?.image ||
+            CATEGORY_IMAGES[categoryKey] ||
+            CATEGORY_IMAGES.outros
+        ).trim();
+
+        if (!title) throw new Error('Informe o título do anúncio.');
+        if (!description) throw new Error('Informe a descrição do anúncio.');
+        if (!Number.isFinite(price) || price < 0) {
+            throw new Error('Informe um preço válido.');
+        }
+
+        const rows = await window.supabaseFetch(
+            `/marketplace_items?id=eq.${encodeURIComponent(id)}&seller_email=eq.${encodeURIComponent(sellerEmail)}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Prefer: 'return=representation'
+                },
+                body: JSON.stringify({
+                    title,
+                    category: categoryToDbCategory(categoryKey),
+                    price,
+                    description,
+                    image_url: imageUrl
+                })
+            }
+        );
+
+        const saved = Array.isArray(rows) ? rows[0] : rows;
+        if (!saved?.id) {
+            throw new Error(
+                'O anúncio não foi atualizado. Confirme se ele pertence à sua conta.'
+            );
+        }
+
+        return mapMarketplaceRowToItem(saved);
+    }
+
+    async function deleteMarketplaceItem(
+        dbId,
+        user = getCurrentUser()
+    ) {
+        await ensureMarketplaceSession();
+
+        const id = Number(dbId);
+        if (!Number.isFinite(id) || id <= 0) {
+            throw new Error('Anúncio inválido para exclusão.');
+        }
+
+        const sellerEmail =
+            String(user?.email || '')
+                .trim()
+                .toLowerCase();
+
+        if (!sellerEmail) {
+            throw new Error('Não foi possível identificar o anunciante.');
+        }
+
+        const rows = await window.supabaseFetch(
+            `/marketplace_items?id=eq.${encodeURIComponent(id)}&seller_email=eq.${encodeURIComponent(sellerEmail)}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    Prefer: 'return=representation'
+                }
+            }
+        );
+
+        if (!Array.isArray(rows) || !rows.length) {
+            throw new Error(
+                'O anúncio não foi excluído. Confirme se ele pertence à sua conta.'
+            );
+        }
+
+        return true;
     }
 
     async function getMarketplaceItems(
@@ -1987,6 +2104,10 @@
         clearAllNotifications,
 
         createMarketplaceItem,
+
+        updateMarketplaceItem,
+
+        deleteMarketplaceItem,
 
         createAssemblyNotification,
 

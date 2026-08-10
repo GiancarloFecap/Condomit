@@ -84,6 +84,20 @@ const SUPABASE_HEADERS = {
     type = 'info',
     options = {}
   ) {
+    /*
+     * A partir da versão 014, todas as notificações visuais utilizam o
+     * componente compartilhado de scripts/condomit-alerts.js. Mantemos
+     * este fallback porque supabase-client.js também é usado em páginas
+     * que podem carregá-lo antes do componente global.
+     */
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.showToast === 'function' &&
+      window.showToast !== showToast
+    ) {
+      return window.showToast(message, type, options);
+    }
+
     if (
       typeof message !== 'string' &&
       typeof message !== 'number'
@@ -3124,6 +3138,19 @@ async function performFullLogout(
       ) {
         const key =
           localStorage.key(i);
+
+        if (
+          key &&
+          key.startsWith(
+            'condomit.notifications.'
+          )
+        ) {
+          /*
+           * Notificações e estado de leitura pertencem ao condomínio/usuário
+           * e não devem desaparecer apenas porque a sessão foi encerrada.
+           */
+          continue;
+        }
 
         if (
           key &&

@@ -58,6 +58,10 @@
   }
 
   function showToast(message, type, duration) {
+    if (typeof window.showToast === 'function') {
+      return window.showToast(message, type || 'info', { duration: duration || 3000 });
+    }
+
     type = type || 'info';
     duration = duration || 3000;
     const toast = document.createElement('div');

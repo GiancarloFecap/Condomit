@@ -288,11 +288,21 @@ function openConfigSection(sectionKey) {
         case 'confirmacao-cancelamento':
         case 'reserva-area-comum':
         case 'politica-privacidade':
+            openPrivacyPolicyModal();
+            break;
         case 'termos-uso':
-        case 'consentimentos':
+            openTermsOfUseModal();
+            break;
         case 'contato-uteis':
+            openUsefulContactsModal();
+            break;
         case 'prestadores-servicos':
+            openServiceProvidersModal();
+            break;
         case 'sobre-empresa':
+            openAboutCompanyModal();
+            break;
+        case 'consentimentos':
         case 'versao-app':
         case 'novas-atualizacoes':
             window.showToast(`Funcionalidade ainda não implementada: ${sectionKey.replace(/-/g, ' ')}`, 'info');
@@ -1004,6 +1014,22 @@ async function fetchCurrentCondominiumInfo() {
     const localCondo = currentUser?.condominium && typeof currentUser.condominium === 'object'
         ? currentUser.condominium
         : {};
+
+    if (typeof window.supabaseFetch === 'function') {
+        try {
+            const result = await window.supabaseFetch('/rpc/condomit_current_condominium_info', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}'
+            });
+            const rpcInfo = Array.isArray(result) ? result[0] : result;
+            if (rpcInfo && typeof rpcInfo === 'object') {
+                return { ...localCondo, ...rpcInfo };
+            }
+        } catch (error) {
+            console.warn('RPC de informações do condomínio indisponível, usando fallback:', error?.message || error);
+        }
+    }
     const cep = localCondo.cep || localCondo.condominium_id || localCondo.condominiumId || currentUser?.cep || '';
 
     if (!cep) return localCondo;
@@ -1147,7 +1173,7 @@ const translations = {
         manage_consents: 'Gerenciar consentimentos',
         condominium: 'Condomínio',
         condominium_info: 'Informações do condomínio',
-        useful_contacts: 'Contato úteis',
+        useful_contacts: 'Contatos úteis',
         service_providers: 'Prestadores de serviços',
         appearance_accessibility: 'Aparência e acessibilidade',
         theme_label: 'Tema',
@@ -1160,7 +1186,7 @@ const translations = {
         about_company: 'Sobre a empresa',
         app_version: 'Versão do app: 1.0.0',
         updates: 'Verifique novas atualizações',
-        footer_condo: '© 2026 condomínio tal.',
+        footer_condo: '© 2026 Condomit.',
         footer_rights: 'Todos os direitos reservados',
         reservations_modal_title: 'Minhas reservas',
         reservations_modal_subtitle: 'Veja todas as reservas feitas na sua conta.',
@@ -1555,4 +1581,529 @@ async function executeDeleteAccount() {
         msg.style.color = '#dc2626';
         msg.textContent = 'Erro ao excluir conta: ' + (err.message || 'Tente novamente.');
     }
+}
+
+
+/* ============================================================
+   CONFIGURAÇÕES 014 - CONTEÚDO INSTITUCIONAL / PRIVACIDADE /
+   TERMOS / CONTATOS / PRESTADORES
+============================================================ */
+
+const CONDOMIT_COMPANY_EMAIL = 'contato.condomit@gmail.com';
+const CONDOMIT_COMPANY_PHONE = 'Não informado no projeto';
+
+function ensureSettingsContentModal() {
+    let modal = document.getElementById('settingsContentModal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'settingsContentModal';
+    modal.className = 'reservas-modal-overlay settings-content-overlay';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+        <div class="reservas-modal-card settings-content-card" role="dialog" aria-modal="true" aria-labelledby="settingsContentTitle">
+            <div class="reservas-modal-header">
+                <div>
+                    <h3 id="settingsContentTitle">Informações</h3>
+                    <p id="settingsContentSubtitle"></p>
+                </div>
+                <button type="button" class="reservas-modal-close" id="settingsContentClose" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="reservas-modal-body settings-content-body" id="settingsContentBody"></div>
+            <div class="reservas-modal-footer settings-content-footer" id="settingsContentFooter">
+                <button type="button" class="btn-edit-profile" id="settingsContentCloseAction">Fechar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const close = () => closeSettingsContentModal();
+    modal.querySelector('#settingsContentClose')?.addEventListener('click', close);
+    modal.querySelector('#settingsContentCloseAction')?.addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) close();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('open')) close();
+    });
+
+    return modal;
+}
+
+function openSettingsContentModal({ title, subtitle = '', html = '', footerHtml = '' } = {}) {
+    const modal = ensureSettingsContentModal();
+    const titleEl = modal.querySelector('#settingsContentTitle');
+    const subtitleEl = modal.querySelector('#settingsContentSubtitle');
+    const bodyEl = modal.querySelector('#settingsContentBody');
+    const footerEl = modal.querySelector('#settingsContentFooter');
+
+    if (titleEl) titleEl.textContent = title || 'Informações';
+    if (subtitleEl) subtitleEl.textContent = subtitle || '';
+    if (bodyEl) bodyEl.innerHTML = html || '';
+    if (footerEl) {
+        footerEl.innerHTML = footerHtml || `
+            <button type="button" class="btn-edit-profile" data-settings-close>Fechar</button>
+        `;
+        footerEl.querySelectorAll('[data-settings-close]').forEach((button) => {
+            button.addEventListener('click', closeSettingsContentModal);
+        });
+    }
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('settings-modal-open');
+    return modal;
+}
+
+function closeSettingsContentModal() {
+    const modal = document.getElementById('settingsContentModal');
+    modal?.classList.remove('open');
+    modal?.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('settings-modal-open');
+}
+
+function settingsSection(title, content) {
+    return `
+        <section class="settings-document-section">
+            <h4>${escapeReservationHtml(title)}</h4>
+            <div>${content}</div>
+        </section>
+    `;
+}
+
+function settingsParagraph(text) {
+    return `<p>${escapeReservationHtml(text)}</p>`;
+}
+
+function settingsList(items) {
+    return `<ul>${items.map((item) => `<li>${escapeReservationHtml(item)}</li>`).join('')}</ul>`;
+}
+
+function openAboutCompanyModal() {
+    const html = `
+        <div class="settings-company-hero">
+            <img src="../assets/Logo-Lado.png" alt="Condomit">
+            <div>
+                <h4>Condomit</h4>
+                <p>Gestão condominial digital, integrada e orientada à comunidade.</p>
+            </div>
+        </div>
+        ${settingsSection('O que é a Condomit',
+            settingsParagraph('A Condomit é uma plataforma criada para centralizar rotinas de condomínios em um único ambiente digital, aproximando síndicos, moradores e porteiros e reduzindo processos manuais.')
+        )}
+        ${settingsSection('Propósito',
+            settingsParagraph('Facilitar a administração do condomínio, melhorar a comunicação entre as pessoas e tornar processos do dia a dia mais organizados, transparentes, seguros e acessíveis.')
+        )}
+        ${settingsSection('Para quem foi criada',
+            settingsList([
+                'Síndicos, que precisam administrar comunicação, moradores, assembleias, manutenção e rotinas do condomínio.',
+                'Moradores, que precisam acompanhar avisos, reservas, assembleias, visitantes, encomendas e serviços da comunidade.',
+                'Porteiros, que precisam controlar visitantes, prestadores, entregas e registros de acesso.'
+            ])
+        )}
+        ${settingsSection('Principais recursos',
+            settingsList([
+                'Assembleias on-line com presença, chat, pautas, votações e registro de acontecimentos.',
+                'Central de notificações, avisos e comunicação entre síndico, moradores e portaria.',
+                'Controle de visitantes, prestadores, dependentes, veículos, entregas e registros de entrada e saída.',
+                'Reservas de áreas comuns, manutenção preventiva, sugestões, marketplace e achados e perdidos.',
+                'Painéis específicos para síndico, morador e porteiro.',
+                'Recursos de inteligência artificial para apoio à comunicação e organização.'
+            ])
+        )}
+        ${settingsSection('Missão',
+            settingsParagraph('Simplificar a vida em condomínio por meio de tecnologia que reúna gestão, comunicação, segurança e participação em um só lugar.')
+        )}
+        ${settingsSection('Visão',
+            settingsParagraph('Evoluir continuamente como uma plataforma de referência para gestão condominial digital, oferecendo uma experiência prática e confiável para toda a comunidade.')
+        )}
+        ${settingsSection('Valores',
+            settingsList([
+                'Inovação',
+                'Transparência',
+                'Segurança',
+                'Organização',
+                'Comunidade',
+                'Praticidade',
+                'Confiabilidade',
+                'Evolução contínua'
+            ])
+        )}
+        ${settingsSection('Diferencial',
+            settingsParagraph('A Condomit integra a gestão cotidiana do condomínio com assembleias on-line e participação digital, permitindo que informações e decisões importantes permaneçam organizadas no mesmo ecossistema.')
+        )}
+        ${settingsSection('Contato',
+            `<p><strong>E-mail:</strong> <a href="mailto:${CONDOMIT_COMPANY_EMAIL}">${CONDOMIT_COMPANY_EMAIL}</a></p>
+             <p><strong>Telefone:</strong> ${escapeReservationHtml(CONDOMIT_COMPANY_PHONE)}</p>`
+        )}
+        ${settingsSection('Versão',
+            settingsParagraph('Aplicativo Condomit — versão 1.0.0. © 2026 Condomit. Todos os direitos reservados.')
+        )}
+    `;
+
+    openSettingsContentModal({
+        title: 'Sobre a Condomit',
+        subtitle: 'Conheça a empresa, o propósito e os principais recursos da plataforma.',
+        html
+    });
+}
+
+function openPrivacyPolicyModal() {
+    const html = `
+        <div class="settings-document-intro">
+            <strong>Política de Privacidade da Condomit</strong>
+            <span>Última atualização: 10 de agosto de 2026</span>
+        </div>
+        ${settingsSection('1. Objetivo e abrangência',
+            settingsParagraph('Esta Política de Privacidade descreve como a Condomit trata informações utilizadas nas funcionalidades da plataforma, incluindo dados de cadastro, condomínio, comunicação, assembleias, acessos, visitantes, prestadores, encomendas, reservas e demais recursos disponibilizados no sistema.')
+        )}
+        ${settingsSection('2. Dados que podem ser tratados',
+            settingsList([
+                'Dados de identificação e contato, como nome, e-mail, telefone e CPF quando exigido por uma funcionalidade.',
+                'Dados de vínculo condominial, como CEP, condomínio, bloco, apartamento e tipo de usuário.',
+                'Dados informados sobre visitantes, dependentes, veículos, prestadores e encomendas.',
+                'Conteúdos enviados pelo usuário, como mensagens, comentários, sugestões, anúncios, arquivos e informações de assembleias.',
+                'Registros técnicos necessários para autenticação, segurança, sessão e funcionamento da plataforma.'
+            ])
+        )}
+        ${settingsSection('3. Finalidades do tratamento',
+            settingsList([
+                'Criar e autenticar contas e manter o usuário conectado quando autorizado.',
+                'Vincular usuários ao condomínio correto e separar informações por CEP.',
+                'Executar as funcionalidades solicitadas pelo usuário.',
+                'Permitir comunicação entre pessoas do mesmo condomínio.',
+                'Registrar ações relevantes de segurança, portaria, assembleias e gestão.',
+                'Prevenir abuso, fraude, acesso indevido e falhas de segurança.',
+                'Melhorar a experiência, estabilidade e evolução da plataforma.'
+            ])
+        )}
+        ${settingsSection('4. Bases e autorizações',
+            settingsParagraph('O tratamento deve ocorrer de acordo com a finalidade do serviço, as autorizações fornecidas pelo usuário, as obrigações aplicáveis à administração condominial e a legislação de proteção de dados aplicável. Determinadas operações podem depender do consentimento ou de outra base legal adequada ao contexto.')
+        )}
+        ${settingsSection('5. Compartilhamento de dados',
+            settingsParagraph('A Condomit não deve disponibilizar dados pessoais a pessoas de outros condomínios. Informações podem ser acessadas por usuários do mesmo condomínio apenas quando a funcionalidade e o perfil de acesso permitirem. Prestadores tecnológicos usados para autenticação, banco de dados, hospedagem, comunicação, pagamentos e videoconferência podem processar dados estritamente para viabilizar o serviço.')
+        )}
+        ${settingsSection('6. Segurança e controle de acesso',
+            settingsParagraph('A plataforma utiliza autenticação, políticas de segurança no banco de dados, separação por condomínio, controles de perfil e outros mecanismos técnicos para reduzir acessos indevidos. Nenhum sistema é totalmente imune a incidentes, por isso credenciais e dispositivos também devem ser protegidos pelo usuário.')
+        )}
+        ${settingsSection('7. Armazenamento e conservação',
+            settingsParagraph('Os dados são mantidos pelo período necessário para prestar os serviços, preservar registros importantes da administração, cumprir obrigações aplicáveis e permitir o funcionamento das funcionalidades. Dados podem ser excluídos ou anonimizados quando deixarem de ser necessários, observadas as hipóteses de conservação aplicáveis.')
+        )}
+        ${settingsSection('8. Direitos do titular',
+            settingsList([
+                'Solicitar acesso aos próprios dados.',
+                'Solicitar correção de informações incompletas ou incorretas.',
+                'Solicitar exclusão, anonimização ou limitação quando aplicável.',
+                'Solicitar informações sobre uso e compartilhamento dos dados.',
+                'Revogar consentimentos quando o tratamento depender de consentimento.',
+                'Entrar em contato para esclarecer dúvidas sobre privacidade.'
+            ])
+        )}
+        ${settingsSection('9. Cookies, armazenamento local e sessão',
+            settingsParagraph('A Condomit pode utilizar recursos do navegador, como armazenamento local e de sessão, para autenticação, preferências, estado de leitura, favoritos e continuidade de uso. Esses recursos não devem ser usados para vender dados pessoais a terceiros.')
+        )}
+        ${settingsSection('10. Comunicações e conteúdo de usuários',
+            settingsParagraph('Mensagens, comentários, arquivos, anúncios e outros conteúdos enviados pelo usuário permanecem vinculados às funcionalidades em que foram publicados. O usuário deve evitar inserir dados pessoais desnecessários ou informações de terceiros sem autorização.')
+        )}
+        ${settingsSection('11. Atualizações desta política',
+            settingsParagraph('Esta Política pode ser atualizada para acompanhar mudanças na plataforma, em requisitos de segurança ou em obrigações aplicáveis. A versão vigente deve permanecer disponível nesta área de Configurações.')
+        )}
+        ${settingsSection('12. Contato sobre privacidade',
+            `<p>Dúvidas e solicitações relacionadas à privacidade podem ser enviadas para <a href="mailto:${CONDOMIT_COMPANY_EMAIL}?subject=Privacidade%20-%20Condomit">${CONDOMIT_COMPANY_EMAIL}</a>.</p>`
+        )}
+    `;
+
+    openSettingsContentModal({
+        title: 'Política de Privacidade',
+        subtitle: 'Como a Condomit trata e protege as informações usadas na plataforma.',
+        html
+    });
+}
+
+function openTermsOfUseModal() {
+    const html = `
+        <div class="settings-document-intro">
+            <strong>Termos de Uso da Condomit</strong>
+            <span>Última atualização: 10 de agosto de 2026</span>
+        </div>
+        ${settingsSection('1. Aceitação',
+            settingsParagraph('Ao criar uma conta, acessar ou utilizar a Condomit, o usuário concorda em utilizar a plataforma de forma compatível com estes Termos, com as regras do seu condomínio e com a legislação aplicável.')
+        )}
+        ${settingsSection('2. Conta e credenciais',
+            settingsList([
+                'O usuário deve fornecer informações verdadeiras e manter seus dados atualizados.',
+                'Credenciais de acesso são pessoais e não devem ser compartilhadas.',
+                'O usuário é responsável por proteger seus dispositivos e comunicar suspeitas de acesso indevido.',
+                'A Condomit pode exigir confirmação de e-mail ou outras verificações para proteger a conta.'
+            ])
+        )}
+        ${settingsSection('3. Vínculo com o condomínio',
+            settingsParagraph('O acesso às informações de um condomínio depende do vínculo cadastrado no sistema. O usuário não deve tentar acessar dados de outro condomínio, alterar identificadores para contornar permissões ou utilizar credenciais de terceiros.')
+        )}
+        ${settingsSection('4. Perfis de usuário',
+            settingsParagraph('Síndicos, moradores e porteiros possuem permissões diferentes. Cada perfil deve utilizar somente as funções compatíveis com suas atribuições e com as permissões concedidas pela plataforma e pelo condomínio.')
+        )}
+        ${settingsSection('5. Comunicação e conteúdo',
+            settingsParagraph('O usuário é responsável pelo conteúdo que envia em chats, assembleias, comentários, sugestões, anúncios e demais áreas. Não é permitido publicar conteúdo ilícito, enganoso, ofensivo, discriminatório, que viole direitos de terceiros ou que comprometa a segurança da comunidade.')
+        )}
+        ${settingsSection('6. Assembleias e votações',
+            settingsParagraph('As ferramentas de assembleia registram dados digitais disponibilizados pela plataforma, como presença, chat, pautas e votos. Regras formais de convocação, validade, quórum e documentação continuam sujeitas às normas do condomínio e às exigências aplicáveis.')
+        )}
+        ${settingsSection('7. Marketplace',
+            settingsParagraph('O marketplace aproxima usuários do mesmo condomínio. A Condomit não é proprietária dos itens anunciados e não garante estado, qualidade, entrega ou negociação entre as partes. O anunciante é responsável pelas informações publicadas e por remover ou atualizar anúncios que deixem de ser válidos.')
+        )}
+        ${settingsSection('8. Pagamentos e serviços de terceiros',
+            settingsParagraph('Determinadas funcionalidades podem utilizar serviços externos de pagamento, autenticação, envio de e-mails, hospedagem ou videoconferência. O uso desses serviços também pode estar sujeito aos respectivos termos e políticas.')
+        )}
+        ${settingsSection('9. Uso proibido',
+            settingsList([
+                'Tentar acessar contas, condomínios ou dados sem autorização.',
+                'Explorar falhas, burlar políticas de segurança ou interferir no funcionamento da aplicação.',
+                'Enviar malware, spam ou arquivos destinados a causar dano.',
+                'Usar dados obtidos na plataforma para assédio, fraude ou finalidade incompatível com a gestão condominial.',
+                'Falsificar identidade, permissões, registros ou informações de acesso.'
+            ])
+        )}
+        ${settingsSection('10. Disponibilidade e alterações',
+            settingsParagraph('A plataforma pode passar por manutenção, atualizações e indisponibilidades temporárias. Funcionalidades podem ser aperfeiçoadas, substituídas ou descontinuadas quando necessário para segurança, evolução técnica ou melhoria do serviço.')
+        )}
+        ${settingsSection('11. Propriedade intelectual',
+            settingsParagraph('Marca, identidade visual, software, interfaces e materiais próprios da Condomit são protegidos pelos direitos aplicáveis. O uso da plataforma não transfere ao usuário titularidade sobre esses elementos.')
+        )}
+        ${settingsSection('12. Suspensão e encerramento',
+            settingsParagraph('Contas podem ter o acesso limitado ou encerrado em caso de violação destes Termos, risco de segurança, fraude, solicitação válida do responsável pelo condomínio ou encerramento da relação com a plataforma, respeitadas as condições aplicáveis.')
+        )}
+        ${settingsSection('13. Responsabilidades',
+            settingsParagraph('A Condomit oferece ferramentas tecnológicas de apoio à gestão e à comunicação. Decisões administrativas, autorizações de acesso, conteúdo publicado, negociações entre usuários e atos praticados por usuários permanecem sob responsabilidade de quem os realiza, dentro das regras aplicáveis.')
+        )}
+        ${settingsSection('14. Privacidade',
+            settingsParagraph('O tratamento de informações pessoais é descrito na Política de Privacidade disponível nesta mesma área de Configurações.')
+        )}
+        ${settingsSection('15. Atualização dos termos',
+            settingsParagraph('Estes Termos podem ser atualizados conforme a plataforma evoluir. A versão vigente deve permanecer disponível ao usuário.')
+        )}
+        ${settingsSection('16. Contato',
+            `<p>Para dúvidas sobre estes Termos, entre em contato pelo e-mail <a href="mailto:${CONDOMIT_COMPANY_EMAIL}?subject=Termos%20de%20Uso%20-%20Condomit">${CONDOMIT_COMPANY_EMAIL}</a>.</p>`
+        )}
+    `;
+
+    openSettingsContentModal({
+        title: 'Termos de Uso',
+        subtitle: 'Regras para utilização responsável e segura da plataforma Condomit.',
+        html
+    });
+}
+
+function openUsefulContactsModal() {
+    const html = `
+        <div class="settings-contact-grid">
+            <a class="settings-contact-card" href="mailto:${CONDOMIT_COMPANY_EMAIL}?subject=Contato%20Condomit">
+                <i class="fas fa-envelope"></i>
+                <div>
+                    <span>E-mail</span>
+                    <strong>${CONDOMIT_COMPANY_EMAIL}</strong>
+                </div>
+            </a>
+            <div class="settings-contact-card">
+                <i class="fas fa-phone"></i>
+                <div>
+                    <span>Telefone</span>
+                    <strong>${escapeReservationHtml(CONDOMIT_COMPANY_PHONE)}</strong>
+                </div>
+            </div>
+        </div>
+        <p class="settings-contact-note">O arquivo do projeto não contém um número de telefone oficial da Condomit; por isso nenhum número fictício foi inserido.</p>
+    `;
+
+    openSettingsContentModal({
+        title: 'Contatos da Condomit',
+        subtitle: 'Canais úteis para falar com a equipe da plataforma.',
+        html
+    });
+}
+
+function getSettingsUserType() {
+    const user = getCurrentUser();
+    if (typeof window.getNormalizedUserType === 'function') {
+        return window.getNormalizedUserType(user);
+    }
+    return String(user?.type || user?.user_type || 'morador').trim().toLowerCase();
+}
+
+async function getSettingsCondoCep() {
+    const user = getCurrentUser();
+    if (typeof window.resolveUserCondominiumCep === 'function') {
+        try {
+            const resolved = await window.resolveUserCondominiumCep(user);
+            if (resolved) return resolved;
+        } catch (_) {}
+    }
+    const condo = user?.condominium && typeof user.condominium === 'object' ? user.condominium : {};
+    return condo.cep || condo.condominium_id || condo.condominiumId || user?.cep || '';
+}
+
+function openServiceProvidersModal() {
+    const role = getSettingsUserType();
+    const canRegister = ['sindico', 'síndico', 'porteiro', 'admin'].includes(role);
+    const html = `
+        <div class="settings-choice-grid">
+            <button type="button" class="settings-choice-card" id="viewProvidersChoice">
+                <i class="fas fa-address-book"></i>
+                <strong>Ver prestadores registrados</strong>
+                <span>Consulte os prestadores vinculados ao seu condomínio.</span>
+            </button>
+            <button type="button" class="settings-choice-card" id="registerProviderChoice" ${canRegister ? '' : 'disabled'}>
+                <i class="fas fa-user-plus"></i>
+                <strong>Registrar prestador</strong>
+                <span>${canRegister ? 'Cadastre um novo prestador para o condomínio.' : 'Disponível para síndicos e porteiros.'}</span>
+            </button>
+        </div>
+    `;
+
+    const modal = openSettingsContentModal({
+        title: 'Prestadores de serviços',
+        subtitle: 'Escolha o que deseja fazer.',
+        html
+    });
+
+    modal.querySelector('#viewProvidersChoice')?.addEventListener('click', renderRegisteredProvidersInSettings);
+    modal.querySelector('#registerProviderChoice')?.addEventListener('click', renderProviderRegistrationInSettings);
+}
+
+async function renderRegisteredProvidersInSettings() {
+    const modal = ensureSettingsContentModal();
+    const body = modal.querySelector('#settingsContentBody');
+    const subtitle = modal.querySelector('#settingsContentSubtitle');
+    if (subtitle) subtitle.textContent = 'Prestadores registrados no condomínio atual.';
+    if (body) {
+        body.innerHTML = `
+            <div class="reservas-empty-state">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Carregando prestadores...</p>
+            </div>
+        `;
+    }
+
+    try {
+        const cep = await getSettingsCondoCep();
+        const rows = typeof window.listServiceProvidersByCep === 'function'
+            ? await window.listServiceProvidersByCep(cep)
+            : [];
+
+        if (!Array.isArray(rows) || !rows.length) {
+            body.innerHTML = `
+                <div class="reservas-empty-state">
+                    <i class="fas fa-user-slash"></i>
+                    <p>Nenhum prestador registrado neste condomínio.</p>
+                </div>
+            `;
+            return;
+        }
+
+        body.innerHTML = `
+            <div class="settings-provider-list">
+                ${rows.map((provider) => `
+                    <article class="settings-provider-card">
+                        <div class="settings-provider-avatar"><i class="fas fa-user-gear"></i></div>
+                        <div>
+                            <strong>${escapeReservationHtml(provider.provider_name || provider.name || 'Prestador')}</strong>
+                            <span>${escapeReservationHtml(provider.service || 'Serviço não informado')}</span>
+                            <small>${escapeReservationHtml(provider.company || '')}${provider.phone ? ` • ${escapeReservationHtml(provider.phone)}` : ''}</small>
+                        </div>
+                        <span class="settings-provider-status">${escapeReservationHtml(provider.initial_status || 'agendado')}</span>
+                    </article>
+                `).join('')}
+            </div>
+        `;
+    } catch (error) {
+        body.innerHTML = `
+            <div class="reservas-empty-state">
+                <i class="fas fa-circle-exclamation"></i>
+                <p>${escapeReservationHtml(error?.message || 'Não foi possível carregar os prestadores.')}</p>
+            </div>
+        `;
+    }
+}
+
+async function renderProviderRegistrationInSettings() {
+    const role = getSettingsUserType();
+    if (!['sindico', 'síndico', 'porteiro', 'admin'].includes(role)) {
+        window.showToast?.('Seu perfil pode consultar prestadores, mas não registrar novos.', 'warning');
+        return;
+    }
+
+    const modal = ensureSettingsContentModal();
+    const body = modal.querySelector('#settingsContentBody');
+    const subtitle = modal.querySelector('#settingsContentSubtitle');
+    if (subtitle) subtitle.textContent = 'Cadastre um prestador para o condomínio atual.';
+
+    body.innerHTML = `
+        <form class="settings-provider-form" id="settingsProviderForm">
+            <label>Nome do prestador<input id="settingsProviderName" type="text" required maxlength="120"></label>
+            <label>Empresa<input id="settingsProviderCompany" type="text" required maxlength="120"></label>
+            <label>Serviço<input id="settingsProviderService" type="text" required maxlength="160"></label>
+            <label>Categoria
+                <select id="settingsProviderCategory" required>
+                    <option value="electrical">Elétrica</option>
+                    <option value="cleaning">Limpeza</option>
+                    <option value="hydraulic">Hidráulica</option>
+                    <option value="security">Segurança</option>
+                    <option value="gardening">Jardinagem</option>
+                    <option value="painting">Pintura</option>
+                    <option value="elevator">Elevadores</option>
+                </select>
+            </label>
+            <label>Telefone<input id="settingsProviderPhone" type="text" required maxlength="30" placeholder="(11) 99999-9999"></label>
+            <label>E-mail<input id="settingsProviderEmail" type="email" required maxlength="160"></label>
+            <label>Data do serviço<input id="settingsProviderDate" type="date" required value="${new Date().toISOString().slice(0, 10)}"></label>
+            <label>Horário / janela<input id="settingsProviderWindow" type="text" required maxlength="80" placeholder="09:00 - 12:00"></label>
+            <label>Status
+                <select id="settingsProviderStatus">
+                    <option value="agendado">Agendado</option>
+                    <option value="em andamento">Em andamento</option>
+                    <option value="concluído">Concluído</option>
+                    <option value="cancelado">Cancelado</option>
+                </select>
+            </label>
+            <div class="settings-provider-form-actions">
+                <button type="button" class="ghost-btn" id="settingsProviderBack">Voltar</button>
+                <button type="submit" class="btn-edit-profile"><i class="fas fa-floppy-disk"></i> Salvar prestador</button>
+            </div>
+        </form>
+    `;
+
+    body.querySelector('#settingsProviderBack')?.addEventListener('click', openServiceProvidersModal);
+    body.querySelector('#settingsProviderForm')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submit = event.currentTarget.querySelector('button[type="submit"]');
+        try {
+            submit.disabled = true;
+            const cep = await getSettingsCondoCep();
+            if (typeof window.createServiceProvider !== 'function') {
+                throw new Error('Serviço de cadastro de prestadores indisponível.');
+            }
+
+            await window.createServiceProvider({
+                cep,
+                provider_name: body.querySelector('#settingsProviderName')?.value || '',
+                company: body.querySelector('#settingsProviderCompany')?.value || '',
+                service: body.querySelector('#settingsProviderService')?.value || '',
+                category: body.querySelector('#settingsProviderCategory')?.value || 'cleaning',
+                phone: body.querySelector('#settingsProviderPhone')?.value || '',
+                email: body.querySelector('#settingsProviderEmail')?.value || '',
+                service_date: body.querySelector('#settingsProviderDate')?.value || '',
+                service_window: body.querySelector('#settingsProviderWindow')?.value || '',
+                initial_status: body.querySelector('#settingsProviderStatus')?.value || 'agendado'
+            });
+
+            window.showToast?.('Prestador registrado com sucesso.', 'success');
+            await renderRegisteredProvidersInSettings();
+        } catch (error) {
+            window.showToast?.(error?.message || 'Não foi possível registrar o prestador.', 'error');
+        } finally {
+            submit.disabled = false;
+        }
+    });
 }

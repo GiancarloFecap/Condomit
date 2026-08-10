@@ -3,8 +3,10 @@ const marketplaceState = {
     search: '',
     category: 'todos',
     favoritesOnly: false,
+    mineOnly: false,
     selectedItemId: null,
     draftImage: '',
+    editingDbId: null,
     isSaving: false
 };
 
@@ -224,11 +226,25 @@ function setupMarketplaceActions() {
 
     document
         .getElementById(
+            'toggleMyAdsBtn'
+        )
+        ?.addEventListener(
+            'click',
+            async () => {
+                marketplaceState.mineOnly =
+                    !marketplaceState.mineOnly;
+
+                await renderMarketplacePage();
+            }
+        );
+
+    document
+        .getElementById(
             'createItemBtn'
         )
         ?.addEventListener(
             'click',
-            openMarketplaceModal
+            () => openMarketplaceModal()
         );
 
     document
@@ -497,20 +513,30 @@ function setupMarketplaceActions() {
                      * deve realizar o INSERT
                      * em marketplace_items.
                      */
+                    const wasEditing =
+                        Boolean(
+                            marketplaceState.editingDbId
+                        );
+
+                    const itemData = {
+                        title,
+                        category,
+                        categoryLabel,
+                        price,
+                        description,
+                        image
+                    };
+
                     const item =
-                        await window
-                            .communityHub
-                            .createMarketplaceItem(
-                                {
-                                    title,
-                                    category,
-                                    categoryLabel,
-                                    price,
-                                    description,
-                                    image
-                                },
-                                marketplaceState
-                                    .currentUser
+                        marketplaceState.editingDbId
+                            ? await window.communityHub.updateMarketplaceItem(
+                                marketplaceState.editingDbId,
+                                itemData,
+                                marketplaceState.currentUser
+                            )
+                            : await window.communityHub.createMarketplaceItem(
+                                itemData,
+                                marketplaceState.currentUser
                             );
 
                     /*
@@ -547,7 +573,9 @@ function setupMarketplaceActions() {
                     await renderMarketplacePage();
 
                     window.showToast?.(
-                        'Anúncio publicado e salvo no banco de dados.',
+                        wasEditing
+                            ? 'Anúncio atualizado com sucesso.'
+                            : 'Anúncio publicado e salvo no banco de dados.',
                         'success'
                     );
                 } catch (error) {
@@ -725,6 +753,14 @@ async function renderMarketplacePage() {
             )
         );
 
+    const currentEmail =
+        String(
+            marketplaceState.currentUser?.email ||
+            ''
+        )
+            .trim()
+            .toLowerCase();
+
     const filteredItems =
         safeItems.filter(
             (item) => {
@@ -769,10 +805,20 @@ async function renderMarketplacePage() {
                         )
                     );
 
+                const matchesMine =
+                    !marketplaceState.mineOnly ||
+                    (
+                        currentEmail &&
+                        String(item.sellerEmail || '')
+                            .trim()
+                            .toLowerCase() === currentEmail
+                    );
+
                 return (
                     matchesCategory &&
                     matchesSearch &&
-                    matchesFavorite
+                    matchesFavorite &&
+                    matchesMine
                 );
             }
         );
@@ -960,6 +1006,11 @@ function renderMarketplaceGrid(
             'toggleFavoritesBtn'
         );
 
+    const myAdsButton =
+        document.getElementById(
+            'toggleMyAdsBtn'
+        );
+
     if (!grid) {
         return;
     }
@@ -994,6 +1045,20 @@ function renderMarketplaceGrid(
             heartIcon.classList.toggle('fas', favoritesActive);
             heartIcon.classList.add('fa-heart');
         }
+    }
+
+    if (myAdsButton) {
+        const mineActive = Boolean(
+            marketplaceState.mineOnly
+        );
+        myAdsButton.classList.toggle(
+            'active',
+            mineActive
+        );
+        myAdsButton.setAttribute(
+            'aria-pressed',
+            mineActive ? 'true' : 'false'
+        );
     }
 
     if (!items.length) {
@@ -1337,30 +1402,140 @@ function renderMarketplaceDetail(
         </div>
 
         <div class="detail-actions">
-            <button
-                class="primary-action"
-                type="button"
-            >
-                <i class="fas fa-comment-dots"></i>
-                Entrar em contato
-            </button>
+            ${
+                isOwnMarketplaceItem(selected)
+                    ? `
+                        <button
+                            class="primary-action"
+                            type="button"
+                            id="editOwnMarketplaceItem"
+                        >
+                            <i class="fas fa-pen"></i>
+                            Editar anúncio
+                        </button>
 
-            <button
-                class="ghost-btn"
-                type="button"
-            >
-                <i class="fab fa-whatsapp"></i>
-                WhatsApp
-            </button>
+                        <button
+                            class="ghost-btn danger-action"
+                            type="button"
+                            id="deleteOwnMarketplaceItem"
+                        >
+                            <i class="fas fa-trash"></i>
+                            Excluir anúncio
+                        </button>
+                    `
+                    : `
+                        <button
+                            class="primary-action"
+                            type="button"
+                        >
+                            <i class="fas fa-comment-dots"></i>
+                            Entrar em contato
+                        </button>
+
+                        <button
+                            class="ghost-btn"
+                            type="button"
+                        >
+                            <i class="fab fa-whatsapp"></i>
+                            WhatsApp
+                        </button>
+                    `
+            }
         </div>
     `;
+
+    detail
+        .querySelector('#editOwnMarketplaceItem')
+        ?.addEventListener('click', () => {
+            openMarketplaceModal(selected);
+        });
+
+    detail
+        .querySelector('#deleteOwnMarketplaceItem')
+        ?.addEventListener('click', () => {
+            deleteOwnMarketplaceItem(selected);
+        });
 }
 
-function openMarketplaceModal() {
+function isOwnMarketplaceItem(item) {
+    const currentEmail =
+        String(
+            marketplaceState.currentUser?.email ||
+            ''
+        )
+            .trim()
+            .toLowerCase();
+
+    const sellerEmail =
+        String(
+            item?.sellerEmail ||
+            ''
+        )
+            .trim()
+            .toLowerCase();
+
+    return Boolean(
+        currentEmail &&
+        sellerEmail &&
+        currentEmail === sellerEmail
+    );
+}
+
+function openMarketplaceModal(item = null) {
     const modal = document.getElementById('marketplaceModal');
 
     if (!modal) {
         return;
+    }
+
+    const isEditing = Boolean(item && isOwnMarketplaceItem(item));
+    marketplaceState.editingDbId =
+        isEditing
+            ? Number(item.dbId)
+            : null;
+
+    const titleEl = modal.querySelector('.modal-header h3');
+    const subtitleEl = modal.querySelector('.modal-header p');
+    const submitButton = modal.querySelector('button[type="submit"]');
+
+    if (titleEl) {
+        titleEl.textContent =
+            isEditing
+                ? 'Editar anúncio'
+                : 'Novo anúncio';
+    }
+
+    if (subtitleEl) {
+        subtitleEl.textContent =
+            isEditing
+                ? 'Atualize as informações do seu anúncio.'
+                : 'Publique um item para vender, doar ou negociar.';
+    }
+
+    const form = document.getElementById('marketplaceForm');
+    form?.reset();
+    resetMarketplaceImagePreview();
+
+    if (isEditing) {
+        const titleInput = document.getElementById('itemTitle');
+        const categoryInput = document.getElementById('itemCategory');
+        const priceInput = document.getElementById('itemPrice');
+        const descriptionInput = document.getElementById('itemDescription');
+
+        if (titleInput) titleInput.value = item.title || '';
+        if (categoryInput) categoryInput.value = item.category || 'outros';
+        if (priceInput) priceInput.value = Number(item.price || 0).toFixed(2);
+        if (descriptionInput) descriptionInput.value = item.description || '';
+
+        marketplaceState.draftImage = item.image || '';
+        renderMarketplaceImagePreview();
+    }
+
+    if (submitButton) {
+        submitButton.innerHTML =
+            isEditing
+                ? '<i class="fas fa-floppy-disk"></i> Salvar alterações'
+                : 'Publicar anúncio';
     }
 
     modal.classList.add('open');
@@ -1385,7 +1560,53 @@ function closeMarketplaceModal() {
         )
         ?.reset();
 
+    marketplaceState.editingDbId = null;
     resetMarketplaceImagePreview();
+}
+
+async function deleteOwnMarketplaceItem(item) {
+    if (!item?.dbId || !isOwnMarketplaceItem(item)) {
+        window.showToast?.(
+            'Você só pode excluir anúncios publicados pela sua conta.',
+            'warning'
+        );
+        return;
+    }
+
+    const confirmed =
+        typeof window.showModal === 'function'
+            ? await new Promise((resolve) => {
+                window.showModal({
+                    title: 'Excluir anúncio?',
+                    message: `O anúncio "${item.title || 'selecionado'}" será removido permanentemente.`,
+                    confirmLabel: 'Excluir',
+                    cancelLabel: 'Cancelar',
+                    onConfirm: () => resolve(true),
+                    onCancel: () => resolve(false)
+                });
+            })
+            : window.confirm('Deseja excluir este anúncio?');
+
+    if (!confirmed) return;
+
+    try {
+        await window.communityHub.deleteMarketplaceItem(
+            item.dbId,
+            marketplaceState.currentUser
+        );
+        marketplaceState.selectedItemId = null;
+        await renderMarketplacePage();
+        window.showToast?.(
+            'Anúncio excluído com sucesso.',
+            'success'
+        );
+    } catch (error) {
+        window.showToast?.(
+            error?.message ||
+            'Não foi possível excluir o anúncio.',
+            'error'
+        );
+    }
 }
 
 function handleMarketplaceImageChange(

@@ -1008,3 +1008,321 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 .access-registration-form[hidden], .access-kind-selector[hidden] { display: none !important; }
 .access-back-btn { width: max-content; border: 0; background: transparent; color: #2563eb; font-weight: 700; cursor: pointer; padding: 0 0 6px; }
 @media (max-width: 720px) { .access-kind-selector { grid-template-columns: 1fr; } .access-kind-card { min-height: 130px; } }
+
+/* ============================================================
+   014 - Modais de conteúdo das Configurações
+============================================================ */
+.settings-modal-open {
+    overflow: hidden;
+}
+
+.settings-content-overlay {
+    z-index: 35000;
+}
+
+.settings-content-card {
+    width: min(920px, calc(100vw - 32px));
+    max-height: min(88vh, 860px);
+}
+
+.settings-content-body {
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+}
+
+.settings-document-intro {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 18px;
+    border-radius: 16px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    margin-bottom: 18px;
+}
+
+.settings-document-intro strong {
+    font-size: 1.05rem;
+}
+
+.settings-document-intro span {
+    color: #64748b;
+    font-size: .88rem;
+}
+
+.settings-document-section {
+    padding: 18px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.settings-document-section:last-child {
+    border-bottom: 0;
+}
+
+.settings-document-section h4 {
+    margin: 0 0 10px;
+    color: #0f172a;
+    font-size: 1rem;
+}
+
+.settings-document-section p,
+.settings-document-section li {
+    color: #475569;
+    line-height: 1.72;
+}
+
+.settings-document-section p {
+    margin: 0 0 9px;
+}
+
+.settings-document-section ul {
+    margin: 0;
+    padding-left: 22px;
+    display: grid;
+    gap: 7px;
+}
+
+.settings-document-section a,
+.settings-contact-card {
+    color: #1d4ed8;
+}
+
+.settings-company-hero {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 20px;
+    border: 1px solid #dbeafe;
+    background: linear-gradient(135deg, #eff6ff, #f0fdfa);
+    border-radius: 18px;
+    margin-bottom: 8px;
+}
+
+.settings-company-hero img {
+    width: 82px;
+    height: 82px;
+    object-fit: contain;
+    flex: 0 0 auto;
+}
+
+.settings-company-hero h4 {
+    margin: 0 0 5px;
+    color: #0f172a;
+    font-size: 1.3rem;
+}
+
+.settings-company-hero p {
+    margin: 0;
+    color: #64748b;
+}
+
+.settings-contact-grid,
+.settings-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.settings-contact-card,
+.settings-choice-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #fff;
+    padding: 18px;
+    text-decoration: none;
+}
+
+.settings-contact-card {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    align-items: center;
+    gap: 14px;
+}
+
+.settings-contact-card > i,
+.settings-choice-card > i {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
+.settings-contact-card div {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.settings-contact-card span {
+    color: #64748b;
+    font-size: .82rem;
+}
+
+.settings-contact-card strong {
+    color: #0f172a;
+    overflow-wrap: anywhere;
+}
+
+.settings-contact-note {
+    color: #64748b;
+    font-size: .9rem;
+    margin: 18px 0 0;
+    line-height: 1.6;
+}
+
+.settings-choice-card {
+    text-align: left;
+    cursor: pointer;
+    display: grid;
+    gap: 10px;
+    transition: .2s ease;
+    color: inherit;
+}
+
+.settings-choice-card:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: #93c5fd;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, .08);
+}
+
+.settings-choice-card:disabled {
+    opacity: .58;
+    cursor: not-allowed;
+}
+
+.settings-choice-card strong {
+    color: #0f172a;
+    font-size: 1rem;
+}
+
+.settings-choice-card span {
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.settings-provider-list {
+    display: grid;
+    gap: 12px;
+}
+
+.settings-provider-card {
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.settings-provider-avatar {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.settings-provider-card > div:nth-child(2) {
+    display: grid;
+    gap: 3px;
+}
+
+.settings-provider-card strong {
+    color: #0f172a;
+}
+
+.settings-provider-card span,
+.settings-provider-card small {
+    color: #64748b;
+}
+
+.settings-provider-status {
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #047857 !important;
+    font-size: .78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.settings-provider-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.settings-provider-form label {
+    display: grid;
+    gap: 7px;
+    color: #334155;
+    font-size: .9rem;
+    font-weight: 600;
+}
+
+.settings-provider-form input,
+.settings-provider-form select {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid #dbe2f0;
+    border-radius: 11px;
+    padding: 10px 12px;
+    background: #fff;
+    color: #0f172a;
+    font: inherit;
+}
+
+.settings-provider-form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+html[data-theme="dark"] .settings-content-card,
+html[data-theme="dark"] .settings-contact-card,
+html[data-theme="dark"] .settings-choice-card,
+html[data-theme="dark"] .settings-provider-card,
+html[data-theme="dark"] .settings-provider-form input,
+html[data-theme="dark"] .settings-provider-form select {
+    background: #111827;
+    border-color: #334155;
+}
+
+html[data-theme="dark"] .settings-document-section h4,
+html[data-theme="dark"] .settings-company-hero h4,
+html[data-theme="dark"] .settings-contact-card strong,
+html[data-theme="dark"] .settings-choice-card strong,
+html[data-theme="dark"] .settings-provider-card strong {
+    color: #f8fafc;
+}
+
+html[data-theme="dark"] .settings-document-section {
+    border-color: #334155;
+}
+
+@media (max-width: 720px) {
+    .settings-contact-grid,
+    .settings-choice-grid,
+    .settings-provider-form {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-provider-card {
+        grid-template-columns: 42px 1fr;
+    }
+
+    .settings-provider-status {
+        grid-column: 2;
+        justify-self: start;
+    }
+}
