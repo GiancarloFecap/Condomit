@@ -1,4 +1,13 @@
 document.addEventListener('DOMContentLoaded', async function() {
+    if (!sessionStorage.getItem('condominiumUser') && typeof window.resumeCondomitSession === 'function') {
+        try {
+            const resumed = await window.resumeCondomitSession({ redirect: true });
+            if (resumed?.redirected) return;
+        } catch (error) {
+            console.warn('[LOGIN] Falha ao restaurar sessão persistente:', error?.message || error);
+        }
+    }
+
     let resendCooldownUntil = 0;
     let resendInProgress = false;
 

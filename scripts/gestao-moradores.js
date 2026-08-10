@@ -128,7 +128,7 @@ async function fetchResidentsFromApi() {
             type: 'morador',
             status: 'ativo',
             role: 'Titular',
-            createdAt: null,
+            createdAt: resident?.joined_at || resident?.created_at || null,
             profilePhoto: resident?.profile_photo || null
         }))
         .sort((left, right) => left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base' }));
@@ -321,13 +321,80 @@ function renderResidentsTable(residents) {
             </td>
             <td>
                 <div class="action-buttons">
-                    <button type="button" aria-label="Visualizar"><i class="fas fa-eye"></i></button>
-                    <button type="button" aria-label="Editar"><i class="fas fa-pen"></i></button>
-                    <button type="button" aria-label="Mais ações"><i class="fas fa-ellipsis-v"></i></button>
+                    <button type="button" class="resident-view-btn" data-resident-email="${escapeHtml(resident.email)}" aria-label="Visualizar morador" title="Visualizar morador"><i class="fas fa-eye"></i></button>
+                    <button type="button" aria-label="Mais ações" title="Mais ações"><i class="fas fa-ellipsis-v"></i></button>
                 </div>
             </td>
         </tr>
     `).join('');
+
+    tbody.querySelectorAll('.resident-view-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            const email = String(button.dataset.residentEmail || '').trim().toLowerCase();
+            const resident = residentsState.residents.find((item) => String(item.email || '').trim().toLowerCase() === email);
+            if (resident) openResidentDetails(resident);
+        });
+    });
+}
+
+function openResidentDetails(resident) {
+    let overlay = document.getElementById('residentDetailsModal');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'residentDetailsModal';
+        overlay.className = 'resident-modal-overlay';
+        overlay.innerHTML = `
+            <div class="resident-modal" role="dialog" aria-modal="true" aria-labelledby="residentModalTitle">
+                <div class="resident-modal-head">
+                    <div>
+                        <span class="resident-modal-eyebrow">Morador</span>
+                        <h2 id="residentModalTitle">Informações do morador</h2>
+                    </div>
+                    <button type="button" class="resident-modal-close" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
+                </div>
+                <div id="residentModalBody"></div>
+            </div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector('.resident-modal-close')?.addEventListener('click', closeResidentDetails);
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) closeResidentDetails();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && overlay.classList.contains('open')) closeResidentDetails();
+        });
+    }
+
+    const body = document.getElementById('residentModalBody');
+    const photo = resident.profilePhoto || '';
+    const joinedDate = resident.createdAt ? new Date(resident.createdAt) : null;
+    const joinedLabel = joinedDate && !Number.isNaN(joinedDate.getTime())
+        ? joinedDate.toLocaleDateString('pt-BR')
+        : 'Não informado';
+    if (body) {
+        body.innerHTML = `
+            <div class="resident-modal-profile">
+                <div class="resident-modal-avatar">${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(resident.name)}">` : escapeHtml(getInitials(resident.name))}</div>
+                <div>
+                    <strong>${escapeHtml(resident.name)}</strong>
+                    <span>${escapeHtml(resident.email)}</span>
+                </div>
+            </div>
+            <div class="resident-modal-grid">
+                <div class="resident-detail"><span>Telefone</span><strong>${escapeHtml(resident.phone)}</strong></div>
+                <div class="resident-detail"><span>Apartamento</span><strong>${escapeHtml(resident.apartment)}</strong></div>
+                <div class="resident-detail"><span>Bloco</span><strong>${escapeHtml(resident.block)}</strong></div>
+                <div class="resident-detail"><span>Tipo</span><strong>${escapeHtml(resident.role || 'Titular')}</strong></div>
+                <div class="resident-detail"><span>Status</span><strong>${escapeHtml(resident.status === 'ativo' ? 'Ativo' : resident.status)}</strong></div>
+                <div class="resident-detail"><span>Entrou no condomínio em</span><strong>${escapeHtml(joinedLabel)}</strong></div>
+            </div>`;
+    }
+    overlay.classList.add('open');
+    document.body.classList.add('resident-modal-open');
+}
+
+function closeResidentDetails() {
+    document.getElementById('residentDetailsModal')?.classList.remove('open');
+    document.body.classList.remove('resident-modal-open');
 }
 
 function renderResidentsCharts(allResidents) {

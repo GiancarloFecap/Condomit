@@ -11,7 +11,9 @@
         activeContact: null,
         messagePoll: null,
         contactsPoll: null,
-        sending: false
+        sending: false,
+        pendingAttachment: null,
+        emojiPickerOpen: false
     };
 
     function escapeHtml(value) {
@@ -25,6 +27,205 @@
 
     function normalizeEmail(value) {
         return String(value || '').trim().toLowerCase();
+    }
+
+
+    const CHAT_ATTACHMENT_MAX_BYTES = 2 * 1024 * 1024;
+    const CHAT_EMOJIS = [
+        '😀','😃','😄','😁','😂','😊','😍','🥰','😎','🤩',
+        '🙂','😉','😅','🤔','😮','😢','😭','😡','👍','👎',
+        '👏','🙌','🙏','💪','❤️','💙','💚','💛','🎉','✨',
+        '✅','❌','⚠️','📌','📎','🏠','🔔','📦','🚗','🐶'
+    ];
+
+    function formatBytes(bytes) {
+        const value = Number(bytes || 0);
+        if (!Number.isFinite(value) || value <= 0) return '0 B';
+        if (value < 1024) return `${value} B`;
+        if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+        return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function insertTextAtCursor(textarea, text) {
+        if (!textarea) return;
+        const start = Number.isInteger(textarea.selectionStart) ? textarea.selectionStart : textarea.value.length;
+        const end = Number.isInteger(textarea.selectionEnd) ? textarea.selectionEnd : textarea.value.length;
+        textarea.value = `${textarea.value.slice(0, start)}${text}${textarea.value.slice(end)}`;
+        const next = start + text.length;
+        textarea.focus();
+        try { textarea.setSelectionRange(next, next); } catch (_) {}
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function clearPendingAttachment() {
+        state.pendingAttachment = null;
+        const input = document.getElementById('chatFileInput');
+        if (input) input.value = '';
+        renderPendingAttachment();
+    }
+
+    function renderPendingAttachment() {
+        const preview = document.getElementById('chatAttachmentPreview');
+        if (!preview) return;
+        const attachment = state.pendingAttachment;
+        if (!attachment) {
+            preview.hidden = true;
+            preview.innerHTML = '';
+            return;
+        }
+        preview.hidden = false;
+        preview.innerHTML = `
+            <div class="chat-attachment-selected">
+                <div class="chat-attachment-selected-icon"><i class="fas fa-file"></i></div>
+                <div class="chat-attachment-selected-info">
+                    <strong>${escapeHtml(attachment.name)}</strong>
+                    <span>${escapeHtml(formatBytes(attachment.size))}</span>
+                </div>
+                <button type="button" id="removeChatAttachment" class="chat-attachment-remove" aria-label="Remover arquivo" title="Remover arquivo">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>`;
+        document.getElementById('removeChatAttachment')?.addEventListener('click', clearPendingAttachment);
+    }
+
+    async function selectAttachment(file) {
+        if (!file) return;
+        if (file.size <= 0) {
+            window.showToast?.('O arquivo selecionado está vazio.', 'warning');
+            return;
+        }
+        if (file.size > CHAT_ATTACHMENT_MAX_BYTES) {
+            window.showToast?.('O arquivo deve ter no máximo 2 MB.', 'warning');
+            return;
+        }
+        try {
+            const data = await readFileAsDataUrl(file);
+            state.pendingAttachment = {
+                name: String(file.name || 'arquivo').slice(0, 255),
+                type: String(file.type || 'application/octet-stream').slice(0, 150),
+                size: Number(file.size || 0),
+                data
+            };
+            renderPendingAttachment();
+        } catch (error) {
+            console.error('Erro ao anexar arquivo:', error);
+            window.showToast?.(error?.message || 'Não foi possível anexar o arquivo.', 'error');
+        }
+    }
+
+    function closeEmojiPicker() {
+        const picker = document.getElementById('chatEmojiPicker');
+        if (picker) picker.hidden = true;
+        state.emojiPickerOpen = false;
+    }
+
+    function toggleEmojiPicker() {
+        const picker = document.getElementById('chatEmojiPicker');
+        if (!picker) return;
+        state.emojiPickerOpen = !state.emojiPickerOpen;
+        picker.hidden = !state.emojiPickerOpen;
+    }
+
+    function ensureChatComposerTools() {
+        const wrapper = document.querySelector('.chat-input-wrapper');
+        const inputArea = document.querySelector('.chat-input-area');
+        const textarea = document.getElementById('chatInput');
+        if (!wrapper || !inputArea || !textarea) return;
+
+        const attachButton = document.getElementById('attachFileBtn') || wrapper.querySelector('[title="Anexar arquivo"]');
+        const emojiButton = document.getElementById('emojiBtn') || wrapper.querySelector('[title="Emoji"]');
+
+        let fileInput = document.getElementById('chatFileInput');
+        if (!fileInput) {
+            fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.id = 'chatFileInput';
+            fileInput.hidden = true;
+            wrapper.appendChild(fileInput);
+        }
+
+        let preview = document.getElementById('chatAttachmentPreview');
+        if (!preview) {
+            preview = document.createElement('div');
+            preview.id = 'chatAttachmentPreview';
+            preview.className = 'chat-attachment-preview';
+            preview.hidden = true;
+            inputArea.insertBefore(preview, wrapper);
+        }
+
+        let picker = document.getElementById('chatEmojiPicker');
+        if (!picker) {
+            picker = document.createElement('div');
+            picker.id = 'chatEmojiPicker';
+            picker.className = 'chat-emoji-picker';
+            picker.hidden = true;
+            picker.innerHTML = CHAT_EMOJIS.map((emoji) => `
+                <button type="button" class="chat-emoji-option" data-emoji="${escapeHtml(emoji)}" aria-label="${escapeHtml(emoji)}">${escapeHtml(emoji)}</button>`
+            ).join('');
+            inputArea.appendChild(picker);
+            picker.querySelectorAll('[data-emoji]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    insertTextAtCursor(textarea, button.dataset.emoji || '');
+                    closeEmojiPicker();
+                });
+            });
+        }
+
+        attachButton?.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files?.[0] || null;
+            if (file) selectAttachment(file);
+        });
+        emojiButton?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            toggleEmojiPicker();
+        });
+        picker.addEventListener('click', (event) => event.stopPropagation());
+        document.addEventListener('click', closeEmojiPicker);
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeEmojiPicker();
+        });
+
+        renderPendingAttachment();
+    }
+
+    function downloadAttachment(message) {
+        const dataUrl = String(message?.attachment_data || '');
+        if (!dataUrl.startsWith('data:') || !dataUrl.includes(',')) {
+            window.showToast?.('O arquivo desta mensagem não está disponível.', 'error');
+            return;
+        }
+        try {
+            const commaIndex = dataUrl.indexOf(',');
+            const metadata = dataUrl.slice(0, commaIndex);
+            const encoded = dataUrl.slice(commaIndex + 1);
+            const mimeMatch = metadata.match(/^data:([^;]+)/i);
+            const mime = message?.attachment_type || mimeMatch?.[1] || 'application/octet-stream';
+            const binary = atob(encoded);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+            const blob = new Blob([bytes], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = String(message?.attachment_name || 'arquivo');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+        } catch (error) {
+            console.error('Erro ao baixar anexo:', error);
+            window.showToast?.('Não foi possível abrir o arquivo anexado.', 'error');
+        }
     }
 
     function getInitials(name) {
@@ -216,6 +417,7 @@
 
     async function openConversation(email) {
         const normalized = normalizeEmail(email);
+        if (state.activeEmail && state.activeEmail !== normalized) clearPendingAttachment();
         const contact = state.contacts.find((item) => normalizeEmail(item.email) === normalized);
         if (!contact) return;
 
@@ -258,6 +460,7 @@
             return;
         }
 
+        const messageById = new Map();
         container.innerHTML = `
             <div class="message-divider"><span>Conversa</span></div>
             ${messages.map((message) => {
@@ -271,16 +474,36 @@
                     : escapeHtml(getInitials(personName));
                 const date = new Date(message.created_at);
                 const time = Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const text = String(message?.message || '').trim();
+                const hasAttachment = Boolean(message?.attachment_data && message?.attachment_name);
+                if (hasAttachment) messageById.set(String(message.id), message);
+                const attachmentMarkup = hasAttachment ? `
+                    <button type="button" class="message-attachment" data-chat-download="${escapeHtml(String(message.id))}" title="Baixar ${escapeHtml(message.attachment_name)}">
+                        <span class="message-attachment-icon"><i class="fas fa-file-arrow-down"></i></span>
+                        <span class="message-attachment-info">
+                            <strong>${escapeHtml(message.attachment_name)}</strong>
+                            <small>${escapeHtml(formatBytes(message.attachment_size))}</small>
+                        </span>
+                        <i class="fas fa-download message-attachment-download"></i>
+                    </button>` : '';
                 return `
                     <div class="message ${mine ? 'mine' : ''}">
                         <div class="message-avatar-sm ${mine ? 'mine' : ''}" style="overflow:hidden;">${avatar}</div>
                         <div class="message-body">
-                            <div class="message-bubble">${escapeHtml(message.message)}</div>
+                            ${text ? `<div class="message-bubble">${escapeHtml(text)}</div>` : ''}
+                            ${attachmentMarkup}
                             <div class="message-time">${escapeHtml(time)}${mine ? ' <i class="fas fa-check-double"></i>' : ''}</div>
                         </div>
                     </div>`;
             }).join('')}
         `;
+
+        container.querySelectorAll('[data-chat-download]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const message = messageById.get(String(button.dataset.chatDownload || ''));
+                if (message) downloadAttachment(message);
+            });
+        });
         container.scrollTop = container.scrollHeight;
     }
 
@@ -298,7 +521,8 @@
         if (state.sending || !state.activeEmail) return;
         const input = document.getElementById('chatInput');
         const text = String(input?.value || '').trim();
-        if (!text) return;
+        const attachment = state.pendingAttachment;
+        if (!text && !attachment) return;
 
         state.sending = true;
         const sendBtn = document.getElementById('sendBtn');
@@ -306,9 +530,14 @@
         try {
             await rpc('condomit_chat_send_message', {
                 other_email: state.activeEmail,
-                message_text: text
+                message_text: text,
+                attachment_name: attachment?.name || null,
+                attachment_type: attachment?.type || null,
+                attachment_data: attachment?.data || null,
+                attachment_size: attachment?.size || null
             });
             if (input) input.value = '';
+            clearPendingAttachment();
             await refreshMessages();
         } catch (error) {
             console.error('Erro ao enviar mensagem:', error);
@@ -321,6 +550,7 @@
     }
 
     function bindControls() {
+        ensureChatComposerTools();
         document.getElementById('searchConversations')?.addEventListener('input', renderContacts);
         document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
         document.getElementById('chatInput')?.addEventListener('keydown', (event) => {
@@ -333,6 +563,24 @@
         document.querySelector('.new-chat-btn')?.addEventListener('click', () => {
             document.getElementById('searchConversations')?.focus();
         });
+    }
+
+
+    async function logout() {
+        stopPolling();
+        clearPendingAttachment();
+        if (typeof window.performFullLogout === 'function') {
+            await window.performFullLogout();
+            return;
+        }
+        try { sessionStorage.clear(); } catch (_) {}
+        try {
+            localStorage.removeItem('condominiumPersistentUser');
+            Object.keys(localStorage).forEach((key) => {
+                if (/^sb-.*-auth-token$/i.test(key)) localStorage.removeItem(key);
+            });
+        } catch (_) {}
+        window.location.href = '../inicio.html';
     }
 
     function stopPolling() {
@@ -382,5 +630,6 @@
         window.addEventListener('beforeunload', stopPolling, { once: true });
     }
 
-    window.CondomitChat = { init, refreshMessages, loadContacts };
+    window.logout = logout;
+    window.CondomitChat = { init, refreshMessages, loadContacts, logout };
 })();

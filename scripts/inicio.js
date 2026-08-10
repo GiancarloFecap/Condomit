@@ -34,6 +34,11 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('Condomit Landing Page Loaded');
+    if (typeof window.resumeCondomitSession === 'function') {
+        try { await window.resumeCondomitSession({ redirect: true }); } catch (error) {
+            console.warn('[SESSION] Não foi possível restaurar automaticamente a sessão:', error?.message || error);
+        }
+    }
 });

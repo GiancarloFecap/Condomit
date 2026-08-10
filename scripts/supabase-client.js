@@ -3140,6 +3140,7 @@ async function performFullLogout(
             key.startsWith(
               'porteiro:'
             ) ||
+            /^sb-.*-auth-token$/i.test(key) ||
             key
               .toLowerCase()
               .includes(
@@ -3577,6 +3578,9 @@ window.refreshCurrentUserFromDb =
 
 window.getNormalizedUserType =
   getNormalizedUserType;
+
+window.fetchUserByEmail =
+  fetchUserByEmail;
 
 window.fetchUserByCpf =
   fetchUserByCpf;

@@ -1244,3 +1244,157 @@ html[data-theme="dark"] .tips-list li:hover {
         max-height: 200px;
     }
 }
+
+
+/* ============================================================
+   CHAT 013 - ANEXOS E EMOJIS
+============================================================ */
+.chat-input-area {
+    position: relative;
+}
+
+.chat-attachment-preview {
+    margin-bottom: 10px;
+}
+
+.chat-attachment-selected {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 520px;
+    padding: 9px 11px;
+    border: 1px solid #dbe2f0;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.chat-attachment-selected-icon,
+.message-attachment-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.chat-attachment-selected-info,
+.message-attachment-info {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    flex: 1;
+}
+
+.chat-attachment-selected-info strong,
+.message-attachment-info strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12.5px;
+}
+
+.chat-attachment-selected-info span,
+.message-attachment-info small {
+    font-size: 10.5px;
+    color: #64748b;
+}
+
+.chat-attachment-remove {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.chat-attachment-remove:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.chat-emoji-picker {
+    position: absolute;
+    z-index: 80;
+    left: 58px;
+    bottom: calc(100% - 8px);
+    width: min(320px, calc(100vw - 64px));
+    max-height: 230px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid #dbe2f0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 16px 38px rgba(15, 23, 42, .18);
+}
+
+.chat-emoji-picker[hidden] {
+    display: none;
+}
+
+.chat-emoji-option {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.chat-emoji-option:hover {
+    background: #f1f5f9;
+}
+
+.message-attachment {
+    width: min(380px, 100%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #dbe2f0;
+    border-radius: 13px;
+    background: #fff;
+    color: #0f172a;
+    cursor: pointer;
+    font: inherit;
+}
+
+.message.mine .message-attachment {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+.message-attachment-download {
+    color: #2563eb;
+    flex-shrink: 0;
+}
+
+html[data-theme="dark"] .chat-attachment-selected,
+html[data-theme="dark"] .chat-emoji-picker,
+html[data-theme="dark"] .message-attachment {
+    background: var(--card-bg, #111827);
+    border-color: var(--border-color, #2d3b50);
+    color: var(--text-primary, #f8fafc);
+}
+
+html[data-theme="dark"] .chat-emoji-option:hover {
+    background: var(--hover-bg, #1e293b);
+}
+
+@media (max-width: 640px) {
+    .chat-emoji-picker {
+        left: 16px;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
