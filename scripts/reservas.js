@@ -3,9 +3,12 @@ let selectedDate = new Date();
 let selectedTime = null;
 let selectedSpace = null;
 let condominiumSpaces = [];
+let reservations = [];
+let currentReservationsUser = null;
+
 const today = new Date();
 today.setHours(0, 0, 0, 0);
-let reservations = [];
+selectedDate.setHours(0, 0, 0, 0);
 
 const timeSlots = [
     { start: '08:00', end: '12:00' },
@@ -21,133 +24,134 @@ const months = [
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
+function getStoredUser() {
+    const candidates = [];
+    try { candidates.push(sessionStorage.getItem('condominiumUser')); } catch (_) {}
+    try {
+        candidates.push(localStorage.getItem('condominiumPersistentUser'));
+        candidates.push(localStorage.getItem('condominiumUser'));
+    } catch (_) {}
+    for (const raw of candidates) {
+        if (!raw) continue;
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') return parsed;
+        } catch (_) {}
+    }
+    return null;
+}
+
+function getUserType(user) {
+    const type = String(user?.type || user?.user_type || 'morador').trim().toLowerCase();
+    if (type.startsWith('sind')) return 'sindico';
+    if (type.startsWith('porteir')) return 'porteiro';
+    return 'morador';
+}
+
+async function rpc(name, payload = {}) {
+    if (typeof window.supabaseFetch !== 'function') {
+        throw new Error('Supabase não está disponível nesta página.');
+    }
+    return window.supabaseFetch(`/rpc/${name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+}
+
 async function fetchCondominium(cep) {
     try {
-        const response = await fetch(`/api/condominiums?cep=eq.${encodeURIComponent(cep)}`);
-        if (!response.ok) {
-            throw new Error('Erro ao buscar condomínio');
+        if (typeof window.supabaseFetch === 'function') {
+            const data = await window.supabaseFetch(
+                `/condominiums?select=*&cep=eq.${encodeURIComponent(cep)}&limit=1`
+            );
+            const row = Array.isArray(data) ? data[0] : data;
+            if (row) {
+                condominiumSpaces = Array.isArray(row.condominium_spaces) ? row.condominium_spaces : [];
+                return row;
+            }
         }
+
+        const response = await fetch(`/api/condominiums?cep=eq.${encodeURIComponent(cep)}`);
+        if (!response.ok) throw new Error('Erro ao buscar condomínio');
         const data = await response.json();
-        if (data && data.length > 0) {
-            condominiumSpaces = data[0].condominium_spaces || [];
+        if (Array.isArray(data) && data.length) {
+            condominiumSpaces = Array.isArray(data[0].condominium_spaces) ? data[0].condominium_spaces : [];
             return data[0];
         }
-        return null;
     } catch (error) {
         console.error('Erro ao buscar condomínio:', error);
-        return null;
     }
+    return null;
 }
 
 function getCondominiumIdentifier(user) {
-    if (!user || !user.condominium) return null;
+    const condo = user?.condominium || {};
+    return condo.cep || condo.condominium_id || condo.condominiumId || user?.cep || user?.condominium_id || null;
+}
 
-    return user.condominium.cep ||
-        user.condominium.condominium_id ||
-        user.condominium.condominiumId ||
-        null;
+function normalizeReservation(row) {
+    return {
+        ...row,
+        email: String(row?.email || '').trim().toLowerCase(),
+        nome_local: row?.nome_local || '',
+        data_reserva: String(row?.data_reserva || '').slice(0, 10),
+        horario_inicio: String(row?.horario_inicio || '').slice(0, 5),
+        horario_fim: String(row?.horario_fim || '').slice(0, 5),
+        status: row?.status || 'indisponivel'
+    };
 }
 
 async function fetchReservations() {
     try {
-        const url = selectedSpace
-            ? `/api/reserva?nome_local=${encodeURIComponent(selectedSpace.name)}`
-            : '/api/reserva';
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error('Erro ao buscar reservas');
-        }
-        reservations = await response.json();
-        console.log('Reservations loaded:', reservations);
-        reservations = reservations.map(res => ({
-            ...res,
-            horario_inicio: res.horario_inicio ? res.horario_inicio.substring(0, 5) : '',
-            horario_fim: res.horario_fim ? res.horario_fim.substring(0, 5) : '',
-            data_reserva: res.data_reserva
-        }));
-        console.log('Processed reservations:', reservations);
+        const rows = await rpc('condomit_list_reservation_slots');
+        reservations = (Array.isArray(rows) ? rows : []).map(normalizeReservation);
     } catch (error) {
-        console.error('Erro ao buscar reservas:', error);
+        console.error('Erro ao buscar horários reservados:', error);
         reservations = [];
+        window.showToast?.('Não foi possível carregar os horários já reservados.', 'error');
     }
 }
 
 function isTimeSlotReserved(dateStr, timeSlot) {
-    return reservations.some(res => {
-        const dbStart = res.horario_inicio ? res.horario_inicio.substring(0, 5) : '';
-        const dbEnd = res.horario_fim ? res.horario_fim.substring(0, 5) : '';
-        return res.data_reserva === dateStr &&
-            dbStart === timeSlot.start &&
-            dbEnd === timeSlot.end &&
-            res.status === 'indisponivel';
-    });
+    if (!selectedSpace) return false;
+    return reservations.some((res) => (
+        String(res.nome_local || '').toLowerCase() === String(selectedSpace.name || '').toLowerCase()
+        && res.data_reserva === dateStr
+        && res.horario_inicio === timeSlot.start
+        && res.horario_fim === timeSlot.end
+        && String(res.status || '').toLowerCase() === 'indisponivel'
+    ));
 }
 
 function isDayFullyReserved(dateStr) {
-    return timeSlots.every(timeSlot => isTimeSlotReserved(dateStr, timeSlot));
-}
-
-function renderTodasReservas() {
-    const container = document.getElementById('todasReservasContainer');
-    if (!container) return;
-
-    if (!reservations.length) {
-        container.innerHTML = '<p>Nenhuma reserva encontrada.</p>';
-        return;
-    }
-
-    container.innerHTML = reservations.map(reserva => {
-        const dataFormatada = new Date(reserva.data_reserva + 'T00:00:00').toLocaleDateString('pt-BR');
-        const horario = `${reserva.horario_inicio.substring(0, 5)} - ${reserva.horario_fim.substring(0, 5)}`;
-        return `
-            <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-                <p><strong>Data:</strong> ${dataFormatada}</p>
-                <p><strong>Horário:</strong> ${horario}</p>
-                <p><strong>Local:</strong> ${reserva.nome_local}</p>
-                <p><strong>Usuário:</strong> ${reserva.email}</p>
-                <p><strong>Status:</strong> ${reserva.status}</p>
-            </div>
-        `;
-    }).join('');
+    if (!selectedSpace) return false;
+    return timeSlots.every((slot) => isTimeSlotReserved(dateStr, slot));
 }
 
 function renderTimeSlots() {
     const container = document.getElementById('horarios-container');
     if (!container) return;
+    if (!selectedSpace) {
+        container.innerHTML = '<div class="reservation-inline-empty">Escolha primeiro um local para consultar os horários.</div>';
+        return;
+    }
 
-    const dateStr = selectedDate.toISOString().split('T')[0];
-
-    let html = '';
-
-    timeSlots.forEach((slot, index) => {
+    const dateStr = formatDateInput(selectedDate);
+    container.innerHTML = timeSlots.map((slot, index) => {
         const isReserved = isTimeSlotReserved(dateStr, slot);
-        const isSelected = selectedTime && selectedTime.start === slot.start && selectedTime.end === slot.end;
-
-        let classes = 'horario-btn';
-        if (isReserved) {
-            classes += ' unavailable';
-        } else {
-            classes += ' available';
-        }
-        if (isSelected) {
-            classes += ' selected';
-        }
-
-        html += `
-            <button class="${classes}" data-index="${index}" data-start="${slot.start}" data-end="${slot.end}" ${isReserved ? 'disabled' : ''}>
+        const isSelected = selectedTime?.start === slot.start && selectedTime?.end === slot.end;
+        return `
+            <button class="horario-btn ${isReserved ? 'unavailable' : 'available'} ${isSelected ? 'selected' : ''}"
+                    data-index="${index}" ${isReserved ? 'disabled' : ''}>
                 <span>${slot.start} - ${slot.end}</span>
                 <small>${isReserved ? 'Indisponível' : 'Disponível'}</small>
-            </button>
-        `;
-    });
+            </button>`;
+    }).join('');
 
-    container.innerHTML = html;
-
-    container.querySelectorAll('.horario-btn.available').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const index = parseInt(btn.dataset.index);
-            selectedTime = timeSlots[index];
-            console.log('Selected time:', selectedTime);
+    container.querySelectorAll('.horario-btn.available').forEach((button) => {
+        button.addEventListener('click', () => {
+            selectedTime = timeSlots[Number(button.dataset.index)];
             renderTimeSlots();
             updateResumo();
         });
@@ -157,394 +161,363 @@ function renderTimeSlots() {
 function renderCalendar() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
+    const monthLabel = document.querySelector('.calendar-month');
+    if (monthLabel) monthLabel.textContent = `${months[month]} ${year}`;
 
-    const calendarMonth = document.querySelector('.calendar-month');
-    if (calendarMonth) {
-        calendarMonth.textContent = `${months[month]} ${year}`;
-    }
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const lastDayDate = new Date(year, month + 1, 0).getDate();
+    let html = weekdays.map((day) => `<div class="calendar-day weekday">${day}</div>`).join('');
+    html += Array.from({ length: firstDayIndex }, () => '<div class="calendar-day" style="visibility:hidden"></div>').join('');
 
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-
-    const firstDayIndex = firstDay.getDay();
-    const lastDayDate = lastDay.getDate();
-
-    let calendarHTML = '';
-
-    for (let i = 0; i < 7; i++) {
-        calendarHTML += `<div class="calendar-day weekday">${weekdays[i]}</div>`;
-    }
-
-    for (let i = 0; i < firstDayIndex; i++) {
-        calendarHTML += `<div class="calendar-day" style="visibility: hidden;"></div>`;
-    }
-
-    for (let day = 1; day <= lastDayDate; day++) {
-        const dateToCheck = new Date(year, month, day);
-        dateToCheck.setHours(0, 0, 0, 0);
-
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const isFullyReserved = isDayFullyReserved(dateStr);
-
+    for (let day = 1; day <= lastDayDate; day += 1) {
+        const date = new Date(year, month, day);
+        date.setHours(0, 0, 0, 0);
+        const dateStr = formatDateInput(date);
         let classes = 'calendar-day';
-
-        if (dateToCheck < today) {
-            classes += ' disabled';
-        } else if (isFullyReserved) {
-            classes += ' unavailable';
-        } else {
-            classes += ' available';
-        }
-
-        if (selectedDate.getFullYear() === year &&
-            selectedDate.getMonth() === month &&
-            selectedDate.getDate() === day) {
-            classes += ' selected';
-        }
-
-        calendarHTML += `<div class="${classes}" data-date="${dateStr}">${day}</div>`;
+        if (date < today) classes += ' disabled';
+        else if (isDayFullyReserved(dateStr)) classes += ' unavailable';
+        else classes += ' available';
+        if (sameDate(date, selectedDate)) classes += ' selected';
+        html += `<div class="${classes}" data-date="${dateStr}">${day}</div>`;
     }
 
-    const calendarGrid = document.querySelector('.calendar-grid');
-    if (calendarGrid) {
-        calendarGrid.innerHTML = calendarHTML;
+    const grid = document.querySelector('.calendar-grid');
+    if (grid) {
+        grid.innerHTML = html;
+        grid.querySelectorAll('.calendar-day.available').forEach((dayEl) => {
+            dayEl.addEventListener('click', () => selectDate(dayEl));
+        });
     }
-
-    document.querySelectorAll('.calendar-day.available, .calendar-day.unavailable').forEach(dayEl => {
-        dayEl.addEventListener('click', () => selectDate(dayEl));
-    });
-
     updatePrevButton();
 }
 
 function updatePrevButton() {
     const prevBtn = document.getElementById('prev-month');
     if (!prevBtn) return;
-
     const currentMonthYear = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const todayMonthYear = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    if (currentMonthYear <= todayMonthYear) {
-        prevBtn.disabled = true;
-        prevBtn.style.opacity = '0.5';
-        prevBtn.style.cursor = 'not-allowed';
-    } else {
-        prevBtn.disabled = false;
-        prevBtn.style.opacity = '1';
-        prevBtn.style.cursor = 'pointer';
-    }
+    prevBtn.disabled = currentMonthYear <= todayMonthYear;
 }
 
 function selectDate(dayEl) {
-    if (dayEl.classList.contains('disabled') || dayEl.classList.contains('unavailable')) return;
-
-    document.querySelectorAll('.calendar-day.selected').forEach(el => {
-        el.classList.remove('selected');
-    });
-    dayEl.classList.add('selected');
-
-    const dateParts = dayEl.dataset.date.split('-');
-    selectedDate = new Date(dateParts[0], parseInt(dateParts[1]) - 1, dateParts[2]);
-    console.log('Selected date:', selectedDate);
-
-    if (selectedTime) {
-        const dateStr = selectedDate.toISOString().split('T')[0];
-        const isReserved = isTimeSlotReserved(dateStr, selectedTime);
-        if (isReserved) {
-            selectedTime = null;
-        }
-    }
-
-    updateResumo();
+    const [year, month, day] = String(dayEl.dataset.date || '').split('-').map(Number);
+    if (!year || !month || !day) return;
+    selectedDate = new Date(year, month - 1, day);
+    selectedDate.setHours(0, 0, 0, 0);
+    if (selectedTime && isTimeSlotReserved(formatDateInput(selectedDate), selectedTime)) selectedTime = null;
+    renderCalendar();
     renderTimeSlots();
+    updateResumo();
+}
+
+function getImageForSpace(spaceName) {
+    const name = String(spaceName || '').toLowerCase();
+    if (name.includes('churras')) return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop';
+    if (name.includes('piscina')) return 'https://images.unsplash.com/photo-1489824904134-891ab6455fda?w=400&h=300&fit=crop';
+    if (name.includes('academia')) return 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=300&fit=crop';
+    if (name.includes('quadra')) return 'https://images.unsplash.com/photo-1598902108854-4003de100b13?w=400&h=300&fit=crop';
+    if (name.includes('brinqued')) return 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=400&h=300&fit=crop';
+    return 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop';
 }
 
 function renderSpaces() {
     const container = document.querySelector('.locais-list');
     if (!container) return;
-
     if (!condominiumSpaces.length) {
-        container.innerHTML = '<p>Nenhum espaço disponível para reserva.</p>';
+        container.innerHTML = '<div class="reservation-inline-empty">Nenhum espaço foi configurado para reserva neste condomínio.</div>';
         return;
     }
 
-    function getImageForSpace(spaceName) {
-        const lowerName = spaceName.toLowerCase();
-        if (lowerName.includes('churras') || lowerName.includes('grill') || lowerName.includes('barbecue')) {
-            return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop';
-        }
-        if (lowerName.includes('piscina') || lowerName.includes('pool')) {
-            return 'https://images.unsplash.com/photo-1489824904134-891ab6455fda?w=400&h=300&fit=crop';
-        }
-        if (lowerName.includes('sala') && lowerName.includes('festas')) {
-            return 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop';
-        }
-        if (lowerName.includes('salao') || lowerName.includes('sala')) {
-            return 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?w=400&h=300&fit=crop';
-        }
-        if (lowerName.includes('gym') || lowerName.includes('academia')) {
-            return 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=300&fit=crop';
-        }
-        if (lowerName.includes('quadra') || lowerName.includes('court') || lowerName.includes('esporte')) {
-            return 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&h=300&fit=crop';
-        }
-        if (lowerName.includes('jardim') || lowerName.includes('garden')) {
-            return 'https://images.unsplash.com/photo-1598902108854-4003de100b13?w=400&h=300&fit=crop';
-        }
-        if (lowerName.includes('brinquedoteca') || lowerName.includes('play') || lowerName.includes('infantil')) {
-            return 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=400&h=300&fit=crop';
-        }
-        // Default
-        return 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop';
-    }
-
-    container.innerHTML = condominiumSpaces.map((space, index) => {
-        const isSelected = selectedSpace && selectedSpace.name === space.name;
-        const imageUrl = getImageForSpace(space.name);
-        return `
-            <div class="local-card ${isSelected ? 'selected' : ''}" data-index="${index}">
-                <img src="${imageUrl}" alt="${space.name}">
-                <div class="local-info">
-                    <h3>${space.name}</h3>
-                    ${space.capacity ? `
-                    <div class="capacidade">
-                        <i class="fas fa-users"></i>
-                        <span>Capacidade: ${space.capacity} pessoas</span>
-                    </div>` : ''}
-                    ${space.description ? `<p>${space.description}</p>` : ''}
-                </div>
+    container.innerHTML = condominiumSpaces.map((space, index) => `
+        <article class="local-card ${selectedSpace?.name === space.name ? 'selected' : ''}" data-index="${index}" tabindex="0">
+            <img src="${getImageForSpace(space.name)}" alt="${escapeHtml(space.name)}">
+            <div class="local-info">
+                <h3>${escapeHtml(space.name)}</h3>
+                ${space.capacity ? `<div class="capacidade"><i class="fas fa-users"></i><span>Capacidade: ${escapeHtml(space.capacity)} pessoas</span></div>` : ''}
+                ${space.description ? `<p>${escapeHtml(space.description)}</p>` : ''}
             </div>
-        `;
-    }).join('');
+        </article>`).join('');
 
-    container.querySelectorAll('.local-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const index = parseInt(card.dataset.index);
-            selectedSpace = condominiumSpaces[index];
-            selectedTime = null;
-            renderSpaces();
-            fetchReservations().then(() => {
-                renderTimeSlots();
-                updateResumo();
-            });
+    const choose = async (card) => {
+        selectedSpace = condominiumSpaces[Number(card.dataset.index)];
+        selectedTime = null;
+        renderSpaces();
+        await fetchReservations();
+        renderCalendar();
+        renderTimeSlots();
+        updateResumo();
+    };
+    container.querySelectorAll('.local-card').forEach((card) => {
+        card.addEventListener('click', () => choose(card));
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(card); }
         });
     });
 }
 
 function updateResumo() {
-    const resumoDataEl = document.getElementById('resumo-data');
-    const resumoHorarioEl = document.getElementById('resumo-horario');
-    const resumoLocalEl = document.querySelector('#resumo-local');
-    const btnAgendar = document.getElementById('btn-agendar');
-
-    if (selectedDate && resumoDataEl) {
-        const dateStr = selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const weekdayStr = selectedDate.toLocaleDateString('pt-BR', { weekday: 'long' });
-        resumoDataEl.textContent = `${dateStr} (${weekdayStr})`;
-    } else if (resumoDataEl) {
-        resumoDataEl.textContent = 'Nenhuma selecionada';
-    }
-
-    if (selectedTime && resumoHorarioEl) {
-        resumoHorarioEl.textContent = `${selectedTime.start} - ${selectedTime.end}`;
-    } else if (resumoHorarioEl) {
-        resumoHorarioEl.textContent = 'Nenhum selecionado';
-    }
-
-    if (selectedSpace && resumoLocalEl) {
-        resumoLocalEl.textContent = selectedSpace.name;
-    } else if (resumoLocalEl) {
-        resumoLocalEl.textContent = 'Nenhum selecionado';
-    }
-
-    if (btnAgendar) {
-        btnAgendar.disabled = !(selectedDate && selectedTime && selectedSpace);
-    }
+    const dateEl = document.getElementById('resumo-data');
+    const timeEl = document.getElementById('resumo-horario');
+    const localEl = document.getElementById('resumo-local');
+    if (dateEl) dateEl.textContent = selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (timeEl) timeEl.textContent = selectedTime ? `${selectedTime.start} - ${selectedTime.end}` : 'Nenhum selecionado';
+    if (localEl) localEl.textContent = selectedSpace?.name || 'Nenhum selecionado';
+    const button = document.getElementById('btn-agendar');
+    if (button) button.disabled = !(selectedDate && selectedTime && selectedSpace);
 }
 
 async function handleAgendar() {
     if (!selectedDate || !selectedTime || !selectedSpace) return;
-
-    const dateStr = selectedDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    const timeStr = `${selectedTime.start} - ${selectedTime.end}`;
-
-    window.showModal({
-        title: 'Confirmar reserva',
-        message: `Você realmente quer agendar o ${selectedSpace.name} para ${dateStr} às ${timeStr}?`,
-        type: 'warning',
-        confirmText: 'Sim, agendar',
-        cancelText: 'Cancelar',
-        onConfirm: async () => {
-            const userStr = sessionStorage.getItem('condominiumUser');
-            if (!userStr) {
-                window.showToast('Você precisa estar logado para agendar.', 'warning');
-                return;
-            }
-
-            const user = JSON.parse(userStr);
-            const reservationData = {
-                email: user.email,
-                nome_local: selectedSpace.name,
-                data_reserva: selectedDate.toISOString().split('T')[0],
-                horario_inicio: selectedTime.start,
-                horario_fim: selectedTime.end,
-                status: 'indisponivel'
-            };
-
-            try {
-                const response = await fetch('/api/reserva', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(reservationData)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => null);
-                    throw new Error(errorData?.message || 'Erro ao fazer reserva');
-                }
-
-                window.showToast('Reserva realizada com sucesso!', 'success');
-                await fetchReservations();
-                renderTimeSlots();
-            } catch (error) {
-                console.error('Erro ao fazer reserva:', error);
-                window.showToast(`Erro ao fazer reserva: ${error.message}`, 'error');
-            }
+    const doSave = async () => {
+        try {
+            await rpc('condomit_create_reservation', {
+                target_local: selectedSpace.name,
+                target_date: formatDateInput(selectedDate),
+                target_start: selectedTime.start,
+                target_end: selectedTime.end
+            });
+            window.showToast?.('Reserva realizada e salva no banco de dados.', 'success');
+            selectedTime = null;
+            await fetchReservations();
+            renderCalendar();
+            renderTimeSlots();
+            updateResumo();
+        } catch (error) {
+            console.error('Erro ao fazer reserva:', error);
+            window.showToast?.(error?.message || 'Não foi possível realizar a reserva.', 'error');
         }
-    });
+    };
+
+    if (typeof window.showModal === 'function') {
+        window.showModal({
+            title: 'Confirmar reserva',
+            message: `Reservar ${selectedSpace.name} em ${selectedDate.toLocaleDateString('pt-BR')} das ${selectedTime.start} às ${selectedTime.end}?`,
+            type: 'warning',
+            confirmText: 'Confirmar reserva',
+            cancelText: 'Cancelar',
+            onConfirm: doSave
+        });
+    } else if (window.confirm('Confirmar esta reserva?')) {
+        await doSave();
+    }
 }
 
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('Reservas page loaded');
+function ensureReservationsModal() {
+    if (document.getElementById('reservationsListModal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'reservationsListModal';
+    modal.className = 'reservations-modal-backdrop';
+    modal.hidden = true;
+    modal.innerHTML = `
+        <section class="reservations-modal" role="dialog" aria-modal="true" aria-labelledby="reservationsModalTitle">
+            <header class="reservations-modal-header">
+                <div><span class="reservations-modal-eyebrow">Reservas</span><h3 id="reservationsModalTitle">Minhas reservas</h3></div>
+                <button type="button" class="reservations-modal-close" id="closeReservationsModal" aria-label="Fechar"><i class="fas fa-times"></i></button>
+            </header>
+            <div class="reservations-modal-body" id="reservationsModalBody"></div>
+        </section>`;
+    document.body.appendChild(modal);
+    document.getElementById('closeReservationsModal')?.addEventListener('click', closeReservationsModal);
+    modal.addEventListener('click', (event) => { if (event.target === modal) closeReservationsModal(); });
+}
 
-    const currentUser = JSON.parse(sessionStorage.getItem('condominiumUser'));
+function closeReservationsModal() {
+    const modal = document.getElementById('reservationsListModal');
+    if (modal) modal.hidden = true;
+}
 
-    if (!currentUser) {
+async function openMyReservations() {
+    ensureReservationsModal();
+    const modal = document.getElementById('reservationsListModal');
+    const title = document.getElementById('reservationsModalTitle');
+    const body = document.getElementById('reservationsModalBody');
+    if (!modal || !title || !body) return;
+    title.textContent = 'Minhas reservas';
+    body.innerHTML = '<div class="reservation-loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+    modal.hidden = false;
+    try {
+        const rows = await rpc('condomit_list_my_reservations');
+        renderReservationCards(body, Array.isArray(rows) ? rows.map(normalizeReservation) : [], true);
+    } catch (error) {
+        body.innerHTML = `<div class="reservation-empty-state"><i class="fas fa-triangle-exclamation"></i><p>${escapeHtml(error?.message || 'Não foi possível carregar suas reservas.')}</p></div>`;
+    }
+}
+
+async function openAllReservations() {
+    ensureReservationsModal();
+    const modal = document.getElementById('reservationsListModal');
+    const title = document.getElementById('reservationsModalTitle');
+    const body = document.getElementById('reservationsModalBody');
+    if (!modal || !title || !body) return;
+    title.textContent = 'Todas as reservas do condomínio';
+    body.innerHTML = '<div class="reservation-loading"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+    modal.hidden = false;
+    try {
+        const rows = await rpc('condomit_list_all_reservations');
+        renderReservationCards(body, Array.isArray(rows) ? rows.map(normalizeReservation) : [], false);
+    } catch (error) {
+        body.innerHTML = `<div class="reservation-empty-state"><i class="fas fa-triangle-exclamation"></i><p>${escapeHtml(error?.message || 'Não foi possível carregar todas as reservas.')}</p></div>`;
+    }
+}
+
+function renderReservationCards(container, rows, canDelete) {
+    if (!rows.length) {
+        container.innerHTML = '<div class="reservation-empty-state"><i class="far fa-calendar-xmark"></i><h4>Nenhuma reserva encontrada</h4><p>Quando houver reservas elas aparecerão aqui.</p></div>';
+        return;
+    }
+    container.innerHTML = `<div class="reservation-modal-list">${rows.map((row, index) => `
+        <article class="reservation-modal-card">
+            <div class="reservation-modal-card-icon"><i class="far fa-calendar-check"></i></div>
+            <div class="reservation-modal-card-main">
+                <div class="reservation-modal-card-title">${escapeHtml(row.nome_local || 'Local')}</div>
+                <div class="reservation-modal-card-meta">
+                    <span><i class="far fa-calendar"></i> ${formatDateLabel(row.data_reserva)}</span>
+                    <span><i class="far fa-clock"></i> ${escapeHtml(row.horario_inicio)} - ${escapeHtml(row.horario_fim)}</span>
+                    ${!canDelete && row.email ? `<span><i class="far fa-user"></i> ${escapeHtml(row.email)}</span>` : ''}
+                </div>
+            </div>
+            ${canDelete ? `<button type="button" class="reservation-delete-btn" data-reservation-index="${index}"><i class="fas fa-trash-alt"></i><span>Excluir</span></button>` : ''}
+        </article>`).join('')}</div>`;
+
+    if (canDelete) {
+        container.querySelectorAll('.reservation-delete-btn').forEach((button) => {
+            button.addEventListener('click', () => deleteOwnReservation(rows[Number(button.dataset.reservationIndex)], button));
+        });
+    }
+}
+
+async function deleteOwnReservation(row, button) {
+    const execute = async () => {
+        button.disabled = true;
+        try {
+            const deleted = await rpc('condomit_delete_my_reservation', {
+                target_local: row.nome_local,
+                target_date: row.data_reserva,
+                target_start: row.horario_inicio,
+                target_end: row.horario_fim
+            });
+            if (deleted === false) throw new Error('A reserva não foi encontrada para exclusão.');
+            window.showToast?.('Reserva excluída com sucesso.', 'success');
+            await fetchReservations();
+            renderCalendar();
+            renderTimeSlots();
+            await openMyReservations();
+        } catch (error) {
+            console.error('Erro ao excluir reserva:', error);
+            window.showToast?.(error?.message || 'Não foi possível excluir a reserva.', 'error');
+        } finally {
+            button.disabled = false;
+        }
+    };
+    if (typeof window.showModal === 'function') {
+        window.showModal({
+            title: 'Excluir reserva',
+            message: `Deseja excluir a reserva de ${row.nome_local} em ${formatDateLabel(row.data_reserva)}?`,
+            type: 'warning',
+            confirmText: 'Excluir reserva',
+            cancelText: 'Cancelar',
+            onConfirm: execute
+        });
+    } else if (window.confirm('Deseja excluir esta reserva?')) {
+        await execute();
+    }
+}
+
+function setupUserShell(user) {
+    const name = user?.name || 'Usuário';
+    const avatar = document.querySelector('.user-profile-small .avatar');
+    const nameEl = document.querySelector('.user-info-small .name');
+    const typeEl = document.querySelector('.user-info-small .type');
+    if (avatar) avatar.textContent = initials(name);
+    if (nameEl) nameEl.textContent = name;
+    if (typeEl) typeEl.textContent = getUserType(user) === 'sindico' ? 'Síndico' : getUserType(user) === 'porteiro' ? 'Porteiro' : 'Morador';
+    window.syncAllAvatars?.(user);
+
+    const sindicoSidebar = document.getElementById('sidebarSindico');
+    const moradorSidebar = document.getElementById('sidebarMorador');
+    if (sindicoSidebar) sindicoSidebar.style.display = getUserType(user) === 'sindico' ? '' : 'none';
+    if (moradorSidebar) moradorSidebar.style.display = getUserType(user) === 'sindico' ? 'none' : '';
+    const sindicoSection = document.getElementById('sindicoSection');
+    if (sindicoSection) sindicoSection.style.display = getUserType(user) === 'sindico' ? 'inline-flex' : 'none';
+}
+
+function formatDateInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function formatDateLabel(value) {
+    const date = new Date(`${String(value || '').slice(0, 10)}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? escapeHtml(value || '--') : date.toLocaleDateString('pt-BR');
+}
+
+function sameDate(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function initials(name) {
+    return String(name || 'U').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').toUpperCase().slice(0, 2) || 'U';
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    currentReservationsUser = getStoredUser();
+    if (!currentReservationsUser) {
         window.location.href = 'entrar.html';
         return;
     }
 
-    const userName = currentUser.name || 'Usuário';
-    const firstName = userName.split(' ')[0];
-    const avatar = document.querySelector('.user-profile-small .avatar');
-    const nameEl = document.querySelector('.user-info-small .name');
-    const typeEl = document.querySelector('.user-info-small .type');
+    setupUserShell(currentReservationsUser);
+    ensureReservationsModal();
+    document.getElementById('btnMinhasReservas')?.addEventListener('click', openMyReservations);
+    document.getElementById('btnVerTodasReservas')?.addEventListener('click', openAllReservations);
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeReservationsModal(); });
 
-    if (avatar && nameEl && typeEl) {
-        const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-        avatar.textContent = initials;
-        nameEl.textContent = userName;
-        typeEl.textContent = currentUser.type === 'sindico' ? 'Síndico' : 'Morador';
+    const condoIdentifier = getCondominiumIdentifier(currentReservationsUser);
+    if (condoIdentifier) {
+        await fetchCondominium(condoIdentifier);
+    }
+    if (!condominiumSpaces.length && Array.isArray(currentReservationsUser?.condominium?.condominium_spaces)) {
+        condominiumSpaces = currentReservationsUser.condominium.condominium_spaces;
     }
 
-    if (currentUser.condominium && currentUser.condominium.name) {
-        const condoNameEl = document.querySelector('.sidebar-header .condo-name');
-        if (condoNameEl) {
-            const words = currentUser.condominium.name.split(' ');
-            if (words.length > 2) {
-                condoNameEl.innerHTML = `${words.slice(0, 2).join(' ')}<br>${words.slice(2).join(' ')}`;
-            } else {
-                condoNameEl.textContent = currentUser.condominium.name;
-            }
-        }
-    }
-
-    const sidebarSindico = document.getElementById('sidebarSindico');
-    const sidebarMorador = document.getElementById('sidebarMorador');
-    if (sidebarSindico && sidebarMorador) {
-        if (currentUser.type === 'sindico') {
-            sidebarSindico.style.display = 'block';
-            sidebarMorador.style.display = 'none';
-        } else {
-            sidebarSindico.style.display = 'none';
-            sidebarMorador.style.display = 'block';
-        }
-    }
-
-    const sindicoSection = document.getElementById('sindicoSection');
-    if (sindicoSection && currentUser.type === 'sindico') {
-        sindicoSection.style.display = 'block';
-    }
-
-    const btnVerTodasReservas = document.getElementById('btnVerTodasReservas');
-    if (btnVerTodasReservas) {
-        btnVerTodasReservas.addEventListener('click', () => {
-            const todasReservasSection = document.getElementById('todasReservasSection');
-            if (todasReservasSection) {
-                todasReservasSection.style.display = 'block';
-                renderTodasReservas();
-            }
-        });
-    }
-
-    const btnFecharReservas = document.getElementById('btnFecharReservas');
-    if (btnFecharReservas) {
-        btnFecharReservas.addEventListener('click', () => {
-            const todasReservasSection = document.getElementById('todasReservasSection');
-            if (todasReservasSection) {
-                todasReservasSection.style.display = 'none';
-            }
-        });
-    }
-
-    const condominiumIdentifier = getCondominiumIdentifier(currentUser);
-
-    if (condominiumIdentifier) {
-        await fetchCondominium(condominiumIdentifier);
-        if (!condominiumSpaces.length && currentUser.condominium.condominium_spaces) {
-            condominiumSpaces = currentUser.condominium.condominium_spaces;
-        }
-    } else if (currentUser.condominium && currentUser.condominium.condominium_spaces) {
-        condominiumSpaces = currentUser.condominium.condominium_spaces;
-    }
-
-    renderSpaces();
     await fetchReservations();
-
-    updateResumo();
-
+    renderSpaces();
     renderCalendar();
     renderTimeSlots();
+    updateResumo();
 
-    const prevBtn = document.getElementById('prev-month');
-    if (prevBtn) {
-        prevBtn.addEventListener('click', () => {
-            const currentMonthYear = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-            const todayMonthYear = new Date(today.getFullYear(), today.getMonth(), 1);
-
-            if (currentMonthYear > todayMonthYear) {
-                currentDate.setMonth(currentDate.getMonth() - 1);
-                renderCalendar();
-            }
-        });
-    }
-
-    const nextBtn = document.getElementById('next-month');
-    if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() + 1);
+    document.getElementById('prev-month')?.addEventListener('click', () => {
+        const currentMonthYear = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const todayMonthYear = new Date(today.getFullYear(), today.getMonth(), 1);
+        if (currentMonthYear > todayMonthYear) {
+            currentDate.setMonth(currentDate.getMonth() - 1);
             renderCalendar();
-        });
-    }
-
-    const agendarBtn = document.getElementById('btn-agendar');
-    if (agendarBtn) {
-        agendarBtn.addEventListener('click', handleAgendar);
-    }
-
-    const cancelarBtn = document.getElementById('btn-cancelar');
-    if (cancelarBtn) {
-        cancelarBtn.addEventListener('click', () => {
-            window.history.back();
-        });
-    }
+        }
+    });
+    document.getElementById('next-month')?.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+    });
+    document.getElementById('btn-agendar')?.addEventListener('click', handleAgendar);
+    document.getElementById('btn-cancelar')?.addEventListener('click', () => window.history.back());
 });
 
 function logout() {
-    if (typeof window.performFullLogout === 'function') { window.performFullLogout(); return; }
+    if (typeof window.performFullLogout === 'function') {
+        window.performFullLogout();
+        return;
+    }
     sessionStorage.removeItem('condominiumUser');
-    try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
     window.location.href = '../inicio.html';
 }

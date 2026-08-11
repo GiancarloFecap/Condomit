@@ -1,7 +1,21 @@
 (function () {
     'use strict';
 
-    const state = { id: null, assembly: null, user: null, polls: [], options: [], results: [], comments: [] };
+    const state = {
+        id: null,
+        assembly: null,
+        user: null,
+        attendance: [],
+        chat: [],
+        polls: [],
+        options: [],
+        results: [],
+        agenda: [],
+        hands: [],
+        events: [],
+        comments: [],
+        transcripts: []
+    };
 
     document.addEventListener('DOMContentLoaded', init);
 
@@ -13,7 +27,11 @@
         }
 
         state.user = getStoredUser();
-        if (!state.user) { location.href = 'entrar.html'; return; }
+        if (!state.user) {
+            location.href = 'entrar.html';
+            return;
+        }
+
         syncUserHeader();
         bindTabs();
         bindCommentForm();
@@ -24,12 +42,29 @@
             renderAll();
         } catch (error) {
             console.error('[ASSEMBLY SUMMARY]', error);
-            renderFatal(error.message || 'Não foi possível carregar a ata da assembleia.');
+            renderFatal(error?.message || 'Não foi possível carregar a ata da assembleia.');
         }
     }
 
     function getStoredUser() {
-        try { return JSON.parse(sessionStorage.getItem('condominiumUser') || 'null'); } catch (_) { return null; }
+        const sources = [];
+        try { sources.push(sessionStorage.getItem('condominiumUser')); } catch (_) {}
+        try { sources.push(localStorage.getItem('condominiumPersistentUser')); } catch (_) {}
+        for (const raw of sources) {
+            if (!raw) continue;
+            try {
+                const user = JSON.parse(raw);
+                if (user && typeof user === 'object') return user;
+            } catch (_) {}
+        }
+        return null;
+    }
+
+    function currentUserRole() {
+        const role = String(state.user?.type || state.user?.user_type || 'morador').toLowerCase();
+        if (role.startsWith('sind')) return 'sindico';
+        if (role.startsWith('porteir')) return 'porteiro';
+        return 'morador';
     }
 
     async function waitForAuthSession() {
@@ -43,16 +78,16 @@
 
     function syncUserHeader() {
         const name = state.user?.name || 'Usuário';
-        const type = String(state.user?.type || state.user?.user_type || 'morador').toLowerCase();
         setText('profileNameTop', name);
-        setText('profileTypeTop', type.startsWith('sind') ? 'Síndico' : type.startsWith('porteir') ? 'Porteiro' : 'Morador');
+        setText('profileTypeTop', currentUserRole() === 'sindico' ? 'Síndico' : currentUserRole() === 'porteiro' ? 'Porteiro' : 'Morador');
         setText('profileAvatarTop', initials(name));
         window.syncAllAvatars?.(state.user);
     }
 
     async function loadAll() {
         if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase não inicializado.');
-        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments] = await Promise.all([
+
+        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts] = await Promise.all([
             fetchRows(`/scheduled_assemblies?select=*&id=eq.${state.id}&limit=1`),
             fetchRows(`/assembly_attendance?select=*&assembly_id=eq.${state.id}&order=joined_at.asc`),
             fetchRows(`/assembly_chat_messages?select=*&assembly_id=eq.${state.id}&order=created_at.asc`),
@@ -60,41 +95,32 @@
             fetchRows(`/assembly_agenda_items?select=*&assembly_id=eq.${state.id}&order=display_order.asc`),
             fetchRows(`/assembly_speaking_requests?select=*&assembly_id=eq.${state.id}&order=requested_at.asc`),
             fetchRows(`/assembly_event_logs?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
-            fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => [])
+            fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
+            fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => [])
         ]);
 
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
-        state.attendance = attendance;
-        state.chat = chat;
-        state.polls = polls;
-        state.agenda = agenda;
-        state.hands = hands;
-        state.events = events;
-        state.comments = comments;
+        Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts });
 
-        const pollIds = polls.map((p) => p.id).filter(Boolean);
+        const pollIds = polls.map((poll) => poll.id).filter(Boolean);
         state.options = pollIds.length
             ? await fetchRows(`/assembly_poll_options?select=*&poll_id=in.(${pollIds.join(',')})&order=display_order.asc`)
             : [];
+        await loadPollResults();
+    }
 
+    async function loadPollResults() {
         try {
             const rpc = await window.supabaseFetch('/rpc/condomit_assembly_poll_results', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ target_assembly_id: state.id })
             });
             state.results = Array.isArray(rpc) ? rpc : [];
         } catch (error) {
-            console.warn('Resultados agregados indisponíveis, tentando leitura direta.', error);
-            const votes = pollIds.length
-                ? await fetchRows(`/assembly_votes?select=poll_id,option_id&poll_id=in.(${pollIds.join(',')})`).catch(() => [])
-                : [];
-            const map = new Map();
-            votes.forEach((v) => {
-                const key = `${v.poll_id}:${v.option_id}`;
-                map.set(key, (map.get(key) || 0) + 1);
-            });
-            state.results = state.options.map((o) => ({ poll_id: o.poll_id, option_id: o.id, vote_count: map.get(`${o.poll_id}:${o.id}`) || 0 }));
+            console.warn('Resultados agregados indisponíveis:', error);
+            state.results = [];
         }
     }
 
@@ -114,16 +140,17 @@
         const a = state.assembly;
         const hero = document.getElementById('assemblySummaryHero');
         if (!hero) return;
+        const uniqueParticipants = new Set(state.attendance.map((row) => String(row.user_email || row.participant_name || row.id))).size;
         hero.innerHTML = `
             <div><span class="summary-chip"><i class="fas fa-file-signature"></i> Assembleia realizada</span></div>
             <h2>${esc(a.title || 'Assembleia')}</h2>
             <div class="summary-hero-meta">
                 <span><i class="far fa-calendar"></i> ${formatDate(a.date)}</span>
-                <span><i class="far fa-clock"></i> ${esc(String(a.start_time || '--:--').slice(0,5))}${a.end_time ? ` – ${esc(String(a.end_time).slice(0,5))}` : ''}</span>
-                <span><i class="fas fa-users"></i> ${state.attendance.length} participante${state.attendance.length === 1 ? '' : 's'} registrado${state.attendance.length === 1 ? '' : 's'}</span>
+                <span><i class="far fa-clock"></i> ${esc(String(a.start_time || '--:--').slice(0, 5))}${a.end_time ? ` – ${esc(String(a.end_time).slice(0, 5))}` : ''}</span>
+                <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
-            </div>
-        `;
+                <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} transcrito${state.transcripts.length === 1 ? '' : 's'}</span>
+            </div>`;
     }
 
     function renderMinutes() {
@@ -132,9 +159,9 @@
 
         const a = state.assembly;
         const events = [];
-        const push = (time, title, text, priority = 0) => events.push({ time, title, text, priority });
+        const push = (time, title, text, priority = 0, kind = 'event') => events.push({ time, title, text, priority, kind });
 
-        push(combineDateTime(a.date, a.start_time), 'Abertura prevista', `Assembleia “${a.title || 'Assembleia'}” programada para início às ${String(a.start_time || '--:--').slice(0,5)}.`, -10);
+        push(combineDateTime(a.date, a.start_time), 'Abertura prevista', `Assembleia “${a.title || 'Assembleia'}” programada para início às ${String(a.start_time || '--:--').slice(0, 5)}.`, -10);
 
         state.attendance.forEach((row) => {
             push(row.joined_at, 'Entrada de participante', `${row.participant_name || row.user_email} (${roleLabel(row.participant_role)}) registrou presença.`);
@@ -145,20 +172,36 @@
             push(item.created_at || combineDateTime(a.date, a.start_time), 'Pauta registrada', `${item.title || 'Pauta'}${item.description ? ` — ${item.description}` : ''}`);
         });
 
+        state.transcripts.forEach((row) => {
+            push(
+                row.spoken_at || row.created_at,
+                `Fala — ${row.participant_name || row.participant_email || 'Participante'}`,
+                row.transcript || '',
+                -2,
+                'speech'
+            );
+        });
+
         state.chat.forEach((message) => {
-            push(message.created_at, `Chat — ${message.participant_name || message.user_email || 'Participante'}`, message.message || '');
+            push(message.created_at, `Chat — ${message.participant_name || message.user_email || 'Participante'}`, message.message || '', 0, 'chat');
         });
 
         state.hands.forEach((request) => {
             const status = String(request.status || '').toLowerCase();
-            const action = status === 'autorizado' ? 'teve a fala autorizada' : status === 'recusado' ? 'teve a solicitação recusada' : status === 'finalizado' ? 'finalizou a solicitação de fala' : 'solicitou a palavra';
+            const action = status === 'autorizado'
+                ? 'teve a fala autorizada'
+                : status === 'recusado'
+                    ? 'teve a solicitação recusada'
+                    : status === 'finalizado'
+                        ? 'finalizou a solicitação de fala'
+                        : 'solicitou a palavra';
             push(request.requested_at || request.created_at, 'Solicitação de fala', `${request.participant_name || request.user_email || 'Participante'} ${action}.`);
         });
 
         state.polls.forEach((poll) => {
-            const options = state.options.filter((o) => String(o.poll_id) === String(poll.id));
-            const totals = options.map((o) => `${o.option_text || 'Opção'}: ${getVoteCount(poll.id, o.id)}`).join('; ');
-            push(poll.created_at, `Votação — ${poll.title || 'Votação'}`, `${poll.description || 'Sem descrição.'}${totals ? ` Resultado: ${totals}.` : ''}`);
+            const options = state.options.filter((option) => String(option.poll_id) === String(poll.id));
+            const totals = options.map((option) => `${option.option_text || 'Opção'}: ${getVoteCount(poll.id, option.id)}`).join('; ');
+            push(poll.created_at, `Votação — ${poll.title || 'Votação'}`, `${poll.description || 'Sem descrição.'}${totals ? ` Resultado atual: ${totals}.` : ''}`, 1, 'poll');
         });
 
         state.events.forEach((event) => {
@@ -167,34 +210,124 @@
         });
 
         state.comments.forEach((comment) => {
-            push(comment.created_at, `Comentário — ${comment.participant_name || comment.user_email}`, comment.comment || '', 10);
+            push(comment.created_at, `Comentário — ${comment.participant_name || comment.user_email || 'Usuário'}`, comment.comment || '', 10, 'comment');
         });
 
-        events.sort((x, y) => safeTime(x.time) - safeTime(y.time) || x.priority - y.priority);
+        events.sort((left, right) => safeTime(left.time) - safeTime(right.time) || left.priority - right.priority);
 
-        const participants = state.attendance.map((r) => `${r.participant_name || r.user_email} (${roleLabel(r.participant_role)})`);
+        const participants = [...new Set(state.attendance.map((row) => `${row.participant_name || row.user_email} (${roleLabel(row.participant_role)})`))];
         const intro = `<div class="minutes-intro"><strong>Ata consolidada.</strong> ${a.description ? esc(a.description) : 'A assembleia foi registrada pelo Condomit.'}${participants.length ? `<br><strong>Participantes registrados:</strong> ${participants.map(esc).join(', ')}.` : ''}</div>`;
-        const notice = `<div class="minutes-notice"><i class="fas fa-microphone-lines"></i> O projeto atual não armazena transcrição automática do áudio. Por isso, a ata consegue reproduzir chat, presença, pautas, votações, solicitações de fala e comentários persistidos no banco; falas feitas apenas pelo microfone não podem ser reconstruídas palavra por palavra.</div>`;
+        const transcriptionState = state.transcripts.length
+            ? `<div class="minutes-transcription-ok"><i class="fas fa-microphone-lines"></i><div><strong>Transcrição automática registrada</strong><span>${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} de fala salvo${state.transcripts.length === 1 ? '' : 's'} durante a reunião.</span></div></div>`
+            : `<div class="minutes-transcription-empty"><i class="fas fa-wave-square"></i><span>Nenhum trecho de fala transcrito foi registrado nesta assembleia.</span></div>`;
 
-        container.innerHTML = intro + notice + (events.length
-            ? `<div class="minutes-timeline">${events.map((event) => `<article class="minute-event"><time class="minute-time">${formatTime(event.time)}</time><div class="minute-card"><strong>${esc(event.title)}</strong><p>${esc(event.text)}</p></div></article>`).join('')}</div>`
+        container.innerHTML = intro + transcriptionState + (events.length
+            ? `<div class="minutes-timeline">${events.map((event) => `<article class="minute-event ${event.kind === 'speech' ? 'speech-event' : ''}"><time class="minute-time">${formatTime(event.time)}</time><div class="minute-card"><strong>${esc(event.title)}</strong><p>${esc(event.text)}</p></div></article>`).join('')}</div>`
             : '<div class="summary-empty">Nenhum evento persistido foi encontrado.</div>');
+    }
+
+    function pollCurrentUserVoted(pollId) {
+        return state.results.some((row) => String(row.poll_id) === String(pollId) && row.current_user_voted === true);
+    }
+
+    function canVoteFromSummary(poll) {
+        return String(state.assembly?.status || '').toLowerCase() === 'encerrada'
+            && String(poll?.status || '').toLowerCase() !== 'cancelada'
+            && currentUserRole() !== 'porteiro'
+            && !pollCurrentUserVoted(poll.id);
     }
 
     function renderPolls() {
         const container = document.getElementById('assemblyPollResults');
         if (!container) return;
-        if (!state.polls.length) { container.innerHTML = '<div class="summary-empty">Nenhuma votação foi criada nesta assembleia.</div>'; return; }
+        if (!state.polls.length) {
+            container.innerHTML = '<div class="summary-empty">Nenhuma votação foi criada nesta assembleia.</div>';
+            return;
+        }
 
         container.innerHTML = state.polls.map((poll) => {
-            const options = state.options.filter((o) => String(o.poll_id) === String(poll.id));
-            const total = options.reduce((sum, o) => sum + getVoteCount(poll.id, o.id), 0);
-            return `<article class="poll-result-card"><h3>${esc(poll.title || 'Votação')}</h3><p class="poll-description">${esc(poll.description || 'Sem descrição.')}</p>${options.length ? options.map((option) => {
+            const options = state.options.filter((option) => String(option.poll_id) === String(poll.id));
+            const total = options.reduce((sum, option) => sum + getVoteCount(poll.id, option.id), 0);
+            const canVote = canVoteFromSummary(poll);
+            const voted = pollCurrentUserVoted(poll.id);
+
+            const optionHtml = options.length ? options.map((option) => {
                 const count = getVoteCount(poll.id, option.id);
-                const pct = total ? Math.round(count / total * 100) : 0;
-                return `<div class="poll-option-result"><span class="poll-option-label">${esc(option.option_text || 'Opção')}</span><div class="poll-result-bar"><div class="poll-result-fill" style="width:${pct}%"></div></div><span class="poll-count">${count} voto${count === 1 ? '' : 's'} · ${pct}%</span></div>`;
-            }).join('') : '<div class="summary-empty">Sem opções registradas.</div>'}<div class="poll-total">Total de votos registrados: ${total}</div></article>`;
+                const pct = total ? Math.round((count / total) * 100) : 0;
+                return `
+                    <div class="poll-option-result ${canVote ? 'can-vote' : ''}">
+                        <div class="poll-option-main">
+                            <span class="poll-option-label">${esc(option.option_text || 'Opção')}</span>
+                            ${canVote ? `<button type="button" class="post-assembly-vote-btn" data-post-vote data-poll-id="${poll.id}" data-option-id="${option.id}"><i class="fas fa-check"></i> Votar nesta opção</button>` : ''}
+                        </div>
+                        <div class="poll-result-bar"><div class="poll-result-fill" style="width:${pct}%"></div></div>
+                        <span class="poll-count">${count} voto${count === 1 ? '' : 's'} · ${pct}%</span>
+                    </div>`;
+            }).join('') : '<div class="summary-empty">Sem opções registradas.</div>';
+
+            const voteStatus = voted
+                ? '<div class="poll-user-status success"><i class="fas fa-circle-check"></i> Seu voto já está registrado nesta votação.</div>'
+                : canVote
+                    ? '<div class="poll-user-status pending"><i class="fas fa-hand-pointer"></i> Você ainda não votou. Escolha uma opção acima.</div>'
+                    : currentUserRole() === 'porteiro'
+                        ? '<div class="poll-user-status neutral"><i class="fas fa-lock"></i> Porteiros não participam das votações.</div>'
+                        : '';
+
+            return `<article class="poll-result-card">
+                <h3>${esc(poll.title || 'Votação')}</h3>
+                <p class="poll-description">${esc(poll.description || 'Sem descrição.')}</p>
+                ${optionHtml}
+                <div class="poll-total">Total de votos registrados: ${total}</div>
+                ${voteStatus}
+            </article>`;
         }).join('');
+
+        container.querySelectorAll('[data-post-vote]').forEach((button) => {
+            button.addEventListener('click', () => castPostAssemblyVote(button));
+        });
+    }
+
+    async function castPostAssemblyVote(button) {
+        const pollId = Number(button.dataset.pollId);
+        const optionId = Number(button.dataset.optionId);
+        if (!pollId || !optionId) return;
+
+        const poll = state.polls.find((item) => Number(item.id) === pollId);
+        const option = state.options.find((item) => Number(item.id) === optionId && Number(item.poll_id) === pollId);
+        if (!poll || !option) return;
+
+        const execute = async () => {
+            const card = button.closest('.poll-result-card');
+            card?.querySelectorAll('[data-post-vote]').forEach((item) => { item.disabled = true; });
+            try {
+                await window.supabaseFetch('/rpc/condomit_cast_post_assembly_vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_poll_id: pollId, target_option_id: optionId })
+                });
+                await loadPollResults();
+                renderPolls();
+                renderMinutes();
+                window.showToast?.('Voto registrado com sucesso.', 'success');
+            } catch (error) {
+                console.error('Erro ao votar pela ata:', error);
+                window.showToast?.(error?.message || 'Não foi possível registrar o voto.', 'error');
+                card?.querySelectorAll('[data-post-vote]').forEach((item) => { item.disabled = false; });
+            }
+        };
+
+        if (typeof window.showModal === 'function') {
+            window.showModal({
+                title: 'Confirmar voto',
+                message: `Confirmar seu voto em “${option.option_text || 'Opção'}” na votação “${poll.title || 'Votação'}”? O voto não poderá ser alterado depois.`,
+                type: 'warning',
+                confirmText: 'Confirmar voto',
+                cancelText: 'Cancelar',
+                onConfirm: execute
+            });
+        } else if (window.confirm('Confirmar este voto?')) {
+            await execute();
+        }
     }
 
     function renderComments() {
@@ -208,7 +341,7 @@
     function bindTabs() {
         document.querySelectorAll('[data-summary-tab]').forEach((button) => button.addEventListener('click', () => {
             const target = button.dataset.summaryTab;
-            document.querySelectorAll('[data-summary-tab]').forEach((b) => b.classList.toggle('active', b === button));
+            document.querySelectorAll('[data-summary-tab]').forEach((tab) => tab.classList.toggle('active', tab === button));
             document.querySelectorAll('[data-summary-panel]').forEach((panel) => panel.classList.toggle('active', panel.dataset.summaryPanel === target));
         }));
     }
@@ -224,7 +357,15 @@
             try {
                 const email = String(state.user?.email || '').trim().toLowerCase();
                 const rows = await window.supabaseFetch('/assembly_post_comments', {
-                    method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ assembly_id: state.id, cep: state.assembly.cep, user_email: email, participant_name: state.user?.name || email, comment })
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+                    body: JSON.stringify({
+                        assembly_id: state.id,
+                        cep: state.assembly.cep,
+                        user_email: email,
+                        participant_name: state.user?.name || email,
+                        comment
+                    })
                 });
                 const saved = Array.isArray(rows) ? rows[0] : rows;
                 if (!saved) throw new Error('O comentário não foi confirmado pelo banco.');
@@ -234,25 +375,31 @@
                 renderMinutes();
                 window.showToast?.('Comentário publicado.', 'success');
             } catch (error) {
-                window.showToast?.(error.message || 'Erro ao publicar comentário.', 'error');
-            } finally { if (submit) submit.disabled = false; }
+                window.showToast?.(error?.message || 'Erro ao publicar comentário.', 'error');
+            } finally {
+                if (submit) submit.disabled = false;
+            }
         });
     }
 
     function getVoteCount(pollId, optionId) {
-        const row = state.results.find((r) => String(r.poll_id) === String(pollId) && String(r.option_id) === String(optionId));
+        const row = state.results.find((result) => String(result.poll_id) === String(pollId) && String(result.option_id) === String(optionId));
         return Number(row?.vote_count || 0);
     }
 
-    function renderFatal(message) { const hero = document.getElementById('assemblySummaryHero'); if (hero) hero.innerHTML = `<div class="summary-empty"><i class="fas fa-circle-exclamation"></i><br>${esc(message)}</div>`; }
-    function setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
-    function initials(name) { return String(name || 'US').split(/\s+/).filter(Boolean).map((x) => x[0]).join('').toUpperCase().slice(0,2) || 'US'; }
-    function esc(v) { return String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
-    function safeTime(v) { const t = new Date(v || 0).getTime(); return Number.isFinite(t) ? t : 0; }
-    function formatDate(v) { if (!v) return '--'; const d = new Date(`${String(v).slice(0,10)}T12:00:00`); return d.toLocaleDateString('pt-BR'); }
-    function formatTime(v) { if (!v) return '--:--'; const d = new Date(v); return Number.isNaN(d.getTime()) ? String(v).slice(0,5) : d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
-    function formatDateTime(v) { const d = new Date(v); return Number.isNaN(d.getTime()) ? '--' : d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}); }
-    function combineDateTime(date,time) { return date ? `${date}T${String(time || '00:00').slice(0,8)}` : null; }
-    function roleLabel(role) { const r=String(role||'morador').toLowerCase(); return r.startsWith('sind')?'Síndico':r.startsWith('porteir')?'Porteiro':'Morador'; }
-    function statusLabel(status) { const s=String(status||'').toLowerCase(); return s==='encerrada'?'Encerrada':s==='cancelada'?'Cancelada':s==='em_andamento'?'Em andamento':'Agendada'; }
+    function renderFatal(message) {
+        const hero = document.getElementById('assemblySummaryHero');
+        if (hero) hero.innerHTML = `<div class="summary-empty"><i class="fas fa-circle-exclamation"></i><br>${esc(message)}</div>`;
+    }
+
+    function setText(id, value) { const element = document.getElementById(id); if (element) element.textContent = value; }
+    function initials(name) { return String(name || 'US').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').toUpperCase().slice(0, 2) || 'US'; }
+    function esc(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); }
+    function safeTime(value) { const time = new Date(value || 0).getTime(); return Number.isFinite(time) ? time : 0; }
+    function formatDate(value) { if (!value) return '--'; const date = new Date(`${String(value).slice(0, 10)}T12:00:00`); return date.toLocaleDateString('pt-BR'); }
+    function formatTime(value) { if (!value) return '--:--'; const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value).slice(0, 5) : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+    function formatDateTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }); }
+    function combineDateTime(date, time) { return date ? `${date}T${String(time || '00:00').slice(0, 8)}` : null; }
+    function roleLabel(role) { const normalized = String(role || 'morador').toLowerCase(); return normalized.startsWith('sind') ? 'Síndico' : normalized.startsWith('porteir') ? 'Porteiro' : 'Morador'; }
+    function statusLabel(status) { const normalized = String(status || '').toLowerCase(); return normalized === 'encerrada' ? 'Encerrada' : normalized === 'cancelada' ? 'Cancelada' : normalized === 'em_andamento' ? 'Em andamento' : 'Agendada'; }
 })();

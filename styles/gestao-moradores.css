@@ -430,3 +430,54 @@ html[data-theme="dark"] .resident-detail { border-color: var(--border-color, #2d
     .resident-modal-grid { grid-template-columns: 1fr; }
     .resident-modal { padding: 18px; }
 }
+
+/* ============================================================
+   015 - Linha clicável e menu de gestão do morador
+============================================================ */
+.resident-table-row {
+    cursor: pointer;
+    transition: background .16s ease, transform .16s ease;
+}
+.resident-table-row:hover { background: #f8fbff; }
+.resident-table-row:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; }
+.action-buttons button:hover { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+
+.resident-actions-menu {
+    position: fixed;
+    z-index: 7000;
+    width: 250px;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 18px 46px rgba(15, 23, 42, .2);
+    display: grid;
+    gap: 5px;
+}
+.resident-actions-menu button {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 750;
+    text-align: left;
+}
+.resident-actions-menu button:hover { background: #eff6ff; color: #1d4ed8; }
+.resident-actions-menu button.danger { color: #b91c1c; }
+.resident-actions-menu button.danger:hover { background: #fff1f2; color: #be123c; }
+.resident-actions-menu i { width: 18px; text-align: center; }
+
+html[data-theme="dark"] .resident-table-row:hover { background: #111827; }
+html[data-theme="dark"] .resident-actions-menu { background: #111827; border-color: #374151; }
+html[data-theme="dark"] .resident-actions-menu button { color: #d1d5db; }
+html[data-theme="dark"] .resident-actions-menu button:hover { background: #172554; color: #bfdbfe; }
+html[data-theme="dark"] .resident-actions-menu button.danger { color: #fca5a5; }
+html[data-theme="dark"] .resident-actions-menu button.danger:hover { background: #450a0a; }

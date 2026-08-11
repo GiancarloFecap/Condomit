@@ -1040,3 +1040,34 @@
         min-width: 0;
     }
 }
+
+/* 015 - Botão Cancelar do cadastro de prestador */
+#cancelProviderBtn.provider-cancel-btn {
+    min-width: 132px;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 800;
+    box-shadow: 0 5px 14px rgba(15, 23, 42, .08);
+    transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+}
+#cancelProviderBtn.provider-cancel-btn:hover {
+    transform: translateY(-1px);
+    border-color: #94a3b8;
+    background: #f1f5f9;
+    color: #0f172a;
+}
+#cancelProviderBtn.provider-cancel-btn i { font-size: 14px; }
+html[data-theme="dark"] #cancelProviderBtn.provider-cancel-btn {
+    background: #111827;
+    border-color: #374151;
+    color: #cbd5e1;
+}
+html[data-theme="dark"] #cancelProviderBtn.provider-cancel-btn:hover { background: #1f2937; color: #fff; }

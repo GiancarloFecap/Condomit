@@ -291,6 +291,8 @@ function renderResidentsTable(residents) {
     const counter = document.getElementById('residentCounter');
     if (!tbody) return;
 
+    closeResidentActionsMenu();
+
     if (counter) {
         counter.textContent = `${residents.length} ${residents.length === 1 ? 'morador encontrado' : 'moradores encontrados'}`;
     }
@@ -301,10 +303,10 @@ function renderResidentsTable(residents) {
     }
 
     tbody.innerHTML = residents.map((resident) => `
-        <tr>
+        <tr class="resident-table-row" data-resident-row data-resident-email="${escapeHtml(resident.email)}" tabindex="0">
             <td>
                 <div class="resident-cell">
-                    <div class="resident-avatar">${resident.profilePhoto ? `<img src="${resident.profilePhoto}" alt="${escapeHtml(resident.name)}">` : escapeHtml(getInitials(resident.name))}</div>
+                    <div class="resident-avatar">${resident.profilePhoto ? `<img src="${escapeHtml(resident.profilePhoto)}" alt="${escapeHtml(resident.name)}">` : escapeHtml(getInitials(resident.name))}</div>
                     <div>
                         <div class="resident-name">${escapeHtml(resident.name)}</div>
                         <div class="resident-role">${escapeHtml(resident.role)}</div>
@@ -322,18 +324,142 @@ function renderResidentsTable(residents) {
             <td>
                 <div class="action-buttons">
                     <button type="button" class="resident-view-btn" data-resident-email="${escapeHtml(resident.email)}" aria-label="Visualizar morador" title="Visualizar morador"><i class="fas fa-eye"></i></button>
-                    <button type="button" aria-label="Mais ações" title="Mais ações"><i class="fas fa-ellipsis-v"></i></button>
+                    <button type="button" class="resident-more-btn" data-resident-email="${escapeHtml(resident.email)}" aria-label="Mais ações" title="Mais ações"><i class="fas fa-ellipsis-v"></i></button>
                 </div>
             </td>
         </tr>
     `).join('');
 
+    const findResident = (email) => residentsState.residents.find(
+        (item) => String(item.email || '').trim().toLowerCase() === String(email || '').trim().toLowerCase()
+    );
+
     tbody.querySelectorAll('.resident-view-btn').forEach((button) => {
-        button.addEventListener('click', () => {
-            const email = String(button.dataset.residentEmail || '').trim().toLowerCase();
-            const resident = residentsState.residents.find((item) => String(item.email || '').trim().toLowerCase() === email);
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const resident = findResident(button.dataset.residentEmail);
             if (resident) openResidentDetails(resident);
         });
+    });
+
+    tbody.querySelectorAll('.resident-more-btn').forEach((button) => {
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const resident = findResident(button.dataset.residentEmail);
+            if (resident) openResidentActionsMenu(button, resident);
+        });
+    });
+
+    tbody.querySelectorAll('[data-resident-row]').forEach((row) => {
+        const open = () => {
+            const resident = findResident(row.dataset.residentEmail);
+            if (resident) openResidentDetails(resident);
+        };
+        row.addEventListener('click', (event) => {
+            if (event.target.closest('button, a, input, select')) return;
+            open();
+        });
+        row.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') open();
+        });
+    });
+}
+
+function closeResidentActionsMenu() {
+    document.getElementById('residentActionsMenu')?.remove();
+}
+
+function openResidentActionsMenu(button, resident) {
+    closeResidentActionsMenu();
+    const menu = document.createElement('div');
+    menu.id = 'residentActionsMenu';
+    menu.className = 'resident-actions-menu';
+    menu.innerHTML = `
+        <button type="button" data-action="promote"><i class="fas fa-user-tie"></i><span>Tornar o usuário síndico</span></button>
+        <button type="button" class="danger" data-action="expel"><i class="fas fa-user-slash"></i><span>Expulsar do condomínio</span></button>`;
+    document.body.appendChild(menu);
+
+    const rect = button.getBoundingClientRect();
+    const width = 250;
+    const left = Math.min(window.innerWidth - width - 12, Math.max(12, rect.right - width));
+    menu.style.left = `${left}px`;
+    menu.style.top = `${Math.min(window.innerHeight - menu.offsetHeight - 12, rect.bottom + 8)}px`;
+
+    menu.querySelector('[data-action="promote"]')?.addEventListener('click', () => {
+        closeResidentActionsMenu();
+        confirmPromoteResident(resident);
+    });
+    menu.querySelector('[data-action="expel"]')?.addEventListener('click', () => {
+        closeResidentActionsMenu();
+        confirmExpelResident(resident);
+    });
+}
+
+function askConfirmation(options) {
+    if (typeof window.showModal === 'function') {
+        window.showModal(options);
+        return;
+    }
+    if (window.confirm(options.message || options.title || 'Confirmar ação?')) {
+        Promise.resolve(options.onConfirm?.()).catch(console.error);
+    }
+}
+
+function persistCurrentUserRole(role) {
+    const current = { ...(residentsState.currentUser || {}) };
+    current.type = role;
+    current.user_type = role;
+    residentsState.currentUser = current;
+    try { sessionStorage.setItem('condominiumUser', JSON.stringify(current)); } catch (_) {}
+    try { localStorage.setItem('condominiumPersistentUser', JSON.stringify(current)); } catch (_) {}
+}
+
+function confirmPromoteResident(resident) {
+    askConfirmation({
+        title: 'Transferir função de síndico',
+        message: `Ao promover ${resident.name} a síndico, sua própria conta passará a ser morador. Deseja continuar?`,
+        type: 'warning',
+        confirmText: 'Sim, transferir função',
+        cancelText: 'Cancelar',
+        onConfirm: async () => {
+            try {
+                await window.supabaseFetch('/rpc/condomit_promote_resident_to_sindico', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_email: resident.email })
+                });
+                persistCurrentUserRole('morador');
+                window.showToast?.(`${resident.name} agora é o síndico do condomínio. Sua conta passou a ser morador.`, 'success');
+                window.setTimeout(() => { window.location.href = 'index-morador.html'; }, 900);
+            } catch (error) {
+                console.error('Erro ao promover morador:', error);
+                window.showToast?.(error?.message || 'Não foi possível transferir a função de síndico.', 'error');
+            }
+        }
+    });
+}
+
+function confirmExpelResident(resident) {
+    askConfirmation({
+        title: 'Expulsar morador do condomínio',
+        message: `${resident.name} será removido deste condomínio e precisará entrar em outro condomínio para voltar a utilizar as funções condominiais. Deseja continuar?`,
+        type: 'warning',
+        confirmText: 'Expulsar do condomínio',
+        cancelText: 'Cancelar',
+        onConfirm: async () => {
+            try {
+                await window.supabaseFetch('/rpc/condomit_expulse_resident', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_email: resident.email })
+                });
+                window.showToast?.(`${resident.name} foi removido do condomínio.`, 'success');
+                await loadResidents();
+            } catch (error) {
+                console.error('Erro ao expulsar morador:', error);
+                window.showToast?.(error?.message || 'Não foi possível remover o morador do condomínio.', 'error');
+            }
+        }
     });
 }
 
@@ -482,3 +608,10 @@ function logout() {
     try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
     window.location.href = '../inicio.html';
 }
+
+
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('#residentActionsMenu, .resident-more-btn')) closeResidentActionsMenu();
+});
+window.addEventListener('resize', closeResidentActionsMenu);
+window.addEventListener('scroll', closeResidentActionsMenu, true);

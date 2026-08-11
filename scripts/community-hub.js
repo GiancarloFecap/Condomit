@@ -559,80 +559,35 @@
     async function fetchNotificationsFromSupabase(
         user = getCurrentUser()
     ) {
-        if (
-            typeof window
-                .supabaseFetch !==
-            'function'
-        ) {
-            return [];
-        }
-
-        const cep =
-            await resolveUserCepForDb(
-                user
-            );
-
-        if (!cep) {
+        if (typeof window.supabaseFetch !== 'function') {
             return [];
         }
 
         try {
-            const rows =
-                await window
-                    .supabaseFetch(
-                        `/notifications?select=*&cep=eq.${encodeURIComponent(
-                            cep
-                        )}&order=created_at.desc`
-                    );
-
-            if (
-                !Array.isArray(
-                    rows
-                )
-            ) {
-                return [];
-            }
-
-            return rows.map(
-                (row) => ({
-                    id:
-                        `db-notif-${row.id}`,
-
-                    category:
-                        row.category ||
-                        'Avisos',
-
-                    title:
-                        row.title ||
-                        '',
-
-                    message:
-                        row.description ||
-                        '',
-
-                    details:
-                        row.description ||
-                        '',
-
-                    createdAt:
-                        row.created_at ||
-                        new Date()
-                            .toISOString(),
-
-                    author:
-                        'Síndico',
-
-                    createdByType:
-                        'sindico'
-                })
+            const rows = await window.supabaseFetch(
+                '/rpc/condomit_list_notifications',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}'
+                }
             );
+
+            if (!Array.isArray(rows)) return [];
+
+            return rows.map((row) => ({
+                id: `db-notif-${row.id}`,
+                category: row.category || 'Avisos',
+                title: row.title || '',
+                message: row.description || '',
+                details: row.description || '',
+                createdAt: row.created_at || new Date().toISOString(),
+                author: row.created_by_name || row.created_by || 'Síndico',
+                createdByType: 'sindico',
+                metadata: null
+            }));
         } catch (error) {
-            console.warn(
-                'fetchNotificationsFromSupabase falhou:',
-                error?.message ||
-                error
-            );
-
+            console.error('Não foi possível carregar as notificações do Supabase:', error);
             return [];
         }
     }
@@ -751,184 +706,59 @@
         data,
         user = getCurrentUser()
     ) {
-        if (
-            typeof window
-                .supabaseFetch !==
-            'function'
-        ) {
-            return null;
-        }
-
-        const cep =
-            await resolveUserCepForDb(
-                user
-            );
-
-        if (!cep) {
-            return null;
+        if (typeof window.supabaseFetch !== 'function') {
+            throw new Error('Supabase não está disponível para salvar a notificação.');
         }
 
         const payload = {
-            cep,
-
-            category:
-                data.category ||
-                'Avisos',
-
-            title:
-                String(
-                    data.title ||
-                    ''
-                ).trim(),
-
-            description:
-                String(
-                    data.details ||
-                    data.message ||
-                    ''
-                ).trim()
+            target_category: data.category || 'Avisos',
+            target_title: String(data.title || '').trim(),
+            target_description: String(data.details || data.message || '').trim()
         };
 
-        try {
-            const rows =
-                await window
-                    .supabaseFetch(
-                        '/notifications',
-                        {
-                            method:
-                                'POST',
-
-                            body:
-                                JSON.stringify(
-                                    payload
-                                ),
-
-                            headers: {
-                                'Content-Type':
-                                    'application/json',
-
-                                Prefer:
-                                    'return=representation'
-                            }
-                        }
-                    );
-
-            if (
-                Array.isArray(
-                    rows
-                ) &&
-                rows.length
-            ) {
-                return rows[0];
+        const result = await window.supabaseFetch(
+            '/rpc/condomit_create_notification',
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             }
+        );
 
-            return null;
-        } catch (error) {
-            console.warn(
-                'saveNotificationToSupabase falhou (RLS?):',
-                error?.message ||
-                error
-            );
-
-            return null;
+        const saved = Array.isArray(result) ? result[0] : result;
+        if (!saved || !saved.id) {
+            throw new Error('O Supabase não confirmou o salvamento da notificação.');
         }
+        return saved;
     }
 
     async function createNotification(
         data,
         user = getCurrentUser()
     ) {
-        const saved =
-            await saveNotificationToSupabase(
-                data,
-                user
-            );
-
-        const key =
-            getNotificationsKey(
-                user
-            );
-
-        let localItems =
-            getStorageJson(
-                key,
-                null
-            );
-
-        if (
-            !Array.isArray(
-                localItems
-            )
-        ) {
-            localItems = [];
-        }
+        const saved = await saveNotificationToSupabase(data, user);
+        const key = getNotificationsKey(user);
+        let localItems = getStorageJson(key, null);
+        if (!Array.isArray(localItems)) localItems = [];
 
         const notification = {
-            id:
-                saved?.id
-                    ? `db-notif-${saved.id}`
-                    : `notif-${Date.now()}`,
-
-            category:
-                data.category ||
-                'Avisos',
-
-            title:
-                String(
-                    data.title ||
-                    ''
-                ).trim(),
-
-            message:
-                String(
-                    data.message ||
-                    ''
-                ).trim(),
-
-            details:
-                String(
-                    data.details ||
-                    data.message ||
-                    ''
-                ).trim(),
-
-            createdAt:
-                saved?.created_at ||
-                new Date()
-                    .toISOString(),
-
-            author:
-                user?.name ||
-                'Síndico',
-
-            createdByType:
-                getUserType(
-                    user
-                ),
-
-            metadata:
-                (
-                    data.metadata &&
-                    typeof data.metadata ===
-                        'object'
-                )
-                    ? data.metadata
-                    : null
+            id: `db-notif-${saved.id}`,
+            category: saved.category || data.category || 'Avisos',
+            title: saved.title || String(data.title || '').trim(),
+            message: saved.description || String(data.message || '').trim(),
+            details: saved.description || String(data.details || data.message || '').trim(),
+            createdAt: saved.created_at || new Date().toISOString(),
+            author: saved.created_by_name || user?.name || 'Síndico',
+            createdByType: 'sindico',
+            metadata: data.metadata && typeof data.metadata === 'object' ? data.metadata : null
         };
 
-        localItems.unshift(
-            notification
-        );
-
-        setStorageJson(
-            key,
-            localItems
-        );
-
-        notificationCache.unshift(
-            notification
-        );
-
+        // Mantém uma cópia local para leitura offline, mas o banco é a fonte de verdade.
+        localItems = localItems.filter((item) => item.id !== notification.id);
+        localItems.unshift(notification);
+        setStorageJson(key, localItems);
+        notificationCache = notificationCache.filter((item) => item.id !== notification.id);
+        notificationCache.unshift(notification);
         return notification;
     }
 

@@ -7,8 +7,8 @@
   <link rel="icon" type="image/png" href="../assets/favicon.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../styles/index.css?v=011">
-  <link rel="stylesheet" href="../styles/theme.css?v=014">
-  <link rel="stylesheet" href="../styles/assembleia-room.css?v=011">
+  <link rel="stylesheet" href="../styles/theme.css?v=015">
+  <link rel="stylesheet" href="../styles/assembleia-room.css?v=015">
 </head>
 <body>
   <div class="call-page">
@@ -25,6 +25,10 @@
         </div>
       </div>
       <div class="call-header-right">
+        <div class="call-transcription" id="call-transcription-status" data-status="paused" title="Transcrição pausada">
+          <i class="fas fa-microphone-lines" aria-hidden="true"></i>
+          <span>Transcrição pausada</span>
+        </div>
         <div class="call-connection" id="call-connection">
           <span class="dot" aria-hidden="true"></span>
           <span id="call-connection-text">Conectando...</span>
@@ -178,7 +182,7 @@
   <script src="../scripts/assembly/auth.js"></script>
   <script src="../scripts/assembly/api.js"></script>
   <script src="../scripts/assembly/permissions.js"></script>
-  <script type="module" src="../scripts/assembly/room/index.js?v=010"></script>
+  <script type="module" src="../scripts/assembly/room/index.js?v=015"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
 </body>
 </html>

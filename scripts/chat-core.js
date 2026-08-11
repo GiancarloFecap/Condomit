@@ -549,6 +549,23 @@
         }
     }
 
+
+    function callActiveContact() {
+        const contact = state.activeContact;
+        if (!contact) {
+            window.showToast?.('Selecione uma conversa antes de ligar.', 'warning');
+            return;
+        }
+        const rawPhone = String(contact.phone || '').trim();
+        const digits = rawPhone.replace(/\D/g, '');
+        if (digits.length < 8) {
+            window.showToast?.('Este usuário não possui telefone cadastrado.', 'warning');
+            return;
+        }
+        const telValue = rawPhone.startsWith('+') ? `+${digits}` : digits;
+        window.location.href = `tel:${telValue}`;
+    }
+
     function bindControls() {
         ensureChatComposerTools();
         document.getElementById('searchConversations')?.addEventListener('input', renderContacts);
@@ -562,6 +579,10 @@
 
         document.querySelector('.new-chat-btn')?.addEventListener('click', () => {
             document.getElementById('searchConversations')?.focus();
+        });
+
+        document.querySelectorAll('.chat-header-actions [title="Ligar"]').forEach((button) => {
+            button.addEventListener('click', callActiveContact);
         });
     }
 

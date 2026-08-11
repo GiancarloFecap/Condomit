@@ -7,8 +7,8 @@
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=011">
-    <link rel="stylesheet" href="../styles/theme.css?v=014">
-    <link rel="stylesheet" href="../styles/ai-condomit.css">
+    <link rel="stylesheet" href="../styles/theme.css?v=015">
+    <link rel="stylesheet" href="../styles/ai-condomit.css?v=015">
 </head>
 <body>
     <div class="dashboard-sindico">
@@ -249,56 +249,71 @@
 
             <!-- AI Chat Content -->
             <div class="ai-chat-container">
-                <!-- Container para mensagens e boas-vindas -->
+                <div class="ai-assistant-toolbar">
+                    <div class="ai-assistant-identity">
+                        <div class="ai-assistant-logo"><i class="fas fa-sparkles"></i></div>
+                        <div>
+                            <strong>Assistente Condomit</strong>
+                            <span id="aiCondoContext">Conectando ao seu condomínio...</span>
+                        </div>
+                    </div>
+                    <button type="button" class="ai-new-chat" id="newAiConversationBtn">
+                        <i class="fas fa-pen-to-square"></i> Nova conversa
+                    </button>
+                </div>
+
                 <div class="chat-content-wrapper">
-                    <!-- Welcome Card -->
                     <div class="welcome-card" id="welcomeCard">
-                        <h2 class="welcome-title">Olá, <span id="firstName">Morador</span>! 👋</h2>
-                        <p class="welcome-subtitle">Como posso te ajudar hoje?</p>
-                        <p class="welcome-description">Pergunte sobre regras, áreas comuns, documentos, boletos, reservas, visitantes e comunicados do condomínio.</p>
-                        
-                        <!-- Suggested Questions -->
+                        <div class="welcome-kicker"><i class="fas fa-shield-heart"></i> Dúvidas do seu condomínio</div>
+                        <h2 class="welcome-title">Olá, <span id="firstName">Morador</span>! Como posso ajudar?</h2>
+                        <p class="welcome-description">Pergunte sobre funcionalidades da Condomit e navegue rapidamente para reservas, visitantes, assembleias, notificações, prestadores e outras áreas do seu condomínio.</p>
+
+                        <div class="ai-category-grid" id="aiCategoryGrid">
+                            <button class="ai-category-card" data-question="Como faço uma reserva de local?">
+                                <span class="ai-category-icon"><i class="fas fa-calendar-check"></i></span>
+                                <span><strong>Reservas</strong><small>Locais, horários e minhas reservas</small></span>
+                            </button>
+                            <button class="ai-category-card" data-question="Como cadastro ou libero um visitante?">
+                                <span class="ai-category-icon"><i class="fas fa-user-check"></i></span>
+                                <span><strong>Visitantes</strong><small>Cadastro e controle de acesso</small></span>
+                            </button>
+                            <button class="ai-category-card" data-question="Como funcionam as assembleias online?">
+                                <span class="ai-category-icon"><i class="fas fa-users-rectangle"></i></span>
+                                <span><strong>Assembleias</strong><small>Entrada, votação e atas</small></span>
+                            </button>
+                            <button class="ai-category-card" data-question="Onde vejo as notificações do condomínio?">
+                                <span class="ai-category-icon"><i class="fas fa-bell"></i></span>
+                                <span><strong>Notificações</strong><small>Avisos publicados no condomínio</small></span>
+                            </button>
+                        </div>
+
                         <div class="suggestions-container">
-                            <button class="suggestion-btn" data-question="Quais são as regras para uso do salão de festas?">
-                                <i class="fas fa-question-circle"></i>
-                                Quais são as regras para uso do salão de festas?
+                            <button class="suggestion-btn" data-question="Como entrar em contato com o síndico?">
+                                <i class="fas fa-comments"></i> Como falar com o síndico?
                             </button>
-                            <button class="suggestion-btn" data-question="Como faço para reservar a churrasqueira?">
-                                <i class="fas fa-calendar-check"></i>
-                                Como faço para reservar a churrasqueira?
+                            <button class="suggestion-btn" data-question="Como registrar uma encomenda?">
+                                <i class="fas fa-box"></i> Como registrar uma encomenda?
                             </button>
-                            <button class="suggestion-btn" data-question="Onde vejo meus boletos?">
-                                <i class="fas fa-file-invoice-dollar"></i>
-                                Onde vejo meus boletos?
-                            </button>
-                            <button class="suggestion-btn" data-question="Como funciona o cadastro de visitantes?">
-                                <i class="fas fa-user-plus"></i>
-                                Como funciona o cadastro de visitantes?
+                            <button class="suggestion-btn" data-question="Como altero minha foto de perfil?">
+                                <i class="fas fa-user-pen"></i> Como altero minha foto?
                             </button>
                         </div>
                     </div>
 
-                    <!-- Chat Messages -->
-                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
                 </div>
 
-                <!-- Input Area -->
                 <div class="chat-input-container">
                     <div class="input-wrapper">
-                        <textarea 
-                            id="chatInput" 
-                            placeholder="Digite sua pergunta..." 
-                            rows="1"
-                            maxlength="500"
-                        ></textarea>
+                        <textarea id="chatInput" placeholder="Pergunte algo sobre a Condomit ou seu condomínio..." rows="1" maxlength="700"></textarea>
                         <div class="input-actions">
-                            <span class="char-count" id="charCount">0/500</span>
-                            <button id="sendBtn" class="send-btn">
+                            <span class="char-count" id="charCount">0/700</span>
+                            <button id="sendBtn" class="send-btn" type="button" aria-label="Enviar pergunta">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
                     </div>
-                    <p class="disclaimer">A AI Condomit pode cometer erros. Sempre confira as informações importantes.</p>
+                    <p class="disclaimer"><i class="fas fa-circle-info"></i> O assistente usa as funcionalidades disponíveis na Condomit como referência. Para decisões importantes, confirme com o síndico ou com a administração.</p>
                 </div>
             </div>
         </main>
@@ -306,7 +321,7 @@
 
     <script src="../scripts/supabase-client.js?v=014"></script>
     <script src="../scripts/sidebar-links.js?v=011"></script>
-    <script src="../scripts/ai-condomit.js"></script>
+    <script src="../scripts/ai-condomit.js?v=015"></script>
     <script src="../scripts/topbar-actions.js?v=011"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
 </body>

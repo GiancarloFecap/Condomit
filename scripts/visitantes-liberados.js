@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         pageSize: 7,
         search: '',
         filterBlock: '',
-        filterDate: '7'
+        filterDate: 'all'
     };
 
     const tableBody = document.getElementById('visitantesTableBody');
@@ -187,9 +187,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function loadVisitorListFromDb() {
+        if (typeof window.supabaseFetch === 'function') {
+            try {
+                const rows = await window.supabaseFetch('/rpc/condomit_list_released_visitors_by_porter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}'
+                });
+                return (Array.isArray(rows) ? rows : [])
+                    .map(transformVisitorRow)
+                    .filter((visitor) => visitor.status === 'liberado');
+            } catch (error) {
+                console.warn('RPC de visitantes liberados indisponível, usando fallback:', error);
+            }
+        }
+
         if (typeof window.getVisitorsForCondominium !== 'function') return [];
         const rows = await window.getVisitorsForCondominium(pageState.currentUser);
-        return (Array.isArray(rows) ? rows : []).map(transformVisitorRow);
+        return (Array.isArray(rows) ? rows : [])
+            .filter((row) => String(row?.release_status || '').toLowerCase() === 'liberado')
+            .map(transformVisitorRow);
     }
 
     async function reloadVisitors() {

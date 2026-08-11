@@ -959,3 +959,31 @@ html[data-theme="dark"] .quick-actions-grid {
 .sidebar-nav {
     min-height: 0;
 }
+
+/* ============================================================
+   015 - Scrollbar garantida nas barras laterais
+============================================================ */
+.sidebar {
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    position: sticky;
+    top: 0;
+    flex-shrink: 0;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+}
+
+.sidebar-nav,
+.sidebar .nav-section {
+    min-height: 0;
+}
+
+.sidebar-footer,
+.sidebar-header {
+    flex-shrink: 0;
+}

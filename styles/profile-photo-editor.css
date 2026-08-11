@@ -362,3 +362,31 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* 015 - ação de reset da foto */
+.reset-profile-photo-btn {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #4b5563;
+  border-radius: 10px;
+  background: #202225;
+  color: #f3f4f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+.reset-profile-photo-btn:hover:not(:disabled) {
+  background: #2b2d31;
+  border-color: #ef4444;
+  color: #fecaca;
+  transform: translateY(-1px);
+}
+.reset-profile-photo-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}

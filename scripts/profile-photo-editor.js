@@ -68,6 +68,10 @@ class ProfilePhotoEditor {
                 <input type="file" id="hiddenFileInput" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;" />
               </div>
             </div>
+            <button type="button" class="reset-profile-photo-btn" id="resetProfilePhotoBtn">
+              <i class="fas fa-rotate-left"></i>
+              <span>Resetar foto de perfil</span>
+            </button>
             <div class="recent-avatars-section" id="recentAvatarsSection" style="display: none;">
               <h3>Avatare Recentes</h3>
               <p>Acesse seus envios de Avatar mais recentes.</p>
@@ -112,6 +116,7 @@ class ProfilePhotoEditor {
     const zoomSlider = document.getElementById('zoomSlider');
     const uploadBox = document.getElementById('uploadBox');
     const hiddenFileInput = document.getElementById('hiddenFileInput');
+    const resetProfilePhotoBtn = document.getElementById('resetProfilePhotoBtn');
 
     closeBtn.addEventListener('click', () => this.close());
     cancelBtn.addEventListener('click', () => this.handleCancel());
@@ -128,6 +133,30 @@ class ProfilePhotoEditor {
         this.processFile(file);
       }
       hiddenFileInput.value = '';
+    });
+
+    resetProfilePhotoBtn?.addEventListener('click', async () => {
+      const currentUser = this.getCurrentStoredUser();
+      const hasPhoto = Boolean(currentUser?.profilePhoto || currentUser?.profile_photo);
+      if (!hasPhoto) {
+        window.showToast?.('Sua conta já está usando o avatar padrão.', 'info');
+        return;
+      }
+
+      const confirmed = window.confirm('Deseja remover a foto de perfil e voltar ao avatar padrão?');
+      if (!confirmed) return;
+
+      resetProfilePhotoBtn.disabled = true;
+      try {
+        await this.updateProfilePhoto(null);
+        this.close();
+        window.showToast?.('Foto de perfil resetada.', 'success');
+      } catch (error) {
+        console.error('Erro ao resetar foto:', error);
+        window.showToast?.(error?.message || 'Não foi possível resetar a foto.', 'error');
+      } finally {
+        resetProfilePhotoBtn.disabled = false;
+      }
     });
 
     this.cropContainer.addEventListener('mousedown', (e) => this.handleMouseDown(e));
@@ -154,15 +183,34 @@ class ProfilePhotoEditor {
     });
   }
 
+  getCurrentStoredUser() {
+    try {
+      return JSON.parse(sessionStorage.getItem('condominiumUser') || 'null');
+    } catch (_) {
+      return null;
+    }
+  }
+
   open() {
     this.showSelectionScreen();
     this.renderRecentAvatars();
+    this.updateResetButtonState();
     this.modal.classList.add('active');
     document.body.style.overflow = 'hidden';
   }
 
+  updateResetButtonState() {
+    const button = document.getElementById('resetProfilePhotoBtn');
+    if (!button) return;
+    const currentUser = this.getCurrentStoredUser();
+    const hasPhoto = Boolean(currentUser?.profilePhoto || currentUser?.profile_photo);
+    button.disabled = !hasPhoto;
+    button.title = hasPhoto ? 'Remover a foto atual' : 'Nenhuma foto personalizada definida';
+  }
+
   showSelectionScreen() {
     document.getElementById('modalTitle').textContent = 'Selecione uma imagem';
+    this.updateResetButtonState();
     this.selectionScreen.style.display = 'flex';
     this.editorScreen.classList.remove('active');
     document.getElementById('modalFooter').style.display = 'none';
@@ -396,38 +444,41 @@ class ProfilePhotoEditor {
   }
 
   async updateProfilePhoto(imageData) {
-    const currentUser = JSON.parse(sessionStorage.getItem('condominiumUser'));
-    if (!currentUser) return;
+    const currentUser = this.getCurrentStoredUser();
+    if (!currentUser) throw new Error('Usuário não identificado.');
 
-    currentUser.profilePhoto = imageData;
+    const normalizedPhoto = imageData || null;
+
+    // O banco é a fonte de verdade: só atualiza a sessão depois de confirmar a persistência.
+    if (typeof window.supabaseFetch === 'function') {
+      await window.supabaseFetch('/rpc/condomit_save_profile_photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photo_data: normalizedPhoto })
+      });
+    } else if (typeof updateUserByEmail === 'function') {
+      await updateUserByEmail(currentUser.email, { profile_photo: normalizedPhoto });
+    } else {
+      throw new Error('Não foi possível acessar o serviço de perfil.');
+    }
+
+    currentUser.profilePhoto = normalizedPhoto;
+    currentUser.profile_photo = normalizedPhoto;
     sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
+    try {
+      localStorage.setItem('condominiumPersistentUser', JSON.stringify(currentUser));
+    } catch (_) {}
 
     if (typeof updateUIWithUserData === 'function') {
       updateUIWithUserData(currentUser);
     }
-
     if (typeof syncAllAvatars === 'function') {
       syncAllAvatars(currentUser);
     }
 
-    try {
-      if (typeof window.supabaseFetch === 'function') {
-        await window.supabaseFetch('/rpc/condomit_save_profile_photo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photo_data: imageData })
-        });
-      } else if (typeof updateUserByEmail === 'function') {
-        await updateUserByEmail(currentUser.email, { profile_photo: imageData });
-      }
-      currentUser.profile_photo = imageData;
-      currentUser.profilePhoto = imageData;
-      sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
-      window.showToast?.('Foto de perfil salva.', 'success');
-    } catch (error) {
-      console.error('Erro ao salvar foto no banco de dados:', error);
-      window.showToast?.('A foto foi atualizada nesta sessão, mas não foi possível salvá-la no banco.', 'error');
-    }
+    this.updateResetButtonState();
+    if (normalizedPhoto) window.showToast?.('Foto de perfil salva.', 'success');
+    return normalizedPhoto;
   }
 
   showError(message) {

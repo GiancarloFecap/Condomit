@@ -3,6 +3,7 @@ import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disco
 import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js';
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js';
+import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js';
 
 function $(id) {
   return document.getElementById(id);
@@ -43,7 +44,7 @@ function bindTabs() {
 
 function bindControls() {
   $('btn-mic')?.addEventListener('click', async () => {
-    try { await toggleMicrophone(); } catch (e) { toast('Não foi possível alternar microfone', 'error'); }
+    try { await toggleMicrophone(); syncAssemblyTranscriptionWithMicrophone(); } catch (e) { toast('Não foi possível alternar microfone', 'error'); }
   });
   $('btn-camera')?.addEventListener('click', async () => {
     try { await toggleCamera(); } catch (e) { toast('Não foi possível alternar câmera', 'error'); }
@@ -84,6 +85,8 @@ function bindControls() {
       error
     );
   }
+
+  stopAssemblyTranscription();
 
   try {
     await disconnectRoom();
@@ -504,6 +507,7 @@ async function init() {
     bindRoomActions();
 
     await connectToRoom(tokenInfo);
+    startAssemblyTranscription();
 
     try { await presenceJoin(); } catch (_) {}
     startHeartbeat();
@@ -522,6 +526,7 @@ async function init() {
 }
 
 window.addEventListener('beforeunload', () => {
+  stopAssemblyTranscription();
   try { presenceLeave(); } catch (_) {}
 });
 

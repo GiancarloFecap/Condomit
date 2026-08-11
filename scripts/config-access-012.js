@@ -177,19 +177,10 @@
         openOverlay(overlay);
     }
 
-    async function loadPackageRecipients(select) {
-        select.innerHTML = '<option value="">Carregando moradores...</option>';
-        const rows = await rpc('condomit_list_package_recipients', {});
-        const residents = Array.isArray(rows) ? rows : [];
-        if (!residents.length) {
-            select.innerHTML = '<option value="">Nenhum morador vinculado ao condomínio</option>';
-            return [];
-        }
-        select.innerHTML = '<option value="">Selecione o destinatário</option>' + residents.map((resident) => {
-            const unit = [resident.block ? `Bloco ${resident.block}` : '', resident.apartment ? `Apto ${resident.apartment}` : ''].filter(Boolean).join(' • ');
-            return `<option value="${escapeHtml(resident.email)}" data-name="${escapeHtml(resident.name)}">${escapeHtml(resident.name)}${unit ? ` — ${escapeHtml(unit)}` : ''}</option>`;
-        }).join('');
-        return residents;
+    function packageRecipientLabel(user) {
+        const name = String(user?.name || user?.email || 'Usuário').trim();
+        const email = String(user?.email || '').trim().toLowerCase();
+        return email ? `${name} — ${email}` : name;
     }
 
     async function openPackageRegistrationModal() {
@@ -208,7 +199,7 @@
         body.innerHTML = `
             <form id="packageRegistrationForm012" class="visitor-access-form">
                 ${formGridHtml(`
-                    <label class="visitor-access-email"><span>Destinatário</span><select id="packageRecipient012" required></select></label>
+                    <label class="visitor-access-email"><span>Destinatário</span><input id="packageRecipient012" type="text" readonly value="${escapeHtml(packageRecipientLabel(user))}" aria-readonly="true"></label>
                     <label><span>Descrição da encomenda</span><input id="packageDescription012" type="text" maxlength="250" placeholder="Ex.: Caixa pequena da Amazon" required></label>
                     <label><span>Transportadora</span><input id="packageCarrier012" type="text" maxlength="120" placeholder="Opcional"></label>
                     <label><span>Código de rastreio</span><input id="packageTracking012" type="text" maxlength="120" placeholder="Opcional"></label>
@@ -222,30 +213,22 @@
             </form>
         `;
 
-        const select = document.getElementById('packageRecipient012');
         body.querySelector('[data-cancel]').addEventListener('click', () => closeOverlay(overlay));
         openOverlay(overlay);
-
-        try {
-            await loadPackageRecipients(select);
-        } catch (error) {
-            feedback(document.getElementById('packageFeedback012'), error?.message || 'Não foi possível carregar os moradores.', 'error');
-        }
 
         body.querySelector('form').addEventListener('submit', async (event) => {
             event.preventDefault();
             const submit = event.currentTarget.querySelector('button[type="submit"]');
             const fb = document.getElementById('packageFeedback012');
-            const recipientEmail = select.value;
-            const selected = select.options[select.selectedIndex];
-            const recipientName = selected?.dataset?.name || selected?.textContent?.split(' — ')[0]?.trim() || '';
+            const recipientEmail = String(user.email || '').trim().toLowerCase();
+            const recipientName = String(user.name || user.email || '').trim();
             const description = document.getElementById('packageDescription012')?.value.trim() || '';
             const carrier = document.getElementById('packageCarrier012')?.value.trim() || null;
             const tracking = document.getElementById('packageTracking012')?.value.trim() || null;
             const observations = document.getElementById('packageObservations012')?.value.trim() || null;
 
             if (!recipientEmail || !recipientName || !description) {
-                feedback(fb, 'Selecione o destinatário e informe a descrição da encomenda.', 'error');
+                feedback(fb, 'Não foi possível identificar o usuário ou a descrição da encomenda.', 'error');
                 return;
             }
 

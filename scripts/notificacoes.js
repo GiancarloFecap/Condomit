@@ -88,16 +88,27 @@ function setupNotificationActions() {
 
         if (!title || !message) return;
 
-        await window.communityHub.createNotification({
-            category,
-            title,
-            message,
-            details: message
-        }, notificationState.currentUser);
-        closeNotificationModal();
-        event.target.reset();
-        notificationState.activeCategory = 'Todas';
-        await renderNotificationsPage();
+        const submitButton = event.submitter || event.target.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
+
+        try {
+            await window.communityHub.createNotification({
+                category,
+                title,
+                message,
+                details: message
+            }, notificationState.currentUser);
+            closeNotificationModal();
+            event.target.reset();
+            notificationState.activeCategory = 'Todas';
+            await renderNotificationsPage();
+            window.showToast?.('Notificação publicada e salva no banco de dados.', 'success');
+        } catch (error) {
+            console.error('Erro ao publicar notificação:', error);
+            window.showToast?.(error?.message || 'Não foi possível salvar a notificação no banco de dados.', 'error');
+        } finally {
+            if (submitButton) submitButton.disabled = false;
+        }
     });
 }
 

@@ -314,3 +314,126 @@
 .todas-reservas-section .btn-cancelar {
     margin-bottom: 1rem;
 }
+
+/* ============================================================
+   015 - Histórico de reservas em popup
+============================================================ */
+.reservation-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 22px 28px 4px;
+}
+
+.reservation-page-actions .sindico-section {
+    display: none;
+    margin: 0;
+}
+
+.btn-reservation-history {
+    min-height: 44px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0b5ed7, #2563eb);
+    color: #fff;
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, .18);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.btn-reservation-history.secondary {
+    background: #fff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, .07);
+}
+
+.btn-reservation-history:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(37, 99, 235, .22); }
+
+.reservations-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(15, 23, 42, .55);
+    backdrop-filter: blur(5px);
+}
+.reservations-modal-backdrop[hidden] { display: none !important; }
+
+.reservations-modal {
+    width: min(760px, 100%);
+    max-height: min(760px, calc(100vh - 48px));
+    background: #fff;
+    border-radius: 22px;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, .3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.reservations-modal-header {
+    padding: 22px 24px 18px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.reservations-modal-header h3 { margin: 3px 0 0; color: #0f172a; font-size: 22px; }
+.reservations-modal-eyebrow { color: #2563eb; text-transform: uppercase; font-size: 11px; font-weight: 850; letter-spacing: .09em; }
+.reservations-modal-close {
+    width: 38px; height: 38px; border-radius: 11px; border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; cursor: pointer;
+}
+.reservations-modal-close:hover { background: #eef2ff; color: #1d4ed8; }
+.reservations-modal-body { padding: 20px 24px 24px; overflow-y: auto; }
+.reservation-modal-list { display: grid; gap: 12px; }
+.reservation-modal-card {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #fff;
+}
+.reservation-modal-card-icon { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 13px; background: #eff6ff; color: #2563eb; font-size: 18px; }
+.reservation-modal-card-title { font-weight: 800; color: #0f172a; }
+.reservation-modal-card-meta { margin-top: 6px; display: flex; gap: 12px 18px; flex-wrap: wrap; color: #64748b; font-size: 12.5px; }
+.reservation-modal-card-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.reservation-delete-btn {
+    border: 1px solid #fecaca;
+    background: #fff1f2;
+    color: #be123c;
+    border-radius: 11px;
+    min-height: 38px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    font-weight: 750;
+}
+.reservation-delete-btn:hover { background: #ffe4e6; }
+.reservation-delete-btn:disabled { opacity: .55; cursor: wait; }
+.reservation-empty-state, .reservation-loading, .reservation-inline-empty { text-align: center; color: #64748b; padding: 22px; }
+.reservation-empty-state i { font-size: 28px; color: #94a3b8; }
+.reservation-empty-state h4 { margin: 10px 0 4px; color: #334155; }
+.reservation-empty-state p { margin: 0; }
+
+@media (max-width: 640px) {
+    .reservation-page-actions { margin-inline: 16px; }
+    .reservations-modal-backdrop { padding: 12px; }
+    .reservations-modal { max-height: calc(100vh - 24px); }
+    .reservation-modal-card { grid-template-columns: 42px minmax(0, 1fr); }
+    .reservation-delete-btn { grid-column: 1 / -1; justify-content: center; }
+}

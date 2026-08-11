@@ -7,8 +7,8 @@
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=011">
-    <link rel="stylesheet" href="../styles/theme.css?v=014">
-    <link rel="stylesheet" href="../styles/reservas.css">
+    <link rel="stylesheet" href="../styles/theme.css?v=015">
+    <link rel="stylesheet" href="../styles/reservas.css?v=015">
 </head>
 <body>
     <div class="dashboard-sindico">
@@ -247,19 +247,18 @@
                 </div>
             </header>
 
-            <!-- Botão de síndico para ver todas as reservas -->
-            <div id="sindicoSection" class="section-card sindico-section">
-                <button id="btnVerTodasReservas" class="btn-primary-large">
-                    <i class="fas fa-list"></i>
-                    Ver todas as reservas
+            <div class="reservation-page-actions" aria-label="Ações de reservas">
+                <button id="btnMinhasReservas" class="btn-reservation-history" type="button">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Minhas reservas</span>
                 </button>
-            </div>
 
-            <!-- Seção de todas as reservas (oculta por padrão) -->
-            <div id="todasReservasSection" class="section-card todas-reservas-section">
-                <h4>Todas as reservas</h4>
-                <button id="btnFecharReservas" class="btn-cancelar">Fechar</button>
-                <div id="todasReservasContainer"></div>
+                <div id="sindicoSection" class="sindico-section" style="display:none;">
+                    <button id="btnVerTodasReservas" class="btn-reservation-history secondary" type="button">
+                        <i class="fas fa-list"></i>
+                        <span>Ver todas as reservas</span>
+                    </button>
+                </div>
             </div>
 
             <div class="reservas-content">
@@ -344,7 +343,7 @@
 
     <script src="../scripts/supabase-client.js?v=014"></script>
     <script src="../scripts/sidebar-links.js?v=011"></script>
-    <script src="../scripts/reservas.js"></script>
+    <script src="../scripts/reservas.js?v=015"></script>
     <script src="../scripts/topbar-actions.js?v=011"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
 </body>

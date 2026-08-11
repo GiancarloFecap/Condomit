@@ -59,3 +59,56 @@ html[data-theme="dark"] .minute-card, html[data-theme="dark"] .poll-result-card,
     font-weight: 700;
 }
 html[data-theme="dark"] .poll-option-label { background: #111827; color: #f3f4f6; border-color: #374151; }
+
+/* ============================================================
+   015 - Transcrição e voto pela ata
+============================================================ */
+.minutes-transcription-ok,
+.minutes-transcription-empty {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    border-radius: 13px;
+    margin-bottom: 18px;
+    line-height: 1.45;
+}
+.minutes-transcription-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+.minutes-transcription-empty { background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; }
+.minutes-transcription-ok i, .minutes-transcription-empty i { font-size: 18px; }
+.minutes-transcription-ok div { display: grid; gap: 2px; }
+.minutes-transcription-ok span { font-size: 13px; }
+.speech-event .minute-card { border-color: #bfdbfe; background: #f8fbff; }
+.speech-event .minute-card strong { color: #1d4ed8; }
+
+.poll-option-result.can-vote { grid-template-columns: minmax(180px, 1.2fr) minmax(150px, 1.8fr) auto; }
+.poll-option-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.poll-option-main .poll-option-label { flex: 1; }
+.post-assembly-vote-btn {
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.post-assembly-vote-btn:hover { background: #dbeafe; }
+.post-assembly-vote-btn:disabled { opacity: .55; cursor: wait; }
+.poll-user-status { margin-top: 12px; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 11px; font-size: 13px; font-weight: 700; }
+.poll-user-status.success { background: #ecfdf5; color: #047857; }
+.poll-user-status.pending { background: #eff6ff; color: #1d4ed8; }
+.poll-user-status.neutral { background: #f8fafc; color: #64748b; }
+
+html[data-theme="dark"] .minutes-transcription-ok { background: rgba(6, 95, 70, .24); border-color: #065f46; color: #a7f3d0; }
+html[data-theme="dark"] .minutes-transcription-empty { background: #111827; border-color: #374151; color: #94a3b8; }
+html[data-theme="dark"] .speech-event .minute-card { background: #111827; border-color: #1e40af; }
+html[data-theme="dark"] .post-assembly-vote-btn { background: #172554; border-color: #1e40af; color: #bfdbfe; }
+
+@media(max-width: 900px) {
+    .poll-option-result.can-vote { grid-template-columns: 1fr; }
+    .poll-option-main { flex-wrap: wrap; }
+    .post-assembly-vote-btn { width: 100%; justify-content: center; }
+}

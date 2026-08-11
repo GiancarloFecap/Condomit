@@ -1671,7 +1671,12 @@ async function scheduleAssembly(event) {
         });
 
         if (window.communityHub && typeof window.communityHub.createAssemblyNotification === 'function') {
-            window.communityHub.createAssemblyNotification(savedAssembly, assemblyState.currentUser);
+            try {
+                await window.communityHub.createAssemblyNotification(savedAssembly, assemblyState.currentUser);
+            } catch (notificationError) {
+                console.error('Assembleia salva, mas a notificação não pôde ser persistida:', notificationError);
+                showToast('Assembleia agendada, mas não foi possível publicar a notificação. Verifique a migration 015.', 'warning');
+            }
         }
 
         renderScheduledAssemblies();
