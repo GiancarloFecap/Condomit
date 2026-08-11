@@ -987,3 +987,63 @@ html[data-theme="dark"] .quick-actions-grid {
 .sidebar-header {
     flex-shrink: 0;
 }
+
+/* ============================================================
+   015.1 - Correção de sobreposição dos itens da barra lateral
+   Mantém a rolagem vertical sem permitir que as seções encolham.
+============================================================ */
+.sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* O menu pode crescer além da altura da viewport. O scroll fica no .sidebar. */
+.sidebar-nav {
+    flex: 1 0 auto !important;
+    min-height: max-content !important;
+    overflow: visible !important;
+}
+
+/* Impede que cada grupo do menu seja comprimido pelo flexbox. */
+.sidebar .nav-section,
+.sidebar .nav-section--plain {
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.sidebar .nav-section-title {
+    position: static !important;
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    line-height: 1.25 !important;
+    white-space: normal;
+}
+
+/* Cada opção preserva sua própria altura e não invade a próxima. */
+.sidebar .nav-item {
+    position: relative;
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    height: auto !important;
+    min-height: 36px;
+    line-height: 1.25 !important;
+}
+
+.sidebar .nav-item span {
+    display: block;
+    min-width: 0;
+    line-height: 1.25 !important;
+}
+
+.sidebar-header,
+.sidebar-footer {
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+}
