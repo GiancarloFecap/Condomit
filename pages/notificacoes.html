@@ -6,9 +6,9 @@
     <title>Condomit - Notificações</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/index.css?v=011">
+    <link rel="stylesheet" href="../styles/index.css?v=016">
     <link rel="stylesheet" href="../styles/theme.css?v=0151">
-    <link rel="stylesheet" href="../styles/notificacoes.css">
+    <link rel="stylesheet" href="../styles/notificacoes.css?v=018">
 </head>
 <body>
     <div class="dashboard-sindico">
@@ -22,15 +22,15 @@
         <main class="main-content">
             <header class="top-bar">
                 <div class="top-bar-left">
-                    <h1>Central de Notificações</h1>
-                    <p>Fique por dentro do que acontece no seu condomínio.</p>
+                    <h1>Notificações</h1>
+                    <p>Veja as mudanças e acontecimentos importantes do seu condomínio.</p>
                 </div>
                 <div class="top-bar-right">
                     <div class="top-icons">
-                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
-                        <button class="icon-btn"><i class="fas fa-video"></i></button>
-                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
-                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Chat"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Assembleias"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Notificações"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Perfil"><i class="fas fa-user-circle"></i></button>
                     </div>
                     <div class="user-profile-small">
                         <div class="user-info-small">
@@ -45,17 +45,13 @@
             <section class="notifications-page">
                 <div class="page-head">
                     <div>
-                        <h2>Notificações</h2>
-                        <p id="notificationsSubtitle">Veja os avisos mais recentes do condomínio.</p>
+                        <h2>Central de Notificações</h2>
+                        <p id="notificationsSubtitle">Mudanças no Mural de Avisos, assembleias, reservas e outras atualizações aparecem aqui.</p>
                     </div>
                     <div class="page-actions">
                         <button class="ghost-btn" id="markAllReadBtn" type="button">
                             <i class="fas fa-check-circle"></i>
                             Marcar todas como lidas
-                        </button>
-                        <button class="primary-action" id="createNotificationBtn" type="button" style="display:none;">
-                            <i class="fas fa-plus"></i>
-                            Criar notificação
                         </button>
                     </div>
                 </div>
@@ -65,7 +61,7 @@
                 <div class="notifications-layout">
                     <section class="notifications-feed card-shell">
                         <div class="section-head">
-                            <h3>Feed do condomínio</h3>
+                            <h3>Atualizações do condomínio</h3>
                             <span class="muted" id="feedCounter">0 itens</span>
                         </div>
                         <div class="notifications-list" id="notificationsList"></div>
@@ -91,10 +87,11 @@
                         </div>
 
                         <div class="card-shell help-card">
-                            <div class="help-icon"><i class="fas fa-life-ring"></i></div>
+                            <div class="help-icon"><i class="fas fa-bullhorn"></i></div>
                             <div>
-                                <h3>Precisa de ajuda?</h3>
-                                <p>Fale com o suporte quando precisar.</p>
+                                <h3>Mural de Avisos</h3>
+                                <p>Os avisos completos e permanentes ficam no Mural de Avisos.</p>
+                                <button class="ghost-btn notification-wall-link" id="openWallBtn" type="button">Abrir Mural de Avisos</button>
                             </div>
                         </div>
                     </aside>
@@ -103,49 +100,12 @@
         </main>
     </div>
 
-    <div class="modal-backdrop" id="notificationModal" aria-hidden="true">
-        <div class="modal-card">
-            <div class="modal-header">
-                <div>
-                    <h3>Nova notificação</h3>
-                    <p>Crie um aviso para todos os moradores.</p>
-                </div>
-                <button class="modal-close" id="closeNotificationModal" type="button" aria-label="Fechar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <form class="modal-form" id="notificationForm">
-                <label>
-                    Categoria
-                    <select id="notificationCategory" required>
-                        <option value="Avisos">Avisos</option>
-                        <option value="Reservas">Reservas</option>
-                        <option value="Assembleias">Assembleias</option>
-                        <option value="Entregas">Entregas</option>
-                    </select>
-                </label>
-                <label>
-                    Título
-                    <input id="notificationTitle" type="text" maxlength="100" required>
-                </label>
-                <label>
-                    Mensagem
-                    <textarea id="notificationMessage" rows="5" maxlength="400" required></textarea>
-                </label>
-                <div class="modal-actions">
-                    <button class="ghost-btn" id="cancelNotificationModal" type="button">Cancelar</button>
-                    <button class="primary-action" type="submit">Publicar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <div class="modal-backdrop" id="notificationDetailModal" aria-hidden="true">
         <div class="modal-card detail-modal-card">
             <div class="modal-header">
                 <div>
                     <h3 id="notificationDetailTitle">Detalhes da notificação</h3>
-                    <p id="notificationDetailSubtitle">Veja todas as informações da notificação.</p>
+                    <p id="notificationDetailSubtitle">Veja as informações desta atualização.</p>
                 </div>
                 <button class="modal-close" id="closeNotificationDetailModal" type="button" aria-label="Fechar">
                     <i class="fas fa-times"></i>
@@ -158,8 +118,8 @@
                 </div>
                 <div class="notification-detail-grid">
                     <div class="detail-line">
-                        <span>Autor</span>
-                        <strong id="notificationDetailAuthor">Sistema</strong>
+                        <span>Origem</span>
+                        <strong id="notificationDetailAuthor">Condomit</strong>
                     </div>
                     <div class="detail-line">
                         <span>Data</span>
@@ -167,25 +127,24 @@
                     </div>
                 </div>
                 <div class="notification-detail-copy">
-                    <h4>Mensagem</h4>
+                    <h4>Informações</h4>
                     <p id="notificationDetailMessage">--</p>
-                </div>
-                <div class="notification-detail-copy">
-                    <h4>Informações completas</h4>
-                    <p id="notificationDetailFullText">--</p>
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="ghost-btn" id="closeNotificationDetailAction" type="button">Fechar</button>
+                <button class="ghost-btn" id="openRelatedWallNotice" type="button" style="display:none;">
+                    <i class="fas fa-bullhorn"></i> Abrir Mural de Avisos
+                </button>
+                <button class="primary-action" id="closeNotificationDetailAction" type="button">Fechar</button>
             </div>
         </div>
     </div>
 
     <script src="../scripts/supabase-client.js?v=017"></script>
-    <script src="../scripts/community-hub.js?v=016"></script>
-    <script src="../scripts/sidebar-links.js?v=011"></script>
-    <script src="../scripts/notificacoes.js?v=016"></script>
-    <script src="../scripts/topbar-actions.js?v=011"></script>
+    <script src="../scripts/community-hub.js?v=018"></script>
+    <script src="../scripts/sidebar-links.js?v=018"></script>
+    <script src="../scripts/notificacoes.js?v=018"></script>
+    <script src="../scripts/topbar-actions.js?v=012"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
 </body>
 </html>

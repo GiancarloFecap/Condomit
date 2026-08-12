@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Mural de Avisos</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css?v=016">
+    <link rel="stylesheet" href="../styles/theme.css?v=0151">
+    <link rel="stylesheet" href="../styles/notificacoes.css?v=018">
+    <link rel="stylesheet" href="../styles/mural-avisos.css?v=018">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/Logo-Lado.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Mural de Avisos</h1>
+                    <p id="wallSubtitle">Acompanhe os avisos do seu condomínio.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button" aria-label="Chat"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Assembleias"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Notificações"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Perfil"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Morador</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="notifications-page wall-page">
+                <div class="page-head">
+                    <div>
+                        <div class="wall-title-line">
+                            <h2>Avisos do condomínio</h2>
+                            <span class="wall-history-badge"><i class="fas fa-infinity"></i> Histórico permanente</span>
+                        </div>
+                        <p>Os avisos publicados permanecem disponíveis no mural e podem ser consultados a qualquer momento.</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="primary-action" id="createWallNoticeBtn" type="button" style="display:none;">
+                            <i class="fas fa-plus"></i>
+                            Publicar aviso
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filter-tabs" id="wallCategoryTabs"></div>
+
+                <div class="notifications-layout">
+                    <section class="notifications-feed card-shell">
+                        <div class="section-head">
+                            <h3>Mural de Avisos</h3>
+                            <span class="muted" id="wallCounter">0 avisos</span>
+                        </div>
+                        <div class="notifications-list" id="wallNoticesList"></div>
+                    </section>
+
+                    <aside class="notifications-sidebar">
+                        <div class="card-shell summary-card">
+                            <h3>Resumo do mural</h3>
+                            <div class="summary-stats">
+                                <div class="summary-stat">
+                                    <span>Total de avisos</span>
+                                    <strong id="totalWallNotices">0</strong>
+                                </div>
+                                <div class="summary-stat">
+                                    <span>Publicados neste mês</span>
+                                    <strong id="monthWallNotices">0</strong>
+                                </div>
+                                <div class="summary-stat wall-latest-row">
+                                    <span>Última atualização</span>
+                                    <strong id="latestWallNotice">--</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-shell help-card wall-info-card">
+                            <div class="help-icon"><i class="fas fa-bell"></i></div>
+                            <div>
+                                <h3>Notificações automáticas</h3>
+                                <p>Quando um novo aviso for adicionado, os usuários do condomínio recebem uma atualização na página de Notificações.</p>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="wallCreateModal" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h3>Publicar novo aviso</h3>
+                    <p>Este aviso ficará disponível permanentemente no Mural de Avisos.</p>
+                </div>
+                <button class="modal-close" id="closeWallCreateModal" type="button" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form class="modal-form" id="wallNoticeForm">
+                <label>
+                    Categoria
+                    <select id="wallNoticeCategory" required>
+                        <option value="Avisos">Avisos</option>
+                        <option value="Reservas">Reservas</option>
+                        <option value="Assembleias">Assembleias</option>
+                        <option value="Entregas">Entregas</option>
+                    </select>
+                </label>
+                <label>
+                    Título
+                    <input id="wallNoticeTitle" type="text" maxlength="160" required>
+                </label>
+                <label>
+                    Aviso
+                    <textarea id="wallNoticeMessage" rows="7" maxlength="4000" required></textarea>
+                </label>
+                <div class="modal-actions">
+                    <button class="ghost-btn" id="cancelWallCreateModal" type="button">Cancelar</button>
+                    <button class="primary-action" type="submit"><i class="fas fa-bullhorn"></i> Publicar no mural</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="wallDetailModal" aria-hidden="true">
+        <div class="modal-card detail-modal-card">
+            <div class="modal-header">
+                <div>
+                    <h3 id="wallDetailTitle">Detalhes do aviso</h3>
+                    <p id="wallDetailSubtitle">Informações completas do aviso.</p>
+                </div>
+                <button class="modal-close" id="closeWallDetailModal" type="button" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="notification-detail-body">
+                <div class="notification-detail-meta">
+                    <span class="tag category" id="wallDetailCategory">Avisos</span>
+                    <span class="tag wall-permanent"><i class="fas fa-infinity"></i> Permanente</span>
+                </div>
+                <div class="notification-detail-grid">
+                    <div class="detail-line">
+                        <span>Publicado por</span>
+                        <strong id="wallDetailAuthor">Síndico</strong>
+                    </div>
+                    <div class="detail-line">
+                        <span>Data da publicação</span>
+                        <strong id="wallDetailDate">--</strong>
+                    </div>
+                    <div class="detail-line">
+                        <span>Origem</span>
+                        <strong id="wallDetailSource">Publicado pelo síndico</strong>
+                    </div>
+                </div>
+                <div class="notification-detail-copy">
+                    <h4>Resumo</h4>
+                    <p id="wallDetailMessage">--</p>
+                </div>
+                <div class="notification-detail-copy">
+                    <h4>Informações do aviso</h4>
+                    <p id="wallDetailFullText">--</p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="primary-action" id="closeWallDetailAction" type="button">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js?v=017"></script>
+    <script src="../scripts/community-hub.js?v=018"></script>
+    <script src="../scripts/sidebar-links.js?v=018"></script>
+    <script src="../scripts/mural-avisos.js?v=018"></script>
+    <script src="../scripts/topbar-actions.js?v=012"></script>
+    <script src="../scripts/condomit-alerts.js?v=014"></script>
+</body>
+</html>
