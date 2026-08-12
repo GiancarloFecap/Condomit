@@ -388,20 +388,31 @@ async function handleVerifyLogin(payload) {
   const rawUserType = String(profile?.user_type || '').trim().toLowerCase();
   const userType = rawUserType === 'síndico' ? 'sindico' : rawUserType;
 
-  const redirectTo = `${APP_BASE_URL}/pages/2fa-completo.html`;
+  /*
+   * Gera um token de autenticação Supabase, mas NÃO redireciona o navegador
+   * para o action_link. O frontend troca o token_hash diretamente por uma
+   * sessão com supabase.auth.verifyOtp(). Isso evita depender de Site URL /
+   * Redirect URLs do Supabase e impede redirecionamentos para localhost.
+   */
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: 'magiclink',
-    email: row.user_email,
-    options: { redirectTo }
+    email: row.user_email
   });
   if (linkError) throw linkError;
 
-  const actionLink = linkData?.properties?.action_link;
-  if (!actionLink) throw new Error('Não foi possível concluir a autenticação.');
+  const tokenHash = String(linkData?.properties?.hashed_token || '').trim();
+  const verificationType = String(
+    linkData?.properties?.verification_type || 'magiclink'
+  ).trim();
+
+  if (!tokenHash) {
+    throw new Error('Não foi possível concluir a autenticação.');
+  }
 
   return response(200, {
     verified: true,
-    actionLink,
+    tokenHash,
+    verificationType,
     userType
   });
 }
