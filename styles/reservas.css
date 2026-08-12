@@ -437,3 +437,29 @@
     .reservation-modal-card { grid-template-columns: 42px minmax(0, 1fr); }
     .reservation-delete-btn { grid-column: 1 / -1; justify-content: center; }
 }
+
+
+/* 016 - Status e cancelamento de reservas */
+.reservation-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: max-content;
+    margin-top: 10px;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: .78rem;
+    font-weight: 800;
+}
+.reservation-status-badge.confirmed {
+    background: #dcfce7;
+    color: #15803d;
+}
+.reservation-cancel-btn {
+    color: #b42318 !important;
+    border-color: #fecaca !important;
+    background: #fff7f7 !important;
+}
+.reservation-cancel-btn:hover {
+    background: #fee2e2 !important;
+}

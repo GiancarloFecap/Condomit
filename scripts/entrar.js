@@ -306,11 +306,63 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             setLoginSubmitting(true);
 
-            const { data: authData, error: authError } =
-                await window.supabase.auth.signInWithPassword({
-                    email,
-                    password
-                });
+            let authData = null;
+            let authError = null;
+
+            try {
+                if (!window.condomitTwoFactor?.passwordLogin) {
+                    throw new Error('Módulo de verificação em duas etapas não carregado.');
+                }
+
+                const loginResult =
+                    await window.condomitTwoFactor.passwordLogin(
+                        email,
+                        password
+                    );
+
+                if (loginResult?.requiresTwoFactor) {
+                    sessionStorage.setItem(
+                        'condomitPendingTwoFactorLogin',
+                        JSON.stringify({
+                            challengeId: loginResult.challengeId,
+                            email: loginResult.email || email,
+                            maskedEmail: loginResult.maskedEmail || email
+                        })
+                    );
+
+                    window.location.href =
+                        'verificar-2fa-email.html';
+
+                    return;
+                }
+
+                if (
+                    !loginResult?.session?.access_token ||
+                    !loginResult?.session?.refresh_token
+                ) {
+                    throw new Error(
+                        'O servidor não retornou uma sessão válida.'
+                    );
+                }
+
+                const {
+                    data,
+                    error
+                } =
+                    await window.supabase.auth.setSession({
+                        access_token:
+                            loginResult.session.access_token,
+
+                        refresh_token:
+                            loginResult.session.refresh_token
+                    });
+
+                authData = data;
+                authError = error;
+
+            } catch (error) {
+                authError = error;
+            }
 
             if (authError) {
     console.error(

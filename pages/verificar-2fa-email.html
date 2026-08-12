@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificação em duas etapas - Condomit</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/two-factor.css?v=016">
+</head>
+<body>
+    <main class="security-shell">
+        <section class="security-card">
+            <img src="../assets/logo-full.png" class="security-logo" alt="Condomit">
+            <div class="security-icon"><i class="fas fa-shield-halved"></i></div>
+            <h1>Verificação em duas etapas</h1>
+            <p id="twoFactorDescription">Enviamos um código de 6 dígitos para o e-mail da sua conta.</p>
+
+            <form id="twoFactorCodeForm">
+                <label for="twoFactorCode">Código de verificação</label>
+                <input id="twoFactorCode" type="text" inputmode="numeric" autocomplete="one-time-code"
+                       maxlength="6" pattern="[0-9]{6}" placeholder="000000" required>
+                <button type="submit" id="twoFactorSubmit">
+                    <i class="fas fa-check"></i> Verificar e entrar
+                </button>
+            </form>
+
+            <p class="security-feedback" id="twoFactorFeedback"></p>
+            <button type="button" class="security-link" id="backToLogin">Voltar para o login</button>
+        </section>
+    </main>
+    <script src="../scripts/two-factor.js?v=016"></script>
+    <script src="../scripts/verificar-2fa-email.js?v=016"></script>
+</body>
+</html>

@@ -588,7 +588,7 @@ body {
 }
 
 /* ============================================================
-   014 - Seletor rápido de chat
+   016 - Seletor rápido de chat no padrão do Controle de acesso
 ============================================================ */
 .quick-chat-modal {
     position: fixed;
@@ -601,20 +601,15 @@ body {
     background: rgba(15, 23, 42, .54);
     backdrop-filter: blur(6px);
 }
-
-.quick-chat-modal.open {
-    display: flex;
-}
-
+.quick-chat-modal.open { display: flex; }
 .quick-chat-card {
     position: relative;
-    width: min(100%, 520px);
+    width: min(760px, calc(100vw - 32px));
     border-radius: 22px;
-    background: #fff;
+    background: var(--card-bg, #fff);
     box-shadow: 0 26px 70px rgba(15, 23, 42, .28);
     padding: 28px;
 }
-
 .quick-chat-close {
     position: absolute;
     top: 16px;
@@ -627,7 +622,6 @@ body {
     color: #64748b;
     cursor: pointer;
 }
-
 .quick-chat-icon {
     width: 54px;
     height: 54px;
@@ -635,79 +629,47 @@ body {
     place-items: center;
     border-radius: 16px;
     background: #eff6ff;
-    color: #1d4ed8;
+    color: #2563eb;
     font-size: 1.35rem;
     margin-bottom: 16px;
 }
-
-.quick-chat-card h3 {
-    margin: 0 0 6px;
-    color: #0f172a;
-    font-size: 1.35rem;
-}
-
-.quick-chat-card > p {
-    margin: 0 0 20px;
-    color: #64748b;
-}
-
+.quick-chat-card h3 { margin: 0 0 6px; color: var(--text-primary, #0f172a); font-size: 1.35rem; }
+.quick-chat-card > p { margin: 0 0 20px; color: var(--text-secondary, #64748b); }
 .quick-chat-options {
     display: grid;
-    gap: 12px;
-}
-
-.quick-chat-options button {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 46px 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
-    align-items: center;
-    text-align: left;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    background: #fff;
-    padding: 16px;
+}
+.quick-chat-options button {
+    min-height: 180px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 18px;
+    background: var(--card-bg, #fff);
+    color: var(--text-primary, #0f172a);
+    padding: 22px 18px;
     cursor: pointer;
-    transition: .2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 10px;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-
 .quick-chat-options button:hover {
-    border-color: #93c5fd;
-    background: #f8fbff;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    border-color: #2563eb;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, .10);
 }
-
 .quick-chat-options button > i {
-    width: 44px;
-    height: 44px;
-    display: grid;
-    place-items: center;
-    border-radius: 13px;
-    background: #eff6ff;
-    color: #1d4ed8;
+    font-size: 2rem;
+    color: #2563eb;
+}
+.quick-chat-options span { display: grid; gap: 6px; }
+.quick-chat-options strong { font-size: 1rem; color: var(--text-primary, #0f172a); }
+.quick-chat-options small { color: var(--text-secondary, #64748b); font-size: .88rem; line-height: 1.45; }
+@media (max-width: 720px) {
+    .quick-chat-options { grid-template-columns: 1fr; }
+    .quick-chat-options button { min-height: 130px; }
 }
 
-.quick-chat-options span {
-    display: grid;
-    gap: 4px;
-}
-
-.quick-chat-options strong {
-    color: #0f172a;
-}
-
-.quick-chat-options small {
-    color: #64748b;
-    line-height: 1.45;
-}
-
-html[data-theme="dark"] .quick-chat-card,
-html[data-theme="dark"] .quick-chat-options button {
-    background: #111827;
-    border-color: #334155;
-}
-
-html[data-theme="dark"] .quick-chat-card h3,
-html[data-theme="dark"] .quick-chat-options strong {
-    color: #f8fafc;
-}

@@ -178,9 +178,7 @@
     }
 
     function packageRecipientLabel(user) {
-        const name = String(user?.name || user?.email || 'Usuário').trim();
-        const email = String(user?.email || '').trim().toLowerCase();
-        return email ? `${name} — ${email}` : name;
+        return String(user?.name || user?.email || 'Usuário').trim();
     }
 
     async function openPackageRegistrationModal() {
@@ -199,8 +197,11 @@
         body.innerHTML = `
             <form id="packageRegistrationForm012" class="visitor-access-form">
                 ${formGridHtml(`
-                    <label class="visitor-access-email"><span>Destinatário</span><input id="packageRecipient012" type="text" readonly value="${escapeHtml(packageRecipientLabel(user))}" aria-readonly="true"></label>
-                    <label><span>Descrição da encomenda</span><input id="packageDescription012" type="text" maxlength="250" placeholder="Ex.: Caixa pequena da Amazon" required></label>
+                    <label><span>Destinatário</span><input id="packageRecipient012" type="text" readonly value="${escapeHtml(packageRecipientLabel(user))}" aria-readonly="true"></label>
+                    <label><span>E-mail do destinatário</span><input id="packageRecipientEmail012" type="email" readonly value="${escapeHtml(String(user.email || '').trim().toLowerCase())}" aria-readonly="true"></label>
+                    <label><span>Dia previsto de chegada</span><input id="packageExpectedDate012" type="date" required></label>
+                    <label><span>Horário previsto de chegada</span><input id="packageExpectedTime012" type="time" required></label>
+                    <label class="visitor-access-email"><span>Descrição da encomenda</span><input id="packageDescription012" type="text" maxlength="250" placeholder="Ex.: Caixa pequena da Amazon" required></label>
                     <label><span>Transportadora</span><input id="packageCarrier012" type="text" maxlength="120" placeholder="Opcional"></label>
                     <label><span>Código de rastreio</span><input id="packageTracking012" type="text" maxlength="120" placeholder="Opcional"></label>
                     <label class="visitor-access-email"><span>Observações</span><textarea id="packageObservations012" maxlength="500" placeholder="Opcional" style="min-height:90px;"></textarea></label>
@@ -214,6 +215,18 @@
         `;
 
         body.querySelector('[data-cancel]').addEventListener('click', () => closeOverlay(overlay));
+
+        const expectedDateInput =
+            body.querySelector('#packageExpectedDate012');
+
+        if (expectedDateInput) {
+            const today =
+                new Date();
+
+            expectedDateInput.min =
+                `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        }
+
         openOverlay(overlay);
 
         body.querySelector('form').addEventListener('submit', async (event) => {
@@ -226,9 +239,11 @@
             const carrier = document.getElementById('packageCarrier012')?.value.trim() || null;
             const tracking = document.getElementById('packageTracking012')?.value.trim() || null;
             const observations = document.getElementById('packageObservations012')?.value.trim() || null;
+            const expectedArrivalDate = document.getElementById('packageExpectedDate012')?.value || '';
+            const expectedArrivalTime = document.getElementById('packageExpectedTime012')?.value || '';
 
-            if (!recipientEmail || !recipientName || !description) {
-                feedback(fb, 'Não foi possível identificar o usuário ou a descrição da encomenda.', 'error');
+            if (!recipientEmail || !recipientName || !description || !expectedArrivalDate || !expectedArrivalTime) {
+                feedback(fb, 'Preencha a descrição, o dia e o horário previstos de chegada.', 'error');
                 return;
             }
 
@@ -258,6 +273,8 @@
                         tracking_code: tracking,
                         received_by: user.name || user.email,
                         status: 'Aguardando retirada',
+                        expected_arrival_date: expectedArrivalDate,
+                        expected_arrival_time: expectedArrivalTime,
                         observations
                     })
                 });

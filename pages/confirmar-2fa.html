@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmação de segurança - Condomit</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/two-factor.css?v=016">
+</head>
+<body>
+    <main class="security-shell">
+        <section class="security-card">
+            <img src="../assets/logo-full.png" class="security-logo" alt="Condomit">
+            <div class="security-icon" id="confirmationIcon"><i class="fas fa-spinner fa-spin"></i></div>
+            <h1 id="confirmationTitle">Confirmando solicitação...</h1>
+            <p id="confirmationMessage">Aguarde enquanto validamos o link temporário.</p>
+            <a class="security-primary-link" href="entrar.html" id="confirmationAction" hidden>Ir para o login</a>
+        </section>
+    </main>
+    <script src="../scripts/two-factor.js?v=016"></script>
+    <script src="../scripts/confirmar-2fa.js?v=016"></script>
+</body>
+</html>

@@ -277,9 +277,11 @@ function openConfigSection(sectionKey) {
         case 'controle-acesso':
             openVisitorAccessModal();
             break;
+        case 'autenticacao-2fa':
+            openTwoFactorSettingsModal();
+            break;
         case 'minha-unidade':
         case 'meus-condominos':
-        case 'autenticacao-2fa':
         case 'comunicados-sindico':
         case 'avisos-gerais':
         case 'reserva-areas':
@@ -2107,3 +2109,136 @@ async function renderProviderRegistrationInSettings() {
         }
     });
 }
+
+
+/* ============================================================
+   CONFIGURAÇÕES 016 - VERIFICAÇÃO EM DUAS ETAPAS POR E-MAIL
+============================================================ */
+
+async function openTwoFactorSettingsModal() {
+    if (!window.condomitTwoFactor?.status) {
+        window.showToast?.(
+            'O módulo de autenticação em duas etapas ainda não foi carregado.',
+            'error'
+        );
+        return;
+    }
+
+    let state;
+    try {
+        state = await window.condomitTwoFactor.status();
+    } catch (error) {
+        window.showToast?.(
+            error?.message || 'Não foi possível consultar a autenticação em duas etapas.',
+            'error'
+        );
+        return;
+    }
+
+    const enabled = state?.enabled === true;
+    const email = state?.email || getCurrentUser()?.email || '';
+    const safeEmail = escapeReservationHtml(email);
+
+    const modal = openSettingsContentModal({
+        title: 'Autenticação de dois fatores',
+        subtitle: enabled
+            ? 'A proteção adicional por e-mail está ativa.'
+            : 'Adicione uma segunda etapa ao entrar na sua conta.',
+        html: `
+            <div class="two-factor-settings-card">
+                <div class="two-factor-settings-icon ${enabled ? 'active' : ''}">
+                    <i class="fas ${enabled ? 'fa-shield-circle-check' : 'fa-shield-halved'}"></i>
+                </div>
+                <div class="two-factor-settings-copy">
+                    <span class="two-factor-status ${enabled ? 'active' : ''}">
+                        ${enabled ? 'Ativada' : 'Desativada'}
+                    </span>
+                    <h4>${enabled ? 'Verificação em duas etapas ativa' : 'Deseja ativar a verificação em duas etapas?'}</h4>
+                    <p>
+                        ${enabled
+                            ? `Sempre que você sair da conta e fizer login novamente, um código de 6 dígitos será enviado para <strong>${safeEmail}</strong>.`
+                            : `Ao ativar, sempre que você sair da conta e fizer login novamente, um código de 6 dígitos será enviado para <strong>${safeEmail}</strong>.`
+                        }
+                    </p>
+                    <p class="two-factor-settings-note">
+                        ${enabled
+                            ? 'Para desativar, enviaremos um link temporário de confirmação para esse mesmo e-mail.'
+                            : 'Para ativar, enviaremos primeiro um link temporário de confirmação para esse e-mail.'
+                        }
+                    </p>
+                </div>
+            </div>
+        `,
+        footerHtml: `
+            <button type="button" class="btn-edit-profile" data-settings-close>Cancelar</button>
+            <button type="button"
+                    class="btn-edit-profile visitor-submit-btn two-factor-action-btn ${enabled ? 'danger' : ''}"
+                    id="twoFactorSettingsAction">
+                <i class="fas ${enabled ? 'fa-shield-xmark' : 'fa-shield-halved'}"></i>
+                ${enabled ? 'Desativar autenticação' : 'Ativar autenticação'}
+            </button>
+        `
+    });
+
+    modal.querySelectorAll('[data-settings-close]').forEach((button) => {
+        button.addEventListener('click', closeSettingsContentModal);
+    });
+
+    const actionButton = modal.querySelector('#twoFactorSettingsAction');
+    actionButton?.addEventListener('click', async () => {
+        actionButton.disabled = true;
+        const original = actionButton.innerHTML;
+        actionButton.innerHTML =
+            '<i class="fas fa-spinner fa-spin"></i> Enviando confirmação...';
+
+        try {
+            const result =
+                await window.condomitTwoFactor.requestChange(!enabled);
+
+            const shownEmail =
+                escapeReservationHtml(
+                    result?.email ||
+                    email
+                );
+
+            modal.querySelector('#settingsContentBody').innerHTML = `
+                <div class="two-factor-confirmation-sent">
+                    <div class="two-factor-settings-icon active">
+                        <i class="fas fa-envelope-circle-check"></i>
+                    </div>
+                    <h4>Confira seu e-mail</h4>
+                    <p>
+                        Enviamos um link temporário para
+                        <strong>${shownEmail}</strong>.
+                    </p>
+                    <p>
+                        Clique no link recebido para
+                        ${enabled ? 'confirmar a desativação' : 'confirmar a ativação'}
+                        da autenticação em duas etapas.
+                    </p>
+                    <small>O link expira em aproximadamente 15 minutos.</small>
+                </div>
+            `;
+
+            modal.querySelector('#settingsContentFooter').innerHTML = `
+                <button type="button" class="btn-edit-profile visitor-submit-btn" data-settings-close>
+                    Entendido
+                </button>
+            `;
+
+            modal.querySelectorAll('[data-settings-close]').forEach((button) => {
+                button.addEventListener('click', closeSettingsContentModal);
+            });
+
+        } catch (error) {
+            window.showToast?.(
+                error?.message ||
+                'Não foi possível enviar o e-mail de confirmação.',
+                'error'
+            );
+            actionButton.disabled = false;
+            actionButton.innerHTML = original;
+        }
+    });
+}
+window.openTwoFactorSettingsModal = openTwoFactorSettingsModal;

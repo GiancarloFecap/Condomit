@@ -690,16 +690,16 @@
     function clearAllNotifications(
         user = getCurrentUser()
     ) {
-        setStorageJson(
-            getNotificationsKey(
-                user
-            ),
-            []
+        /*
+         * 016: os avisos do mural são históricos do condomínio.
+         * Marcar como lido não deve removê-los e nenhum logout/troca
+         * de página pode limpar o feed.
+         */
+        console.warn(
+            '[NOTIFICAÇÕES] A limpeza automática do mural foi desativada para preservar o histórico.'
         );
 
-        notificationCache = [];
-
-        return true;
+        return false;
     }
 
     async function saveNotificationToSupabase(

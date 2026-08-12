@@ -1326,3 +1326,78 @@ html[data-theme="dark"] .settings-document-section {
         justify-self: start;
     }
 }
+
+
+/* ============================================================
+   016 - Autenticação de dois fatores
+============================================================ */
+.two-factor-settings-card {
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    gap: 18px;
+    align-items: start;
+    padding: 8px 2px;
+}
+.two-factor-settings-icon {
+    width: 66px;
+    height: 66px;
+    display: grid;
+    place-items: center;
+    border-radius: 20px;
+    background: #eef3ff;
+    color: #2347b7;
+    font-size: 1.55rem;
+}
+.two-factor-settings-icon.active {
+    background: #eaf8ef;
+    color: #16a34a;
+}
+.two-factor-settings-copy h4,
+.two-factor-confirmation-sent h4 {
+    margin: 8px 0 8px;
+    color: var(--text-primary);
+}
+.two-factor-settings-copy p,
+.two-factor-confirmation-sent p {
+    margin: 0 0 10px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+.two-factor-status {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: .78rem;
+    font-weight: 800;
+}
+.two-factor-status.active {
+    background: #dcfce7;
+    color: #15803d;
+}
+.two-factor-settings-note {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+.two-factor-action-btn.danger {
+    background: #fff1f2 !important;
+    color: #be123c !important;
+    border: 1px solid #fecdd3 !important;
+}
+.two-factor-confirmation-sent {
+    text-align: center;
+    padding: 18px 8px 8px;
+}
+.two-factor-confirmation-sent .two-factor-settings-icon {
+    margin: 0 auto 14px;
+}
+@media (max-width: 620px) {
+    .two-factor-settings-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    .two-factor-settings-icon { margin-inline: auto; }
+}

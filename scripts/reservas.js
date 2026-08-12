@@ -120,7 +120,6 @@ function isTimeSlotReserved(dateStr, timeSlot) {
         && res.data_reserva === dateStr
         && res.horario_inicio === timeSlot.start
         && res.horario_fim === timeSlot.end
-        && String(res.status || '').toLowerCase() === 'indisponivel'
     ));
 }
 
@@ -373,10 +372,11 @@ function renderReservationCards(container, rows, canDelete) {
                 <div class="reservation-modal-card-meta">
                     <span><i class="far fa-calendar"></i> ${formatDateLabel(row.data_reserva)}</span>
                     <span><i class="far fa-clock"></i> ${escapeHtml(row.horario_inicio)} - ${escapeHtml(row.horario_fim)}</span>
-                    ${!canDelete && row.email ? `<span><i class="far fa-user"></i> ${escapeHtml(row.email)}</span>` : ''}
+                    ${!canDelete && (row.reserved_by_name || row.email) ? `<span><i class="far fa-user"></i> ${escapeHtml(row.reserved_by_name || row.email)}</span>` : ''}
                 </div>
+                <span class="reservation-status-badge confirmed"><i class="fas fa-circle-check"></i> Confirmada</span>
             </div>
-            ${canDelete ? `<button type="button" class="reservation-delete-btn" data-reservation-index="${index}"><i class="fas fa-trash-alt"></i><span>Excluir</span></button>` : ''}
+            ${canDelete ? `<button type="button" class="reservation-delete-btn reservation-cancel-btn" data-reservation-index="${index}"><i class="fas fa-ban"></i><span>Cancelar reserva</span></button>` : ''}
         </article>`).join('')}</div>`;
 
     if (canDelete) {
@@ -397,28 +397,28 @@ async function deleteOwnReservation(row, button) {
                 target_end: row.horario_fim
             });
             if (deleted === false) throw new Error('A reserva não foi encontrada para exclusão.');
-            window.showToast?.('Reserva excluída com sucesso.', 'success');
+            window.showToast?.('Reserva cancelada com sucesso.', 'success');
             await fetchReservations();
             renderCalendar();
             renderTimeSlots();
             await openMyReservations();
         } catch (error) {
             console.error('Erro ao excluir reserva:', error);
-            window.showToast?.(error?.message || 'Não foi possível excluir a reserva.', 'error');
+            window.showToast?.(error?.message || 'Não foi possível cancelar a reserva.', 'error');
         } finally {
             button.disabled = false;
         }
     };
     if (typeof window.showModal === 'function') {
         window.showModal({
-            title: 'Excluir reserva',
-            message: `Deseja excluir a reserva de ${row.nome_local} em ${formatDateLabel(row.data_reserva)}?`,
+            title: 'Cancelar reserva',
+            message: `Deseja cancelar a reserva de ${row.nome_local} em ${formatDateLabel(row.data_reserva)}?`,
             type: 'warning',
-            confirmText: 'Excluir reserva',
+            confirmText: 'Cancelar reserva',
             cancelText: 'Cancelar',
             onConfirm: execute
         });
-    } else if (window.confirm('Deseja excluir esta reserva?')) {
+    } else if (window.confirm('Deseja cancelar esta reserva?')) {
         await execute();
     }
 }
