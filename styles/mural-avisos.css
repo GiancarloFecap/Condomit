@@ -1,0 +1,60 @@
+.wall-page .wall-title-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.wall-history-badge,
+.tag.wall-permanent {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.wall-history-badge {
+    padding: 7px 11px;
+    color: #047857;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    font-size: 0.78rem;
+}
+
+.tag.wall-permanent {
+    padding: 6px 10px;
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.wall-notice-item {
+    position: relative;
+}
+
+.wall-notice-item .wall-chevron {
+    align-self: center;
+    color: #94a3b8;
+    margin: 0 6px;
+}
+
+.wall-info-card {
+    align-items: flex-start;
+}
+
+.wall-latest-row {
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.wall-latest-row strong {
+    text-align: right;
+    font-size: 0.95rem;
+}
+
+@media (max-width: 680px) {
+    .wall-title-line {
+        align-items: flex-start !important;
+        flex-direction: column;
+    }
+}

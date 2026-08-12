@@ -431,13 +431,14 @@ Administração.`
         let created = false;
         try {
             await new Promise((r) => setTimeout(r, 600));
-            if (window.communityHub && typeof window.communityHub.createNotification === 'function') {
+            if (window.communityHub && typeof window.communityHub.createWallNotice === 'function') {
                 const preview = content.length > 160 ? content.slice(0, 157) + '...' : content;
-                await window.communityHub.createNotification({
+                await window.communityHub.createWallNotice({
                     category: 'Avisos',
                     title: title,
                     message: preview,
                     details: content,
+                    source: 'ai-comunicados',
                     metadata: { source: 'ai-comunicados', generatedAt: new Date().toISOString() }
                 }, state.currentUser);
                 created = true;
@@ -460,14 +461,14 @@ Administração.`
                     if (toastEl) {
                         toastEl.style.cursor = 'pointer';
                         toastEl.addEventListener('click', () => {
-                            window.location.href = 'notificacoes.html';
+                            window.location.href = 'mural-avisos.html';
                         }, { once: true });
                     }
                 } catch (_) {}
             }
             setTimeout(() => {
                 const open = window.confirm ? confirm('Comunicado publicado! Deseja abrir o Mural de Avisos para visualizar?') : false;
-                if (open) window.location.href = 'notificacoes.html';
+                if (open) window.location.href = 'mural-avisos.html';
             }, 600);
         } else {
             if (typeof showToast === 'function') {

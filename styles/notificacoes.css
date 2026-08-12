@@ -444,3 +444,9 @@
         justify-content: center;
     }
 }
+
+.notification-wall-link {
+    margin-top: 12px;
+    width: auto;
+    padding: 10px 12px;
+}

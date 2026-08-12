@@ -167,9 +167,9 @@
         if (includesAny(q, ['notificacao', 'aviso', 'comunicado'])) {
             return {
                 text: isSindico
-                    ? 'Na página Notificações você pode publicar avisos para os usuários do mesmo condomínio e acompanhar o que já foi enviado.'
-                    : 'Na página Notificações você encontra os avisos publicados para o seu condomínio.',
-                actions: [{ label: 'Abrir Notificações', href: 'notificacoes.html', icon: 'fa-bell' }]
+                    ? 'Na página Mural de Avisos o síndico pode publicar comunicados permanentes para os moradores e acompanhar todo o histórico.'
+                    : 'Na página Mural de Avisos você encontra todos os avisos permanentes publicados para o seu condomínio.',
+                actions: [{ label: 'Abrir Mural de Avisos', href: 'mural-avisos.html', icon: 'fa-bullhorn' }]
             };
         }
 

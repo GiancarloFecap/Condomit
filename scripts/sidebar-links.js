@@ -315,7 +315,7 @@ function getHomePage(userType) {
 function getTargetForRoute(routeKey, userType) {
     const routeMap = {
         inicio: getHomePage(userType),
-        mural: 'notificacoes.html',
+        mural: 'mural-avisos.html',
         sugestoes: 'sugestoes.html',
         notificacoes: 'notificacoes.html',
         correio: 'notificacoes.html',
@@ -505,7 +505,8 @@ function getSidebarConfig(userType) {
             titleKey: 'notice_engagement',
             items: [
                 { labelKey: 'mural', icon: 'fas fa-bullhorn', route: 'mural' },
-                { labelKey: 'suggestions_long', icon: 'fas fa-lightbulb', route: 'sugestoes' }
+                { labelKey: 'suggestions_long', icon: 'fas fa-lightbulb', route: 'sugestoes' },
+                { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' }
             ]
         },
         {
@@ -657,6 +658,7 @@ function translateTitle(lang = getAppLanguage()) {
     const titleMap = {
         'Condomit - Configurações': 'Condomit - Settings',
         'Condomit - Notificações': 'Condomit - Notifications',
+        'Condomit - Mural de Avisos': 'Condomit - Notice Board',
         'Condomit - Marketplace': 'Condomit - Marketplace',
         'Condomit - Achados e Perdidos': 'Condomit - Lost and Found',
         'Condomit - Gestão de Moradores': 'Condomit - Resident Management',

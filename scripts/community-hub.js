@@ -36,6 +36,7 @@
      * Cache usado pelas funções síncronas de notificações.
      */
     let notificationCache = [];
+    let wallNoticeCache = [];
 
     /* =========================================================
        USUÁRIO / STORAGE
@@ -577,13 +578,16 @@
 
             return rows.map((row) => ({
                 id: `db-notif-${row.id}`,
+                dbId: row.id,
                 category: row.category || 'Avisos',
                 title: row.title || '',
                 message: row.description || '',
                 details: row.description || '',
                 createdAt: row.created_at || new Date().toISOString(),
-                author: row.created_by_name || row.created_by || 'Síndico',
+                author: row.created_by_name || row.created_by || 'Condomit',
                 createdByType: 'sindico',
+                eventType: row.event_type || null,
+                relatedNoticeId: row.related_notice_id || null,
                 metadata: null
             }));
         } catch (error) {
@@ -951,6 +955,117 @@
             ) ||
             null
         );
+    }
+
+
+    /* =========================================================
+       MURAL DE AVISOS
+    ========================================================= */
+
+    async function fetchWallNoticesFromSupabase(
+        user = getCurrentUser()
+    ) {
+        if (typeof window.supabaseFetch !== 'function') {
+            throw new Error('Supabase não está disponível para carregar o Mural de Avisos.');
+        }
+
+        const rows = await window.supabaseFetch(
+            '/rpc/condomit_list_wall_notices',
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}'
+            }
+        );
+
+        if (!Array.isArray(rows)) return [];
+
+        return rows.map((row) => ({
+            id: `wall-${row.id}`,
+            dbId: row.id,
+            category: row.category || 'Avisos',
+            title: row.title || '',
+            message: row.description || '',
+            details: row.details || row.description || '',
+            createdAt: row.created_at || new Date().toISOString(),
+            author: row.created_by_name || row.created_by || 'Condomit',
+            createdBy: row.created_by || null,
+            source: row.source || 'manual'
+        }));
+    }
+
+    async function getWallNotices(
+        user = getCurrentUser()
+    ) {
+        wallNoticeCache = (await fetchWallNoticesFromSupabase(user))
+            .slice()
+            .sort(
+                (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+            );
+
+        return wallNoticeCache;
+    }
+
+    async function createWallNotice(
+        data,
+        user = getCurrentUser()
+    ) {
+        if (typeof window.supabaseFetch !== 'function') {
+            throw new Error('Supabase não está disponível para publicar no Mural de Avisos.');
+        }
+
+        const payload = {
+            target_category: data?.category || 'Avisos',
+            target_title: String(data?.title || '').trim(),
+            target_description: String(data?.message || data?.description || '').trim(),
+            target_details: String(data?.details || data?.message || data?.description || '').trim(),
+            target_source: String(data?.source || data?.metadata?.source || 'manual').trim() || 'manual'
+        };
+
+        const result = await window.supabaseFetch(
+            '/rpc/condomit_create_wall_notice',
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }
+        );
+
+        const saved = Array.isArray(result) ? result[0] : result;
+        if (!saved || !saved.id) {
+            throw new Error('O Supabase não confirmou a publicação no Mural de Avisos.');
+        }
+
+        const notice = {
+            id: `wall-${saved.id}`,
+            dbId: saved.id,
+            category: saved.category || payload.target_category,
+            title: saved.title || payload.target_title,
+            message: saved.description || payload.target_description,
+            details: saved.details || payload.target_details,
+            createdAt: saved.created_at || new Date().toISOString(),
+            author: saved.created_by_name || user?.name || 'Síndico',
+            createdBy: saved.created_by || user?.email || null,
+            source: saved.source || payload.target_source
+        };
+
+        wallNoticeCache = wallNoticeCache.filter((item) => item.dbId !== notice.dbId);
+        wallNoticeCache.unshift(notice);
+
+        // A trigger do banco cria automaticamente a notificação de mudança do mural.
+        // Limpamos o cache de notificações para que a próxima abertura traga o evento novo.
+        notificationCache = [];
+
+        return notice;
+    }
+
+    function getWallNoticeById(id) {
+        return wallNoticeCache.find((notice) =>
+            String(notice.id) === String(id) ||
+            String(notice.dbId) === String(id)
+        ) || null;
     }
 
     /* =========================================================
@@ -1943,6 +2058,8 @@
 
         createNotification,
 
+        createWallNotice,
+
         fetchMarketplaceFromSupabase,
 
         formatCondoName,
@@ -1969,7 +2086,11 @@
 
         getNotificationById,
 
+        getWallNoticeById,
+
         getNotifications,
+
+        getWallNotices,
 
         getReadNotifications,
 
@@ -1988,6 +2109,8 @@
         markNotificationAsRead,
 
         resolveUserCepForDb,
+
+        fetchWallNoticesFromSupabase,
 
         saveMarketplaceToSupabase,
 

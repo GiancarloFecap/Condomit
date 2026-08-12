@@ -429,7 +429,7 @@ function confirmPromoteResident(resident) {
                     body: JSON.stringify({ target_email: resident.email })
                 });
                 persistCurrentUserRole('morador');
-                window.showToast?.(`${resident.name} agora é o síndico do condomínio. Sua conta passou a ser morador.`, 'success');
+                window.showToast?.(`${resident.name} agora é o síndico do condomínio. Sua conta passou a ser morador e a mudança foi publicada no Mural de Avisos.`, 'success');
                 window.setTimeout(() => { window.location.href = 'index-morador.html'; }, 900);
             } catch (error) {
                 console.error('Erro ao promover morador:', error);

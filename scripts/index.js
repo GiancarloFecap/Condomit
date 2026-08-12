@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const text = btn.textContent.toLowerCase();
         if (text.includes('enviar aviso') || text.includes('aviso')) {
             btn.addEventListener('click', () => {
-                window.location.href = 'notificacoes.html';
+                window.location.href = 'mural-avisos.html';
             });
         } else if (text.includes('agendar reunião') || text.includes('agendar reuniao') || text.includes('reunião') || text.includes('reuniao')) {
             btn.addEventListener('click', () => {
