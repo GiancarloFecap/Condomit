@@ -4122,43 +4122,907 @@ function updateFontButtons(
 }
 
 /* ============================================================
-   PAGAMENTO
+   COBRANÇA MENSAL DO CONDOMÍNIO
 ============================================================ */
 
-async function fetchApprovedPayment(
-  email
-) {
+let condomitBillingCache = {
+  value: null,
+  expiresAt: 0
+};
+
+let condomitBillingExpiryTimer =
+  null;
+
+function normalizeBillingStatusPayload(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  return {
+    ...payload,
+    can_use: Boolean(payload.can_use),
+    status: String(payload.status || '').trim().toLowerCase(),
+    plan_id:
+      payload.plan_id === null ||
+      typeof payload.plan_id === 'undefined'
+        ? null
+        : payload.plan_id
+  };
+}
+
+function getStoredCondominiumUser() {
   try {
-    const response =
-      await fetch(
-        `/api/pagamento?email=${encodeURIComponent(
-          email
-        )}`
+    const raw =
+      sessionStorage.getItem(
+        'condominiumUser'
       );
 
-    if (!response.ok) {
-      return null;
+    return raw
+      ? JSON.parse(raw)
+      : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function getStoredUserCep(user) {
+  return (
+    user?.condominium?.cep ||
+    user?.condominium?.condominium_id ||
+    user?.condominium?.condominium_cep ||
+    user?.condominium_cep ||
+    user?.cep ||
+    ''
+  );
+}
+
+function addOneCalendarMonth(dateValue) {
+  const source =
+    new Date(dateValue);
+
+  if (
+    Number.isNaN(
+      source.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  const result =
+    new Date(
+      source.getTime()
+    );
+
+  const originalDay =
+    result.getDate();
+
+  result.setDate(1);
+  result.setMonth(
+    result.getMonth() + 1
+  );
+
+  const lastDay =
+    new Date(
+      result.getFullYear(),
+      result.getMonth() + 1,
+      0
+    ).getDate();
+
+  result.setDate(
+    Math.min(
+      originalDay,
+      lastDay
+    )
+  );
+
+  return result;
+}
+
+async function fetchCondomitBillingFallback() {
+  const user =
+    getStoredCondominiumUser();
+
+  const cep =
+    getStoredUserCep(
+      user
+    );
+
+  if (!cep) {
+    return {
+      cep: null,
+      status: 'no_condominium',
+      can_use: true,
+      plan_id: null,
+      payment_id: null,
+      last_paid_at: null,
+      due_at: null,
+      days_remaining: null
+    };
+  }
+
+  const response =
+    await fetch(
+      `/api/pagamento?cep=${encodeURIComponent(
+        cep
+      )}`
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      'Não foi possível consultar a situação da mensalidade.'
+    );
+  }
+
+  const rows =
+    await response.json();
+
+  const approved =
+    (Array.isArray(rows)
+      ? rows
+      : [])
+      .filter(
+        (payment) =>
+          String(
+            payment?.status_pagamento ||
+            ''
+          )
+            .trim()
+            .toLowerCase() ===
+          'aprovado'
+      )
+      .sort(
+        (a, b) => {
+          const aTime =
+            new Date(
+              a?.data_pagamento ||
+              0
+            ).getTime();
+
+          const bTime =
+            new Date(
+              b?.data_pagamento ||
+              0
+            ).getTime();
+
+          if (
+            bTime !== aTime
+          ) {
+            return bTime - aTime;
+          }
+
+          return (
+            Number(b?.id || 0) -
+            Number(a?.id || 0)
+          );
+        }
+      );
+
+  const payment =
+    approved[0] ||
+    null;
+
+  if (!payment) {
+    return {
+      cep,
+      status: 'unpaid',
+      can_use: false,
+      plan_id: null,
+      payment_id: null,
+      last_paid_at: null,
+      due_at: null,
+      days_remaining: 0
+    };
+  }
+
+  const dueAt =
+    addOneCalendarMonth(
+      payment.data_pagamento
+    );
+
+  const active =
+    Boolean(
+      dueAt &&
+      Date.now() <
+        dueAt.getTime()
+    );
+
+  return {
+    cep,
+    status:
+      active
+        ? 'active'
+        : 'overdue',
+    can_use: active,
+    plan_id:
+      payment.plano_id ??
+      null,
+    payment_id:
+      payment.id ??
+      null,
+    last_paid_at:
+      payment.data_pagamento ??
+      null,
+    due_at:
+      dueAt
+        ? dueAt.toISOString()
+        : null,
+    days_remaining:
+      active && dueAt
+        ? Math.max(
+            0,
+            Math.ceil(
+              (
+                dueAt.getTime() -
+                Date.now()
+              ) /
+                86400000
+            )
+          )
+        : 0
+  };
+}
+
+async function getCondomitBillingStatus(
+  force = false
+) {
+  const now =
+    Date.now();
+
+  if (
+    !force &&
+    condomitBillingCache.value &&
+    condomitBillingCache.expiresAt >
+      now
+  ) {
+    return condomitBillingCache.value;
+  }
+
+  let billing = null;
+
+  try {
+    billing =
+      normalizeBillingStatusPayload(
+        await supabaseFetch(
+          '/rpc/condomit_get_billing_status',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json'
+            },
+            body: '{}'
+          }
+        )
+      );
+  } catch (rpcError) {
+    console.warn(
+      '[Billing] RPC 017 indisponível; usando consulta de compatibilidade:',
+      rpcError?.message ||
+        rpcError
+    );
+
+    billing =
+      normalizeBillingStatusPayload(
+        await fetchCondomitBillingFallback()
+      );
+  }
+
+  if (!billing) {
+    throw new Error(
+      'Não foi possível determinar a situação da mensalidade.'
+    );
+  }
+
+  condomitBillingCache = {
+    value: billing,
+    expiresAt:
+      now + 15000
+  };
+
+  const user =
+    getStoredCondominiumUser();
+
+  if (
+    billing.can_use &&
+    billing.plan_id &&
+    user &&
+    user.plan !==
+      billing.plan_id
+  ) {
+    user.plan =
+      billing.plan_id;
+
+    try {
+      sessionStorage.setItem(
+        'condominiumUser',
+        JSON.stringify(user)
+      );
+    } catch (_) {}
+  }
+
+  return billing;
+}
+
+function clearCondomitBillingCache() {
+  condomitBillingCache = {
+    value: null,
+    expiresAt: 0
+  };
+}
+
+function scheduleCondomitBillingExpiryCheck(
+  billing
+) {
+  if (
+    condomitBillingExpiryTimer
+  ) {
+    window.clearTimeout(
+      condomitBillingExpiryTimer
+    );
+
+    condomitBillingExpiryTimer =
+      null;
+  }
+
+  if (
+    !billing?.can_use ||
+    !billing?.due_at ||
+    isCondomitBillingExemptPage()
+  ) {
+    return;
+  }
+
+  const dueTime =
+    new Date(
+      billing.due_at
+    ).getTime();
+
+  if (
+    !Number.isFinite(
+      dueTime
+    )
+  ) {
+    return;
+  }
+
+  const remaining =
+    dueTime - Date.now();
+
+  const maxSleep =
+    6 * 60 * 60 * 1000;
+
+  const delay =
+    Math.max(
+      1000,
+      Math.min(
+        remaining + 1500,
+        maxSleep
+      )
+    );
+
+  condomitBillingExpiryTimer =
+    window.setTimeout(
+      async () => {
+        try {
+          clearCondomitBillingCache();
+
+          const fresh =
+            await getCondomitBillingStatus(
+              true
+            );
+
+          if (
+            fresh?.can_use
+          ) {
+            scheduleCondomitBillingExpiryCheck(
+              fresh
+            );
+
+            return;
+          }
+
+          await enforceCondomitBillingAccess(
+            {
+              force: true
+            }
+          );
+        } catch (error) {
+          console.warn(
+            '[Billing] Falha ao verificar vencimento em tempo real:',
+            error
+          );
+
+          condomitBillingExpiryTimer =
+            window.setTimeout(
+              () => {
+                enforceCondomitBillingAccess(
+                  {
+                    force: true
+                  }
+                ).catch(() => {});
+              },
+              5 * 60 * 1000
+            );
+        }
+      },
+      delay
+    );
+}
+
+function formatCondomitBillingDate(
+  value
+) {
+  if (!value) {
+    return '';
+  }
+
+  const parsed =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      parsed.getTime()
+    )
+  ) {
+    return '';
+  }
+
+  try {
+    return new Intl.DateTimeFormat(
+      'pt-BR',
+      {
+        dateStyle: 'long'
+      }
+    ).format(parsed);
+  } catch (_) {
+    return parsed.toLocaleDateString(
+      'pt-BR'
+    );
+  }
+}
+
+function isCondomitBillingExemptPage() {
+  const page =
+    String(
+      window.location.pathname
+        .split('/')
+        .pop() || ''
+    )
+      .trim()
+      .toLowerCase();
+
+  return new Set([
+    '',
+    'inicio.html',
+    'entrar.html',
+    'cadastrar-se.html',
+    'tipo-usuario.html',
+    'cadastro-sindico.html',
+    'cadastro-morador.html',
+    'cadastro-porteiro.html',
+    'checkout.html',
+    'pagamento-sucesso.html',
+    'pagamento-pendente.html',
+    'pagamento-falha.html',
+    'esqueci-senha.html',
+    'redefinir-senha.html',
+    'verificar-2fa-email.html',
+    'confirmar-2fa.html',
+    '2fa-completo.html'
+  ]).has(page);
+}
+
+function ensureCondomitBillingLockStyles() {
+  if (
+    document.getElementById(
+      'condomit-billing-lock-styles'
+    )
+  ) {
+    return;
+  }
+
+  const style =
+    document.createElement(
+      'style'
+    );
+
+  style.id =
+    'condomit-billing-lock-styles';
+
+  style.textContent = `
+    .condomit-billing-lock {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, .72);
+      backdrop-filter: blur(5px);
     }
 
-    const payments =
-      await response.json();
+    .condomit-billing-lock-card {
+      width: min(520px, 100%);
+      background: var(--card-bg, #ffffff);
+      color: var(--text-primary, #111827);
+      border: 1px solid rgba(148, 163, 184, .28);
+      border-radius: 24px;
+      box-shadow: 0 24px 80px rgba(15, 23, 42, .28);
+      padding: 30px;
+      text-align: center;
+    }
 
-    return (
-      Array.isArray(payments)
-        ? payments.find(
-            (p) =>
-              p.status_pagamento ===
-              'aprovado'
-          )
-        : null
+    .condomit-billing-lock-icon {
+      width: 70px;
+      height: 70px;
+      margin: 0 auto 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 22px;
+      background: rgba(245, 158, 11, .14);
+      color: #d97706;
+      font-size: 30px;
+    }
+
+    .condomit-billing-lock-card h2 {
+      margin: 0 0 10px;
+      font-size: 1.55rem;
+      line-height: 1.2;
+    }
+
+    .condomit-billing-lock-card p {
+      margin: 0;
+      color: var(--text-secondary, #64748b);
+      line-height: 1.65;
+    }
+
+    .condomit-billing-lock-due {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(245, 158, 11, .1);
+      color: #b45309;
+      font-weight: 700;
+    }
+
+    .condomit-billing-lock-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    .condomit-billing-lock-actions button {
+      min-height: 44px;
+      border-radius: 12px;
+      border: 0;
+      padding: 0 18px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .condomit-billing-pay {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .condomit-billing-refresh {
+      background: rgba(148, 163, 184, .14);
+      color: var(--text-primary, #1f2937);
+      border: 1px solid rgba(148, 163, 184, .35) !important;
+    }
+
+    .condomit-billing-logout {
+      background: transparent;
+      color: var(--text-secondary, #64748b);
+      border: 1px solid rgba(148, 163, 184, .35) !important;
+    }
+
+    body.condomit-billing-locked {
+      overflow: hidden !important;
+    }
+  `;
+
+  document.head.appendChild(
+    style
+  );
+}
+
+function removeCondomitBillingLock() {
+  const existing =
+    document.getElementById(
+      'condomit-billing-lock'
     );
+
+  if (existing) {
+    existing.remove();
+  }
+
+  document.body.classList.remove(
+    'condomit-billing-locked'
+  );
+}
+
+function showCondomitBillingLock(
+  billing,
+  userType
+) {
+  ensureCondomitBillingLockStyles();
+
+  removeCondomitBillingLock();
+
+  const isSindico =
+    userType === 'sindico';
+
+  const isUnpaid =
+    billing?.status ===
+    'unpaid';
+
+  const dueLabel =
+    formatCondomitBillingDate(
+      billing?.due_at
+    );
+
+  const overlay =
+    document.createElement(
+      'div'
+    );
+
+  overlay.id =
+    'condomit-billing-lock';
+
+  overlay.className =
+    'condomit-billing-lock';
+
+  overlay.setAttribute(
+    'role',
+    'dialog'
+  );
+
+  overlay.setAttribute(
+    'aria-modal',
+    'true'
+  );
+
+  const title =
+    isUnpaid
+      ? 'Pagamento necessário'
+      : 'Mensalidade do condomínio vencida';
+
+  const message =
+    isSindico
+      ? (
+          isUnpaid
+            ? 'Este condomínio ainda não possui uma mensalidade aprovada. Conclua o pagamento no Mercado Pago para liberar o sistema.'
+            : 'A mensalidade mensal deste condomínio venceu. Até a aprovação do novo pagamento, as funcionalidades do condomínio ficam temporariamente indisponíveis.'
+        )
+      : 'A mensalidade deste condomínio está pendente. As funcionalidades ficam temporariamente indisponíveis até que o síndico regularize o pagamento.';
+
+  overlay.innerHTML = `
+    <div class="condomit-billing-lock-card">
+      <div class="condomit-billing-lock-icon">
+        <i class="fas fa-lock"></i>
+      </div>
+      <h2>${title}</h2>
+      <p>${message}</p>
+      ${
+        dueLabel && !isUnpaid
+          ? `<div class="condomit-billing-lock-due">Vencimento: ${dueLabel}</div>`
+          : ''
+      }
+      <div class="condomit-billing-lock-actions">
+        ${
+          isSindico
+            ? '<button type="button" class="condomit-billing-pay"><i class="fas fa-credit-card"></i> Pagar mensalidade</button>'
+            : ''
+        }
+        <button type="button" class="condomit-billing-refresh"><i class="fas fa-rotate"></i> Atualizar status</button>
+        <button type="button" class="condomit-billing-logout">Sair</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(
+    overlay
+  );
+
+  document.body.classList.add(
+    'condomit-billing-locked'
+  );
+
+  overlay
+    .querySelector(
+      '.condomit-billing-pay'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        window.location.href =
+          'checkout.html';
+      }
+    );
+
+  overlay
+    .querySelector(
+      '.condomit-billing-refresh'
+    )
+    ?.addEventListener(
+      'click',
+      async (event) => {
+        const button =
+          event.currentTarget;
+
+        button.disabled =
+          true;
+
+        const original =
+          button.innerHTML;
+
+        button.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+
+        try {
+          clearCondomitBillingCache();
+
+          const fresh =
+            await getCondomitBillingStatus(
+              true
+            );
+
+          if (
+            fresh?.can_use
+          ) {
+            removeCondomitBillingLock();
+
+            window.location.reload();
+
+            return;
+          }
+
+          showCondomitBillingLock(
+            fresh,
+            userType
+          );
+        } catch (error) {
+          console.error(
+            '[Billing] Falha ao atualizar cobrança:',
+            error
+          );
+
+          if (
+            typeof window.showToast ===
+            'function'
+          ) {
+            window.showToast(
+              'Não foi possível atualizar a situação do pagamento agora.',
+              'error'
+            );
+          }
+        } finally {
+          if (
+            document.body.contains(
+              button
+            )
+          ) {
+            button.disabled =
+              false;
+
+            button.innerHTML =
+              original;
+          }
+        }
+      }
+    );
+
+  overlay
+    .querySelector(
+      '.condomit-billing-logout'
+    )
+    ?.addEventListener(
+      'click',
+      async () => {
+        if (
+          typeof window.performFullLogout ===
+          'function'
+        ) {
+          await window.performFullLogout();
+        } else {
+          try {
+            sessionStorage.clear();
+          } catch (_) {}
+
+          window.location.href =
+            'entrar.html';
+        }
+      }
+    );
+
+  setTimeout(
+    () => {
+      overlay
+        .querySelector(
+          isSindico
+            ? '.condomit-billing-pay'
+            : '.condomit-billing-refresh'
+        )
+        ?.focus();
+    },
+    30
+  );
+}
+
+async function enforceCondomitBillingAccess(
+  options = {}
+) {
+  if (
+    isCondomitBillingExemptPage() &&
+    !options.forceOnExemptPage
+  ) {
+    return true;
+  }
+
+  const user =
+    getStoredCondominiumUser();
+
+  if (!user) {
+    return true;
+  }
+
+  const userType =
+    getNormalizedUserType(
+      user
+    );
+
+  const cep =
+    getStoredUserCep(
+      user
+    );
+
+  if (!cep) {
+    return true;
+  }
+
+  try {
+    const billing =
+      await getCondomitBillingStatus(
+        Boolean(options.force)
+      );
+
+    if (
+      billing?.can_use ||
+      billing?.status ===
+        'no_condominium'
+    ) {
+      removeCondomitBillingLock();
+
+      if (
+        billing?.can_use
+      ) {
+        scheduleCondomitBillingExpiryCheck(
+          billing
+        );
+      }
+
+      return true;
+    }
+
+    showCondomitBillingLock(
+      billing,
+      userType
+    );
+
+    return false;
   } catch (error) {
     console.error(
-      'Error checking payment:',
+      '[Billing] Não foi possível verificar a mensalidade:',
       error
     );
 
-    return null;
+    // Falha de rede não bloqueia o sistema por engano.
+    return true;
   }
 }
 
@@ -4210,42 +5074,43 @@ async function redirectToHome() {
   if (
     userType === 'sindico'
   ) {
-    const approvedPayment =
-      await fetchApprovedPayment(
-        user.email
+    const cep =
+      getStoredUserCep(
+        user
       );
 
-    if (approvedPayment) {
-      if (
-        approvedPayment.plano_id &&
-        !user.plan
-      ) {
-        user.plan =
-          approvedPayment
-            .plano_id;
-
-        sessionStorage.setItem(
-          'condominiumUser',
-          JSON.stringify(
-            user
-          )
-        );
-      }
-
+    if (!cep) {
       window.location.href =
-        'index.html';
+        'condominio_register.html';
 
       return;
     }
 
-    delete user.plan;
+    try {
+      const billing =
+        await getCondomitBillingStatus(
+          true
+        );
 
-    sessionStorage.setItem(
-      'condominiumUser',
-      JSON.stringify(
-        user
-      )
-    );
+      if (
+        billing?.can_use
+      ) {
+        window.location.href =
+          'index.html';
+
+        return;
+      }
+
+      if (
+        billing?.status ===
+        'overdue'
+      ) {
+        window.location.href =
+          'index.html';
+
+        return;
+      }
+    } catch (_) {}
 
     window.location.href =
       'checkout.html';
@@ -4257,8 +5122,36 @@ async function redirectToHome() {
     'index.html';
 }
 
+window.getCondomitBillingStatus =
+  getCondomitBillingStatus;
+
+window.clearCondomitBillingCache =
+  clearCondomitBillingCache;
+
+window.enforceCondomitBillingAccess =
+  enforceCondomitBillingAccess;
+
 window.redirectToHome =
   redirectToHome;
+
+document.addEventListener(
+  'DOMContentLoaded',
+  function () {
+    window.setTimeout(
+      () => {
+        enforceCondomitBillingAccess()
+          .catch(
+            (error) =>
+              console.warn(
+                '[Billing] Falha no guard global:',
+                error
+              )
+          );
+      },
+      80
+    );
+  }
+);
 
 /* ============================================================
    INICIALIZAÇÃO

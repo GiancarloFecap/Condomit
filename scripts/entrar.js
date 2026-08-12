@@ -40,16 +40,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    async function fetchApprovedPayment(email) {
+    async function fetchCondominiumBillingStatus(force = false) {
         try {
-            const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
-            if (!response.ok) return null;
-            const payments = await response.json();
-            return payments.find(p => p.status_pagamento === 'aprovado');
+            if (typeof window.getCondomitBillingStatus === 'function') {
+                return await window.getCondomitBillingStatus(force);
+            }
+            if (typeof window.supabaseFetch === 'function') {
+                return await window.supabaseFetch('/rpc/condomit_get_billing_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}'
+                });
+            }
         } catch (error) {
-            console.error('Error checking payment:', error);
-            return null;
+            console.error('[LOGIN][Billing] Não foi possível consultar a mensalidade:', error);
         }
+        return null;
     }
 
     function getNormalizedUserType(user) {
@@ -112,21 +118,33 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
 
         if (type === 'sindico') {
-            const approvedPayment = await fetchApprovedPayment(user.email);
-
-            if (approvedPayment) {
-                if (user.condominium) {
-                    window.location.href = 'index.html';
-                } else {
-                    window.location.href = 'condominio_register.html';
-                }
-            } else {
-                if (user.condominium) {
-                    window.location.href = 'checkout.html';
-                } else {
-                    window.location.href = 'condominio_register.html';
-                }
+            if (!user.condominium) {
+                window.location.href = 'condominio_register.html';
+                return;
             }
+
+            const billing = await fetchCondominiumBillingStatus(true);
+
+            if (billing?.plan_id && user.plan !== billing.plan_id) {
+                user.plan = billing.plan_id;
+                sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+            }
+
+            if (billing?.can_use) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Condomínio já pago anteriormente, mas mensalidade vencida:
+            // entra no painel e o guard global mostra o popup bloqueante.
+            if (billing?.status === 'overdue') {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Primeiro pagamento do condomínio.
+            window.location.href = 'checkout.html';
+            return;
         } else if (type === 'morador') {
             if (user.condominium) {
                 window.location.href = 'index-morador.html';

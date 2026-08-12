@@ -1,13 +1,19 @@
-async function fetchApprovedPayment(email) {
+async function fetchCondominiumBillingStatus(force = false) {
     try {
-        const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
-        if (!response.ok) return null;
-        const payments = await response.json();
-        return payments.find(p => p.status_pagamento === 'aprovado');
+        if (typeof window.getCondomitBillingStatus === 'function') {
+            return await window.getCondomitBillingStatus(force);
+        }
+        if (typeof window.supabaseFetch === 'function') {
+            return await window.supabaseFetch('/rpc/condomit_get_billing_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}'
+            });
+        }
     } catch (error) {
-        console.error('Error checking payment:', error);
-        return null;
+        console.error('[Billing] Error checking condominium billing:', error);
     }
+    return null;
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -28,17 +34,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         currentUser = await refreshCurrentUserFromDb();
     }
 
-    // Se for síndico, verificar se tem plano ou pagamento aprovado
-    if (currentUser.type === 'sindico') {
-        const approvedPayment = await fetchApprovedPayment(currentUser.email);
-        if (!approvedPayment && !currentUser.plan) {
-            window.location.href = 'checkout.html';
-            return;
-        }
-        // Atualizar o usuário com o plano se houver pagamento aprovado
-        if (approvedPayment && !currentUser.plan) {
-            currentUser.plan = approvedPayment.plano_id;
+    // A mensalidade é do condomínio (CEP), não da pessoa que ocupa o cargo.
+    if (currentUser.type === 'sindico' && currentUser.condominium) {
+        const billing = await fetchCondominiumBillingStatus(true);
+
+        if (billing?.plan_id && currentUser.plan !== billing.plan_id) {
+            currentUser.plan = billing.plan_id;
             sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
+        }
+
+        if (billing && !billing.can_use) {
+            if (typeof window.enforceCondomitBillingAccess === 'function') {
+                await window.enforceCondomitBillingAccess({ force: true });
+            }
+            return;
         }
     }
 

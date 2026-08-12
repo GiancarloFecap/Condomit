@@ -2008,9 +2008,13 @@ async function bootstrapUser() {
         assemblyState.currentUser.type = getNormalizedUserType(assemblyState.currentUser);
     }
 
-    if (assemblyState.currentUser.type === 'sindico' && !assemblyState.currentUser.plan) {
-        window.location.href = 'checkout.html';
-        return false;
+    // Acesso à assembleia depende da mensalidade do condomínio (CEP),
+    // e não do usuário que realizou o pagamento.
+    if (typeof window.enforceCondomitBillingAccess === 'function') {
+        const allowed = await window.enforceCondomitBillingAccess({ force: true });
+        if (!allowed) {
+            return false;
+        }
     }
 
     return true;

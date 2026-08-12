@@ -50,14 +50,14 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     try {
-        const approvedPayment = await fetchApprovedPayment(currentUser.email);
-        if (approvedPayment) {
-            persistApprovedPlan(approvedPayment);
+        const billing = await fetchCondominiumBillingStatus(true);
+        if (billing?.can_use) {
+            persistApprovedPlan(billing);
             window.location.href = 'index.html';
             return;
         }
     } catch (error) {
-        console.error('[Checkout] Erro ao consultar pagamento aprovado:', error);
+        console.error('[Checkout] Erro ao consultar mensalidade do condomínio:', error);
     }
 
     const logoutBtn = document.getElementById('btn-logout-checkout');
@@ -95,13 +95,20 @@ async function fetchPlans() {
     return await response.json();
 }
 
-async function fetchApprovedPayment(email) {
-    const response = await fetch(`/api/pagamento?email=${encodeURIComponent(email)}`);
-    if (!response.ok) return null;
-    const payments = await response.json();
-    return Array.isArray(payments)
-        ? payments.find((payment) => payment.status_pagamento === 'aprovado')
-        : null;
+async function fetchCondominiumBillingStatus(force = false) {
+    if (typeof window.getCondomitBillingStatus === 'function') {
+        return await window.getCondomitBillingStatus(force);
+    }
+
+    if (typeof window.supabaseFetch === 'function') {
+        return await window.supabaseFetch('/rpc/condomit_get_billing_status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
+        });
+    }
+
+    return null;
 }
 
 async function fetchMercadoPagoConfig() {
@@ -529,10 +536,15 @@ async function refreshApprovedPaymentStatus(options = {}) {
     if (!currentUser?.email) return;
 
     try {
-        const approvedPayment = await fetchApprovedPayment(currentUser.email);
-        if (approvedPayment) {
+        if (typeof window.clearCondomitBillingCache === 'function') {
+            window.clearCondomitBillingCache();
+        }
+
+        const billing = await fetchCondominiumBillingStatus(true);
+
+        if (billing?.can_use) {
             clearCheckoutPendingState();
-            persistApprovedPlan(approvedPayment);
+            persistApprovedPlan(billing);
             window.location.href = 'index.html';
             return true;
         }
@@ -541,7 +553,7 @@ async function refreshApprovedPaymentStatus(options = {}) {
             resetCheckoutAfterPending(options.message);
         }
     } catch (error) {
-        console.warn('[Checkout] Nao foi possivel revalidar pagamento aprovado:', error);
+        console.warn('[Checkout] Nao foi possivel revalidar a mensalidade:', error);
         if (options.resetIfPending) {
             resetCheckoutAfterPending('Nao foi possivel confirmar o pagamento agora. Voce pode tentar novamente.');
         }
@@ -550,9 +562,10 @@ async function refreshApprovedPaymentStatus(options = {}) {
     return false;
 }
 
-function persistApprovedPlan(payment) {
-    if (!payment?.plano_id || !currentUser) return;
-    currentUser.plan = payment.plano_id;
+function persistApprovedPlan(paymentOrBilling) {
+    const planId = paymentOrBilling?.plano_id ?? paymentOrBilling?.plan_id;
+    if (!planId || !currentUser) return;
+    currentUser.plan = planId;
     sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
 }
 
