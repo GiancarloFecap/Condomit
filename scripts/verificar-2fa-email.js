@@ -39,7 +39,27 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const result = await window.condomitTwoFactor.verifyLogin(pending.challengeId, code);
             if (!result?.actionLink) throw new Error('Não foi possível concluir o login.');
+
+            const normalizedUserType = String(result.userType || '')
+                .trim()
+                .toLowerCase()
+                .replace('síndico', 'sindico');
+
+            if (normalizedUserType) {
+                sessionStorage.setItem(
+                    'condomitVerifiedTwoFactorUserType',
+                    normalizedUserType
+                );
+            }
+
             sessionStorage.removeItem('condomitPendingTwoFactorLogin');
+
+            /*
+             * O actionLink conclui a sessão Supabase com segurança. Depois
+             * dele o usuário retorna para 2fa-completo.html, que usa o tipo
+             * salvo acima (ou o perfil do banco como fallback) para abrir o
+             * dashboard correto.
+             */
             window.location.replace(result.actionLink);
         } catch (error) {
             feedback.textContent = error?.message || 'Código inválido.';

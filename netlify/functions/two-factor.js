@@ -384,6 +384,10 @@ async function handleVerifyLogin(payload) {
     .update({ consumed_at: new Date().toISOString() })
     .eq('challenge_id', challengeId);
 
+  const profile = await getProfile(admin, normalizeEmail(row.user_email));
+  const rawUserType = String(profile?.user_type || '').trim().toLowerCase();
+  const userType = rawUserType === 'síndico' ? 'sindico' : rawUserType;
+
   const redirectTo = `${APP_BASE_URL}/pages/2fa-completo.html`;
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: 'magiclink',
@@ -397,7 +401,8 @@ async function handleVerifyLogin(payload) {
 
   return response(200, {
     verified: true,
-    actionLink
+    actionLink,
+    userType
   });
 }
 
