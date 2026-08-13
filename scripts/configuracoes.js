@@ -2133,27 +2133,82 @@ async function openTwoFactorSettingsModal() {
         return;
     }
 
+    /*
+     * Abre o popup imediatamente. Antes a página esperava a consulta ao
+     * backend terminar para só então exibir o modal, dando a impressão de
+     * que o botão não havia funcionado.
+     */
+    const modal = openSettingsContentModal({
+        title: 'Autenticação de dois fatores',
+        subtitle: 'Consultando a proteção da sua conta...',
+        html: `
+            <div class="two-factor-confirmation-sent">
+                <div class="two-factor-settings-icon active">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <h4>Carregando...</h4>
+                <p>Estamos verificando se a autenticação em duas etapas está ativa.</p>
+            </div>
+        `,
+        footerHtml: `
+            <button type="button" class="btn-edit-profile" data-settings-close>Fechar</button>
+        `
+    });
+
+    modal.querySelectorAll('[data-settings-close]').forEach((button) => {
+        button.addEventListener('click', closeSettingsContentModal);
+    });
+
     let state;
     try {
         state = await window.condomitTwoFactor.status();
     } catch (error) {
-        window.showToast?.(
-            error?.message || 'Não foi possível consultar a autenticação em duas etapas.',
-            'error'
-        );
+        const body = modal.querySelector('#settingsContentBody');
+        const footer = modal.querySelector('#settingsContentFooter');
+        const subtitle = modal.querySelector('#settingsContentSubtitle');
+
+        if (subtitle) subtitle.textContent = 'Não foi possível consultar a proteção da conta.';
+        if (body) {
+            body.innerHTML = `
+                <div class="two-factor-confirmation-sent">
+                    <div class="two-factor-settings-icon">
+                        <i class="fas fa-triangle-exclamation"></i>
+                    </div>
+                    <h4>Falha ao carregar</h4>
+                    <p>${escapeReservationHtml(error?.message || 'Não foi possível consultar a autenticação em duas etapas.')}</p>
+                </div>
+            `;
+        }
+        if (footer) {
+            footer.innerHTML = `
+                <button type="button" class="btn-edit-profile" data-settings-close>Fechar</button>
+                <button type="button" class="btn-edit-profile visitor-submit-btn" id="retryTwoFactorStatus">
+                    <i class="fas fa-rotate-right"></i> Tentar novamente
+                </button>
+            `;
+            footer.querySelectorAll('[data-settings-close]').forEach((button) => {
+                button.addEventListener('click', closeSettingsContentModal);
+            });
+            footer.querySelector('#retryTwoFactorStatus')?.addEventListener('click', openTwoFactorSettingsModal);
+        }
         return;
     }
 
     const enabled = state?.enabled === true;
     const email = state?.email || getCurrentUser()?.email || '';
     const safeEmail = escapeReservationHtml(email);
+    const subtitle = modal.querySelector('#settingsContentSubtitle');
+    const body = modal.querySelector('#settingsContentBody');
+    const footer = modal.querySelector('#settingsContentFooter');
 
-    const modal = openSettingsContentModal({
-        title: 'Autenticação de dois fatores',
-        subtitle: enabled
+    if (subtitle) {
+        subtitle.textContent = enabled
             ? 'A proteção adicional por e-mail está ativa.'
-            : 'Adicione uma segunda etapa ao entrar na sua conta.',
-        html: `
+            : 'Adicione uma segunda etapa ao entrar na sua conta.';
+    }
+
+    if (body) {
+        body.innerHTML = `
             <div class="two-factor-settings-card">
                 <div class="two-factor-settings-icon ${enabled ? 'active' : ''}">
                     <i class="fas ${enabled ? 'fa-shield-circle-check' : 'fa-shield-halved'}"></i>
@@ -2177,8 +2232,11 @@ async function openTwoFactorSettingsModal() {
                     </p>
                 </div>
             </div>
-        `,
-        footerHtml: `
+        `;
+    }
+
+    if (footer) {
+        footer.innerHTML = `
             <button type="button" class="btn-edit-profile" data-settings-close>Cancelar</button>
             <button type="button"
                     class="btn-edit-profile visitor-submit-btn two-factor-action-btn ${enabled ? 'danger' : ''}"
@@ -2186,8 +2244,8 @@ async function openTwoFactorSettingsModal() {
                 <i class="fas ${enabled ? 'fa-shield-xmark' : 'fa-shield-halved'}"></i>
                 ${enabled ? 'Desativar autenticação' : 'Ativar autenticação'}
             </button>
-        `
-    });
+        `;
+    }
 
     modal.querySelectorAll('[data-settings-close]').forEach((button) => {
         button.addEventListener('click', closeSettingsContentModal);

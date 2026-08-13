@@ -12,6 +12,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupNotificationsShell(currentUser);
     setupNotificationActions();
     await renderNotificationsPage();
+
+    // Mantém a central atualizada enquanto ela estiver aberta.
+    window.setInterval(() => {
+        if (!document.hidden) {
+            renderNotificationsPage().catch((error) =>
+                console.warn('Falha ao atualizar notificações:', error)
+            );
+        }
+    }, 12000);
 });
 
 async function loadNotificationsUser() {
@@ -74,7 +83,7 @@ function renderCategoryTabs(notifications) {
         acc[item.category] = (acc[item.category] || 0) + 1;
         return acc;
     }, {});
-    const categories = ['Todas', 'Avisos', 'Reservas', 'Assembleias', 'Entregas'];
+    const categories = ['Todas', 'Avisos', 'Chat', 'Visitantes', 'Entregas', 'Prestadores', 'Reservas', 'Assembleias'];
 
     container.innerHTML = categories.map((category) => {
         const count = category === 'Todas' ? notifications.length : (counts[category] || 0);
@@ -189,6 +198,9 @@ function setNotificationText(id, value) {
 }
 
 function iconForCategory(category) {
+    if (category === 'Chat') return 'fas fa-comments';
+    if (category === 'Visitantes') return 'fas fa-user-check';
+    if (category === 'Prestadores') return 'fas fa-helmet-safety';
     if (category === 'Reservas') return 'fas fa-calendar-check';
     if (category === 'Assembleias') return 'fas fa-users';
     if (category === 'Entregas') return 'fas fa-box-open';

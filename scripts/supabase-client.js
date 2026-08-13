@@ -2966,6 +2966,31 @@ async function refreshCurrentUserFromDb() {
         ...fresh
       };
 
+      /*
+       * O campo `type` salvo no navegador podia continuar com o cargo
+       * antigo mesmo depois de `users.user_type` ser alterado no banco.
+       * Isso fazia um morador promovido a síndico continuar vendo o painel
+       * de morador até sair e entrar novamente. O banco passa a ser a fonte
+       * de verdade para o cargo atual.
+       */
+      const freshType =
+        getNormalizedUserType(
+          fresh
+        );
+
+      if (
+        [
+          'sindico',
+          'morador',
+          'porteiro'
+        ].includes(
+          freshType
+        )
+      ) {
+        merged.type = freshType;
+        merged.user_type = freshType;
+      }
+
       if (fresh.profile_photo || fresh.profilePhoto) {
         merged.profilePhoto = fresh.profile_photo || fresh.profilePhoto;
         merged.profile_photo = fresh.profile_photo || fresh.profilePhoto;
@@ -2978,15 +3003,7 @@ async function refreshCurrentUserFromDb() {
       delete merged.password;
 
       if (!merged.type) {
-        merged.type =
-          getNormalizedUserType(
-            fresh
-          );
-      }
-
-      if (!merged.type) {
-        merged.type =
-          existingType;
+        merged.type = existingType;
       }
 
       if (
@@ -2995,15 +3012,15 @@ async function refreshCurrentUserFromDb() {
           'morador',
           'porteiro'
         ].includes(
-          merged.type
+          getNormalizedUserType(merged)
         )
       ) {
-        merged.type =
-          getNormalizedUserType(
-            merged
-          ) ||
-          existingType;
+        merged.type = existingType;
+      } else {
+        merged.type = getNormalizedUserType(merged);
       }
+
+      merged.user_type = merged.type;
 
       if (
         fresh.condominium &&
@@ -3039,6 +3056,30 @@ async function refreshCurrentUserFromDb() {
           merged
         )
       );
+
+      try {
+        const persistentRaw =
+          localStorage.getItem(
+            'condominiumPersistentUser'
+          );
+
+        const persistent =
+          persistentRaw
+            ? JSON.parse(persistentRaw)
+            : {};
+
+        localStorage.setItem(
+          'condominiumPersistentUser',
+          JSON.stringify({
+            ...(persistent && typeof persistent === 'object' ? persistent : {}),
+            email: merged.email || user.email,
+            name: merged.name || user.name || null,
+            type: merged.type,
+            user_type: merged.type,
+            t: Date.now()
+          })
+        );
+      } catch (_) {}
 
       return merged;
     }
@@ -5027,6 +5068,252 @@ async function enforceCondomitBillingAccess(
 }
 
 /* ============================================================
+   SINCRONIZAÇÃO AUTOMÁTICA DE CARGO
+   Se outro síndico transferir a função enquanto esta conta estiver
+   conectada, o painel muda sem exigir logout/login.
+============================================================ */
+
+const condomitRoleSyncState = {
+  busy: false,
+  timer: null
+};
+
+function getCondomitRoleHomePath(role) {
+  const normalized =
+    getNormalizedUserType({
+      type: role
+    });
+
+  if (normalized === 'sindico') {
+    return 'index.html';
+  }
+
+  if (normalized === 'porteiro') {
+    return 'index-porteiro.html';
+  }
+
+  return 'index-morador.html';
+}
+
+function isCondomitRoleSyncExemptPage() {
+  const fileName =
+    String(
+      window.location.pathname || ''
+    )
+      .split('/')
+      .pop()
+      .toLowerCase();
+
+  return [
+    '',
+    'inicio.html',
+    'entrar.html',
+    'tipo-usuario.html',
+    'cadastro-sindico.html',
+    'cadastro-morador.html',
+    'cadastro-porteiro.html',
+    'esqueci-senha.html',
+    'redefinir-senha.html',
+    'verificar-2fa-email.html',
+    'confirmar-2fa.html',
+    '2fa-completo.html',
+    'condominio_register.html',
+    'entrar-condominio.html',
+    'entrar-condominio-porteiro.html',
+    'checkout.html',
+    'pagamento-sucesso.html',
+    'pagamento-pendente.html',
+    'pagamento-falha.html'
+  ].includes(fileName);
+}
+
+async function syncCondomitRoleNow(options = {}) {
+  if (
+    condomitRoleSyncState.busy ||
+    isCondomitRoleSyncExemptPage()
+  ) {
+    return false;
+  }
+
+  let cached = null;
+
+  try {
+    const raw =
+      sessionStorage.getItem(
+        'condominiumUser'
+      );
+
+    cached = raw
+      ? JSON.parse(raw)
+      : null;
+  } catch (_) {
+    cached = null;
+  }
+
+  if (!cached?.email) {
+    return false;
+  }
+
+  const previousRole =
+    getNormalizedUserType(
+      cached
+    );
+
+  condomitRoleSyncState.busy = true;
+
+  try {
+    const fresh =
+      await refreshCurrentUserFromDb();
+
+    if (!fresh) {
+      return false;
+    }
+
+    const currentRole =
+      getNormalizedUserType(
+        fresh
+      );
+
+    const destination =
+      getCondomitRoleHomePath(
+        currentRole
+      );
+
+    const currentPage =
+      String(
+        window.location.pathname || ''
+      )
+        .split('/')
+        .pop()
+        .toLowerCase();
+
+    const isRoleHomePage =
+      [
+        'index.html',
+        'index-morador.html',
+        'index-porteiro.html'
+      ].includes(
+        currentPage
+      );
+
+    const roleChanged =
+      Boolean(
+        currentRole &&
+        previousRole &&
+        currentRole !== previousRole
+      );
+
+    const homeNeedsReload =
+      Boolean(
+        currentRole &&
+        isRoleHomePage &&
+        currentPage !== destination
+      );
+
+    if (
+      roleChanged ||
+      homeNeedsReload
+    ) {
+      clearCondomitBillingCache?.();
+
+      if (options.notify !== false) {
+        const label =
+          currentRole === 'sindico'
+            ? 'Síndico'
+            : currentRole === 'porteiro'
+              ? 'Porteiro'
+              : 'Morador';
+
+        window.showToast?.(
+          `Seu cargo foi atualizado para ${label}. Atualizando o sistema...`,
+          'success'
+        );
+      }
+
+      window.setTimeout(
+        () => {
+          window.location.replace(
+            destination
+          );
+        },
+        options.notify === false
+          ? 0
+          : 350
+      );
+
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.warn(
+      '[Cargo] Não foi possível sincronizar o cargo atual:',
+      error?.message || error
+    );
+
+    return false;
+  } finally {
+    condomitRoleSyncState.busy = false;
+  }
+}
+
+function startCondomitRoleSync() {
+  if (
+    condomitRoleSyncState.timer ||
+    isCondomitRoleSyncExemptPage()
+  ) {
+    return;
+  }
+
+  window.setTimeout(
+    () => {
+      syncCondomitRoleNow({
+        notify: true
+      });
+    },
+    700
+  );
+
+  condomitRoleSyncState.timer =
+    window.setInterval(
+      () => {
+        if (!document.hidden) {
+          syncCondomitRoleNow({
+            notify: true
+          });
+        }
+      },
+      4000
+    );
+
+  window.addEventListener(
+    'focus',
+    () => {
+      syncCondomitRoleNow({
+        notify: true
+      });
+    }
+  );
+
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (!document.hidden) {
+        syncCondomitRoleNow({
+          notify: true
+        });
+      }
+    }
+  );
+}
+
+window.syncCondomitRoleNow =
+  syncCondomitRoleNow;
+
+window.startCondomitRoleSync =
+  startCondomitRoleSync;
+
+/* ============================================================
    REDIRECIONAMENTO HOME
 ============================================================ */
 
@@ -5207,6 +5494,9 @@ document.addEventListener(
           typeof refreshCurrentUserFromDb ===
             'function'
         ) {
+          const roleBeforeRefresh =
+            getNormalizedUserType(user);
+
           const refreshed =
             await refreshCurrentUserFromDb();
 
@@ -5219,6 +5509,36 @@ document.addEventListener(
               refreshed
             );
           }
+
+          const roleAfterRefresh =
+            refreshed
+              ? getNormalizedUserType(refreshed)
+              : roleBeforeRefresh;
+
+          if (
+            refreshed &&
+            roleBeforeRefresh &&
+            roleAfterRefresh &&
+            roleBeforeRefresh !== roleAfterRefresh &&
+            !isCondomitRoleSyncExemptPage()
+          ) {
+            const destination =
+              getCondomitRoleHomePath(
+                roleAfterRefresh
+              );
+
+            window.showToast?.(
+              `Seu cargo foi atualizado. Carregando o painel de ${roleAfterRefresh === 'sindico' ? 'síndico' : roleAfterRefresh === 'porteiro' ? 'porteiro' : 'morador'}...`,
+              'success'
+            );
+
+            window.setTimeout(
+              () => window.location.replace(destination),
+              250
+            );
+
+            return;
+          }
         }
       }
     } catch (err) {
@@ -5227,6 +5547,8 @@ document.addEventListener(
         err
       );
     }
+
+    startCondomitRoleSync();
 
     document.addEventListener(
       'click',

@@ -113,13 +113,33 @@ async function fetchReservations() {
     }
 }
 
+function timeToMinutes(value) {
+    const [hours, minutes] = String(value || '').slice(0, 5).split(':').map(Number);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    return (hours * 60) + minutes;
+}
+
+function timeRangesOverlap(startA, endA, startB, endB) {
+    const aStart = timeToMinutes(startA);
+    const aEnd = timeToMinutes(endA);
+    const bStart = timeToMinutes(startB);
+    const bEnd = timeToMinutes(endB);
+    if ([aStart, aEnd, bStart, bEnd].some((value) => value === null)) return false;
+    return aStart < bEnd && aEnd > bStart;
+}
+
 function isTimeSlotReserved(dateStr, timeSlot) {
     if (!selectedSpace) return false;
+    const selectedName = String(selectedSpace.name || '').trim().toLowerCase();
     return reservations.some((res) => (
-        String(res.nome_local || '').toLowerCase() === String(selectedSpace.name || '').toLowerCase()
+        String(res.nome_local || '').trim().toLowerCase() === selectedName
         && res.data_reserva === dateStr
-        && res.horario_inicio === timeSlot.start
-        && res.horario_fim === timeSlot.end
+        && timeRangesOverlap(
+            res.horario_inicio,
+            res.horario_fim,
+            timeSlot.start,
+            timeSlot.end
+        )
     ));
 }
 
@@ -176,7 +196,7 @@ function renderCalendar() {
         if (date < today) classes += ' disabled';
         else if (isDayFullyReserved(dateStr)) classes += ' unavailable';
         else classes += ' available';
-        if (sameDate(date, selectedDate)) classes += ' selected';
+        if (sameDate(date, selectedDate) && classes.includes('available')) classes += ' selected';
         html += `<div class="${classes}" data-date="${dateStr}">${day}</div>`;
     }
 
@@ -269,9 +289,25 @@ async function handleAgendar() {
     if (!selectedDate || !selectedTime || !selectedSpace) return;
     const doSave = async () => {
         try {
+            /*
+             * Revalida a agenda imediatamente antes de gravar. Assim, se
+             * outra pessoa reservou enquanto o popup de confirmação estava
+             * aberto, o horário é bloqueado sem depender do erro do banco.
+             */
+            await fetchReservations();
+            const dateKey = formatDateInput(selectedDate);
+            if (isTimeSlotReserved(dateKey, selectedTime)) {
+                selectedTime = null;
+                renderCalendar();
+                renderTimeSlots();
+                updateResumo();
+                window.showToast?.('Horário indisponível! Escolha outro horário.', 'warning');
+                return;
+            }
+
             await rpc('condomit_create_reservation', {
                 target_local: selectedSpace.name,
-                target_date: formatDateInput(selectedDate),
+                target_date: dateKey,
                 target_start: selectedTime.start,
                 target_end: selectedTime.end
             });
@@ -283,7 +319,20 @@ async function handleAgendar() {
             updateResumo();
         } catch (error) {
             console.error('Erro ao fazer reserva:', error);
-            window.showToast?.(error?.message || 'Não foi possível realizar a reserva.', 'error');
+            const rawMessage = String(error?.message || error || '');
+            const isUnavailable = /duplicate key|reserva_unica|23505|hor[aá]rio.*reserv|conflito|indispon/i.test(rawMessage);
+
+            if (isUnavailable) {
+                selectedTime = null;
+                await fetchReservations();
+                renderCalendar();
+                renderTimeSlots();
+                updateResumo();
+                window.showToast?.('Horário indisponível! Escolha outro horário.', 'warning');
+                return;
+            }
+
+            window.showToast?.(rawMessage || 'Não foi possível realizar a reserva.', 'error');
         }
     };
 

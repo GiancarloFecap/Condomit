@@ -35,7 +35,7 @@ function setupWallShell(currentUser) {
     if (createButton) createButton.style.display = isSindico ? 'inline-flex' : 'none';
     if (subtitle) {
         subtitle.textContent = isSindico
-            ? 'Publique avisos permanentes para todos os moradores do condomínio.'
+            ? 'Publique avisos para todos os moradores do condomínio.'
             : 'Acompanhe todos os avisos publicados pelo síndico do seu condomínio.';
     }
 
@@ -169,7 +169,6 @@ function renderWallNotices(notices) {
                 </div>
                 <div class="notification-badges">
                     <span class="tag category">${escapeWallHtml(notice.category)}</span>
-                    <span class="tag wall-permanent"><i class="fas fa-infinity"></i> Permanente</span>
                     <span class="tag category">${escapeWallHtml(notice.author || 'Condomit')}</span>
                 </div>
             </div>
