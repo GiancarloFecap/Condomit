@@ -124,14 +124,17 @@ function setupOccurrenceActions() {
         if (occurrenceState.userType !== 'sindico') return;
         const section = document.getElementById('syndicOccurrencesSection');
         if (!section) return;
-        section.hidden = false;
-        await loadAllOccurrences();
-        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        const shouldOpen = section.hidden;
+        setAllOccurrencesSectionOpen(shouldOpen);
+        if (shouldOpen) {
+            await loadAllOccurrences();
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     });
 
     document.getElementById('closeAllOccurrencesBtn')?.addEventListener('click', () => {
-        const section = document.getElementById('syndicOccurrencesSection');
-        if (section) section.hidden = true;
+        setAllOccurrencesSectionOpen(false);
     });
 
     document.querySelectorAll('[data-close-modal]').forEach((button) => {
@@ -163,6 +166,37 @@ function setupOccurrenceActions() {
     document.getElementById('allOccurrencesRoleFilter')?.addEventListener('change', renderAllOccurrences);
     document.getElementById('allOccurrencesPeriodFilter')?.addEventListener('change', renderAllOccurrences);
     document.getElementById('clearOccurrenceFiltersBtn')?.addEventListener('click', clearOccurrenceFilters);
+}
+
+function setAllOccurrencesSectionOpen(isOpen) {
+    if (occurrenceState.userType !== 'sindico') return;
+
+    const section = document.getElementById('syndicOccurrencesSection');
+    const button = document.getElementById('openAllOccurrencesBtn');
+    if (!section) return;
+
+    section.hidden = !isOpen;
+    section.setAttribute('aria-hidden', String(!isOpen));
+
+    if (button) {
+        button.setAttribute('aria-expanded', String(isOpen));
+        button.classList.toggle('is-expanded', isOpen);
+        const label = button.querySelector('.action-copy strong');
+        const description = button.querySelector('.action-copy small');
+        const arrow = button.querySelector('.action-arrow');
+        if (label) label.textContent = isOpen ? 'Recolher ocorrências' : 'Ver ocorrências';
+        if (description) description.textContent = isOpen
+            ? 'Feche a consulta de registros do condomínio.'
+            : 'Consulte os registros do condomínio com busca e filtros.';
+        if (arrow) {
+            arrow.classList.toggle('fa-chevron-right', !isOpen);
+            arrow.classList.toggle('fa-chevron-up', isOpen);
+        }
+    }
+
+    if (typeof window.applyGlobalAppLanguage === 'function') {
+        window.applyGlobalAppLanguage();
+    }
 }
 
 function openOccurrenceModal(id) {

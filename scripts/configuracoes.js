@@ -1601,7 +1601,7 @@ async function executeDeleteAccount() {
 ============================================================ */
 
 const CONDOMIT_COMPANY_EMAIL = 'contato.condomit@gmail.com';
-const CONDOMIT_COMPANY_PHONE = 'Não informado no projeto';
+const CONDOMIT_COMPANY_PHONE = '(11)97440-9806';
 
 function ensureSettingsContentModal() {
     let modal = document.getElementById('settingsContentModal');
@@ -1925,7 +1925,6 @@ function openUsefulContactsModal() {
                 </div>
             </div>
         </div>
-        <p class="settings-contact-note">O arquivo do projeto não contém um número de telefone oficial da Condomit; por isso nenhum número fictício foi inserido.</p>
     `;
 
     openSettingsContentModal({
