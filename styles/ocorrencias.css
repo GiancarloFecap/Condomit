@@ -1,0 +1,852 @@
+:root {
+    --occ-blue: #2563eb;
+    --occ-blue-dark: #1d4ed8;
+    --occ-blue-soft: #eff6ff;
+    --occ-green: #16a34a;
+    --occ-green-soft: #ecfdf3;
+    --occ-amber: #d97706;
+    --occ-amber-soft: #fff7ed;
+    --occ-border: #e2e8f0;
+    --occ-text: #0f172a;
+    --occ-muted: #64748b;
+    --occ-surface: #ffffff;
+    --occ-bg: #f8fafc;
+}
+
+.occurrences-page {
+    padding: 28px 30px 48px;
+    display: grid;
+    gap: 22px;
+}
+
+.card-shell {
+    background: var(--occ-surface);
+    border: 1px solid var(--occ-border);
+    border-radius: 18px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+.occurrences-hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 190px;
+    padding: 30px 34px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 28px;
+    background:
+        radial-gradient(circle at 88% 20%, rgba(37, 99, 235, 0.15), transparent 34%),
+        linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.occurrences-hero::after {
+    content: "";
+    position: absolute;
+    width: 210px;
+    height: 210px;
+    border: 42px solid rgba(37, 99, 235, 0.05);
+    border-radius: 50%;
+    right: -90px;
+    bottom: -120px;
+}
+
+.occurrences-hero-copy {
+    max-width: 760px;
+    position: relative;
+    z-index: 1;
+}
+
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--occ-blue);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.occurrences-hero h2,
+.syndic-occurrences h2,
+.occurrence-modal-header h2 {
+    margin: 8px 0 8px;
+    color: var(--occ-text);
+}
+
+.occurrences-hero h2 {
+    font-size: clamp(1.45rem, 2vw, 2rem);
+}
+
+.occurrences-hero p,
+.syndic-occurrences p,
+.occurrence-modal-header p {
+    margin: 0;
+    color: var(--occ-muted);
+    line-height: 1.55;
+}
+
+.occurrences-hero-badge {
+    position: relative;
+    z-index: 1;
+    width: 102px;
+    height: 102px;
+    flex: 0 0 102px;
+    border-radius: 28px;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    font-size: 2.35rem;
+    background: linear-gradient(145deg, #2563eb, #1e40af);
+    box-shadow: 0 20px 45px rgba(37, 99, 235, 0.28);
+}
+
+.occurrence-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.occurrence-actions.is-syndic {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.occurrence-action-card {
+    appearance: none;
+    width: 100%;
+    min-height: 114px;
+    padding: 18px;
+    border: 1px solid var(--occ-border);
+    border-radius: 17px;
+    background: #ffffff;
+    color: var(--occ-text);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.occurrence-action-card:hover {
+    transform: translateY(-2px);
+    border-color: #bfdbfe;
+    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.10);
+}
+
+.action-icon {
+    width: 50px;
+    height: 50px;
+    flex: 0 0 50px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    font-size: 1.15rem;
+}
+
+.action-icon-blue { color: var(--occ-blue); background: var(--occ-blue-soft); }
+.action-icon-green { color: var(--occ-green); background: var(--occ-green-soft); }
+.action-icon-amber { color: var(--occ-amber); background: var(--occ-amber-soft); }
+
+.action-copy {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+    flex: 1;
+}
+
+.action-copy strong {
+    font-size: 0.98rem;
+}
+
+.action-copy small {
+    color: var(--occ-muted);
+    line-height: 1.38;
+}
+
+.action-arrow {
+    color: #94a3b8;
+}
+
+.syndic-occurrences {
+    padding: 24px;
+}
+
+.section-heading-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.occurrence-filters {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) 180px 190px auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.search-field,
+.filter-field {
+    display: grid;
+    gap: 7px;
+}
+
+.filter-field > span {
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.search-field {
+    position: relative;
+}
+
+.search-field i {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    color: #94a3b8;
+}
+
+.search-field input,
+.filter-field select,
+.book-field input,
+.book-field textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 11px;
+    background: #ffffff;
+    color: var(--occ-text);
+    outline: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.search-field input,
+.filter-field select {
+    min-height: 44px;
+    padding: 0 13px;
+}
+
+.search-field input {
+    padding-left: 40px;
+}
+
+.search-field input:focus,
+.filter-field select:focus,
+.book-field input:focus,
+.book-field textarea:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+
+.ghost-action,
+.primary-occurrence-action,
+.signature-clear,
+.view-occurrence-btn {
+    border: 0;
+    border-radius: 10px;
+    min-height: 42px;
+    padding: 0 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.16s ease, opacity 0.16s ease, background 0.16s ease;
+}
+
+.ghost-action {
+    color: #334155;
+    background: #f1f5f9;
+}
+
+.ghost-action:hover,
+.signature-clear:hover,
+.view-occurrence-btn:hover {
+    background: #e2e8f0;
+}
+
+.filter-clear {
+    white-space: nowrap;
+}
+
+.primary-occurrence-action {
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--occ-blue), var(--occ-blue-dark));
+    box-shadow: 0 9px 20px rgba(37, 99, 235, 0.22);
+}
+
+.primary-occurrence-action:hover {
+    transform: translateY(-1px);
+}
+
+.primary-occurrence-action:disabled,
+.ghost-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.occurrence-table-wrap {
+    margin-top: 18px;
+    overflow-x: auto;
+    border: 1px solid var(--occ-border);
+    border-radius: 14px;
+}
+
+.occurrence-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 880px;
+}
+
+.occurrence-table th,
+.occurrence-table td {
+    padding: 14px 15px;
+    border-bottom: 1px solid #edf2f7;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.occurrence-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.occurrence-table td {
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.occurrence-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.table-empty {
+    text-align: center !important;
+    color: var(--occ-muted) !important;
+    padding: 34px 20px !important;
+}
+
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 9px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.role-badge.role-porteiro { background: #f3e8ff; color: #7e22ce; }
+.role-badge.role-sindico { background: #fff7ed; color: #c2410c; }
+
+.view-occurrence-btn {
+    min-height: 34px;
+    padding: 0 11px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 0.8rem;
+}
+
+.occurrence-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.60);
+    backdrop-filter: blur(4px);
+}
+
+.occurrence-modal-backdrop.is-open {
+    display: flex;
+}
+
+.occurrence-modal {
+    width: min(900px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+}
+
+.register-occurrence-modal {
+    width: min(980px, 100%);
+}
+
+.occurrence-modal-header {
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--occ-border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.register-modal-titlebar {
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.modal-close {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border: 0;
+    border-radius: 11px;
+    background: #f1f5f9;
+    color: #475569;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    background: #e2e8f0;
+}
+
+.occurrence-modal-body,
+.occurrence-book-form {
+    overflow-y: auto;
+}
+
+.occurrence-modal-body {
+    padding: 22px 24px 26px;
+}
+
+.occurrence-book-form {
+    padding: 22px 24px 26px;
+    display: grid;
+    gap: 16px;
+}
+
+.book-grid {
+    display: grid;
+    gap: 14px;
+}
+
+.book-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.responsible-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(180px, 0.85fr);
+}
+
+.book-field {
+    display: grid;
+    gap: 7px;
+    color: #334155;
+    font-size: 0.79rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.book-field input,
+.book-field textarea {
+    padding: 11px 12px;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.book-field input {
+    min-height: 45px;
+}
+
+.book-field input[readonly] {
+    background: #f8fafc;
+    color: #475569;
+    cursor: default;
+}
+
+.book-field textarea {
+    resize: vertical;
+    min-height: 145px;
+    line-height: 1.52;
+}
+
+.description-field small {
+    justify-self: end;
+    color: var(--occ-muted);
+    font-size: 0.73rem;
+    font-weight: 500;
+    text-transform: none;
+}
+
+.signature-section {
+    padding-top: 2px;
+}
+
+.signature-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 16px;
+    margin-bottom: 9px;
+}
+
+.signature-heading > div {
+    display: grid;
+    gap: 3px;
+}
+
+.signature-heading span {
+    color: #334155;
+    font-size: 0.79rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.signature-heading small {
+    color: var(--occ-muted);
+    font-size: 0.78rem;
+}
+
+.signature-clear {
+    min-height: 36px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.78rem;
+}
+
+.signature-canvas-wrap {
+    position: relative;
+    height: 190px;
+    border: 1.5px solid #94a3b8;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #ffffff;
+    background-image: linear-gradient(to bottom, transparent calc(100% - 42px), #cbd5e1 calc(100% - 41px), #cbd5e1 calc(100% - 40px), transparent calc(100% - 39px));
+    touch-action: none;
+}
+
+.signature-canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.signature-placeholder {
+    position: absolute;
+    left: 22px;
+    bottom: 18px;
+    color: #94a3b8;
+    font-size: 0.77rem;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+.signature-canvas-wrap.has-signature .signature-placeholder {
+    opacity: 0;
+}
+
+.signature-error {
+    margin: 7px 0 0;
+    color: #dc2626;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.book-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 5px;
+}
+
+.my-occurrences-list {
+    display: grid;
+    gap: 12px;
+}
+
+.my-occurrence-card {
+    border: 1px solid var(--occ-border);
+    border-radius: 14px;
+    padding: 15px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 14px;
+    align-items: center;
+}
+
+.my-occurrence-card:hover {
+    border-color: #bfdbfe;
+}
+
+.my-occurrence-main {
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.my-occurrence-title {
+    color: var(--occ-text);
+    font-weight: 800;
+}
+
+.my-occurrence-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px 14px;
+    color: var(--occ-muted);
+    font-size: 0.8rem;
+}
+
+.my-occurrence-preview {
+    margin: 0;
+    color: #475569;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.loading-state,
+.empty-state {
+    min-height: 150px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: var(--occ-muted);
+}
+
+.empty-state-content {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    max-width: 430px;
+}
+
+.empty-state-content i {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    background: var(--occ-blue-soft);
+    color: var(--occ-blue);
+    font-size: 1.2rem;
+}
+
+.occurrence-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.detail-block {
+    border: 1px solid var(--occ-border);
+    border-radius: 12px;
+    padding: 13px 14px;
+    background: #f8fafc;
+}
+
+.detail-block.detail-full {
+    grid-column: 1 / -1;
+}
+
+.detail-block span {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--occ-muted);
+    font-size: 0.73rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.detail-block strong,
+.detail-block p {
+    color: #1e293b;
+    font-size: 0.91rem;
+    line-height: 1.5;
+}
+
+.detail-block p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.signature-preview {
+    width: 100%;
+    min-height: 150px;
+    max-height: 210px;
+    object-fit: contain;
+    object-position: left center;
+    border-radius: 8px;
+    background: #ffffff;
+    border-bottom: 1px solid #94a3b8;
+}
+
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+body.modal-open {
+    overflow: hidden;
+}
+
+@media (max-width: 1180px) {
+    .occurrence-actions.is-syndic {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .occurrence-filters {
+        grid-template-columns: minmax(240px, 1fr) repeat(2, 170px);
+    }
+
+    .filter-clear {
+        grid-column: 1 / -1;
+        justify-self: end;
+    }
+}
+
+@media (max-width: 850px) {
+    .occurrences-page {
+        padding: 20px 16px 36px;
+    }
+
+    .occurrences-hero {
+        padding: 24px;
+    }
+
+    .occurrences-hero-badge {
+        width: 76px;
+        height: 76px;
+        flex-basis: 76px;
+        border-radius: 22px;
+        font-size: 1.8rem;
+    }
+
+    .occurrence-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .occurrence-filters,
+    .book-grid-2,
+    .responsible-grid,
+    .occurrence-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-block.detail-full {
+        grid-column: auto;
+    }
+
+    .filter-clear {
+        grid-column: auto;
+        justify-self: stretch;
+    }
+}
+
+@media (max-width: 620px) {
+    .occurrences-hero-badge {
+        display: none;
+    }
+
+    .section-heading-row,
+    .signature-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .occurrence-modal-backdrop {
+        padding: 10px;
+        align-items: flex-end;
+    }
+
+    .occurrence-modal {
+        max-height: calc(100vh - 20px);
+        border-radius: 18px 18px 12px 12px;
+    }
+
+    .occurrence-modal-header,
+    .occurrence-modal-body,
+    .occurrence-book-form {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .book-form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .book-form-actions > button {
+        width: 100%;
+    }
+
+    .my-occurrence-card {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Ajustes simples para o tema escuro já utilizado no projeto. */
+body.dark-mode .card-shell,
+body.dark-mode .occurrence-action-card,
+body.dark-mode .occurrence-modal,
+html[data-theme="dark"] .card-shell,
+html[data-theme="dark"] .occurrence-action-card,
+html[data-theme="dark"] .occurrence-modal {
+    background: #111827;
+    border-color: #263247;
+}
+
+body.dark-mode .occurrences-hero,
+html[data-theme="dark"] .occurrences-hero {
+    background: radial-gradient(circle at 88% 20%, rgba(37, 99, 235, 0.20), transparent 34%), #111827;
+}
+
+body.dark-mode .occurrences-page,
+html[data-theme="dark"] .occurrences-page {
+    --occ-text: #f8fafc;
+    --occ-muted: #94a3b8;
+    --occ-border: #263247;
+    --occ-surface: #111827;
+}
+
+body.dark-mode .search-field input,
+body.dark-mode .filter-field select,
+body.dark-mode .book-field input,
+body.dark-mode .book-field textarea,
+html[data-theme="dark"] .search-field input,
+html[data-theme="dark"] .filter-field select,
+html[data-theme="dark"] .book-field input,
+html[data-theme="dark"] .book-field textarea {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+body.dark-mode .book-field input[readonly],
+html[data-theme="dark"] .book-field input[readonly] {
+    background: #172033;
+}

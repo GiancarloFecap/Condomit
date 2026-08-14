@@ -1,7 +1,0 @@
-.env
-.env.*
-!.env.example
-.dbg/
-node_modules/
-*.log
-.netlify/

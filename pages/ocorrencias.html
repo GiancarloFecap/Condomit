@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condomit - Ocorrências</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css?v=021">
+    <link rel="stylesheet" href="../styles/theme.css?v=021">
+    <link rel="stylesheet" href="../styles/ocorrencias.css?v=021">
+</head>
+<body>
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/Logo-Lado.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar occurrences-topbar">
+                <div class="top-bar-left">
+                    <h1>Ocorrências</h1>
+                    <p>Registre e acompanhe acontecimentos do condomínio de forma organizada e segura.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn" type="button"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn" type="button"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn" type="button"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Usuário</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="occurrences-page">
+                <section class="occurrences-hero card-shell">
+                    <div class="occurrences-hero-copy">
+                        <span class="eyebrow"><i class="fas fa-book"></i> Livro digital de ocorrências</span>
+                        <h2>Central de ocorrências do condomínio</h2>
+                        <p>
+                            Utilize esta área para registrar uma nova ocorrência ou consultar os registros feitos por você.
+                            Síndicos também podem consultar as ocorrências do condomínio.
+                        </p>
+                    </div>
+                    <div class="occurrences-hero-badge" aria-hidden="true">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                </section>
+
+                <section class="occurrence-actions" aria-label="Ações de ocorrências">
+                    <button class="occurrence-action-card" id="openMyOccurrencesBtn" type="button">
+                        <span class="action-icon action-icon-blue"><i class="fas fa-folder-open"></i></span>
+                        <span class="action-copy">
+                            <strong>Minhas ocorrências</strong>
+                            <small>Veja todos os registros feitos por você.</small>
+                        </span>
+                        <i class="fas fa-chevron-right action-arrow"></i>
+                    </button>
+
+                    <button class="occurrence-action-card" id="openRegisterOccurrenceBtn" type="button">
+                        <span class="action-icon action-icon-green"><i class="fas fa-pen-to-square"></i></span>
+                        <span class="action-copy">
+                            <strong>Registrar uma ocorrência</strong>
+                            <small>Preencha o livro digital e assine o registro.</small>
+                        </span>
+                        <i class="fas fa-chevron-right action-arrow"></i>
+                    </button>
+
+                    <button class="occurrence-action-card syndic-only" id="openAllOccurrencesBtn" type="button" hidden>
+                        <span class="action-icon action-icon-amber"><i class="fas fa-magnifying-glass"></i></span>
+                        <span class="action-copy">
+                            <strong>Ver ocorrências</strong>
+                            <small>Consulte os registros do condomínio com busca e filtros.</small>
+                        </span>
+                        <i class="fas fa-chevron-right action-arrow"></i>
+                    </button>
+                </section>
+
+                <section class="syndic-occurrences card-shell" id="syndicOccurrencesSection" hidden>
+                    <div class="section-heading-row">
+                        <div>
+                            <span class="eyebrow">Visão do síndico</span>
+                            <h2>Ocorrências do condomínio</h2>
+                            <p id="allOccurrencesCounter">Carregando ocorrências...</p>
+                        </div>
+                        <button class="ghost-action" id="closeAllOccurrencesBtn" type="button">
+                            <i class="fas fa-chevron-up"></i>
+                            Recolher
+                        </button>
+                    </div>
+
+                    <div class="occurrence-filters">
+                        <label class="search-field">
+                            <span class="sr-only">Pesquisar ocorrências</span>
+                            <i class="fas fa-search"></i>
+                            <input id="allOccurrencesSearch" type="search" placeholder="Buscar por responsável, unidade, autor ou descrição...">
+                        </label>
+
+                        <label class="filter-field">
+                            <span>Função</span>
+                            <select id="allOccurrencesRoleFilter">
+                                <option value="todos">Todas</option>
+                                <option value="morador">Morador</option>
+                                <option value="porteiro">Porteiro</option>
+                                <option value="sindico">Síndico</option>
+                            </select>
+                        </label>
+
+                        <label class="filter-field">
+                            <span>Período</span>
+                            <select id="allOccurrencesPeriodFilter">
+                                <option value="todos">Todo o período</option>
+                                <option value="hoje">Hoje</option>
+                                <option value="7">Últimos 7 dias</option>
+                                <option value="30">Últimos 30 dias</option>
+                                <option value="90">Últimos 90 dias</option>
+                            </select>
+                        </label>
+
+                        <button class="ghost-action filter-clear" id="clearOccurrenceFiltersBtn" type="button">
+                            <i class="fas fa-filter-circle-xmark"></i>
+                            Limpar filtros
+                        </button>
+                    </div>
+
+                    <div class="occurrence-table-wrap">
+                        <table class="occurrence-table">
+                            <thead>
+                                <tr>
+                                    <th>Registro</th>
+                                    <th>Ocorrência</th>
+                                    <th>Responsável</th>
+                                    <th>Função</th>
+                                    <th>Unidade envolvida</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allOccurrencesTableBody">
+                                <tr>
+                                    <td colspan="6" class="table-empty">Carregando ocorrências...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal: minhas ocorrências -->
+    <div class="occurrence-modal-backdrop" id="myOccurrencesModal" aria-hidden="true">
+        <div class="occurrence-modal occurrence-list-modal" role="dialog" aria-modal="true" aria-labelledby="myOccurrencesTitle">
+            <div class="occurrence-modal-header">
+                <div>
+                    <span class="eyebrow">Histórico pessoal</span>
+                    <h2 id="myOccurrencesTitle">Minhas ocorrências</h2>
+                    <p id="myOccurrencesCounter">Carregando...</p>
+                </div>
+                <button class="modal-close" type="button" data-close-modal="myOccurrencesModal" aria-label="Fechar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="occurrence-modal-body">
+                <div class="my-occurrences-list" id="myOccurrencesList">
+                    <div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Carregando ocorrências...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: registrar ocorrência -->
+    <div class="occurrence-modal-backdrop" id="registerOccurrenceModal" aria-hidden="true">
+        <div class="occurrence-modal register-occurrence-modal" role="dialog" aria-modal="true" aria-labelledby="registerOccurrenceTitle">
+            <div class="occurrence-modal-header register-modal-titlebar">
+                <div>
+                    <span class="eyebrow"><i class="fas fa-book-open"></i> Condomit</span>
+                    <h2 id="registerOccurrenceTitle">Livro de Registro de Ocorrências</h2>
+                    <p>Preencha os dados abaixo. Os dados do responsável pelo registro são identificados automaticamente.</p>
+                </div>
+                <button class="modal-close" type="button" data-close-modal="registerOccurrenceModal" aria-label="Fechar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="occurrenceForm" class="occurrence-book-form">
+                <div class="book-grid book-grid-2">
+                    <label class="book-field">
+                        <span>Data do registro</span>
+                        <input id="registrationDate" type="text" readonly>
+                    </label>
+                    <label class="book-field">
+                        <span>Hora do registro</span>
+                        <input id="registrationTime" type="text" readonly>
+                    </label>
+                </div>
+
+                <div class="book-grid responsible-grid">
+                    <label class="book-field responsible-name-field">
+                        <span>Responsável pelo registro</span>
+                        <input id="occurrenceResponsibleName" type="text" readonly>
+                    </label>
+                    <label class="book-field">
+                        <span>Função</span>
+                        <input id="occurrenceResponsibleRole" type="text" readonly>
+                    </label>
+                </div>
+
+                <div class="book-grid book-grid-2">
+                    <label class="book-field">
+                        <span>Data da ocorrência</span>
+                        <input id="occurrenceDate" type="date" required>
+                    </label>
+                    <label class="book-field">
+                        <span>Hora da ocorrência</span>
+                        <input id="occurrenceTime" type="time" required>
+                    </label>
+                </div>
+
+                <div class="book-grid book-grid-2">
+                    <label class="book-field">
+                        <span>Unidade envolvida</span>
+                        <input id="occurrenceUnit" type="text" maxlength="120" placeholder="Ex.: Bloco A - Apto 101, garagem, portaria...">
+                    </label>
+                    <label class="book-field">
+                        <span>Autor da ocorrência</span>
+                        <input id="occurrenceAuthor" type="text" maxlength="120" placeholder="Nome, apartamento ou identificação (se conhecido)">
+                    </label>
+                </div>
+
+                <label class="book-field description-field">
+                    <span>Descrição da ocorrência</span>
+                    <textarea id="occurrenceDescription" rows="7" maxlength="3000" required placeholder="Descreva o que aconteceu com clareza, incluindo informações importantes para o registro."></textarea>
+                    <small><span id="occurrenceDescriptionCount">0</span>/3000 caracteres</small>
+                </label>
+
+                <div class="signature-section">
+                    <div class="signature-heading">
+                        <div>
+                            <span>Assinatura</span>
+                            <small>Desenhe sua assinatura na área abaixo usando o mouse ou o toque.</small>
+                        </div>
+                        <button class="signature-clear" id="clearSignatureBtn" type="button">
+                            <i class="fas fa-eraser"></i>
+                            Limpar assinatura
+                        </button>
+                    </div>
+                    <div class="signature-canvas-wrap" id="signatureCanvasWrap">
+                        <canvas id="signatureCanvas" aria-label="Área para desenhar a assinatura"></canvas>
+                        <span class="signature-placeholder" id="signaturePlaceholder">Assine aqui</span>
+                    </div>
+                    <p class="signature-error" id="signatureError" hidden>Faça sua assinatura antes de registrar a ocorrência.</p>
+                </div>
+
+                <div class="book-form-actions">
+                    <button class="ghost-action" type="button" data-close-modal="registerOccurrenceModal">Cancelar</button>
+                    <button class="primary-occurrence-action" id="saveOccurrenceBtn" type="submit">
+                        <i class="fas fa-floppy-disk"></i>
+                        Registrar ocorrência
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: detalhes -->
+    <div class="occurrence-modal-backdrop" id="occurrenceDetailsModal" aria-hidden="true">
+        <div class="occurrence-modal occurrence-details-modal" role="dialog" aria-modal="true" aria-labelledby="occurrenceDetailsTitle">
+            <div class="occurrence-modal-header">
+                <div>
+                    <span class="eyebrow">Registro completo</span>
+                    <h2 id="occurrenceDetailsTitle">Detalhes da ocorrência</h2>
+                    <p id="occurrenceDetailsSubtitle"></p>
+                </div>
+                <button class="modal-close" type="button" data-close-modal="occurrenceDetailsModal" aria-label="Fechar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <div class="occurrence-modal-body" id="occurrenceDetailsBody"></div>
+        </div>
+    </div>
+
+    <script src="../scripts/supabase-client.js?v=021"></script>
+    <script type="module" src="../scripts/supabase-auth.js"></script>
+    <script src="../scripts/sidebar-links.js?v=021"></script>
+    <script src="../scripts/ocorrencias.js?v=021"></script>
+    <script src="../scripts/topbar-actions.js?v=021"></script>
+    <script src="../scripts/condomit-alerts.js?v=021"></script>
+</body>
+</html>
