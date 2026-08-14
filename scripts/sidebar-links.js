@@ -53,7 +53,8 @@ const sidebarI18n = {
         access_history: 'Histórico de Acesso',
         emergency_button: 'Botão de Emergência',
         deliveries_authorization: 'Autorização de Entregas',
-        provider_control: 'Controle de Prestadores'
+        provider_control: 'Controle de Prestadores',
+        occurrences: 'Ocorrências'
     },
     en: {
         your_condo: 'Your Condo',
@@ -101,7 +102,8 @@ const sidebarI18n = {
         access_history: 'Access History',
         emergency_button: 'Emergency Button',
         deliveries_authorization: 'Delivery Authorization',
-        provider_control: 'Provider Control'
+        provider_control: 'Provider Control',
+        occurrences: 'Incident Reports'
     }
 };
 
@@ -219,7 +221,9 @@ const textTranslations = {
         'Usuário': 'User',
         'Síndico': 'Manager',
         'Morador': 'Resident',
-        'Porteiro': 'Porter'
+        'Porteiro': 'Porter',
+        'Ocorrências': 'Incident Reports',
+        'Registre e acompanhe acontecimentos do condomínio de forma organizada e segura.': 'Register and track condominium incidents in an organized and secure way.'
     }
 };
 
@@ -340,7 +344,8 @@ function getTargetForRoute(routeKey, userType) {
         'porteiro-historico': 'registro-entrada-saida.html',
         'porteiro-emergencia': 'index-porteiro.html#emergencia',
         'porteiro-entregas': 'autorizacao-entregas.html',
-        'porteiro-prestadores': 'controle-prestadores.html'
+        'porteiro-prestadores': 'controle-prestadores.html',
+        ocorrencias: 'ocorrencias.html'
     };
 
     return routeMap[routeKey] || '';
@@ -418,7 +423,8 @@ function getSidebarConfig(userType) {
             {
                 items: [
                     { labelKey: 'home', icon: 'fas fa-home', route: 'inicio' },
-                    { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' }
+                    { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' },
+                    { labelKey: 'occurrences', icon: 'fas fa-clipboard-list', route: 'ocorrencias' }
                 ]
             },
             {
@@ -460,7 +466,8 @@ function getSidebarConfig(userType) {
                 items: [
                     { labelKey: 'mural', icon: 'fas fa-bullhorn', route: 'mural' },
                     { labelKey: 'suggestions', icon: 'fas fa-lightbulb', route: 'sugestoes' },
-                    { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' }
+                    { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' },
+                    { labelKey: 'occurrences', icon: 'fas fa-clipboard-list', route: 'ocorrencias' }
                 ]
             },
             {
@@ -506,7 +513,8 @@ function getSidebarConfig(userType) {
             items: [
                 { labelKey: 'mural', icon: 'fas fa-bullhorn', route: 'mural' },
                 { labelKey: 'suggestions_long', icon: 'fas fa-lightbulb', route: 'sugestoes' },
-                { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' }
+                { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' },
+                { labelKey: 'occurrences', icon: 'fas fa-clipboard-list', route: 'ocorrencias' }
             ]
         },
         {
@@ -668,7 +676,8 @@ function translateTitle(lang = getAppLanguage()) {
         'Condomit - Liberação de Visitantes': 'Condomit - Visitor Release',
         'Condomit - Registro de Entrada e Saída': 'Condomit - Entry and Exit Log',
         'Condomit - Autorização de Entregas': 'Condomit - Delivery Authorization',
-        'Condomit - Controle de Prestadores': 'Condomit - Provider Control'
+        'Condomit - Controle de Prestadores': 'Condomit - Provider Control',
+        'Condomit - Ocorrências': 'Condomit - Incident Reports'
     };
 
     document.title = titleMap[currentTitle] || currentTitle;
