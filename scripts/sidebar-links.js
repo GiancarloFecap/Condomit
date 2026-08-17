@@ -242,6 +242,7 @@ const placeholderTranslations = {
         'Ex: A': 'Ex: A',
         '(11) 99999-9999': '(11) 99999-9999',
         'Informações adicionais (opcional)': 'Additional information (optional)',
+        'Buscar por responsável, unidade, autor ou descrição...': 'Search by responsible person, unit, author or description...',
         'visitante@email.com': 'visitor@email.com'
     }
 };
@@ -555,6 +556,23 @@ Object.assign(textTranslations.en, {
     "Ver": "View",
     "Não informada": "Not Informed",
     "Não informado": "Not Informed",
+    "Período": "Period",
+    "Você ainda não registrou nenhuma ocorrência.": "You have not registered any incidents yet.",
+    "Não foi possível carregar suas ocorrências.": "Could not load your incidents.",
+    "Não foi possível carregar os registros.": "Could not load the records.",
+    "Nenhuma ocorrência corresponde aos filtros selecionados.": "No incidents match the selected filters.",
+    "Ocorrência registrada com sucesso.": "Incident registered successfully.",
+    "Assinatura indisponível": "Signature unavailable",
+    "Data não informada": "Date not provided",
+    "Não foi possível identificar o condomínio da sua conta.": "Could not identify the condominium linked to your account.",
+    "Não foi possível identificar o e-mail do usuário.": "Could not identify the user's email.",
+    "A conexão com o Supabase não está disponível nesta página.": "The Supabase connection is not available on this page.",
+    "Preencha a data, a hora e a descrição da ocorrência.": "Fill in the incident date, time and description.",
+    "A área de assinatura não está disponível.": "The signature area is not available.",
+    "Registrando...": "Registering...",
+    "Erro ao carregar suas ocorrências.": "Error loading your incidents.",
+    "Erro ao carregar ocorrências.": "Error loading incidents.",
+    "Sempre verifique a documentação e libere o acesso apenas para prestadores autorizados e vinculados ao serviço esperado.": "Always verify the documentation and allow access only to authorized providers linked to the expected service.",
     "Detalhes da Assembleia": "Assembly Details",
     "Visualize todas as informações e participe ativamente": "View all information and participate actively",
     "Carregando detalhes da assembleia...": "Loading assembly details...",
@@ -827,7 +845,89 @@ Object.assign(textTranslations.en, {
     "Todos os registros exibidos pertencem ao mesmo CEP de condomínio do porteiro logado e mostram a unidade do morador responsável.": "All displayed records belong to the same condominium ZIP code as the logged-in porter and show the responsible resident’s unit."
 });
 
+Object.assign(textTranslations.en, {
+    "Conta e Perfil": "Account and Profile",
+    "Foto de perfil": "Profile Photo",
+    "Carregando reservas...": "Loading reservations...",
+    "Mural de Avisos": "Notice Board",
+    "IA - Comunicados Automáticos": "AI - Automatic Notices",
+    "Canal de Sugestões": "Suggestions Channel",
+    "Assembleia": "Assembly",
+    "Autorização de Entregas": "Delivery Authorization",
+    "Perfil do usuário": "User Profile",
+    "Sair da Conta": "Sign Out",
+    "Segurança e acesso": "Security and Access",
+    "Autenticação de dois fatores": "Two-Factor Authentication",
+    "Mudar de condomínio": "Change Condominium",
+    "Comunicados do síndico": "Manager Notices",
+    "Avisos gerais do condomínio": "General Condominium Notices",
+    "Reserva de áreas comuns": "Common Area Reservations",
+    "Reserva e áreas comuns": "Reservations and Common Areas",
+    "Lembretes da reserva": "Reservation Reminders",
+    "Confirmação/lembrete cancelamento": "Cancellation Reminder/Confirmation",
+    "Reserva da área comum": "Reserve Common Area",
+    "Política de privacidade": "Privacy Policy",
+    "Contatos úteis": "Useful Contacts",
+    "Prestadores de serviços": "Service Providers",
+    "médio": "medium",
+    "Versão do app: 1.0.0": "App version: 1.0.0",
+    "Verifique novas atualizações": "Check for updates",
+    "Todos os direitos reservados": "All rights reserved",
+    "Veja todas as reservas feitas na sua conta.": "See all reservations made on your account.",
+    "Veja os dados cadastrados do seu condomínio.": "See the registered details of your condominium.",
+    "Carregando informações do condomínio...": "Loading condominium information...",
+    "Escolha o que deseja registrar.": "Choose what you want to register.",
+    "Cadastre um dependente ligado à sua unidade.": "Register a dependent linked to your unit.",
+    "Cadastre um veículo autorizado no condomínio.": "Register a vehicle authorized in the condominium.",
+    "Registrar dependente": "Register Dependent",
+    "Registrar carro": "Register Vehicle",
+    "Manutenção": "Maintenance",
+    "Olá,": "Hello,",
+    "AVISOS E COMUNICADOS": "NOTICES AND COMMUNICATIONS",
+    "COMUNICAÇÃO E RELACIONAMENTO": "COMMUNICATION AND RELATIONSHIPS",
+    "ASSEMBLEIA E RESERVAS": "ASSEMBLIES AND RESERVATIONS",
+    "IA E SERVIÇOS": "AI AND SERVICES",
+    "Descreva o comunicado no passo acima para que a IA gere um rascunho profissional e personalizado para o seu condomínio. Você pode incluir detalhes como: • Data, horário e local do evento ou manutenção • Bloco e apartamento afetados (se aplicável) • Prazo para resposta ou ação dos moradores • Tom do comunicado (formal, amigável, urgente)": "Describe the notice in the step above so AI can generate a professional, customized draft for your condominium. You can include details such as: • Date, time and location of the event or maintenance • Affected block and apartment (if applicable) • Deadline for residents to respond or take action • Notice tone (formal, friendly, urgent)",
+    "Use o botão \"Refinar\" para ajustar o tom do texto": "Use the \"Refine\" button to adjust the tone",
+    "Para comunicados urgentes, mencione \"urgente\" na descrição": "For urgent notices, mention \"urgent\" in the description",
+    "Assembleia de Condominio": "Condominium Assembly",
+    "Assembleia Geral Ordinaria": "Ordinary General Assembly",
+    "Assembleia Extraordinaria - Reforma do Hall Principal": "Extraordinary Assembly - Main Hall Renovation"
+});
+
+Object.assign(placeholderTranslations.en, {
+    "Ex.: Filho(a), responsável": "Ex.: Child, guardian",
+    "Ex: Assembleia Geral Ordinaria": "Ex: Ordinary General Assembly",
+    "Buscar por itens, categorias ou vendedor...": "Search by items, categories or seller...",
+    "Buscar por nome, empresa ou serviço...": "Search by name, company or service...",
+    "Nome completo": "Full name",
+    "Ex: Instalação elétrica": "Ex: Electrical installation",
+    "Escreva um comentário sobre a assembleia...": "Write a comment about the assembly...",
+    "Buscar conversa...": "Search conversation...",
+    "Digite sua mensagem...": "Type your message...",
+    "Ex: Manutenção do elevador do bloco A amanhã das 8h às 12h. Pedimos que os moradores utilizem o elevador social. Agradecemos a compreensão.": "Ex: Maintenance on the Block A elevator tomorrow from 8 AM to 12 PM. Please use the service elevator. Thank you for your understanding.",
+    "Buscar por nome, documento ou responsável...": "Search by name, document or responsible person...",
+    "Buscar sugestões...": "Search suggestions...",
+    "Digite o título da sua sugestão": "Enter your suggestion title",
+    "Descreva detalhadamente a sua sugestão...": "Describe your suggestion in detail...",
+    "Pergunte algo sobre a Condomit ou seu condomínio...": "Ask something about Condomit or your condominium...",
+    "Buscar por nome do visitante ou responsável...": "Search by visitor or responsible person...",
+    "Nome, apartamento ou identificação (se conhecido)": "Name, apartment or identification (if known)",
+    "Descreva o que aconteceu com clareza, incluindo informações importantes para o registro.": "Clearly describe what happened, including important information for the record.",
+    "Buscar por morador, entrega ou código...": "Search by resident, delivery or code...",
+    "Nome do morador": "Resident name",
+    "Informações adicionais sobre a entrega": "Additional delivery information"
+});
+
 const dynamicTextPatternsEn = [
+    [/^Ocorrência #(\d+)$/i, 'Incident #$1'],
+    [/^Ocorrência #(\d+)\s*•\s*registrada em\s*(.+)$/i, 'Incident #$1 • recorded on $2'],
+    [/^Olá,\s*(.+)!\s*:\)$/i, 'Hello, $1! :)'],
+    [/^Eletricista liberado até\s+(.+)$/i, 'Electrician authorized until $1'],
+    [/^Limpeza da piscina às\s+(.+)$/i, 'Pool cleaning at $1'],
+    [/^Manutenção elevador amanhã às\s+(.+)$/i, 'Elevator maintenance tomorrow at $1'],
+    [/^Entrega para\s+(.+)$/i, 'Delivery for $1'],
+    [/^Encomenda para\s+(.+)$/i, 'Package for $1'],
     [/(\d+) manuten(?:ção|ções) encontrada(?:s)?/gi, '$1 maintenance item(s) found'],
     [/(\d+) ocorrência encontrada/gi, '$1 incident found'],
     [/(\d+) ocorrências encontradas/gi, '$1 incidents found'],
@@ -860,7 +960,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
         renderSidebar(sidebarRuntime.currentUser, sidebarRuntime.currentUserType, sidebarRuntime.currentPage, lang);
         bindSupportButtons('mailto:contato.condomit@gmail.com?subject=Contato%20Condomit');
-        if (sidebarRuntime.currentPage !== 'configuracoes.html') translateDocument(lang);
+        translateDocument(lang);
     };
 
     window.applyGlobalAppLanguage(getAppLanguage());
@@ -1196,6 +1296,7 @@ function translateTextNodes(lang = getAppLanguage(), root = document.body) {
         if (!node || node.nodeType !== Node.TEXT_NODE || !node.nodeValue || !node.nodeValue.trim()) return;
         const parent = node.parentElement;
         if (!parent || ['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA'].includes(parent.tagName)) return;
+        if (parent.closest('[data-no-translate], [translate="no"]')) return;
         let record = sidebarTextNodes.get(node);
         if (!record || typeof record !== 'object') record = { pt: node.nodeValue, rendered: node.nodeValue };
         else if (node.nodeValue !== record.rendered) record.pt = node.nodeValue;
@@ -1210,6 +1311,7 @@ function translateTextNodes(lang = getAppLanguage(), root = document.body) {
             if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
             const parent = node.parentElement;
             if (!parent || ['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA'].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+            if (parent.closest('[data-no-translate], [translate="no"]')) return NodeFilter.FILTER_REJECT;
             return NodeFilter.FILTER_ACCEPT;
         }
     });
@@ -1222,7 +1324,18 @@ function translateRawText(value, lang = getAppLanguage()) {
     const original = String(value || '');
     const trimmed = original.trim();
     if (!trimmed) return original;
-    const translated = textTranslations[lang]?.[trimmed];
+
+    /*
+     * Parágrafos formatados em várias linhas no HTML possuem quebras e
+     * indentação internas. Normalizamos apenas a chave de consulta; o texto
+     * registrado pelo usuário não é alterado e elementos marcados com
+     * data-no-translate/translate="no" são ignorados pelo walker.
+     */
+    const normalizedKey = trimmed.replace(/\s+/g, ' ');
+    const translated =
+        textTranslations[lang]?.[trimmed] ||
+        textTranslations[lang]?.[normalizedKey];
+
     if (translated) return original.replace(trimmed, translated);
     const greetingMorning = trimmed.match(/^Bom dia,\s*(.+)!$/i);
     if (greetingMorning) return original.replace(trimmed, `Good morning, ${greetingMorning[1]}!`);
@@ -1233,9 +1346,13 @@ function translateRawText(value, lang = getAppLanguage()) {
     return patternTranslated !== trimmed ? original.replace(trimmed, patternTranslated) : original;
 }
 
+window.translateAppText = function translateAppText(value, lang = getAppLanguage()) {
+    return translateRawText(value, lang);
+};
+
 let sidebarLanguageObserver = null;
 function installLanguageObserver() {
-    if (sidebarLanguageObserver || sidebarRuntime.currentPage === 'configuracoes.html') return;
+    if (sidebarLanguageObserver) return;
     sidebarLanguageObserver = new MutationObserver((mutations) => {
         const lang = getAppLanguage();
         if (lang !== 'en') return;

@@ -652,6 +652,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 profilePhoto: rawUser.profile_photo || rawUser.profilePhoto || null
             };
 
+            /*
+             * O usuário informou as credenciais e o login foi concluído.
+             * A partir daqui a restauração automática de sessão volta a ser
+             * permitida em recarregamentos futuros.
+             */
+            try { localStorage.removeItem('authExplicitLogoutAt'); } catch (_) {}
+
             sessionStorage.setItem(
                 'condominiumUser',
                 JSON.stringify(loadedUser)

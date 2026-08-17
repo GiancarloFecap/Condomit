@@ -2,6 +2,15 @@
     'use strict';
 
     let inFlight = null;
+    const EXPLICIT_LOGOUT_KEY = 'authExplicitLogoutAt';
+
+    function hasExplicitLogoutGuard() {
+        try {
+            return Boolean(localStorage.getItem(EXPLICIT_LOGOUT_KEY));
+        } catch (_) {
+            return false;
+        }
+    }
 
     function normalizeType(user) {
         const raw = String(user?.user_type || user?.type || '').trim().toLowerCase();
@@ -91,6 +100,15 @@
             const hash = String(window.location.hash || '');
             const search = String(window.location.search || '');
             if (/type=recovery/i.test(hash + search)) return { user: null, redirected: false };
+
+            /*
+             * Um clique explícito em "Sair" deve sempre levar a um novo login.
+             * Mesmo que algum token antigo ainda exista no storage interno do
+             * Supabase, não restauramos a conta automaticamente.
+             */
+            if (hasExplicitLogoutGuard()) {
+                return { user: null, redirected: false, explicitLogout: true };
+            }
 
             const client = await waitForSupabase();
             if (!client) return { user: null, redirected: false };

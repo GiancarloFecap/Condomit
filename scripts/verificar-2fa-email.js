@@ -138,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             sessionStorage.removeItem('condomitPendingTwoFactorLogin');
             sessionStorage.removeItem('condomitVerifiedTwoFactorUserType');
+            try { localStorage.removeItem('authExplicitLogoutAt'); } catch (_) {}
 
             /*
              * Se o projeto possuir o restaurador de sessão carregado, usa-o

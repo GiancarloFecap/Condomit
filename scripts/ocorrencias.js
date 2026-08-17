@@ -103,8 +103,21 @@ function setupOccurrenceShell(user) {
     if (avatarEl) avatarEl.textContent = getInitials(name);
     window.syncAllAvatars?.(user);
 
+    const myOccurrencesButton = document.getElementById('openMyOccurrencesBtn');
+    if (myOccurrencesButton) {
+        myOccurrencesButton.hidden = false;
+        myOccurrencesButton.disabled = false;
+        myOccurrencesButton.removeAttribute('aria-hidden');
+    }
+
     const syndicButton = document.getElementById('openAllOccurrencesBtn');
-    if (syndicButton) syndicButton.hidden = occurrenceState.userType !== 'sindico';
+    if (syndicButton) {
+        const canViewCondominiumOccurrences = occurrenceState.userType === 'sindico';
+        syndicButton.hidden = !canViewCondominiumOccurrences;
+        syndicButton.disabled = !canViewCondominiumOccurrences;
+        syndicButton.setAttribute('aria-hidden', String(!canViewCondominiumOccurrences));
+    }
+
     document.querySelector('.occurrence-actions')?.classList.toggle('is-syndic', occurrenceState.userType === 'sindico');
 }
 
@@ -280,7 +293,10 @@ async function loadAllOccurrences(force = false) {
     if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="table-empty"><i class="fas fa-spinner fa-spin"></i> Carregando ocorrências...</td></tr>';
 
     try {
-        occurrenceState.allOccurrences = await fetchOccurrences('');
+        const cepFilter = occurrenceState.cep
+            ? `&cep=eq.${encodeURIComponent(occurrenceState.cep)}`
+            : '';
+        occurrenceState.allOccurrences = await fetchOccurrences(cepFilter);
         occurrenceState.allLoaded = true;
         renderAllOccurrences();
     } catch (error) {
@@ -434,9 +450,9 @@ function renderMyOccurrences() {
                 <div class="my-occurrence-meta">
                     <span><i class="fas fa-calendar-day"></i> ${escapeOccurrenceHtml(formatOccurrenceDate(row.occurrence_date))}</span>
                     <span><i class="fas fa-clock"></i> ${escapeOccurrenceHtml(formatOccurrenceTime(row.occurrence_time))}</span>
-                    ${row.unit_involved ? `<span><i class="fas fa-building"></i> ${escapeOccurrenceHtml(row.unit_involved)}</span>` : ''}
+                    ${row.unit_involved ? `<span><i class="fas fa-building"></i> <span data-no-translate>${escapeOccurrenceHtml(row.unit_involved)}</span></span>` : ''}
                 </div>
-                <p class="my-occurrence-preview">${escapeOccurrenceHtml(row.description || '')}</p>
+                <p class="my-occurrence-preview" data-no-translate>${escapeOccurrenceHtml(row.description || '')}</p>
             </div>
             <button class="view-occurrence-btn" type="button" data-view-occurrence="${escapeOccurrenceHtml(row.id)}">
                 <i class="fas fa-eye"></i> Ver registro
@@ -445,6 +461,7 @@ function renderMyOccurrences() {
     `).join('');
 
     bindOccurrenceDetailButtons(list, rows);
+    window.applyGlobalAppLanguage?.();
 }
 
 function renderAllOccurrences() {
@@ -467,9 +484,11 @@ function renderAllOccurrences() {
                 <small>${escapeOccurrenceHtml(formatDateTime(row.created_at))}</small>
             </td>
             <td>${escapeOccurrenceHtml(formatOccurrenceDate(row.occurrence_date))}<br><small>${escapeOccurrenceHtml(formatOccurrenceTime(row.occurrence_time))}</small></td>
-            <td>${escapeOccurrenceHtml(row.reporter_name || 'Usuário')}</td>
+            <td><span data-no-translate>${escapeOccurrenceHtml(row.reporter_name || 'Usuário')}</span></td>
             <td><span class="role-badge role-${escapeOccurrenceHtml(normalizeStoredRole(row.reporter_role))}">${escapeOccurrenceHtml(occurrenceRoleLabel(row.reporter_role))}</span></td>
-            <td>${escapeOccurrenceHtml(row.unit_involved || 'Não informada')}</td>
+            <td>${row.unit_involved
+                ? `<span data-no-translate>${escapeOccurrenceHtml(row.unit_involved)}</span>`
+                : 'Não informada'}</td>
             <td>
                 <button class="view-occurrence-btn" type="button" data-view-occurrence="${escapeOccurrenceHtml(row.id)}">
                     <i class="fas fa-eye"></i> Ver
@@ -479,6 +498,7 @@ function renderAllOccurrences() {
     `).join('');
 
     bindOccurrenceDetailButtons(tbody, rows);
+    window.applyGlobalAppLanguage?.();
 }
 
 function getFilteredAllOccurrences() {
@@ -556,7 +576,7 @@ function openOccurrenceDetails(row) {
         <div class="occurrence-detail-grid">
             <div class="detail-block">
                 <span>Responsável pelo registro</span>
-                <strong>${escapeOccurrenceHtml(row.reporter_name || 'Usuário')}</strong>
+                <strong data-no-translate>${escapeOccurrenceHtml(row.reporter_name || 'Usuário')}</strong>
             </div>
             <div class="detail-block">
                 <span>Função</span>
@@ -572,15 +592,15 @@ function openOccurrenceDetails(row) {
             </div>
             <div class="detail-block">
                 <span>Unidade envolvida</span>
-                <strong>${escapeOccurrenceHtml(row.unit_involved || 'Não informada')}</strong>
+                <strong${row.unit_involved ? ' data-no-translate' : ''}>${escapeOccurrenceHtml(row.unit_involved || 'Não informada')}</strong>
             </div>
             <div class="detail-block">
                 <span>Autor da ocorrência</span>
-                <strong>${escapeOccurrenceHtml(row.occurrence_author || 'Não informado')}</strong>
+                <strong${row.occurrence_author ? ' data-no-translate' : ''}>${escapeOccurrenceHtml(row.occurrence_author || 'Não informado')}</strong>
             </div>
             <div class="detail-block detail-full">
                 <span>Descrição da ocorrência</span>
-                <p>${escapeOccurrenceHtml(row.description || '')}</p>
+                <p data-no-translate>${escapeOccurrenceHtml(row.description || '')}</p>
             </div>
             <div class="detail-block detail-full">
                 <span>Assinatura</span>
@@ -592,6 +612,7 @@ function openOccurrenceDetails(row) {
     `;
 
     openOccurrenceModal('occurrenceDetailsModal');
+    window.applyGlobalAppLanguage?.();
 }
 
 function renderEmptyState(message, icon) {
@@ -732,8 +753,16 @@ function getInitials(name) {
         .join('') || 'US';
 }
 
+function getOccurrenceLocale() {
+    try {
+        return localStorage.getItem('app-language') === 'en' ? 'en-US' : 'pt-BR';
+    } catch (_) {
+        return 'pt-BR';
+    }
+}
+
 function formatDateBr(date) {
-    return new Intl.DateTimeFormat('pt-BR').format(date);
+    return new Intl.DateTimeFormat(getOccurrenceLocale()).format(date);
 }
 
 function formatTime(date) {
@@ -760,7 +789,7 @@ function startOfToday() {
 
 function formatOccurrenceDate(value) {
     const date = parseDateOnly(value);
-    return date ? new Intl.DateTimeFormat('pt-BR').format(date) : 'Não informada';
+    return date ? new Intl.DateTimeFormat(getOccurrenceLocale()).format(date) : 'Não informada';
 }
 
 function formatOccurrenceTime(value) {
@@ -773,7 +802,7 @@ function formatDateTime(value) {
     if (!value) return 'Data não informada';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
-    return new Intl.DateTimeFormat('pt-BR', {
+    return new Intl.DateTimeFormat(getOccurrenceLocale(), {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',

@@ -3203,6 +3203,9 @@ async function performFullLogout(
               'condominium'
             ) ||
             key.startsWith(
+              'sb-'
+            ) ||
+            key.startsWith(
               'release_statuses:'
             ) ||
             key.startsWith(
@@ -3264,6 +3267,19 @@ async function performFullLogout(
       try {
         localStorage.removeItem(
           'sb-127.0.0.1-auth-token'
+        );
+      } catch (_) {}
+
+      /*
+       * Mantém uma marca fora das chaves de sessão da Condomit/Supabase.
+       * Ela impede que inicio.html/entrar.html restaurem uma sessão antiga
+       * logo após um logout explícito. A marca só é removida após um novo
+       * login concluído com sucesso.
+       */
+      try {
+        localStorage.setItem(
+          'authExplicitLogoutAt',
+          String(Date.now())
         );
       } catch (_) {}
     }

@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // A conclusão do cadastro é conferida no banco. Isso evita o redirecionamento
     // momentâneo causado pelas antigas flags de sessionStorage.
-    const linkedCep = await resolveCurrentCondoCep();
+    const linkedCep = await resolveCurrentCondoCep(currentUser);
     if (!linkedCep) {
         window.location.href = 'entrar-condominio-porteiro.html';
         return;
@@ -76,14 +76,79 @@ async function rpc(name, payload = {}) {
     });
 }
 
-async function resolveCurrentCondoCep() {
+async function resolveCurrentCondoCep(user = null) {
+    const normalize = (value) => {
+        const raw = String(value || '').trim();
+        const digits = raw.replace(/\D/g, '');
+        return digits.length === 8 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : raw;
+    };
+
+    /*
+     * 1) Usa o resolvedor compartilhado quando disponível.
+     * 2) Consulta a RPC autenticada.
+     * 3) Consulta o vínculo diretamente.
+     * 4) Por último, usa o vínculo já validado na sessão.
+     *
+     * Isso evita o ciclo index-porteiro -> entrar-condominio-porteiro -> index-porteiro
+     * quando uma das formas de consulta do CEP falha temporariamente.
+     */
+    try {
+        if (typeof window.resolveUserCondominiumCep === 'function') {
+            const resolved = await window.resolveUserCondominiumCep(user);
+            if (resolved) return normalize(resolved);
+        }
+    } catch (error) {
+        console.warn('Falha ao resolver CEP pelo helper compartilhado:', error?.message || error);
+    }
+
     try {
         const result = await rpc('condomit_current_user_cep');
-        return typeof result === 'string' ? result : '';
+        if (typeof result === 'string' && result.trim()) return normalize(result);
+        if (Array.isArray(result)) {
+            const value = result[0]?.condomit_current_user_cep || result[0]?.cep || '';
+            if (value) return normalize(value);
+        }
+        const value = result?.condomit_current_user_cep || result?.cep || '';
+        if (value) return normalize(value);
     } catch (error) {
-        console.warn('Não foi possível validar o vínculo do porteiro:', error?.message || error);
-        return '';
+        console.warn('Não foi possível validar o vínculo do porteiro pela RPC:', error?.message || error);
     }
+
+    const email = String(user?.email || '').trim();
+    if (email) {
+        try {
+            const rows = await window.supabaseFetch(
+                `/user_condominiums?select=condominium_id&user_email=eq.${encodeURIComponent(email)}&limit=1`
+            );
+            const row = Array.isArray(rows) ? rows[0] : rows;
+            if (row?.condominium_id) return normalize(row.condominium_id);
+        } catch (error) {
+            console.warn('Não foi possível validar o vínculo do porteiro pela tabela:', error?.message || error);
+        }
+
+        try {
+            const response = await fetch(
+                `/api/user_condominiums?user_email=eq.${encodeURIComponent(email)}`
+            );
+            if (response.ok) {
+                const rows = await response.json().catch(() => []);
+                const row = Array.isArray(rows) ? rows[0] : rows;
+                if (row?.condominium_id) return normalize(row.condominium_id);
+            }
+        } catch (error) {
+            console.warn('Não foi possível validar o vínculo do porteiro pela API:', error?.message || error);
+        }
+    }
+
+    const condominium = user?.condominium && typeof user.condominium === 'object'
+        ? user.condominium
+        : {};
+    return normalize(
+        condominium.cep ||
+        condominium.condominium_id ||
+        condominium.condominium_cep ||
+        ''
+    );
 }
 
 function setupPorterShell(currentUser) {
