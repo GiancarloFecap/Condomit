@@ -58,9 +58,6 @@ function initDeliveryShell(user) {
     const dateLabel = document.getElementById('currentDateLabel');
     if (dateLabel) dateLabel.textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
 
-    document.getElementById('newDeliveryBtn')?.addEventListener('click', () => {
-        window.location.href = 'configuracoes.html#registrar-encomenda';
-    });
 }
 
 function bindDeliveryControls() {

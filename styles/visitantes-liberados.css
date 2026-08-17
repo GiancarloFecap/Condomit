@@ -824,3 +824,25 @@ html[data-theme="dark"] .info-row > strong {
         border-top-color: #2d3b50;
     }
 }
+
+/* 024 - ação principal dentro da página, fora do top bar */
+.page-primary-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.page-primary-actions .btn-liberar-visitante {
+    min-height: 44px;
+}
+
+@media (max-width: 640px) {
+    .page-primary-actions {
+        justify-content: stretch;
+    }
+
+    .page-primary-actions .btn-liberar-visitante {
+        width: 100%;
+        justify-content: center;
+    }
+}

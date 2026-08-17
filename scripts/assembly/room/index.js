@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom } from './livekit.js';
+import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js';
 import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js';
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js';
@@ -48,6 +48,17 @@ function bindControls() {
   });
   $('btn-camera')?.addEventListener('click', async () => {
     try { await toggleCamera(); } catch (e) { toast('Não foi possível alternar câmera', 'error'); }
+  });
+  $('btn-switch-camera')?.addEventListener('click', async () => {
+    const button = $('btn-switch-camera');
+    if (button) button.disabled = true;
+    try {
+      await switchMobileCamera();
+    } catch (e) {
+      toast('Não foi possível trocar entre a câmera frontal e traseira', 'error');
+    } finally {
+      if (button) button.disabled = false;
+    }
   });
   $('btn-screen')?.addEventListener('click', async () => {
     try { await toggleScreenShare(); } catch (e) { toast('Não foi possível compartilhar tela', 'error'); }
@@ -507,6 +518,12 @@ async function init() {
     bindRoomActions();
 
     await connectToRoom(tokenInfo);
+
+    const switchCameraButton = $('btn-switch-camera');
+    if (switchCameraButton) {
+      switchCameraButton.hidden = !(await canSwitchMobileCamera());
+    }
+
     startAssemblyTranscription();
 
     try { await presenceJoin(); } catch (_) {}

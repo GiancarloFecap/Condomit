@@ -623,8 +623,14 @@ body {
   .call-header-right .btn {
     display: none;
   }
+  .call-controls {
+    gap: 6px;
+    padding-inline: 6px;
+  }
   .control-btn {
-    min-width: 76px;
+    min-width: 44px;
+    max-width: 72px;
+    flex: 1 1 0;
     height: 50px;
   }
   .control-btn span {
@@ -1129,4 +1135,16 @@ body {
 @media (max-width: 820px) {
   .call-transcription span { display: none; }
   .call-transcription { width: 36px; height: 36px; padding: 0; justify-content: center; }
+}
+
+
+/* 024 - alternância de câmera frontal/traseira em dispositivos móveis */
+.control-btn[hidden] {
+  display: none !important;
+}
+
+#btn-switch-camera:disabled {
+  opacity: .55;
+  cursor: wait;
+  transform: none;
 }

@@ -850,3 +850,9 @@ body.dark-mode .book-field input[readonly],
 html[data-theme="dark"] .book-field input[readonly] {
     background: #172033;
 }
+
+/* 024 - [hidden] deve prevalecer sobre display:flex do cartão. */
+.occurrence-action-card[hidden],
+.syndic-only[hidden] {
+    display: none !important;
+}
