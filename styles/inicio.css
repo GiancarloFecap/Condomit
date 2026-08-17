@@ -751,3 +751,224 @@ body {
         gap: 18px;
     }
 }
+
+/* ============================================================
+   025 - Responsividade refinada da landing page
+============================================================ */
+@media (max-width: 768px) {
+    .container {
+        width: 100%;
+        max-width: 100%;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .hero-section {
+        min-height: auto;
+    }
+
+    .header-content {
+        min-height: 92px;
+        padding: 10px 0;
+        gap: 12px;
+    }
+
+    .logo {
+        width: min(50vw, 190px);
+        height: auto;
+        max-height: 92px;
+        object-fit: contain;
+        margin: 0;
+    }
+
+    .header-nav {
+        margin-left: auto;
+        gap: 8px;
+        flex: 0 0 auto;
+    }
+
+    .header-nav .btn-login {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 44px;
+        padding: 9px 13px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .header-nav .btn-signup {
+        display: none !important;
+    }
+
+    .hero-content {
+        padding-top: 74px;
+        padding-bottom: 46px;
+    }
+
+    .hero-text {
+        max-width: 100%;
+    }
+
+    .hero-text h1 {
+        font-size: clamp(2rem, 8.6vw, 2.7rem);
+        line-height: 1.12;
+        margin-bottom: 22px;
+        text-wrap: balance;
+    }
+
+    .hero-text p {
+        font-size: 1rem;
+        line-height: 1.55;
+        margin-bottom: 28px;
+    }
+
+    .hero-buttons {
+        gap: 12px;
+    }
+
+    .hero-buttons a {
+        width: 100%;
+        min-height: 52px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        text-align: center;
+    }
+
+    .hero-indicators {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px 14px;
+        padding-top: 34px;
+    }
+
+    .indicator-item {
+        align-items: flex-start;
+        font-size: .92rem;
+        line-height: 1.3;
+    }
+
+    .sobre-section,
+    .planos-section,
+    .faq-section {
+        padding-top: 50px;
+        padding-bottom: 50px;
+    }
+
+    .sobre-content,
+    .faq-content {
+        gap: 36px;
+    }
+
+    .sobre-left .section-title,
+    .section-title,
+    .section-title-center {
+        font-size: clamp(1.55rem, 6vw, 2rem);
+        line-height: 1.2;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .feature-card {
+        min-height: 108px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 16px 10px;
+    }
+
+    .feature-card h4 {
+        font-size: .82rem;
+    }
+
+    .sobre-image-wrapper {
+        padding-bottom: 0;
+    }
+
+    .stats-card {
+        position: static;
+        transform: none;
+        width: 100%;
+        margin-top: 12px;
+        padding: 16px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .stat-item {
+        justify-content: flex-start;
+    }
+
+    .planos-grid {
+        gap: 18px;
+    }
+
+    .plano-card,
+    .plano-card.featured {
+        transform: none !important;
+        width: 100%;
+    }
+
+    .faq-contact,
+    .faq-item {
+        max-width: 100%;
+    }
+
+    .footer {
+        padding-top: 38px;
+    }
+
+    .footer-content {
+        gap: 28px;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .header-content {
+        min-height: 78px;
+    }
+
+    .logo {
+        width: min(48vw, 175px);
+        max-height: 76px;
+    }
+
+    .header-nav .btn-login {
+        min-width: 82px;
+        padding: 8px 10px;
+    }
+
+    .hero-content {
+        padding-top: 56px;
+        padding-bottom: 36px;
+    }
+
+    .hero-text h1 {
+        font-size: clamp(1.85rem, 9vw, 2.3rem);
+    }
+
+    .hero-text p {
+        font-size: .96rem;
+    }
+
+    .hero-indicators {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+}

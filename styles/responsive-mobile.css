@@ -1,0 +1,541 @@
+/* ============================================================
+   Condomit 025 - Camada global de responsividade para celulares
+   Carregada por ultimo para neutralizar larguras/posicionamentos
+   de desktop sem alterar o layout em telas grandes.
+============================================================ */
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    max-width: 100%;
+}
+
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+img,
+video,
+canvas,
+iframe,
+svg {
+    max-width: 100%;
+}
+
+.dashboard-sindico,
+.main-content {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.main-content {
+    width: 100%;
+}
+
+/* Elementos de dados largos devem rolar apenas dentro do bloco. */
+.table-responsive,
+.table-container,
+.table-wrapper,
+.maintenance-table-wrapper,
+.access-table-wrapper,
+.residents-table-wrapper,
+.occurrence-table-wrapper,
+.visitantes-table-wrapper,
+.sugestoes-table-wrapper,
+.table-wrap,
+.occurrence-table-wrap,
+.sugestoes-table-container,
+.calendar-wrapper,
+.calendar-container {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Botao inserido por responsive-nav.js. */
+.mobile-menu-btn {
+    display: none;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 11px;
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 1.05rem;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(30, 64, 175, .08);
+}
+
+.mobile-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3990;
+    background: rgba(15, 23, 42, .52);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .22s ease, visibility .22s ease;
+    backdrop-filter: blur(2px);
+}
+
+.mobile-sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+@media (max-width: 900px) {
+    html,
+    body {
+        width: 100%;
+        min-width: 0;
+        overflow-x: hidden !important;
+    }
+
+    body.mobile-sidebar-open {
+        overflow: hidden !important;
+        touch-action: none;
+    }
+
+    .dashboard-sindico {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 100dvh;
+    }
+
+    /*
+      A regra antiga de theme.css tornava a sidebar sticky no mobile.
+      Isso fazia os 300px do menu ocuparem permanentemente a viewport.
+      Aqui ela vira drawer/off-canvas.
+    */
+    .dashboard-sindico > .sidebar,
+    .sidebar {
+        position: fixed !important;
+        inset: 0 auto 0 0 !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: min(86vw, 320px) !important;
+        max-width: 320px !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        z-index: 4000 !important;
+        transform: translate3d(-105%, 0, 0) !important;
+        transition: transform .25s ease !important;
+        box-shadow: 12px 0 34px rgba(15, 23, 42, .22) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .dashboard-sindico > .sidebar.open,
+    .sidebar.open {
+        transform: translate3d(0, 0, 0) !important;
+    }
+
+    .sidebar .sidebar-header {
+        padding-top: max(10px, env(safe-area-inset-top)) !important;
+    }
+
+    .sidebar .sidebar-logo,
+    .sidebar.sindico-sidebar .sidebar-logo,
+    .sidebar.morador-sidebar .sidebar-logo,
+    .sidebar.porteiro-sidebar .sidebar-logo,
+    .sidebar .sidebar-header .sidebar-logo,
+    .sidebar.sindico-sidebar .sidebar-header .sidebar-logo,
+    .sidebar.morador-sidebar .sidebar-header .sidebar-logo,
+    .sidebar.porteiro-sidebar .sidebar-header .sidebar-logo {
+        height: 112px !important;
+        max-width: 90% !important;
+    }
+
+    .main-content {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100vw !important;
+        margin: 0 !important;
+        overflow-x: clip !important;
+    }
+
+    .top-bar {
+        position: sticky !important;
+        top: 0;
+        z-index: 120 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        padding: 12px 16px !important;
+        gap: 10px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        flex-wrap: nowrap !important;
+        box-shadow: 0 2px 14px rgba(15, 23, 42, .08) !important;
+    }
+
+    .mobile-menu-btn {
+        display: inline-flex;
+        order: -2;
+    }
+
+    .top-bar-left {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .top-bar-left h1 {
+        margin: 0 !important;
+        font-size: clamp(1rem, 4.5vw, 1.3rem) !important;
+        line-height: 1.2 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .top-bar-left p {
+        margin: 3px 0 0 !important;
+        font-size: .78rem !important;
+        line-height: 1.25 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .top-bar-right {
+        flex: 0 0 auto;
+        min-width: 0;
+        gap: 8px !important;
+    }
+
+    .top-icons {
+        gap: 6px !important;
+    }
+
+    .icon-btn {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        padding: 0 !important;
+        border-radius: 10px !important;
+    }
+
+    .user-profile-small {
+        gap: 7px !important;
+    }
+
+    .user-profile-small .avatar {
+        width: 38px !important;
+        height: 38px !important;
+        flex: 0 0 38px !important;
+        font-size: .88rem !important;
+    }
+
+    /* Conteudo principal das telas autenticadas. */
+    .dashboard-grid,
+    .porteiro-page,
+    .lost-found-page,
+    .ai-comunicados-page,
+    .assembly-detail,
+    .assembly-summary-page,
+    .access-page,
+    .chat-page,
+    .config-content,
+    .residents-page,
+    .maintenance-page,
+    .marketplace-page,
+    .notifications-page,
+    .occurrences-page,
+    .visitor-page,
+    .visitantes-liberados-page,
+    .reservas-content,
+    .sugestoes-content,
+    #main-content:not(.main-content) {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .dashboard-grid {
+        padding: 16px !important;
+        gap: 14px !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    .bottom-actions {
+        padding: 0 16px 18px !important;
+        gap: 12px !important;
+    }
+
+    .card,
+    .info-card,
+    .quick-card,
+    .config-card,
+    .welcome-card {
+        max-width: 100%;
+    }
+
+    /* Formularios nunca devem extrapolar a largura do aparelho. */
+    form,
+    fieldset,
+    input,
+    select,
+    textarea,
+    button {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    select,
+    textarea {
+        width: 100%;
+    }
+
+    /* 16px evita zoom automatico em browsers moveis baseados em WebKit. */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    /* Grids comuns passam a duas ou uma coluna quando necessario. */
+    .overview-strip,
+    .quick-grid,
+    .support-layout,
+    .stats-grid,
+    .summary-grid,
+    .filters-grid,
+    .form-grid,
+    .cards-grid,
+    .action-grid,
+    .maintenance-head {
+        min-width: 0 !important;
+    }
+
+    /* Tabelas grandes permanecem utilizaveis por scroll horizontal. */
+    .maintenance-table,
+    .access-table,
+    .provider-table,
+    .visitantes-table,
+    .occurrence-table,
+    .residents-table,
+    .sugestoes-table,
+    .spaces-table {
+        width: max(100%, 680px);
+    }
+
+    .modal,
+    .modal-card,
+    .modal-content,
+    .quick-chat-card,
+    .prejoin-card,
+    .dialog,
+    [role="dialog"] {
+        max-width: calc(100vw - 24px) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .top-bar {
+        padding: 10px 12px !important;
+    }
+
+    .mobile-menu-btn {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+    }
+
+    .top-bar-left p {
+        display: none !important;
+    }
+
+    .user-profile-small {
+        display: none !important;
+    }
+
+    .top-bar-right {
+        gap: 4px !important;
+    }
+
+    .top-icons {
+        gap: 4px !important;
+    }
+
+    .icon-btn {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        font-size: .92rem !important;
+    }
+
+    .user-profile-small .avatar {
+        width: 36px !important;
+        height: 36px !important;
+        flex-basis: 36px !important;
+    }
+
+    .dashboard-grid {
+        padding: 12px !important;
+    }
+
+    .card {
+        padding: 16px !important;
+        border-radius: 13px !important;
+    }
+
+    .quick-chat-card {
+        padding: 20px 16px !important;
+    }
+
+    .quick-chat-options {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Barra de acoes fixa/rodape deve respeitar notch e gestos. */
+    .bottom-actions,
+    .room-controls,
+    .meeting-controls,
+    .assembly-controls {
+        padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .top-bar-left h1 {
+        font-size: .98rem !important;
+    }
+
+    .top-icons .icon-btn {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+    }
+
+    .user-profile-small .avatar {
+        width: 34px !important;
+        height: 34px !important;
+        flex-basis: 34px !important;
+    }
+}
+
+/* Sala da assembleia em smartphones: preserva o palco e os controles. */
+@media (max-width: 640px) {
+    .call-page {
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+    }
+
+    .call-header {
+        height: 60px !important;
+        min-height: 60px !important;
+        padding: 0 10px !important;
+        gap: 8px !important;
+    }
+
+    .call-header-left,
+    .call-header-right {
+        gap: 7px !important;
+        min-width: 0 !important;
+    }
+
+    .call-brand {
+        gap: 0 !important;
+        flex: 0 0 auto;
+    }
+
+    .call-brand img {
+        height: 42px !important;
+        width: auto !important;
+        max-width: 52px !important;
+    }
+
+    .call-brand > span,
+    .call-header-divider,
+    .call-assembly-meta,
+    .call-connection > span:not(.dot) {
+        display: none !important;
+    }
+
+    .call-assembly-title {
+        max-width: 42vw !important;
+        font-size: .78rem !important;
+    }
+
+    .call-connection {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        padding: 0 !important;
+        justify-content: center !important;
+    }
+
+    .call-stage {
+        padding: 8px !important;
+    }
+
+    .call-grid {
+        gap: 8px !important;
+        padding-right: 0 !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    .call-tile {
+        min-height: min(52vh, 360px) !important;
+        border-radius: 14px !important;
+    }
+
+    .call-panel {
+        top: 60px !important;
+        bottom: 68px !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+    }
+
+    .panel-tabs {
+        padding: 8px !important;
+    }
+
+    .panel-tab {
+        flex: 0 0 auto;
+        padding: 9px 10px !important;
+    }
+
+    .call-controls {
+        height: 68px !important;
+        min-height: 68px !important;
+        padding: 8px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)) !important;
+        justify-content: flex-start !important;
+        gap: 7px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .call-controls::-webkit-scrollbar {
+        display: none;
+    }
+
+    .control-btn {
+        width: 50px !important;
+        min-width: 50px !important;
+        height: 50px !important;
+        flex: 0 0 50px !important;
+        padding: 0 !important;
+        border-radius: 13px !important;
+        scroll-snap-align: start;
+    }
+
+    .control-btn span {
+        display: none !important;
+    }
+}
