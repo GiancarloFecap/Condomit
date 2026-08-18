@@ -9,13 +9,17 @@
   <link rel="manifest" href="../manifest.webmanifest">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../styles/theme.css?v=027">
-  <link rel="stylesheet" href="../styles/gestao-avancada.css?v=027">
-  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=027">
+  <link rel="stylesheet" href="../styles/gestao-avancada.css?v=028">
+  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=028">
 </head>
 <body>
 <div class="advanced-shell">
   <aside class="advanced-sidebar" id="advancedSidebar">
-    <div class="advanced-brand"><img src="../assets/logo-lado.png" alt="Condomit"><div><strong>Condomit</strong><small id="sidebarCondo">Gestão Avançada</small></div></div>
+    <div class="advanced-brand">
+      <img src="../assets/logo-lado.png" alt="Condomit" class="advanced-brand-logo">
+      <h2 id="sidebarCondo">Gestão Avançada</h2>
+    </div>
+    <div class="advanced-nav-title">Módulos</div>
     <nav id="advancedNav">
       <button class="advanced-nav-item active" data-view="overview"><i class="fas fa-chart-line"></i><span>Visão geral</span></button>
       <button class="advanced-nav-item" data-view="documents"><i class="fas fa-folder-open"></i><span>Documentos e IA</span></button>
@@ -28,7 +32,7 @@
       <button class="advanced-nav-item management-only" data-view="admin"><i class="fas fa-city"></i><span>Administradora</span></button>
       <button class="advanced-nav-item" data-view="integrations"><i class="fas fa-plug"></i><span>Integrações</span></button>
     </nav>
-    <div class="advanced-sidebar-footer"><a id="advancedHomeLink" href="index.html"><i class="fas fa-arrow-left"></i> Voltar ao painel</a></div>
+    <div class="advanced-sidebar-footer"><a id="advancedHomeLink" class="advanced-back-link" href="index.html"><i class="fas fa-arrow-left"></i><span>Voltar ao painel</span></a></div>
   </aside>
 
   <main class="advanced-main">
@@ -41,6 +45,16 @@
 
     <section class="advanced-view active" data-view-panel="overview">
       <div class="hero-panel"><div><span class="eyebrow">CONDOMIT 027</span><h2>Centro operacional do condomínio</h2><p>Documentos, finanças, patrimônio, chamados, mobilidade, comunidade, auditoria e automações reunidos em um só lugar.</p></div><button id="refreshAdvancedBtn" class="primary-btn"><i class="fas fa-rotate"></i> Atualizar dados</button></div>
+      <div class="advanced-shortcuts" aria-label="Atalhos da gestão avançada">
+        <button class="advanced-shortcut" data-jump="documents"><i class="fas fa-folder-open"></i><span><strong>Documentos e IA</strong><small>Arquivos, contratos e conhecimento</small></span></button>
+        <button class="advanced-shortcut management-only" data-jump="financial"><i class="fas fa-wallet"></i><span><strong>Financeiro</strong><small>Receitas, despesas e consumo</small></span></button>
+        <button class="advanced-shortcut management-only" data-jump="assets"><i class="fas fa-screwdriver-wrench"></i><span><strong>Patrimônio</strong><small>Ativos e manutenção recorrente</small></span></button>
+        <button class="advanced-shortcut" data-jump="tickets"><i class="fas fa-headset"></i><span><strong>Chamados</strong><small>SLA e acompanhamento</small></span></button>
+        <button class="advanced-shortcut" data-jump="mobility"><i class="fas fa-car-side"></i><span><strong>Mobilidade</strong><small>Vagas e carregadores</small></span></button>
+        <button class="advanced-shortcut" data-jump="community"><i class="fas fa-people-group"></i><span><strong>Comunidade</strong><small>Alertas, pesquisas e participação</small></span></button>
+        <button class="advanced-shortcut management-only" data-jump="governance"><i class="fas fa-shield-halved"></i><span><strong>Governança</strong><small>Tarefas, permissões e auditoria</small></span></button>
+        <button class="advanced-shortcut" data-jump="integrations"><i class="fas fa-plug"></i><span><strong>Integrações</strong><small>PWA, API e segurança</small></span></button>
+      </div>
       <div class="metric-grid" id="advancedMetrics">
         <article class="metric-card"><i class="fas fa-file-lines"></i><span>Documentos</span><strong data-metric="documents">0</strong></article>
         <article class="metric-card"><i class="fas fa-ticket"></i><span>Chamados abertos</span><strong data-metric="tickets">0</strong></article>
@@ -155,7 +169,7 @@
 <script src="../scripts/supabase-client.js?v=027"></script>
 <script type="module" src="../scripts/supabase-auth.js"></script>
 <script src="../scripts/condomit-alerts.js?v=027"></script>
-<script src="../scripts/gestao-avancada.js?v=027"></script>
+<script src="../scripts/gestao-avancada.js?v=028"></script>
 <script src="../scripts/advanced-global.js?v=027"></script>
 </body>
 </html>

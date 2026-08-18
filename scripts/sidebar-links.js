@@ -14,7 +14,8 @@ const sidebarI18n = {
         home: 'Início',
         notice_engagement: 'Comunicado e Engajamento',
         relationships: 'Comunicação e Relacionamento',
-        resident_management: 'Gestão de Moradores',
+        resident_management: 'Gestão',
+        advanced_management: 'Gestão Avançada',
         reservations_maintenance: 'Reserva e Manutenção',
         ai_automation: 'IA e Automação',
         settings: 'Configurações',
@@ -63,7 +64,8 @@ const sidebarI18n = {
         home: 'Home',
         notice_engagement: 'Communication and Engagement',
         relationships: 'Communication and Relationships',
-        resident_management: 'Resident Management',
+        resident_management: 'Management',
+        advanced_management: 'Advanced Management',
         reservations_maintenance: 'Reservations and Maintenance',
         ai_automation: 'AI and Automation',
         settings: 'Settings',
@@ -118,6 +120,8 @@ const textTranslations = {
         'Achados e Perdidos': 'Lost and Found',
         'Encontre objetos perdidos ou veja o que foi encontrado no condomínio.': 'Find lost objects or see what was found in the condominium.',
         'Gestão de Moradores': 'Resident Management',
+        'Gestão Avançada': 'Advanced Management',
+        'Gestão': 'Management',
         'Gerencie os moradores do seu condomínio de forma prática e segura.': 'Manage condominium residents in a practical and secure way.',
         'Manutenção Preventiva': 'Preventive Maintenance',
         'Acompanhe e gerencie as manutenções preventivas do condomínio.': 'Track and manage the condominium preventive maintenance tasks.',
@@ -1030,6 +1034,7 @@ function getTargetForRoute(routeKey, userType) {
         marketplace: 'marketplace.html',
         assembleias: 'assembleia.html',
         'gestao-moradores': 'gestao-moradores.html',
+        'gestao-avancada': 'gestao-avancada.html',
         reservas: 'reservas.html',
         manutencao: 'manutencao-preventiva.html',
         'ia-duvidas': 'ai-condomit.html',
@@ -1058,7 +1063,7 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
     sidebar.classList.toggle('morador-sidebar', userType === 'morador');
     sidebar.innerHTML = `
         <div class="sidebar-header">
-            <img src="../assets/Logo-Lado.png" alt="Condomit Icon" class="sidebar-logo">
+            <img src="../assets/logo-lado.png" alt="Condomit Icon" class="sidebar-logo">
             <h2 class="condo-name" id="sidebarApartment">${formatSidebarCondoName(getSidebarCondoName(currentUser, lang), lang)}</h2>
         </div>
         ${buildSidebarNav(userType, currentPage, lang)}
@@ -1231,7 +1236,10 @@ function getSidebarConfig(userType) {
         },
         {
             titleKey: 'resident_management',
-            items: [{ labelKey: 'resident_management_link', icon: 'fas fa-users-cog', route: 'gestao-moradores' }]
+            items: [
+                { labelKey: 'resident_management_link', icon: 'fas fa-users-cog', route: 'gestao-moradores' },
+                { labelKey: 'advanced_management', icon: 'fas fa-layer-group', route: 'gestao-avancada' }
+            ]
         },
         {
             titleKey: 'reservations_maintenance',

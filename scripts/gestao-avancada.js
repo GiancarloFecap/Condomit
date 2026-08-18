@@ -92,7 +92,20 @@
     document.querySelectorAll('.advanced-nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === name));
     document.querySelectorAll('.advanced-view').forEach(v => v.classList.toggle('active', v.dataset.viewPanel === name));
     const label = document.querySelector(`.advanced-nav-item[data-view="${CSS.escape(name)}"] span`)?.textContent || 'Gestão Avançada';
+    const subtitles = {
+      overview: 'Resumo operacional e atalhos do condomínio',
+      documents: 'Documentos, versões, validade e base de conhecimento da IA',
+      financial: 'Receitas, despesas, orçamento e consumo',
+      assets: 'Patrimônio, QR Code e manutenção preventiva',
+      tickets: 'Chamados, prazos de SLA e acompanhamento',
+      mobility: 'Vagas, empréstimos e carregadores elétricos',
+      community: 'Emergências, satisfação, calendário e participação',
+      governance: 'Tarefas, permissões e auditoria administrativa',
+      admin: 'Gestão de múltiplos condomínios',
+      integrations: 'PWA, API, segurança e integrações'
+    };
     $('pageTitle').textContent = label;
+    if ($('pageSubtitle')) $('pageSubtitle').textContent = subtitles[name] || 'Indicadores e operações do condomínio';
     window.scrollTo({top:0,behavior:'smooth'});
   }
 

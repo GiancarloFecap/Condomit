@@ -1698,7 +1698,7 @@ function settingsList(items) {
 function openAboutCompanyModal() {
     const html = `
         <div class="settings-company-hero">
-            <img src="../assets/Logo-Lado.png" alt="Condomit">
+            <img src="../assets/logo-lado.png" alt="Condomit">
             <div>
                 <h4>Condomit</h4>
                 <p>Gestão condominial digital, integrada e orientada à comunidade.</p>

@@ -1634,8 +1634,9 @@ async function deleteOwnMarketplaceItem(item) {
                 window.showModal({
                     title: 'Excluir anúncio?',
                     message: `O anúncio "${item.title || 'selecionado'}" será removido permanentemente.`,
-                    confirmLabel: 'Excluir',
-                    cancelLabel: 'Cancelar',
+                    confirmText: 'Excluir',
+                    cancelText: 'Cancelar',
+                    type: 'warning',
                     onConfirm: () => resolve(true),
                     onCancel: () => resolve(false)
                 });
@@ -1650,6 +1651,8 @@ async function deleteOwnMarketplaceItem(item) {
             marketplaceState.currentUser
         );
         marketplaceState.selectedItemId = null;
+        const detail = document.getElementById('marketplaceDetail');
+        if (detail) detail.innerHTML = '';
         await renderMarketplacePage();
         window.showToast?.(
             'Anúncio excluído com sucesso.',

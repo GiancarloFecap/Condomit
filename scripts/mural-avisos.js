@@ -228,12 +228,23 @@ function renderWallSummary(notices) {
     if (latest) latest.textContent = notices[0] ? formatWallDate(notices[0].createdAt) : '--';
 }
 
+function syncWallModalBodyLock() {
+    const hasOpenModal = Boolean(document.querySelector('.modal-backdrop.open'));
+    document.body.classList.toggle('condomit-modal-open', hasOpenModal);
+}
+
 function openWallCreateModal() {
-    document.getElementById('wallCreateModal')?.classList.add('open');
+    const modal = document.getElementById('wallCreateModal');
+    modal?.classList.add('open');
+    modal?.setAttribute('aria-hidden', 'false');
+    syncWallModalBodyLock();
 }
 
 function closeWallCreateModal() {
-    document.getElementById('wallCreateModal')?.classList.remove('open');
+    const modal = document.getElementById('wallCreateModal');
+    modal?.classList.remove('open');
+    modal?.setAttribute('aria-hidden', 'true');
+    syncWallModalBodyLock();
 }
 
 async function openWallDetail(noticeId) {
@@ -257,7 +268,11 @@ async function openWallDetail(noticeId) {
         if(url)attachment.href=url;
     }
 
-    document.getElementById('wallDetailModal')?.classList.add('open');
+    const detailModal = document.getElementById('wallDetailModal');
+    detailModal?.classList.add('open');
+    detailModal?.setAttribute('aria-hidden', 'false');
+    syncWallModalBodyLock();
+    detailModal?.querySelector('.modal-close')?.focus?.({ preventScroll: true });
     await renderWallInteractions(notice);
 }
 
@@ -346,7 +361,10 @@ async function toggleWallPin() {
 
 function closeWallDetailModal() {
     wallState.selectedNoticeId = null;
-    document.getElementById('wallDetailModal')?.classList.remove('open');
+    const modal = document.getElementById('wallDetailModal');
+    modal?.classList.remove('open');
+    modal?.setAttribute('aria-hidden', 'true');
+    syncWallModalBodyLock();
 }
 
 function setText(id, value) {

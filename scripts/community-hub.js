@@ -1670,6 +1670,33 @@
             throw new Error('Não foi possível identificar o anunciante.');
         }
 
+        // 028: usa uma RPC que valida o proprietário no servidor. Isso evita
+        // inconsistências de DELETE/RETURNING com RLS em instalações antigas.
+        try {
+            const result = await window.supabaseFetch(
+                '/rpc/condomit_delete_marketplace_item',
+                {
+                    method: 'POST',
+                    body: JSON.stringify({ target_item_id: id })
+                }
+            );
+
+            if (result === true || result === 'true' || result?.deleted === true) {
+                return true;
+            }
+        } catch (rpcError) {
+            const msg = String(rpcError?.message || rpcError || '').toLowerCase();
+            const missingRpc =
+                msg.includes('condomit_delete_marketplace_item') ||
+                msg.includes('schema cache') ||
+                msg.includes('could not find the function') ||
+                msg.includes('pgrst202');
+
+            if (!missingRpc) {
+                throw rpcError;
+            }
+        }
+
         const rows = await window.supabaseFetch(
             `/marketplace_items?id=eq.${encodeURIComponent(id)}&seller_email=eq.${encodeURIComponent(sellerEmail)}`,
             {
@@ -1682,7 +1709,7 @@
 
         if (!Array.isArray(rows) || !rows.length) {
             throw new Error(
-                'O anúncio não foi excluído. Confirme se ele pertence à sua conta.'
+                'O anúncio não foi excluído. Confirme se ele pertence à sua conta e execute a migration 025.'
             );
         }
 
