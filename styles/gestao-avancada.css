@@ -270,3 +270,16 @@ button, input, select, textarea { font: inherit; }
 @media (max-width: 390px) {
     .metric-grid,.metric-grid.compact { grid-template-columns:1fr; }
 }
+
+/* Sidebar 029: alinhada ao padrão das demais páginas do Condomit */
+.advanced-primary-nav { padding: 12px 16px 4px; }
+.advanced-primary-nav .advanced-nav-item { width: 100%; }
+.advanced-home-item { text-decoration: none; }
+.advanced-settings-block { margin-top: auto; padding-top: 10px; }
+.advanced-settings-block > .advanced-nav-item { margin: 0 16px 8px; width: calc(100% - 32px); text-decoration: none; }
+.advanced-sidebar-footer { padding: 12px 16px max(16px, env(safe-area-inset-bottom)); display: grid; gap: 8px; border-top: 1px solid rgba(255,255,255,.14); }
+.advanced-footer-btn { width:100%; min-height:44px; display:flex; align-items:center; gap:11px; border:0; border-radius:12px; padding:11px 13px; background:rgba(255,255,255,.10); color:#fff; font-weight:700; cursor:pointer; text-align:left; }
+.advanced-footer-btn:hover { background:rgba(255,255,255,.17); }
+.advanced-footer-btn i { width:20px; text-align:center; }
+.advanced-logout-btn { background:rgba(127,29,29,.24); }
+.advanced-logout-btn:hover { background:rgba(127,29,29,.36); }

@@ -1230,6 +1230,7 @@ function getSidebarConfig(userType) {
             ]
         },
         {
+            titleKey: 'assembly',
             items: [
                 { labelKey: 'assembly', icon: 'fas fa-calendar-check', route: 'assembleias' }
             ]

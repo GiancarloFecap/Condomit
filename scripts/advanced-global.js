@@ -1,19 +1,46 @@
 (() => {
   'use strict';
   let installPrompt = null;
+  let installState = 'unknown';
+
+  function isStandalone() {
+    return window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone === true;
+  }
 
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
     installPrompt = event;
+    installState = 'ready';
     window.dispatchEvent(new CustomEvent('condomit:pwa-ready'));
   });
 
-  window.condomitInstallPwa = async () => {
-    if (!installPrompt) return false;
-    installPrompt.prompt();
-    const result = await installPrompt.userChoice.catch(() => null);
+  window.addEventListener('appinstalled', () => {
     installPrompt = null;
-    return result?.outcome === 'accepted';
+    installState = 'installed';
+    window.dispatchEvent(new CustomEvent('condomit:pwa-installed'));
+  });
+
+  window.condomitGetPwaInstallState = () => {
+    if (isStandalone()) return 'installed';
+    return installPrompt ? 'ready' : installState;
+  };
+
+  window.condomitInstallPwa = async () => {
+    if (isStandalone()) { installState = 'installed'; return { ok:true, outcome:'installed' }; }
+    if (!installPrompt) return { ok:false, outcome:'unavailable' };
+    const promptEvent = installPrompt;
+    installPrompt = null;
+    installState = 'prompting';
+    try {
+      await promptEvent.prompt();
+      const result = await promptEvent.userChoice;
+      const accepted = result?.outcome === 'accepted';
+      installState = accepted ? 'accepted' : 'dismissed';
+      return { ok:accepted, outcome:result?.outcome || installState };
+    } catch (error) {
+      installState = 'error';
+      return { ok:false, outcome:'error', error };
+    }
   };
 
   function inPages() { return String(location.pathname || '').includes('/pages/'); }
@@ -57,9 +84,54 @@
   function injectAdvancedNavigation(){
     if(location.pathname.endsWith('/gestao-avancada.html')||location.pathname.endsWith('/index-administradora.html'))return;
     const nav=document.querySelector('.sidebar-nav, .sidebar nav, aside.sidebar nav');
-    if(!nav||nav.querySelector('[data-condomit-advanced-link]'))return;
-    const a=document.createElement('a');a.href=page('gestao-avancada.html');a.className='nav-item';a.dataset.condomitAdvancedLink='true';a.innerHTML='<i class="fas fa-layer-group"></i><span>Gestão Avançada</span>';
-    const section=document.createElement('div');section.className='nav-section advanced-nav-section-027';section.innerHTML='<div class="nav-section-title">Gestão inteligente</div>';section.appendChild(a);nav.appendChild(section);
+    if(!nav)return;
+
+    const currentRole=role(readUser());
+    const lang=(()=>{try{return localStorage.getItem('app-language')==='en'?'en':'pt';}catch(_){return 'pt';}})();
+    const labels=lang==='en'
+      ? {management:'Management',advanced:'Advanced Management',assembly:'Assembly'}
+      : {management:'Gestão',advanced:'Gestão Avançada',assembly:'Assembleia'};
+
+    // Remove a seção antiga que criava um segundo botão e o título “Gestão inteligente”.
+    nav.querySelectorAll('.advanced-nav-section-027').forEach(el=>el.remove());
+    [...nav.querySelectorAll('.nav-section-title')].forEach(title=>{
+      if(/^gest[aã]o inteligente$/i.test(title.textContent.trim())) title.closest('.nav-section')?.remove();
+    });
+
+    const advancedLinks=[...nav.querySelectorAll('a.nav-item')].filter(a=>
+      /gestao-avancada\.html(?:$|[?#])/i.test(a.getAttribute('href')||'') ||
+      /gestão avançada|advanced management/i.test(a.textContent||'')
+    );
+
+    if(currentRole!=='sindico'){
+      advancedLinks.forEach(a=>a.remove());
+      return;
+    }
+
+    // Renomeia o grupo de moradores para “Gestão”.
+    const residentLink=[...nav.querySelectorAll('a.nav-item')].find(a=>/gestão de moradores|resident management/i.test(a.textContent||''));
+    const managementSection=residentLink?.closest('.nav-section');
+    if(managementSection){
+      let title=managementSection.querySelector(':scope > .nav-section-title');
+      if(!title){ title=document.createElement('div'); title.className='nav-section-title'; managementSection.prepend(title); }
+      title.textContent=labels.management;
+
+      // Mantém exatamente um botão Gestão Avançada logo abaixo de Gestão de Moradores.
+      const keep=advancedLinks.find(a=>a.closest('.nav-section')===managementSection) || advancedLinks[0] || document.createElement('a');
+      advancedLinks.filter(a=>a!==keep).forEach(a=>a.remove());
+      keep.href=page('gestao-avancada.html');
+      keep.className='nav-item';
+      keep.dataset.condomitAdvancedLink='true';
+      keep.innerHTML=`<i class="fas fa-layer-group"></i><span>${labels.advanced}</span>`;
+      residentLink.insertAdjacentElement('afterend',keep);
+    }
+
+    // Adiciona o título “Assembleia” no grupo da assembleia quando a sidebar legada não o tiver.
+    const assemblyLink=[...nav.querySelectorAll('a.nav-item')].find(a=>/assembleia|assembly/i.test(a.textContent||'') && /assembleia\.html|assembleias/i.test(a.getAttribute('href')||a.textContent||''));
+    const assemblySection=assemblyLink?.closest('.nav-section');
+    if(assemblySection && !assemblySection.querySelector(':scope > .nav-section-title')){
+      const title=document.createElement('div');title.className='nav-section-title';title.textContent=labels.assembly;assemblySection.prepend(title);
+    }
   }
 
   async function showEmergencyBanner(){
@@ -77,16 +149,18 @@
 
   function injectStyle(){ if(document.getElementById('advancedGlobalStyle027'))return;const s=document.createElement('style');s.id='advancedGlobalStyle027';s.textContent=`
     .condomit-emergency-banner-027{position:relative;z-index:9990;background:#a92828;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px max(16px,env(safe-area-inset-right)) 11px max(16px,env(safe-area-inset-left));font:600 14px/1.35 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:0 5px 18px rgba(120,20,20,.18)}
-    .condomit-emergency-banner-027>div{display:flex;align-items:center;gap:9px;min-width:0}.condomit-emergency-banner-027 span{font-weight:400;opacity:.93;overflow-wrap:anywhere}.condomit-emergency-banner-027 button{border:1px solid rgba(255,255,255,.5);background:#fff;color:#8c1e1e;border-radius:10px;padding:7px 10px;font-weight:800;white-space:nowrap}.condomit-emergency-banner-027.acknowledged{background:#6d3030}.advanced-nav-section-027 .nav-item{margin-top:4px}
+    .condomit-emergency-banner-027>div{display:flex;align-items:center;gap:9px;min-width:0}.condomit-emergency-banner-027 span{font-weight:400;opacity:.93;overflow-wrap:anywhere}.condomit-emergency-banner-027 button{border:1px solid rgba(255,255,255,.5);background:#fff;color:#8c1e1e;border-radius:10px;padding:7px 10px;font-weight:800;white-space:nowrap}.condomit-emergency-banner-027.acknowledged{background:#6d3030}
     @media(max-width:650px){.condomit-emergency-banner-027{align-items:flex-start;flex-direction:column}.condomit-emergency-banner-027>div{align-items:flex-start}.condomit-emergency-banner-027 button{width:100%}}
   `;document.head.appendChild(s); }
   function escapeHtml(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');}
 
   async function boot(){
-    ensureManifest();injectStyle();injectAdvancedNavigation();
+    ensureManifest();injectStyle();injectAdvancedNavigation();setTimeout(injectAdvancedNavigation,0);
     if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){navigator.serviceWorker.register(inPages()?'../service-worker.js':'service-worker.js',{scope:'../'}).catch(()=>{});}
     await Promise.allSettled([showEmergencyBanner(),registerSession()]);
     window.setInterval(()=>{if(!document.hidden)registerSession();},300000);
+    window.addEventListener('condomit:language-changed',injectAdvancedNavigation);
+    window.addEventListener('storage',e=>{if(e.key==='app-language')setTimeout(injectAdvancedNavigation,0);});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();

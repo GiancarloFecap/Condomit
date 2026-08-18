@@ -9,8 +9,8 @@
   <link rel="manifest" href="../manifest.webmanifest">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../styles/theme.css?v=027">
-  <link rel="stylesheet" href="../styles/gestao-avancada.css?v=028">
-  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=028">
+  <link rel="stylesheet" href="../styles/gestao-avancada.css?v=029">
+  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=029">
 </head>
 <body>
 <div class="advanced-shell">
@@ -19,6 +19,9 @@
       <img src="../assets/logo-lado.png" alt="Condomit" class="advanced-brand-logo">
       <h2 id="sidebarCondo">Gestão Avançada</h2>
     </div>
+    <nav class="advanced-primary-nav" aria-label="Navegação principal">
+      <a id="advancedHomeLink" class="advanced-nav-item advanced-home-item" href="index.html"><i class="fas fa-home"></i><span>Início</span></a>
+    </nav>
     <div class="advanced-nav-title">Módulos</div>
     <nav id="advancedNav">
       <button class="advanced-nav-item active" data-view="overview"><i class="fas fa-chart-line"></i><span>Visão geral</span></button>
@@ -32,7 +35,14 @@
       <button class="advanced-nav-item management-only" data-view="admin"><i class="fas fa-city"></i><span>Administradora</span></button>
       <button class="advanced-nav-item" data-view="integrations"><i class="fas fa-plug"></i><span>Integrações</span></button>
     </nav>
-    <div class="advanced-sidebar-footer"><a id="advancedHomeLink" class="advanced-back-link" href="index.html"><i class="fas fa-arrow-left"></i><span>Voltar ao painel</span></a></div>
+    <div class="advanced-settings-block">
+      <div class="advanced-nav-title">Configurações</div>
+      <a class="advanced-nav-item" href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a>
+    </div>
+    <div class="advanced-sidebar-footer">
+      <button id="advancedSupportBtn" class="advanced-footer-btn" type="button"><i class="fas fa-headset"></i><span>Central de Suporte</span></button>
+      <button id="advancedLogoutBtn" class="advanced-footer-btn advanced-logout-btn" type="button"><i class="fas fa-right-from-bracket"></i><span>Sair</span></button>
+    </div>
   </aside>
 
   <main class="advanced-main">
@@ -158,7 +168,7 @@
       <div class="section-heading"><div><span class="eyebrow">ECOSSISTEMA</span><h2>PWA, API e integrações</h2><p>Instale o Condomit no celular e exponha uma API protegida para integrações futuras.</p></div></div>
       <div class="three-col-grid">
         <article class="panel-card"><i class="big-feature-icon fas fa-mobile-screen-button"></i><h3>PWA instalável</h3><p>Manifesto, service worker e cache do shell principal estão configurados.</p><button id="installPwaBtn" class="primary-btn">Instalar Condomit</button><small id="pwaStatus" class="muted">A disponibilidade depende do navegador.</small></article>
-        <article class="panel-card"><i class="big-feature-icon fas fa-code"></i><h3>API pública protegida</h3><p>Endpoint Netlify: <code>/.netlify/functions/public-api</code>. Exige a variável <code>CONDOMIT_API_KEY</code>.</p><button id="copyApiExampleBtn" class="secondary-btn">Copiar exemplo</button></article>
+        <article class="panel-card"><i class="big-feature-icon fas fa-code"></i><h3>API de integrações protegida</h3><p>Endpoint Netlify: <code>/.netlify/functions/public-api</code>. Ele pode ser chamado por sistemas externos, mas só responde quando a requisição envia a chave secreta configurada em <code>CONDOMIT_API_KEY</code>. Nunca coloque essa chave no JavaScript do navegador.</p><button id="copyApiExampleBtn" class="secondary-btn">Copiar exemplo</button></article>
         <article class="panel-card"><i class="big-feature-icon fas fa-store"></i><h3>Marketplace e achados</h3><p>Marketplace recebe status/expiração e favoritos persistentes. Achados e perdidos recebe arquivamento e correspondências sugeridas.</p><div class="button-row"><a href="marketplace.html" class="secondary-btn">Marketplace</a><a href="achados-perdidos.html" class="secondary-btn">Achados</a></div></article>
       </div>
       <article class="panel-card" style="margin-top:20px"><div class="panel-heading"><div><h3>Segurança e sessões</h3><p>Dispositivos que acessaram a conta, autenticação em duas etapas e encerramento global de sessão.</p></div><div class="button-row"><a class="secondary-btn" href="configuracoes.html"><i class="fas fa-key"></i> Gerenciar 2FA</a><button id="signOutAllDevicesBtn" class="danger-btn"><i class="fas fa-shield-halved"></i> Sair de todos os dispositivos</button></div></div><div id="sessionsList" class="stack-list"></div></article>
@@ -169,7 +179,7 @@
 <script src="../scripts/supabase-client.js?v=027"></script>
 <script type="module" src="../scripts/supabase-auth.js"></script>
 <script src="../scripts/condomit-alerts.js?v=027"></script>
-<script src="../scripts/gestao-avancada.js?v=028"></script>
-<script src="../scripts/advanced-global.js?v=027"></script>
+<script src="../scripts/gestao-avancada.js?v=029"></script>
+<script src="../scripts/advanced-global.js?v=029"></script>
 </body>
 </html>

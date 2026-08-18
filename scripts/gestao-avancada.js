@@ -86,6 +86,16 @@
       if (document.body.classList.contains('advanced-menu-open') && !e.target.closest('.advanced-sidebar') && !e.target.closest('#advancedMenuBtn')) document.body.classList.remove('advanced-menu-open');
     });
     $('refreshAdvancedBtn')?.addEventListener('click', loadAll);
+    $('advancedSupportBtn')?.addEventListener('click', () => {
+      window.location.href='mailto:contato.condomit@gmail.com?subject=Contato%20Condomit';
+    });
+    $('advancedLogoutBtn')?.addEventListener('click', async () => {
+      const button=$('advancedLogoutBtn'); if(button)button.disabled=true;
+      try {
+        if (typeof window.performFullLogout === 'function') await window.performFullLogout('../inicio.html');
+        else { try{await window.supabase?.auth?.signOut?.();}catch(_){} sessionStorage.clear(); location.replace('../inicio.html'); }
+      } finally { if(button)button.disabled=false; }
+    });
   }
 
   function switchView(name){
@@ -500,7 +510,26 @@
 
   function setupPwaControls(){
     $('signOutAllDevicesBtn')?.addEventListener('click',signOutAllDevices);
-    $('installPwaBtn')?.addEventListener('click',async()=>{if(window.condomitInstallPwa){const ok=await window.condomitInstallPwa();$('pwaStatus').textContent=ok?'Instalação solicitada.':'Use a opção “Instalar app” do navegador quando disponível.';}else toast('Instalação ainda não disponível neste navegador.','warning');});
+    const installBtn=$('installPwaBtn');
+    const status=$('pwaStatus');
+    const refreshInstallUi=()=>{
+      const stateNow=window.condomitGetPwaInstallState?.()||'unknown';
+      if(stateNow==='installed'){ if(installBtn){installBtn.disabled=true;installBtn.innerHTML='<i class="fas fa-check"></i> Condomit instalado';} if(status)status.textContent='O Condomit já está instalado neste dispositivo.'; }
+      else if(stateNow==='ready'){ if(installBtn){installBtn.disabled=false;installBtn.innerHTML='<i class="fas fa-download"></i> Instalar Condomit';} if(status)status.textContent='Pronto para instalar como aplicativo neste dispositivo.'; }
+      else { if(installBtn)installBtn.disabled=false; if(status)status.textContent='Se o navegador oferecer instalação de PWA, o botão abrirá a confirmação do sistema.'; }
+    };
+    window.addEventListener('condomit:pwa-ready',refreshInstallUi);
+    window.addEventListener('condomit:pwa-installed',refreshInstallUi);
+    installBtn?.addEventListener('click',async()=>{
+      if(!window.condomitInstallPwa){toast('Instalação PWA não está disponível neste navegador.','warning');return;}
+      const result=await window.condomitInstallPwa();
+      if(result?.ok){toast(result.outcome==='installed'?'Condomit já está instalado.':'Instalação do Condomit confirmada.','success');}
+      else if(result?.outcome==='dismissed'){toast('Instalação cancelada. Você pode tentar novamente pelo menu do navegador.','info');}
+      else if(result?.outcome==='unavailable'){toast('O navegador ainda não disponibilizou a instalação. No Chrome/Edge, confira também o ícone de instalar na barra de endereço.','warning');}
+      else toast('Não foi possível iniciar a instalação neste navegador.','error');
+      refreshInstallUi();
+    });
+    refreshInstallUi();
   }
 
   function toast(message,type='info'){

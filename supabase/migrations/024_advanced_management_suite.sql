@@ -88,53 +88,6 @@ AS $$
 $$;
 
 
--- Dashboard seguro para administradoras. A função SECURITY DEFINER permite
--- consolidar dados de condomínios vinculados sem enfraquecer as RLS antigas.
-CREATE OR REPLACE FUNCTION public.condomit_managed_condominiums_dashboard()
-RETURNS TABLE (
-  company_id BIGINT,
-  company_name TEXT,
-  cep TEXT,
-  condominium_name TEXT,
-  open_tickets BIGINT,
-  pending_maintenance BIGINT,
-  active_emergencies BIGINT,
-  documents_count BIGINT,
-  current_balance NUMERIC
-)
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-  SELECT
-    mc.company_id,
-    cmp.name AS company_name,
-    mc.cep,
-    COALESCE(c.condominium_name, 'Condomínio ' || mc.cep) AS condominium_name,
-    (SELECT COUNT(*) FROM public.service_tickets st
-      WHERE public.condomit_same_cep(st.cep, mc.cep)
-        AND st.status NOT IN ('resolvido','cancelado')) AS open_tickets,
-    (SELECT COUNT(*) FROM public.maintenance_items mi
-      WHERE public.condomit_same_cep(mi.cep, mc.cep)
-        AND COALESCE(mi.status,'') <> 'concluida') AS pending_maintenance,
-    (SELECT COUNT(*) FROM public.emergency_alerts ea
-      WHERE public.condomit_same_cep(ea.cep, mc.cep)
-        AND ea.active = TRUE) AS active_emergencies,
-    (SELECT COUNT(*) FROM public.condominium_documents cd
-      WHERE public.condomit_same_cep(cd.cep, mc.cep)) AS documents_count,
-    COALESCE((SELECT SUM(CASE WHEN fe.entry_type='receita' THEN fe.amount ELSE -fe.amount END)
-      FROM public.financial_entries fe
-      WHERE public.condomit_same_cep(fe.cep, mc.cep)
-        AND fe.status <> 'cancelado'),0) AS current_balance
-  FROM public.management_company_users mcu
-  JOIN public.management_companies cmp ON cmp.id = mcu.company_id
-  JOIN public.managed_condominiums mc ON mc.company_id = mcu.company_id AND mc.active = TRUE
-  LEFT JOIN public.condominiums c ON public.condomit_same_cep(c.cep, mc.cep)
-  WHERE LOWER(mcu.user_email) = public.condomit_auth_email()
-  ORDER BY cmp.name, COALESCE(c.condominium_name, mc.cep);
-$$;
-
 -- ------------------------------------------------------------
 -- 1. CENTRAL DE DOCUMENTOS + BASE DE CONHECIMENTO DA IA
 -- ------------------------------------------------------------
@@ -737,6 +690,58 @@ END;
 $$;
 
 -- ------------------------------------------------------------
+-- 10.1 DASHBOARD CONSOLIDADO DA ADMINISTRADORA
+-- Criado somente depois das tabelas service_tickets, emergency_alerts,
+-- condominium_documents e financial_entries existirem.
+-- ------------------------------------------------------------
+-- Dashboard seguro para administradoras. A função SECURITY DEFINER permite
+-- consolidar dados de condomínios vinculados sem enfraquecer as RLS antigas.
+CREATE OR REPLACE FUNCTION public.condomit_managed_condominiums_dashboard()
+RETURNS TABLE (
+  company_id BIGINT,
+  company_name TEXT,
+  cep TEXT,
+  condominium_name TEXT,
+  open_tickets BIGINT,
+  pending_maintenance BIGINT,
+  active_emergencies BIGINT,
+  documents_count BIGINT,
+  current_balance NUMERIC
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT
+    mc.company_id,
+    cmp.name AS company_name,
+    mc.cep,
+    COALESCE(c.condominium_name, 'Condomínio ' || mc.cep) AS condominium_name,
+    (SELECT COUNT(*) FROM public.service_tickets st
+      WHERE public.condomit_same_cep(st.cep, mc.cep)
+        AND st.status NOT IN ('resolvido','cancelado')) AS open_tickets,
+    (SELECT COUNT(*) FROM public.maintenance_items mi
+      WHERE public.condomit_same_cep(mi.cep, mc.cep)
+        AND COALESCE(mi.status,'') <> 'concluida') AS pending_maintenance,
+    (SELECT COUNT(*) FROM public.emergency_alerts ea
+      WHERE public.condomit_same_cep(ea.cep, mc.cep)
+        AND ea.active = TRUE) AS active_emergencies,
+    (SELECT COUNT(*) FROM public.condominium_documents cd
+      WHERE public.condomit_same_cep(cd.cep, mc.cep)) AS documents_count,
+    COALESCE((SELECT SUM(CASE WHEN fe.entry_type='receita' THEN fe.amount ELSE -fe.amount END)
+      FROM public.financial_entries fe
+      WHERE public.condomit_same_cep(fe.cep, mc.cep)
+        AND fe.status <> 'cancelado'),0) AS current_balance
+  FROM public.management_company_users mcu
+  JOIN public.management_companies cmp ON cmp.id = mcu.company_id
+  JOIN public.managed_condominiums mc ON mc.company_id = mcu.company_id AND mc.active = TRUE
+  LEFT JOIN public.condominiums c ON public.condomit_same_cep(c.cep, mc.cep)
+  WHERE LOWER(mcu.user_email) = public.condomit_auth_email()
+  ORDER BY cmp.name, COALESCE(c.condominium_name, mc.cep);
+$$;
+
+-- ------------------------------------------------------------
 -- 11. RLS
 -- ------------------------------------------------------------
 ALTER TABLE public.management_companies ENABLE ROW LEVEL SECURITY;
@@ -1008,5 +1013,8 @@ GRANT EXECUTE ON FUNCTION public.condomit_notify_old_packages() TO authenticated
 GRANT EXECUTE ON FUNCTION public.condomit_expire_marketplace_items() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.condomit_archive_old_lost_found() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.condomit_suggest_lost_found_matches() TO authenticated;
+
+-- Solicita ao PostgREST/Supabase que atualize o schema cache imediatamente.
+NOTIFY pgrst, 'reload schema';
 
 COMMIT;
