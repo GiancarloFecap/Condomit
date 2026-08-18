@@ -116,6 +116,8 @@ function setupOccurrenceShell(user) {
         syndicButton.hidden = !canViewCondominiumOccurrences;
         syndicButton.disabled = !canViewCondominiumOccurrences;
         syndicButton.setAttribute('aria-hidden', String(!canViewCondominiumOccurrences));
+        syndicButton.style.display = canViewCondominiumOccurrences ? '' : 'none';
+        syndicButton.tabIndex = canViewCondominiumOccurrences ? 0 : -1;
     }
 
     document.querySelector('.occurrence-actions')?.classList.toggle('is-syndic', occurrenceState.userType === 'sindico');

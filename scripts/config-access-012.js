@@ -132,7 +132,8 @@
         body.querySelector('[data-cancel]').addEventListener('click', () => closeOverlay(overlay));
         body.querySelector('form').addEventListener('submit', async (event) => {
             event.preventDefault();
-            const submit = event.currentTarget.querySelector('button[type="submit"]');
+            const form = event.currentTarget;
+            const submit = form.querySelector('button[type="submit"]');
             const fb = document.getElementById('changeCondoFeedback012');
             const rawCep = document.getElementById('changeCondoCep012')?.value || '';
             const cepDigits = String(rawCep).replace(/\D/g, '');
@@ -285,7 +286,7 @@
 
                 feedback(fb, 'Encomenda registrada com sucesso.', 'success');
                 window.showToast?.('Encomenda registrada com sucesso.', 'success');
-                event.currentTarget.reset();
+                form.reset();
                 setTimeout(() => closeOverlay(overlay), 700);
             } catch (error) {
                 feedback(fb, error?.message || 'Não foi possível registrar a encomenda.', 'error');

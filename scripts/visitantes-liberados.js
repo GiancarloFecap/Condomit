@@ -183,6 +183,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             return false;
         }
 
+        const topName = document.getElementById('profileNameTop');
+        const topType = document.getElementById('profileTypeTop');
+        const topAvatar = document.getElementById('profileAvatarTop');
+        const porterName = String(pageState.currentUser?.name || 'Porteiro').trim();
+        if (topName) topName.textContent = porterName;
+        if (topType) topType.textContent = 'Porteiro';
+        if (topAvatar) topAvatar.textContent = avatarInitials(porterName);
+        window.syncAllAvatars?.(pageState.currentUser);
+        window.initTopbarActions?.();
+
         return true;
     }
 

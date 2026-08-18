@@ -8,6 +8,7 @@ export const state = {
   connected: false,
   activeSpeakers: new Set(),
   cameraTracks: new Map(),
+  mobileCameraFacing: 'user',
   screenShareTrack: null,
   screenShareOwner: null,
   raisedHands: new Map(),

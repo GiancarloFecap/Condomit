@@ -28,8 +28,10 @@
 
         const profileNameTop = document.getElementById('profileNameTop');
         const profileAvatarTop = document.getElementById('profileAvatarTop');
+        const profileTypeTop = document.getElementById('profileTypeTop');
 
         if (profileNameTop) profileNameTop.textContent = currentUser.name || 'Porteiro';
+        if (profileTypeTop) profileTypeTop.textContent = 'Porteiro';
 
         if (!profileAvatarTop) return;
 
@@ -42,47 +44,10 @@
         profileAvatarTop.textContent = getInitials(currentUser.name || 'Porteiro');
     }
 
-    function bindTopBarLinks() {
-        const cameraBtn = document.getElementById('topCameraBtn');
-        const bellBtn = document.getElementById('topBellBtn');
-        const userBtn = document.getElementById('topUserBtn');
-        const profileBlock = document.getElementById('topProfileBlock');
-
-        cameraBtn?.addEventListener('click', () => {
-            window.location.href = 'assembleia.html';
-        });
-
-        bellBtn?.addEventListener('click', () => {
-            window.location.href = 'notificacoes.html';
-        });
-
-        userBtn?.addEventListener('click', () => {
-            window.location.href = 'configuracoes.html#editar-perfil';
-        });
-
-        if (!profileBlock) return;
-
-        profileBlock.style.cursor = 'pointer';
-        profileBlock.setAttribute('role', 'link');
-        profileBlock.setAttribute('tabindex', '0');
-
-        const goToSettings = () => {
-            window.location.href = 'configuracoes.html';
-        };
-
-        profileBlock.addEventListener('click', goToSettings);
-        profileBlock.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                goToSettings();
-            }
-        });
-    }
-
     window.initPorterTopBar = function initPorterTopBar(currentUser) {
         renderTopBarDate();
         renderTopBarUser(currentUser);
-        bindTopBarLinks();
+        /* Ações e padronização dos ícones ficam centralizadas em topbar-actions.js. */
+        window.initTopbarActions?.();
     };
 })();
-

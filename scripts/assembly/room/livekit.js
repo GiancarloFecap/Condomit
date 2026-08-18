@@ -23,6 +23,40 @@ import {
 let intentionalDisconnect =
   false;
 
+function isMobileCameraDevice() {
+  const ua = String(navigator.userAgent || '');
+  const mobileUa = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  const coarsePointer = window.matchMedia?.('(pointer: coarse)')?.matches === true;
+  return mobileUa || coarsePointer;
+}
+
+function getFacingModeFromPublication(room) {
+  try {
+    const publication = room?.localParticipant?.getTrackPublication?.(Track.Source.Camera);
+    const mediaTrack = publication?.track?.mediaStreamTrack;
+    const facingMode = mediaTrack?.getSettings?.().facingMode;
+    if (facingMode === 'environment' || facingMode === 'user') return facingMode;
+
+    const label = String(mediaTrack?.label || '').toLowerCase();
+    if (/back|rear|environment|traseir/.test(label)) return 'environment';
+    if (/front|user|facetime|frontal|frente/.test(label)) return 'user';
+  } catch (_) {}
+  return state.mobileCameraFacing || 'user';
+}
+
+function findCameraForFacing(devices, facing, activeDeviceId) {
+  const patterns = facing === 'environment'
+    ? [/back/i, /rear/i, /environment/i, /traseir/i]
+    : [/front/i, /user/i, /facetime/i, /frontal/i, /frente/i];
+
+  const labeled = devices.find((device) =>
+    device.deviceId !== activeDeviceId && patterns.some((pattern) => pattern.test(device.label || ''))
+  );
+  if (labeled) return labeled;
+
+  return devices.find((device) => device.deviceId !== activeDeviceId) || null;
+}
+
 function safeText(
   value
 ) {
@@ -1083,6 +1117,12 @@ function getInitialDevicePrefs() {
     );
   }
 
+  if (isMobileCameraDevice()) {
+    /* A reunião sempre inicia pela câmera frontal no celular. */
+    preferences.cameraDeviceId = null;
+    state.mobileCameraFacing = 'user';
+  }
+
   return preferences;
 }
 
@@ -1132,14 +1172,10 @@ async function enableInitialCamera(
   preferences
 ) {
   try {
-    const options =
-      preferences
-        .cameraDeviceId
-        ? {
-            deviceId:
-              preferences
-                .cameraDeviceId
-          }
+    const options = isMobileCameraDevice()
+      ? { facingMode: 'user' }
+      : preferences.cameraDeviceId
+        ? { deviceId: preferences.cameraDeviceId }
         : undefined;
 
     await room
@@ -1261,6 +1297,10 @@ export async function connectToRoom(
 
       dynacast:
         true,
+
+      videoCaptureDefaults: {
+        facingMode: 'user'
+      },
 
       publishDefaults: {
         videoCodec:
@@ -1864,6 +1904,62 @@ export async function toggleMicrophone() {
         'Não foi possível alterar o microfone.',
         'error'
       );
+  }
+}
+
+export async function canSwitchMobileCamera() {
+  if (!isMobileCameraDevice()) return false;
+
+  try {
+    const devices = await Room.getLocalDevices('videoinput', true);
+    return Array.isArray(devices) && devices.length > 1;
+  } catch (error) {
+    warnLiveKit('Não foi possível listar as câmeras do celular.', error);
+    return false;
+  }
+}
+
+export async function switchMobileCamera() {
+  const room = state.room;
+  if (!room || !state.connected || !isMobileCameraDevice()) return false;
+
+  const cameraEnabled = room.localParticipant.isCameraEnabled ?? false;
+  if (!cameraEnabled) {
+    await room.localParticipant.setCameraEnabled(true, { facingMode: 'user' });
+    state.mobileCameraFacing = 'user';
+    setControlActive('btn-camera', true);
+    syncMediaFromRoom(room);
+    return true;
+  }
+
+  const currentFacing = getFacingModeFromPublication(room);
+  const nextFacing = currentFacing === 'environment' ? 'user' : 'environment';
+
+  try {
+    const devices = await Room.getLocalDevices('videoinput', true);
+    const activeDeviceId = room.getActiveDevice?.('videoinput') || '';
+    const targetDevice = findCameraForFacing(devices, nextFacing, activeDeviceId);
+
+    if (targetDevice?.deviceId) {
+      const switched = await room.switchActiveDevice('videoinput', targetDevice.deviceId, true);
+      if (switched !== false) {
+        state.mobileCameraFacing = nextFacing;
+        syncMediaFromRoom(room);
+        return true;
+      }
+    }
+
+    /* Fallback para navegadores móveis que não expõem labels/deviceIds úteis. */
+    await room.localParticipant.setCameraEnabled(false);
+    await room.localParticipant.setCameraEnabled(true, { facingMode: nextFacing });
+    state.mobileCameraFacing = nextFacing;
+    setControlActive('btn-camera', true);
+    syncMediaFromRoom(room);
+    return true;
+  } catch (error) {
+    console.error('[LiveKit] Erro ao alternar câmera frontal/traseira:', error);
+    window.AssemblyUtils?.showToast?.('Não foi possível trocar a câmera do celular.', 'error');
+    return false;
   }
 }
 
