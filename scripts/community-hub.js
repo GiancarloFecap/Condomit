@@ -1312,7 +1312,10 @@
                     .toISOString(),
 
             status:
-                'Disponível',
+                String(row?.item_status || 'disponivel'),
+
+            expiresAt:
+                row?.expires_at || null,
 
             image:
                 row?.image_url ||

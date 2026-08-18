@@ -714,6 +714,10 @@ async function renderMarketplacePage() {
         );
     }
 
+    try {
+        await window.supabaseFetch('/rpc/condomit_expire_marketplace_items', { method: 'POST', body: '{}' });
+    } catch (_) {}
+
     const allItems =
         await window
             .communityHub
@@ -733,25 +737,13 @@ async function renderMarketplacePage() {
      * Favoritos também são
      * normalizados como string.
      */
-    const favoriteIds =
-        window.communityHub
-            .getFavoriteMarketplaceItems(
-                marketplaceState
-                    .currentUser
-            );
+    let favoriteIds = window.communityHub.getFavoriteMarketplaceItems(marketplaceState.currentUser);
+    try {
+        const dbFavorites = await window.supabaseFetch('/marketplace_favorites?select=item_id');
+        if (Array.isArray(dbFavorites)) favoriteIds = dbFavorites.map(row => `db-mp-${row.item_id}`);
+    } catch (_) {}
 
-    const favorites =
-        new Set(
-            (
-                Array.isArray(
-                    favoriteIds
-                )
-                    ? favoriteIds
-                    : []
-            ).map(
-                normalizeItemId
-            )
-        );
+    const favorites = new Set((Array.isArray(favoriteIds) ? favoriteIds : []).map(normalizeItemId));
 
     const currentEmail =
         String(
@@ -1125,6 +1117,7 @@ function renderMarketplaceGrid(
                                         'Outros'
                                     )}
                                 </span>
+                                <span class="market-status market-status-${escapeHtml(item.status || 'disponivel')}">${escapeHtml(marketplaceStatusLabel(item.status))}</span>
 
                                 <h4>
                                     ${escapeHtml(
@@ -1233,7 +1226,7 @@ function renderMarketplaceGrid(
             (button) => {
                 button.addEventListener(
                     'click',
-                    (event) => {
+                    async (event) => {
                         event.stopPropagation();
 
                         const itemId =
@@ -1242,12 +1235,7 @@ function renderMarketplaceGrid(
                                     .favoriteId
                             );
 
-                        window.communityHub
-                            .toggleMarketplaceFavorite(
-                                itemId,
-                                marketplaceState
-                                    .currentUser
-                            );
+                        await togglePersistentMarketplaceFavorite(itemId);
 
                         renderMarketplacePage()
                             .catch(
@@ -1347,6 +1335,7 @@ function renderMarketplaceDetail(
         </p>
 
         <div class="detail-meta">
+            <span class="detail-tag market-status market-status-${escapeHtml(selected.status || 'disponivel')}"><i class="fas fa-tag"></i>${escapeHtml(marketplaceStatusLabel(selected.status))}</span>
             <span class="detail-tag">
                 <i class="fas fa-location-dot"></i>
                 ${escapeHtml(
@@ -1414,6 +1403,13 @@ function renderMarketplaceDetail(
                             Editar anúncio
                         </button>
 
+                        <div class="marketplace-status-actions">
+                            <button class="ghost-btn" type="button" data-own-status="disponivel">Disponível</button>
+                            <button class="ghost-btn" type="button" data-own-status="reservado">Reservado</button>
+                            <button class="ghost-btn" type="button" data-own-status="vendido">Vendido</button>
+                            <button class="ghost-btn" type="button" data-own-status="doado">Doado</button>
+                        </div>
+
                         <button
                             class="ghost-btn danger-action"
                             type="button"
@@ -1427,6 +1423,7 @@ function renderMarketplaceDetail(
                         <button
                             class="primary-action"
                             type="button"
+                            id="contactMarketplaceSeller"
                         >
                             <i class="fas fa-comment-dots"></i>
                             Entrar em contato
@@ -1435,6 +1432,7 @@ function renderMarketplaceDetail(
                         <button
                             class="ghost-btn"
                             type="button"
+                            id="whatsappMarketplaceSeller"
                         >
                             <i class="fab fa-whatsapp"></i>
                             WhatsApp
@@ -1450,11 +1448,68 @@ function renderMarketplaceDetail(
             openMarketplaceModal(selected);
         });
 
+    detail.querySelectorAll('[data-own-status]').forEach(button => {
+        button.addEventListener('click', async () => {
+            try {
+                await window.supabaseFetch(`/marketplace_items?id=eq.${encodeURIComponent(selected.dbId)}&seller_email=eq.${encodeURIComponent(String(marketplaceState.currentUser?.email || '').toLowerCase())}`, { method:'PATCH', headers:{Prefer:'return=minimal'}, body:JSON.stringify({item_status:button.dataset.ownStatus}) });
+                window.showToast?.('Status do anúncio atualizado.', 'success');
+                await renderMarketplacePage();
+            } catch (error) { window.showToast?.(error?.message || 'Não foi possível atualizar o status.', 'error'); }
+        });
+    });
+
     detail
         .querySelector('#deleteOwnMarketplaceItem')
         ?.addEventListener('click', () => {
             deleteOwnMarketplaceItem(selected);
         });
+
+    detail.querySelector('#contactMarketplaceSeller')?.addEventListener('click', () => {
+        const email=String(selected?.sellerEmail||'').trim().toLowerCase();
+        if(!email){window.showToast?.('O anunciante não possui e-mail disponível.','warning');return;}
+        sessionStorage.setItem('condomitChatTargetEmail',email);
+        sessionStorage.setItem('condomitChatReturnUrl','marketplace.html');
+        window.location.href='chat-moradores.html';
+    });
+
+    detail.querySelector('#whatsappMarketplaceSeller')?.addEventListener('click', async () => {
+        const email=String(selected?.sellerEmail||'').trim().toLowerCase();
+        if(!email){window.showToast?.('O anunciante não possui contato disponível.','warning');return;}
+        try{
+            let contact=null;
+            for(const role of ['morador','sindico','porteiro']){
+                try{
+                    const rows=await window.supabaseFetch('/rpc/condomit_list_chat_contacts',{method:'POST',body:JSON.stringify({target_role:role})});
+                    contact=(rows||[]).find(item=>String(item.email||'').trim().toLowerCase()===email)||contact;
+                    if(contact)break;
+                }catch(_){}
+            }
+            const phone=String(contact?.phone||'').replace(/\D/g,'');
+            if(!phone)throw new Error('Telefone não cadastrado pelo anunciante.');
+            const number=phone.startsWith('55')?phone:`55${phone}`;
+            window.open(`https://wa.me/${number}?text=${encodeURIComponent('Olá! Vi seu anúncio no Marketplace do Condomit.')}`,'_blank','noopener');
+        }catch(error){window.showToast?.(error?.message||'Não foi possível abrir o WhatsApp.','warning');}
+    });
+}
+
+function marketplaceStatusLabel(value) {
+    return ({disponivel:'Disponível',reservado:'Reservado',vendido:'Vendido',doado:'Doado',expirado:'Expirado'})[String(value||'').toLowerCase()] || 'Disponível';
+}
+
+async function togglePersistentMarketplaceFavorite(itemId) {
+    const normalized = normalizeItemId(itemId);
+    const dbId = Number(String(normalized).replace(/^db-mp-/, ''));
+    if (!Number.isFinite(dbId)) { window.communityHub.toggleMarketplaceFavorite(normalized, marketplaceState.currentUser); return; }
+    try {
+        const existing = await window.supabaseFetch(`/marketplace_favorites?select=item_id&item_id=eq.${dbId}&limit=1`);
+        if (Array.isArray(existing) && existing.length) {
+            await window.supabaseFetch(`/marketplace_favorites?item_id=eq.${dbId}`, {method:'DELETE',headers:{Prefer:'return=minimal'}});
+        } else {
+            await window.supabaseFetch('/marketplace_favorites', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({item_id:dbId,user_email:marketplaceState.currentUser.email})});
+        }
+    } catch (_) {
+        window.communityHub.toggleMarketplaceFavorite(normalized, marketplaceState.currentUser);
+    }
 }
 
 function isOwnMarketplaceItem(item) {

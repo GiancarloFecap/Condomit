@@ -205,6 +205,7 @@
                     <label class="visitor-access-email"><span>Descrição da encomenda</span><input id="packageDescription012" type="text" maxlength="250" placeholder="Ex.: Caixa pequena da Amazon" required></label>
                     <label><span>Transportadora</span><input id="packageCarrier012" type="text" maxlength="120" placeholder="Opcional"></label>
                     <label><span>Código de rastreio</span><input id="packageTracking012" type="text" maxlength="120" placeholder="Opcional"></label>
+                    <label><span>Foto da encomenda (URL)</span><input id="packagePhoto012" type="url" maxlength="1200" placeholder="https://... (opcional)"></label>
                     <label class="visitor-access-email"><span>Observações</span><textarea id="packageObservations012" maxlength="500" placeholder="Opcional" style="min-height:90px;"></textarea></label>
                 `)}
                 <div id="packageFeedback012" class="visitor-feedback"></div>
@@ -230,9 +231,10 @@
 
         openOverlay(overlay);
 
-        body.querySelector('form').addEventListener('submit', async (event) => {
+        const form = body.querySelector('form');
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const submit = event.currentTarget.querySelector('button[type="submit"]');
+            const submit = form.querySelector('button[type="submit"]');
             const fb = document.getElementById('packageFeedback012');
             const recipientEmail = String(user.email || '').trim().toLowerCase();
             const recipientName = String(user.name || user.email || '').trim();
@@ -240,6 +242,7 @@
             const carrier = document.getElementById('packageCarrier012')?.value.trim() || null;
             const tracking = document.getElementById('packageTracking012')?.value.trim() || null;
             const observations = document.getElementById('packageObservations012')?.value.trim() || null;
+            const packagePhotoUrl = document.getElementById('packagePhoto012')?.value.trim() || null;
             const expectedArrivalDate = document.getElementById('packageExpectedDate012')?.value || '';
             const expectedArrivalTime = document.getElementById('packageExpectedTime012')?.value || '';
 
@@ -276,6 +279,7 @@
                         status: 'Aguardando retirada',
                         expected_arrival_date: expectedArrivalDate,
                         expected_arrival_time: expectedArrivalTime,
+                        package_photo_url: packagePhotoUrl,
                         observations
                     })
                 });

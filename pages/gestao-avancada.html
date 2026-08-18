@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#2457c5">
+  <title>Condomit - Gestão Avançada</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../styles/theme.css?v=027">
+  <link rel="stylesheet" href="../styles/gestao-avancada.css?v=027">
+  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=027">
+</head>
+<body>
+<div class="advanced-shell">
+  <aside class="advanced-sidebar" id="advancedSidebar">
+    <div class="advanced-brand"><img src="../assets/logo-lado.png" alt="Condomit"><div><strong>Condomit</strong><small id="sidebarCondo">Gestão Avançada</small></div></div>
+    <nav id="advancedNav">
+      <button class="advanced-nav-item active" data-view="overview"><i class="fas fa-chart-line"></i><span>Visão geral</span></button>
+      <button class="advanced-nav-item" data-view="documents"><i class="fas fa-folder-open"></i><span>Documentos e IA</span></button>
+      <button class="advanced-nav-item management-only" data-view="financial"><i class="fas fa-wallet"></i><span>Financeiro e consumo</span></button>
+      <button class="advanced-nav-item management-only" data-view="assets"><i class="fas fa-building-circle-check"></i><span>Patrimônio</span></button>
+      <button class="advanced-nav-item" data-view="tickets"><i class="fas fa-headset"></i><span>Chamados e SLA</span></button>
+      <button class="advanced-nav-item" data-view="mobility"><i class="fas fa-car-side"></i><span>Vagas e recarga</span></button>
+      <button class="advanced-nav-item" data-view="community"><i class="fas fa-people-group"></i><span>Comunidade</span></button>
+      <button class="advanced-nav-item management-only" data-view="governance"><i class="fas fa-shield-halved"></i><span>Governança</span></button>
+      <button class="advanced-nav-item management-only" data-view="admin"><i class="fas fa-city"></i><span>Administradora</span></button>
+      <button class="advanced-nav-item" data-view="integrations"><i class="fas fa-plug"></i><span>Integrações</span></button>
+    </nav>
+    <div class="advanced-sidebar-footer"><a id="advancedHomeLink" href="index.html"><i class="fas fa-arrow-left"></i> Voltar ao painel</a></div>
+  </aside>
+
+  <main class="advanced-main">
+    <header class="advanced-topbar">
+      <div class="advanced-topbar-left"><button id="advancedMenuBtn" class="icon-square" aria-label="Menu"><i class="fas fa-bars"></i></button><div><h1 id="pageTitle">Gestão Avançada</h1><p id="pageSubtitle">Indicadores e operações do condomínio</p></div></div>
+      <div class="advanced-user"><div id="advancedAvatar" class="advanced-avatar">US</div><div><strong id="advancedUserName">Usuário</strong><small id="advancedUserRole">Perfil</small></div></div>
+    </header>
+
+    <div id="migrationWarning" class="migration-warning" hidden><i class="fas fa-database"></i><div><strong>Recursos avançados ainda não estão ativos no banco.</strong><span>Execute <code>supabase/migrations/024_advanced_management_suite.sql</code> no Supabase SQL Editor.</span></div></div>
+
+    <section class="advanced-view active" data-view-panel="overview">
+      <div class="hero-panel"><div><span class="eyebrow">CONDOMIT 027</span><h2>Centro operacional do condomínio</h2><p>Documentos, finanças, patrimônio, chamados, mobilidade, comunidade, auditoria e automações reunidos em um só lugar.</p></div><button id="refreshAdvancedBtn" class="primary-btn"><i class="fas fa-rotate"></i> Atualizar dados</button></div>
+      <div class="metric-grid" id="advancedMetrics">
+        <article class="metric-card"><i class="fas fa-file-lines"></i><span>Documentos</span><strong data-metric="documents">0</strong></article>
+        <article class="metric-card"><i class="fas fa-ticket"></i><span>Chamados abertos</span><strong data-metric="tickets">0</strong></article>
+        <article class="metric-card"><i class="fas fa-screwdriver-wrench"></i><span>Manutenções pendentes</span><strong data-metric="maintenance">0</strong></article>
+        <article class="metric-card"><i class="fas fa-triangle-exclamation"></i><span>Alertas ativos</span><strong data-metric="emergency">0</strong></article>
+        <article class="metric-card"><i class="fas fa-face-smile"></i><span>Satisfação média</span><strong data-metric="satisfaction">--</strong></article>
+        <article class="metric-card"><i class="fas fa-money-bill-trend-up"></i><span>Saldo registrado</span><strong data-metric="balance">R$ 0</strong></article>
+      </div>
+      <div class="two-col-grid">
+        <article class="panel-card"><div class="panel-heading"><div><h3>Próximos compromissos</h3><p>Calendário unificado</p></div><button class="text-btn" data-jump="governance">Gerenciar</button></div><div id="overviewCalendar" class="stack-list empty-state">Nenhum evento carregado.</div></article>
+        <article class="panel-card"><div class="panel-heading"><div><h3>Indicadores operacionais</h3><p>Leitura rápida do condomínio</p></div></div><div id="operationalIndicators" class="indicator-list"></div></article>
+      </div>
+    </section>
+
+    <section class="advanced-view" data-view-panel="documents">
+      <div class="section-heading"><div><span class="eyebrow">CONHECIMENTO</span><h2>Central Inteligente de Documentos</h2><p>Versione contratos, regulamentos, atas e use o conteúdo como base da IA.</p></div><a class="secondary-btn" href="ai-condomit.html"><i class="fas fa-sparkles"></i> Perguntar à IA</a></div>
+      <div class="two-col-grid">
+        <article class="panel-card management-only"><h3>Novo documento</h3><form id="documentForm" class="advanced-form">
+          <label>Título<input name="title" required placeholder="Ex.: Regulamento interno"></label>
+          <div class="form-row"><label>Categoria<select name="category"><option>Regulamento</option><option>Ata</option><option>Contrato</option><option>Nota fiscal</option><option>Comunicado</option><option>Geral</option></select></label><label>Versão<input name="version" type="number" min="1" value="1"></label></div>
+          <label>Descrição<input name="description" placeholder="Resumo do documento"></label>
+          <label>Conteúdo pesquisável<textarea name="content" rows="5" placeholder="Cole os principais trechos para que a IA possa responder usando este documento."></textarea></label>
+          <div class="form-row"><label>Link do arquivo<input name="file_url" type="url" placeholder="https://..."></label><label>Vencimento<input name="expires_at" type="date"></label></div>
+          <label>Visibilidade<select name="visibility"><option value="todos">Todos</option><option value="moradores">Moradores</option><option value="portaria">Portaria</option><option value="gestao">Somente gestão</option></select></label>
+          <button class="primary-btn" type="submit"><i class="fas fa-floppy-disk"></i> Salvar documento</button>
+        </form></article>
+        <article class="panel-card"><div class="panel-heading"><div><h3>Documentos cadastrados</h3><p>Pesquisa, versão e validade</p></div><input id="documentSearch" class="mini-search" placeholder="Pesquisar..."></div><div id="documentsList" class="stack-list"></div></article>
+      </div>
+    </section>
+
+    <section class="advanced-view" data-view-panel="financial">
+      <div class="section-heading"><div><span class="eyebrow">GESTÃO FINANCEIRA</span><h2>Financeiro e consumo</h2><p>Receitas, despesas, orçamento realizado e leituras de água, gás e energia.</p></div></div>
+      <div class="metric-grid compact"><article class="metric-card"><span>Receitas</span><strong id="financeIncome">R$ 0</strong></article><article class="metric-card"><span>Despesas</span><strong id="financeExpense">R$ 0</strong></article><article class="metric-card"><span>Saldo</span><strong id="financeBalance">R$ 0</strong></article><article class="metric-card"><span>Pendências</span><strong id="financePending">0</strong></article></div>
+      <div class="two-col-grid finance-insights">
+        <article class="panel-card"><div class="panel-heading"><div><h3>Previsto × realizado</h3><p>Comparativo mensal do orçamento com despesas efetivamente registradas.</p></div></div><div id="financeMonthlyChart" class="finance-chart"><div class="empty-state">Cadastre orçamento e lançamentos para gerar o gráfico.</div></div></article>
+        <article class="panel-card"><h3>Orçamento mensal</h3><form id="budgetForm" class="advanced-form"><div class="form-row"><label>Mês<input name="budget_month" type="month" required></label><label>Valor previsto<input name="planned_amount" type="number" min="0" step="0.01" required></label></div><label>Categoria<input name="category" value="Geral" required></label><label>Observações<input name="notes" placeholder="Ex.: previsão aprovada em assembleia"></label><button class="primary-btn" type="submit">Salvar orçamento</button></form><div id="budgetList" class="stack-list"></div></article>
+      </div>
+      <div class="two-col-grid">
+        <article class="panel-card"><h3>Novo lançamento</h3><form id="financialForm" class="advanced-form"><div class="form-row"><label>Tipo<select name="entry_type"><option value="receita">Receita</option><option value="despesa">Despesa</option></select></label><label>Valor<input name="amount" type="number" min="0" step="0.01" required></label></div><label>Categoria<input name="category" required placeholder="Ex.: Elevadores"></label><label>Descrição<input name="description" required></label><div class="form-row"><label>Vencimento<input name="due_date" type="date"></label><label>Status<select name="status"><option value="pendente">Pendente</option><option value="pago">Pago</option><option value="atrasado">Atrasado</option><option value="cancelado">Cancelado</option></select></label></div><button class="primary-btn" type="submit">Registrar</button></form><div id="financialList" class="stack-list"></div></article>
+        <article class="panel-card"><h3>Leitura de consumo</h3><form id="utilityForm" class="advanced-form"><div class="form-row"><label>Unidade<input name="unit" required placeholder="101"></label><label>Bloco<input name="block" placeholder="A"></label></div><div class="form-row"><label>Tipo<select name="utility_type"><option value="agua">Água</option><option value="gas">Gás</option><option value="energia">Energia</option></select></label><label>Leitura<input name="reading_value" type="number" min="0" step="0.001" required></label></div><label>Data<input name="measured_at" type="date"></label><button class="primary-btn" type="submit">Salvar leitura</button></form><div id="utilityAlerts" class="stack-list"></div></article>
+      </div>
+    </section>
+
+    <section class="advanced-view" data-view-panel="assets">
+      <div class="section-heading"><div><span class="eyebrow">PATRIMÔNIO</span><h2>Ativos, QR Code e manutenção preventiva</h2><p>Cadastre equipamentos e gere planos recorrentes de manutenção.</p></div><button id="generateMaintenanceBtn" class="secondary-btn"><i class="fas fa-gears"></i> Gerar manutenções vencidas</button></div>
+      <div class="three-col-grid">
+        <article class="panel-card"><h3>Novo ativo</h3><form id="assetForm" class="advanced-form"><label>Nome<input name="name" required></label><div class="form-row"><label>Tipo<input name="asset_type" required placeholder="Elevador"></label><label>Local<input name="location" required></label></div><label>Nº de série<input name="serial_number"></label><div class="form-row"><label>Fornecedor<input name="supplier"></label><label>Garantia<input name="warranty_until" type="date"></label></div><button class="primary-btn" type="submit">Cadastrar ativo</button></form></article>
+        <article class="panel-card"><h3>Plano recorrente</h3><form id="maintenanceTemplateForm" class="advanced-form"><label>Ativo<select id="maintenanceAssetSelect" name="asset_id"><option value="">Sem ativo específico</option></select></label><label>Tarefa<input name="title" required></label><div class="form-row"><label>Local<input name="location" required></label><label>Categoria<input name="category" required value="Preventiva"></label></div><div class="form-row"><label>Intervalo (dias)<input name="interval_days" type="number" min="1" value="30" required></label><label>Próxima data<input name="next_due" type="date" required></label></div><button class="primary-btn" type="submit">Criar plano</button></form></article>
+        <article class="panel-card"><h3>Patrimônio cadastrado</h3><div id="assetsList" class="stack-list"></div></article>
+      </div>
+      <div id="assetQrModal" class="simple-modal" hidden><div class="simple-modal-card asset-modal-card"><button class="modal-close" data-close-modal="assetQrModal">×</button><h3 id="assetQrTitle">QR do ativo</h3><div class="asset-modal-grid"><div><div id="assetQrCode" class="qr-box"></div><code id="assetQrValue"></code><p>O QR abre diretamente a ficha do equipamento e seu histórico de manutenção em um dispositivo autenticado.</p></div><div><h4>Histórico do equipamento</h4><div id="assetHistory" class="stack-list"><div class="empty-state">Carregando histórico...</div></div></div></div></div></div>
+    </section>
+
+    <section class="advanced-view" data-view-panel="tickets">
+      <div class="section-heading"><div><span class="eyebrow">ATENDIMENTO</span><h2>Chamados com SLA</h2><p>Acompanhe tempo de resposta e fluxo: aberto → análise → andamento → prestador → resolvido.</p></div></div>
+      <div class="two-col-grid">
+        <article class="panel-card"><h3>Abrir chamado</h3><form id="ticketForm" class="advanced-form"><label>Título<input name="title" required></label><label>Descrição<textarea name="description" required rows="4"></textarea></label><div class="form-row"><label>Categoria<input name="category" value="Geral"></label><label>Prioridade<select name="priority"><option value="baixa">Baixa</option><option value="normal" selected>Normal</option><option value="alta">Alta</option><option value="critica">Crítica</option></select></label></div><label>Prazo SLA<input name="sla_due_at" type="datetime-local"></label><button class="primary-btn" type="submit">Abrir chamado</button></form></article>
+        <article class="panel-card"><div class="panel-heading"><div><h3>Fila de chamados</h3><p>Atualização de status disponível para a gestão</p></div><select id="ticketStatusFilter" class="mini-select"><option value="">Todos</option><option value="aberto">Aberto</option><option value="em_analise">Em análise</option><option value="em_andamento">Em andamento</option><option value="aguardando_prestador">Aguardando prestador</option><option value="resolvido">Resolvido</option></select></div><div id="ticketsList" class="stack-list"></div></article>
+      </div>
+    </section>
+
+    <section class="advanced-view" data-view-panel="mobility">
+      <div class="section-heading"><div><span class="eyebrow">MOBILIDADE</span><h2>Estacionamento e carregadores elétricos</h2><p>Vagas, empréstimos temporários e reservas de recarga.</p></div></div>
+      <div class="three-col-grid">
+        <article class="panel-card management-only"><h3>Cadastrar vaga</h3><form id="parkingForm" class="advanced-form"><label>Código da vaga<input name="code" required placeholder="V-101"></label><div class="form-row"><label>Unidade<input name="unit"></label><label>Bloco<input name="block"></label></div><label>Tipo<select name="space_type"><option value="morador">Morador</option><option value="visitante">Visitante</option><option value="pcd">PCD</option><option value="moto">Moto</option><option value="eletrico">Elétrico</option></select></label><label>Placa<input name="vehicle_plate"></label><label>Usuário autorizado / empréstimo<input name="user_email" type="email" placeholder="morador@email.com"></label><label>Emprestada até<input name="borrowed_until" type="datetime-local"><small>Ao informar uma data, a vaga fica marcada como emprestada temporariamente.</small></label><button class="primary-btn" type="submit">Cadastrar vaga</button></form><div id="parkingList" class="stack-list"></div></article>
+        <article class="panel-card management-only"><h3>Novo carregador</h3><form id="chargerForm" class="advanced-form"><label>Nome<input name="name" required placeholder="Carregador 01"></label><label>Local<input name="location" required></label><label>Potência (kW)<input name="power_kw" type="number" min="0" step="0.1"></label><button class="primary-btn" type="submit">Cadastrar</button></form><div id="chargerList" class="stack-list"></div></article>
+        <article class="panel-card"><h3>Reservar carregador</h3><form id="chargerBookingForm" class="advanced-form"><label>Carregador<select name="charger_id" id="chargerBookingSelect" required><option value="">Selecione</option></select></label><label>Início<input name="start_at" type="datetime-local" required></label><label>Fim<input name="end_at" type="datetime-local" required></label><label>Consumo estimado (kWh)<input name="kwh" type="number" min="0" step="0.001" placeholder="Opcional"></label><button class="primary-btn" type="submit">Reservar</button></form><div id="chargerBookingsList" class="stack-list"></div></article>
+      </div>
+    </section>
+
+    <section class="advanced-view" data-view-panel="community">
+      <div class="section-heading"><div><span class="eyebrow">COMUNIDADE</span><h2>Emergência, calendário, satisfação e participação</h2><p>Comunique eventos críticos, colete avaliações e reconheça participação comunitária.</p></div></div>
+      <div class="two-col-grid">
+        <article class="panel-card management-only"><h3>Modo Emergência</h3><form id="emergencyForm" class="advanced-form"><label>Título<input name="title" required placeholder="Interrupção no abastecimento"></label><label>Mensagem<textarea name="message" required rows="3"></textarea></label><label>Severidade<select name="severity"><option value="moderada">Moderada</option><option value="alta">Alta</option><option value="critica">Crítica</option></select></label><button class="danger-btn" type="submit"><i class="fas fa-triangle-exclamation"></i> Publicar alerta</button></form><div id="emergencyList" class="stack-list"></div></article>
+        <article class="panel-card"><h3>Pesquisa de satisfação</h3><form id="surveyForm" class="advanced-form management-only"><label>Título<input name="title" required></label><label>Pergunta<input name="question" required placeholder="Como você avalia..."></label><button class="primary-btn" type="submit">Criar pesquisa</button></form><div id="surveysList" class="stack-list"></div></article>
+      </div>
+      <div class="two-col-grid">
+        <article class="panel-card management-only"><h3>Calendário geral</h3><form id="calendarForm" class="advanced-form"><label>Título<input name="title" required></label><div class="form-row"><label>Tipo<select name="event_type"><option value="assembleia">Assembleia</option><option value="manutencao">Manutenção</option><option value="reserva">Reserva</option><option value="evento">Evento</option><option value="vencimento">Vencimento</option></select></label><label>Início<input name="starts_at" type="datetime-local" required></label></div><label>Descrição<input name="description"></label><button class="primary-btn" type="submit">Adicionar ao calendário</button></form><div id="calendarList" class="stack-list"></div></article>
+        <article class="panel-card"><h3>Conquistas comunitárias</h3><p class="muted">Sem competição financeira: pontos apenas por participação cívica no condomínio.</p><form id="badgeForm" class="advanced-form management-only"><label>Morador (e-mail)<input name="user_email" type="email" required></label><div class="form-row"><label>Conquista<select name="badge_code"><option value="participacao_assembleia">Participou de assembleia</option><option value="pesquisa">Colaborou em pesquisa</option><option value="comunidade">Ajudou a comunidade</option></select></label><label>Pontos<input name="points" type="number" min="0" value="10"></label></div><button class="primary-btn" type="submit">Conceder</button></form><div id="badgesList" class="stack-list"></div></article>
+      </div>
+    </section>
+
+    <section class="advanced-view" data-view-panel="governance">
+      <div class="section-heading"><div><span class="eyebrow">GOVERNANÇA</span><h2>Tarefas, auditoria e permissões</h2><p>Transforme decisões em tarefas e mantenha rastreabilidade das ações administrativas.</p></div></div>
+      <div class="two-col-grid">
+        <article class="panel-card"><h3>Tarefas de assembleia</h3><form id="assemblyTaskForm" class="advanced-form"><label>Tarefa<input name="title" required></label><label>Responsável<input name="assigned_to" type="email"></label><div class="form-row"><label>Prazo<input name="due_date" type="date"></label><label>Status<select name="status"><option value="pendente">Pendente</option><option value="em_andamento">Em andamento</option><option value="concluida">Concluída</option></select></label></div><button class="primary-btn" type="submit">Criar tarefa</button></form><div id="assemblyTasksList" class="stack-list"></div></article>
+        <article class="panel-card"><h3>Permissões por perfil</h3><p class="muted">A gestão sempre mantém acesso administrativo. Configure permissões extras para moradores e porteiros.</p><div id="permissionsMatrix" class="permissions-matrix"></div></article>
+      </div>
+      <article class="panel-card"><div class="panel-heading"><div><h3>Auditoria</h3><p>Últimas ações registradas pelos módulos avançados</p></div></div><div id="auditList" class="audit-table-wrap"></div></article>
+    </section>
+
+    <section class="advanced-view" data-view-panel="admin">
+      <div class="section-heading"><div><span class="eyebrow">MULTICONDOMÍNIO</span><h2>Painel da Administradora</h2><p>Uma única conta pode consultar condomínios vinculados à administradora.</p></div><a href="index-administradora.html" class="secondary-btn"><i class="fas fa-arrow-up-right-from-square"></i> Abrir painel dedicado</a></div>
+      <div class="two-col-grid">
+        <article class="panel-card"><h3>Condomínios gerenciados</h3><div id="managedCondosList" class="stack-list"></div></article>
+        <article class="panel-card"><h3>Como habilitar</h3><ol class="steps"><li>Cadastre a empresa em <code>management_companies</code>.</li><li>Vincule o usuário em <code>management_company_users</code>.</li><li>Vincule CEPs em <code>managed_condominiums</code>.</li><li>Defina <code>users.user_type = 'administradora'</code> para usar o painel dedicado.</li></ol></article>
+      </div>
+    </section>
+
+    <section class="advanced-view" data-view-panel="integrations">
+      <div class="section-heading"><div><span class="eyebrow">ECOSSISTEMA</span><h2>PWA, API e integrações</h2><p>Instale o Condomit no celular e exponha uma API protegida para integrações futuras.</p></div></div>
+      <div class="three-col-grid">
+        <article class="panel-card"><i class="big-feature-icon fas fa-mobile-screen-button"></i><h3>PWA instalável</h3><p>Manifesto, service worker e cache do shell principal estão configurados.</p><button id="installPwaBtn" class="primary-btn">Instalar Condomit</button><small id="pwaStatus" class="muted">A disponibilidade depende do navegador.</small></article>
+        <article class="panel-card"><i class="big-feature-icon fas fa-code"></i><h3>API pública protegida</h3><p>Endpoint Netlify: <code>/.netlify/functions/public-api</code>. Exige a variável <code>CONDOMIT_API_KEY</code>.</p><button id="copyApiExampleBtn" class="secondary-btn">Copiar exemplo</button></article>
+        <article class="panel-card"><i class="big-feature-icon fas fa-store"></i><h3>Marketplace e achados</h3><p>Marketplace recebe status/expiração e favoritos persistentes. Achados e perdidos recebe arquivamento e correspondências sugeridas.</p><div class="button-row"><a href="marketplace.html" class="secondary-btn">Marketplace</a><a href="achados-perdidos.html" class="secondary-btn">Achados</a></div></article>
+      </div>
+      <article class="panel-card" style="margin-top:20px"><div class="panel-heading"><div><h3>Segurança e sessões</h3><p>Dispositivos que acessaram a conta, autenticação em duas etapas e encerramento global de sessão.</p></div><div class="button-row"><a class="secondary-btn" href="configuracoes.html"><i class="fas fa-key"></i> Gerenciar 2FA</a><button id="signOutAllDevicesBtn" class="danger-btn"><i class="fas fa-shield-halved"></i> Sair de todos os dispositivos</button></div></div><div id="sessionsList" class="stack-list"></div></article>
+    </section>
+  </main>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../scripts/supabase-client.js?v=027"></script>
+<script type="module" src="../scripts/supabase-auth.js"></script>
+<script src="../scripts/condomit-alerts.js?v=027"></script>
+<script src="../scripts/gestao-avancada.js?v=027"></script>
+<script src="../scripts/advanced-global.js?v=027"></script>
+</body>
+</html>

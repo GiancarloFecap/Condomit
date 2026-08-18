@@ -112,3 +112,6 @@ html[data-theme="dark"] .post-assembly-vote-btn { background: #172554; border-co
     .poll-option-main { flex-wrap: wrap; }
     .post-assembly-vote-btn { width: 100%; justify-content: center; }
 }
+
+/* 027 - resumo executivo e tarefas automáticas */
+.summary-hero-actions{margin-top:16px}.minutes-decisions{margin:14px 0;padding:14px 16px;border-radius:14px;background:#eef6ff;border:1px solid #d7e8ff}.minutes-decisions ul{margin:8px 0 0;padding-left:20px}.minutes-decisions li+li{margin-top:6px}

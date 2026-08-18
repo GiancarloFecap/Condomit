@@ -2927,6 +2927,15 @@ function getNormalizedUserType(
     return 'porteiro';
   }
 
+  if (
+    t.startsWith('administra') ||
+    t === 'admin' ||
+    t === 'administradora' ||
+    t === 'administrador'
+  ) {
+    return 'administradora';
+  }
+
   return t || 'morador';
 }
 
@@ -2982,7 +2991,8 @@ async function refreshCurrentUserFromDb() {
         [
           'sindico',
           'morador',
-          'porteiro'
+          'porteiro',
+          'administradora'
         ].includes(
           freshType
         )
@@ -3010,7 +3020,8 @@ async function refreshCurrentUserFromDb() {
         ![
           'sindico',
           'morador',
-          'porteiro'
+          'porteiro',
+          'administradora'
         ].includes(
           getNormalizedUserType(merged)
         )
@@ -5108,6 +5119,10 @@ function getCondomitRoleHomePath(role) {
     return 'index-porteiro.html';
   }
 
+  if (normalized === 'administradora') {
+    return 'index-administradora.html';
+  }
+
   return 'index-morador.html';
 }
 
@@ -5207,7 +5222,8 @@ async function syncCondomitRoleNow(options = {}) {
       [
         'index.html',
         'index-morador.html',
-        'index-porteiro.html'
+        'index-porteiro.html',
+        'index-administradora.html'
       ].includes(
         currentPage
       );
@@ -5238,7 +5254,9 @@ async function syncCondomitRoleNow(options = {}) {
             ? 'Síndico'
             : currentRole === 'porteiro'
               ? 'Porteiro'
-              : 'Morador';
+              : currentRole === 'administradora'
+                ? 'Administradora'
+                : 'Morador';
 
         window.showToast?.(
           `Seu cargo foi atualizado para ${label}. Atualizando o sistema...`,

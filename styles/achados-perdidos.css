@@ -467,3 +467,6 @@
         align-items: stretch;
     }
 }
+
+/* 027 - correspondências e arquivamento */
+.match-chip{display:inline-flex;align-items:center;gap:5px;background:#eef2ff;color:#4338ca;border-radius:999px;padding:5px 8px;font-size:.7rem;font-weight:700}.status-chip.arquivado{background:#f1f5f9;color:#64748b}
