@@ -230,6 +230,54 @@
     btn.disabled = !(hasBasicPerm && canEnter);
   }
 
+  function isMobileMediaDevice() {
+    const ua = String(navigator.userAgent || '');
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua)
+      || window.matchMedia?.('(pointer: coarse)')?.matches === true;
+  }
+
+  function normalizeMobileCameras(devices) {
+    const cameras = Array.isArray(devices) ? devices.filter(Boolean) : [];
+    if (!isMobileMediaDevice() || cameras.length <= 1) {
+      return cameras.map((device, index) => ({ device, label: device.label || `Câmera ${index + 1}` }));
+    }
+
+    const labelOf = (device) => String(device?.label || '').toLowerCase();
+    let front = cameras.find((device) => /facing\s*front|camera\s*1|front|user|frontal|frente|facetime/.test(labelOf(device)));
+    let back = cameras.find((device) => /facing\s*back|camera\s*0|back|rear|environment|traseir/.test(labelOf(device)));
+
+    if (!front) front = cameras[0] || null;
+    if (!back) back = cameras.find((device) => device !== front) || null;
+
+    const result = [];
+    if (front) result.push({ device: front, label: 'Câmera frontal' });
+    if (back && back !== front) result.push({ device: back, label: 'Câmera traseira' });
+    return result;
+  }
+
+  function populateCameraSelect(select, devices, selectedId) {
+    if (!select) return;
+    const normalized = normalizeMobileCameras(devices);
+    select.innerHTML = '';
+    if (!normalized.length) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'Nenhuma câmera encontrada';
+      select.appendChild(option);
+      select.disabled = true;
+      return;
+    }
+    select.disabled = false;
+    normalized.forEach(({ device, label }, index) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId || `camera-${index}`;
+      option.textContent = label;
+      if ((selectedId && device.deviceId === selectedId) || (!selectedId && index === 0)) option.selected = true;
+      select.appendChild(option);
+    });
+    state.cameraDeviceId = select.value || normalized[0]?.device?.deviceId || '';
+  }
+
   function populateDeviceSelect(select, devices, selectedId, defaultLabel) {
     if (!select) return;
     select.innerHTML = '';
@@ -265,7 +313,7 @@
       const mics = devices.filter(d => d.kind === 'audioinput');
       const outputs = devices.filter(d => d.kind === 'audiooutput');
 
-      populateDeviceSelect($('camera-select'), cameras, state.cameraDeviceId, 'Câmera');
+      populateCameraSelect($('camera-select'), cameras, state.cameraDeviceId);
       populateDeviceSelect($('mic-select'), mics, state.micDeviceId, 'Microfone');
 
       if (outputs.length > 0 && typeof $('localVideo').setSinkId === 'function') {
@@ -381,6 +429,7 @@
     const videoConstraints = options.video !== false ? {
       width: { ideal: 1280 },
       height: { ideal: 720 },
+      ...(!options.videoDeviceId && isMobileMediaDevice() ? { facingMode: { ideal: 'user' } } : {}),
       ...(options.videoDeviceId ? { deviceId: { exact: options.videoDeviceId } } : {})
     } : false;
 

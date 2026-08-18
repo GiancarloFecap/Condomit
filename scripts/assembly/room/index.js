@@ -1,9 +1,9 @@
-import { state } from './state.js';
-import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js';
-import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js';
-import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js';
-import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js';
-import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js';
+import { state } from './state.js?v=026';
+import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=026';
+import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=026';
+import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=026';
+import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=026';
+import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=026';
 
 function $(id) {
   return document.getElementById(id);
@@ -23,6 +23,40 @@ function toast(msg, type) {
 async function getTokenInfo() {
   if (!window.AssemblyAPI?.requestLivekitToken) throw new Error('AssemblyAPI indisponível');
   return await window.AssemblyAPI.requestLivekitToken(state.assemblyId);
+}
+
+
+async function loadAssemblyProfilePhotos() {
+  const directory = new Map();
+  const ownUser = state.tokenInfo?.user || {};
+  const ownEmail = String(ownUser.email || '').trim().toLowerCase();
+  const ownPhoto = ownUser.profile_photo || ownUser.profilePhoto || '';
+  if (ownEmail && ownPhoto) directory.set(ownEmail, ownPhoto);
+
+  if (typeof window.supabaseFetch !== 'function') {
+    state.profilePhotos = directory;
+    return;
+  }
+
+  const requests = [
+    window.supabaseFetch('/rpc/condomit_list_condo_residents', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    }).catch(() => []),
+    window.supabaseFetch('/rpc/condomit_list_chat_contacts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_role: 'sindico' })
+    }).catch(() => []),
+    window.supabaseFetch('/rpc/condomit_list_chat_contacts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_role: 'porteiro' })
+    }).catch(() => [])
+  ];
+
+  const groups = await Promise.all(requests);
+  groups.flat().forEach((row) => {
+    const email = String(row?.email || '').trim().toLowerCase();
+    const photo = row?.profile_photo || row?.profilePhoto || '';
+    if (email && photo) directory.set(email, photo);
+  });
+  state.profilePhotos = directory;
 }
 
 function bindTabs() {
@@ -510,6 +544,7 @@ async function init() {
     const tokenInfo = await getTokenInfo();
     state.tokenInfo = tokenInfo;
     state.permissions = tokenInfo.permissions || {};
+    await loadAssemblyProfilePhotos();
 
     if (state.assembly?.status !== 'em_andamento') {
       showBanner('A assembleia ainda não está em andamento. Aguarde o organizador iniciar.', 'warning');

@@ -6,7 +6,7 @@ import {
 
 import {
   state
-} from './state.js';
+} from './state.js?v=026';
 
 import {
   renderGrid,
@@ -18,7 +18,7 @@ import {
   setConnectionConnecting,
   setConnectionDisconnected,
   setConnectionReconnecting
-} from './ui.js';
+} from './ui.js?v=026';
 
 let intentionalDisconnect =
   false;
@@ -1118,8 +1118,8 @@ function getInitialDevicePrefs() {
   }
 
   if (isMobileCameraDevice()) {
-    /* A reunião sempre inicia pela câmera frontal no celular. */
-    preferences.cameraDeviceId = null;
+    /* O seletor de preparação já deixa a frontal como padrão. Mantemos
+       o deviceId quando o usuário escolheu explicitamente a traseira. */
     state.mobileCameraFacing = 'user';
   }
 
@@ -1172,10 +1172,10 @@ async function enableInitialCamera(
   preferences
 ) {
   try {
-    const options = isMobileCameraDevice()
-      ? { facingMode: 'user' }
-      : preferences.cameraDeviceId
-        ? { deviceId: preferences.cameraDeviceId }
+    const options = preferences.cameraDeviceId
+      ? { deviceId: preferences.cameraDeviceId }
+      : isMobileCameraDevice()
+        ? { facingMode: 'user' }
         : undefined;
 
     await room
@@ -2054,6 +2054,18 @@ export async function toggleScreenShare() {
       false
     );
 
+  /* Compartilhamento web depende da Screen Capture API do navegador.
+     Em navegadores móveis que não expõem getDisplayMedia não existe
+     captura de tela que o JavaScript possa forçar. Evitamos o erro
+     genérico e mantemos a função ativa nos navegadores que suportam. */
+  if (enabled && typeof navigator.mediaDevices?.getDisplayMedia !== 'function') {
+    window.AssemblyUtils?.showToast?.(
+      'Este navegador móvel não oferece compartilhamento de tela pelo site. Use um navegador/dispositivo com suporte à captura de tela.',
+      'warning'
+    );
+    return false;
+  }
+
   try {
     /*
      * Se está PARANDO:
@@ -2083,7 +2095,8 @@ export async function toggleScreenShare() {
     await room
       .localParticipant
       .setScreenShareEnabled(
-        enabled
+        enabled,
+        enabled ? { audio: false } : undefined
       );
 
     setControlActive(
@@ -2119,12 +2132,20 @@ export async function toggleScreenShare() {
       false
     );
 
+    const errorName = String(error?.name || '');
+    const message = errorName === 'NotAllowedError'
+      ? 'O compartilhamento de tela foi cancelado ou bloqueado pelo navegador.'
+      : errorName === 'NotSupportedError'
+        ? 'Este navegador não oferece compartilhamento de tela nesta plataforma.'
+        : 'Não foi possível compartilhar tela neste navegador.';
+
     window
       .AssemblyUtils
       ?.showToast?.(
-        'Não foi possível compartilhar tela.',
-        'error'
+        message,
+        errorName === 'NotAllowedError' ? 'warning' : 'error'
       );
+    return false;
   }
 }
 

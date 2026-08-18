@@ -1,10 +1,17 @@
-import { state } from './state.js';
+import { state } from './state.js?v=026';
 
 let recognition = null;
 let shouldRun = false;
 let restarting = false;
 let lastSavedText = '';
 let lastSavedAt = 0;
+
+
+function isMobileSpeechDevice() {
+  const ua = String(navigator.userAgent || '');
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(ua)
+    || window.matchMedia?.('(pointer: coarse)')?.matches === true;
+}
 
 function getRecognitionClass() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -115,6 +122,17 @@ function createRecognition() {
 }
 
 export function startAssemblyTranscription() {
+  /* Em celulares, Web Speech pode emitir um som do próprio sistema sempre
+     que o reconhecimento é iniciado/reiniciado. Esse áudio não é controlável
+     pelo site. Mantemos o microfone da reunião normalmente e desativamos
+     apenas a transcrição automática local nesses dispositivos. */
+  if (isMobileSpeechDevice()) {
+    shouldRun = false;
+    try { recognition?.stop(); } catch (_) {}
+    setStatus('paused', 'Transcrição pausada no celular');
+    return false;
+  }
+
   if (!getRecognitionClass()) {
     setStatus('unsupported', 'Transcrição indisponível neste navegador');
     return false;

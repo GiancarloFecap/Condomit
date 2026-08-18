@@ -1,4 +1,4 @@
-import { state } from './state.js';
+import { state } from './state.js?v=026';
 
 function el(id) {
   return document.getElementById(id);
@@ -23,6 +23,40 @@ function parseMetadata(participant) {
   } catch (_) {
     return {};
   }
+}
+
+
+function participantEmail(participant, meta = null) {
+  const data = meta || parseMetadata(participant);
+  return safeText(data?.user_email || data?.email || '').toLowerCase();
+}
+
+function participantProfilePhoto(participant, meta = null) {
+  const email = participantEmail(participant, meta);
+  if (email && state.profilePhotos instanceof Map) {
+    const photo = safeText(state.profilePhotos.get(email));
+    if (photo) return photo;
+  }
+  const data = meta || parseMetadata(participant);
+  return safeText(data?.profile_photo || data?.profilePhoto || '');
+}
+
+function renderAvatarContent(avatar, participant, displayName, meta = null) {
+  if (!avatar) return;
+  const photo = participantProfilePhoto(participant, meta);
+  avatar.textContent = '';
+  if (photo) {
+    const img = document.createElement('img');
+    img.src = photo;
+    img.alt = `Foto de perfil de ${displayName || 'participante'}`;
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    avatar.appendChild(img);
+    avatar.classList.add('has-photo');
+    return;
+  }
+  avatar.classList.remove('has-photo');
+  avatar.textContent = getInitials(displayName);
 }
 
 function formatUserType(meta) {
@@ -150,7 +184,7 @@ function renderTile(participant, isLocal) {
 
   const avatar = document.createElement('div');
   avatar.className = 'tile-avatar';
-  avatar.textContent = getInitials(displayName);
+  renderAvatarContent(avatar, participant, displayName, meta);
   media.appendChild(avatar);
 
   const footer = document.createElement('div');
@@ -288,7 +322,7 @@ export function renderParticipantsList(room) {
 
     const avatar = document.createElement('div');
     avatar.className = 'panel-item-avatar';
-    avatar.textContent = getInitials(displayName);
+    renderAvatarContent(avatar, p, displayName, meta);
 
     const info = document.createElement('div');
     info.className = 'panel-item-info';
@@ -374,7 +408,22 @@ export function renderChatMessage(msg) {
 
   const avatar = document.createElement('div');
   avatar.className = 'chat-msg-avatar';
-  avatar.textContent = getInitials(name);
+  const msgEmail = safeText(msg?.user_email || msg?.participant_email || '').toLowerCase();
+  const profilePhoto = msgEmail && state.profilePhotos instanceof Map
+    ? safeText(state.profilePhotos.get(msgEmail))
+    : '';
+  avatar.textContent = '';
+  if (profilePhoto) {
+    const img = document.createElement('img');
+    img.src = profilePhoto;
+    img.alt = `Foto de perfil de ${name}`;
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    avatar.appendChild(img);
+    avatar.classList.add('has-photo');
+  } else {
+    avatar.textContent = getInitials(name);
+  }
 
   const body = document.createElement('div');
   body.className = 'chat-msg-body';
