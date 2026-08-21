@@ -1,0 +1,21 @@
+node_modules/
+www/
+.DS_Store
+*.log
+
+# Android
+android/.gradle/
+android/local.properties
+android/app/build/
+android/build/
+
+# iOS
+ios/App/DerivedData/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+
+# Segredos de assinatura
+*.jks
+*.keystore
+*.p12
+*.mobileprovision

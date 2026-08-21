@@ -283,3 +283,86 @@ button, input, select, textarea { font: inherit; }
 .advanced-footer-btn i { width:20px; text-align:center; }
 .advanced-logout-btn { background:rgba(127,29,29,.24); }
 .advanced-logout-btn:hover { background:rgba(127,29,29,.36); }
+<<<<<<< HEAD
+=======
+
+/* Condomit 030 — top bar e rodapé da sidebar idênticos ao painel do síndico */
+.advanced-topbar.top-bar {
+    background: #fff;
+    padding: 20px 40px;
+    min-height: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    border-bottom: 0;
+}
+.advanced-topbar .top-bar-left { display:flex; align-items:center; min-width:0; gap:14px; }
+.advanced-topbar .top-bar-left h1 { font-size:1.6rem; color:#1f2937; margin:0 0 4px; }
+.advanced-topbar .top-bar-left p { color:#6b7280; font-size:.95rem; margin:0; }
+.advanced-topbar .top-bar-right { display:flex; align-items:center; gap:25px; }
+.advanced-topbar .top-icons { display:flex; gap:10px; }
+.advanced-topbar .icon-btn {
+    width:40px; height:40px; border-radius:10px; border:none;
+    background:#f3f4f6; color:#6b7280; cursor:pointer; font-size:1rem;
+    transition:all .3s ease;
+}
+.advanced-topbar .icon-btn:hover { background:#e5e7eb; color:#1f2937; }
+.advanced-topbar .user-profile-small { display:flex; align-items:center; gap:12px; }
+.advanced-topbar .user-info-small .name { font-weight:600; color:#1f2937; }
+.advanced-topbar .user-info-small .type { font-size:.85rem; color:#6b7280; }
+.advanced-topbar .avatar {
+    width:45px; height:45px; flex:0 0 45px; border-radius:50%;
+    background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);
+    color:#fff; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:1.1rem; overflow:hidden;
+}
+.advanced-topbar .avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+
+.advanced-settings-block { margin-top:10px; padding-top:0; }
+.advanced-settings-block > .advanced-nav-item { margin:0; width:100%; }
+.advanced-sidebar-footer.sidebar-footer {
+    padding-top:15px;
+    padding-left:0;
+    padding-right:0;
+    padding-bottom:max(12px,env(safe-area-inset-bottom));
+    margin-top:10px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    border-top:1px solid rgba(255,255,255,.15);
+}
+.advanced-sidebar .btn-support,
+.advanced-sidebar .btn-logout-sidebar {
+    width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+    padding:14px 12px; border-radius:25px;
+    background:rgba(255,255,255,.15); border:2px solid rgba(255,255,255,.3);
+    color:#fff; cursor:pointer; transition:all .3s ease;
+    font-weight:600; font-size:.95rem;
+}
+.advanced-sidebar .btn-support:hover { background:rgba(255,255,255,.25); border-color:rgba(255,255,255,.5); transform:translateY(-1px); }
+.advanced-sidebar .btn-logout-sidebar:hover { background:rgba(239,68,68,.3); border-color:rgba(252,165,165,.6); transform:translateY(-1px); }
+
+@media (max-width:900px) {
+    .advanced-topbar.top-bar { min-height:76px; padding:14px 18px; }
+    .advanced-topbar .top-bar-right { gap:12px; }
+    .advanced-topbar .top-icons { gap:6px; }
+    .advanced-topbar .user-info-small { display:none; }
+}
+@media (max-width:600px) {
+    .advanced-topbar.top-bar { padding:max(10px,env(safe-area-inset-top)) 12px 10px; gap:8px; }
+    .advanced-topbar .top-bar-left h1 { font-size:1.05rem; }
+    .advanced-topbar .top-bar-left p { font-size:.72rem; line-height:1.35; }
+    .advanced-topbar .top-icons { gap:4px; }
+    .advanced-topbar .icon-btn { width:36px; height:36px; border-radius:9px; }
+    .advanced-topbar .avatar { width:40px; height:40px; flex-basis:40px; }
+}
+@media (max-width:480px) {
+    .advanced-topbar .top-icons .icon-btn:nth-child(2) { display:none; }
+    .advanced-topbar .top-bar-right { gap:6px; }
+}
+>>>>>>> 48db672 (Android)

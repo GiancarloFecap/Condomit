@@ -9,8 +9,14 @@
   <link rel="manifest" href="../manifest.webmanifest">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../styles/theme.css?v=027">
+<<<<<<< HEAD
   <link rel="stylesheet" href="../styles/gestao-avancada.css?v=029">
   <link rel="stylesheet" href="../styles/responsive-mobile.css?v=029">
+=======
+  <link rel="stylesheet" href="../styles/gestao-avancada.css?v=030">
+  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=029">
+  <script src="../scripts/platform-config.js?v=030"></script>
+>>>>>>> 48db672 (Android)
 </head>
 <body>
 <div class="advanced-shell">
@@ -39,16 +45,45 @@
       <div class="advanced-nav-title">Configurações</div>
       <a class="advanced-nav-item" href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a>
     </div>
+<<<<<<< HEAD
     <div class="advanced-sidebar-footer">
       <button id="advancedSupportBtn" class="advanced-footer-btn" type="button"><i class="fas fa-headset"></i><span>Central de Suporte</span></button>
       <button id="advancedLogoutBtn" class="advanced-footer-btn advanced-logout-btn" type="button"><i class="fas fa-right-from-bracket"></i><span>Sair</span></button>
+=======
+    <div class="advanced-sidebar-footer sidebar-footer">
+      <button id="advancedSupportBtn" class="btn-support" type="button"><i class="fas fa-headset"></i><span>Central de Suporte</span></button>
+      <button id="advancedLogoutBtn" class="btn-logout-sidebar" type="button"><i class="fas fa-sign-out-alt"></i><span>Sair</span></button>
+>>>>>>> 48db672 (Android)
     </div>
   </aside>
 
   <main class="advanced-main">
+<<<<<<< HEAD
     <header class="advanced-topbar">
       <div class="advanced-topbar-left"><button id="advancedMenuBtn" class="icon-square" aria-label="Menu"><i class="fas fa-bars"></i></button><div><h1 id="pageTitle">Gestão Avançada</h1><p id="pageSubtitle">Indicadores e operações do condomínio</p></div></div>
       <div class="advanced-user"><div id="advancedAvatar" class="advanced-avatar">US</div><div><strong id="advancedUserName">Usuário</strong><small id="advancedUserRole">Perfil</small></div></div>
+=======
+    <header class="top-bar advanced-topbar">
+      <div class="top-bar-left advanced-topbar-left">
+        <button id="advancedMenuBtn" class="icon-square" aria-label="Menu"><i class="fas fa-bars"></i></button>
+        <div><h1 id="pageTitle">Gestão Avançada</h1><p id="pageSubtitle">Indicadores e operações do condomínio</p></div>
+      </div>
+      <div class="top-bar-right">
+        <div class="top-icons">
+          <button class="icon-btn" type="button" aria-label="Chat"><i class="fas fa-comments"></i></button>
+          <button class="icon-btn" type="button" aria-label="Assembleias"><i class="fas fa-video"></i></button>
+          <button class="icon-btn" type="button" aria-label="Notificações"><i class="fas fa-bell"></i></button>
+          <button class="icon-btn" type="button" aria-label="Editar perfil"><i class="fas fa-user-circle"></i></button>
+        </div>
+        <div class="user-profile-small">
+          <div class="user-info-small">
+            <div id="advancedUserName" class="name">Usuário</div>
+            <div id="advancedUserRole" class="type">Perfil</div>
+          </div>
+          <div id="advancedAvatar" class="avatar advanced-avatar">US</div>
+        </div>
+      </div>
+>>>>>>> 48db672 (Android)
     </header>
 
     <div id="migrationWarning" class="migration-warning" hidden><i class="fas fa-database"></i><div><strong>Recursos avançados ainda não estão ativos no banco.</strong><span>Execute <code>supabase/migrations/024_advanced_management_suite.sql</code> no Supabase SQL Editor.</span></div></div>
@@ -179,6 +214,10 @@
 <script src="../scripts/supabase-client.js?v=027"></script>
 <script type="module" src="../scripts/supabase-auth.js"></script>
 <script src="../scripts/condomit-alerts.js?v=027"></script>
+<<<<<<< HEAD
+=======
+<script src="../scripts/topbar-actions.js?v=030"></script>
+>>>>>>> 48db672 (Android)
 <script src="../scripts/gestao-avancada.js?v=029"></script>
 <script src="../scripts/advanced-global.js?v=029"></script>
 </body>

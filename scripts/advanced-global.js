@@ -156,7 +156,11 @@
 
   async function boot(){
     ensureManifest();injectStyle();injectAdvancedNavigation();setTimeout(injectAdvancedNavigation,0);
+<<<<<<< HEAD
     if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){navigator.serviceWorker.register(inPages()?'../service-worker.js':'service-worker.js',{scope:'../'}).catch(()=>{});}
+=======
+    if(!window.CondomitPlatform?.isNativeApp?.() && 'serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){navigator.serviceWorker.register(inPages()?'../service-worker.js':'service-worker.js',{scope:'../'}).catch(()=>{});}
+>>>>>>> 48db672 (Android)
     await Promise.allSettled([showEmergencyBanner(),registerSession()]);
     window.setInterval(()=>{if(!document.hidden)registerSession();},300000);
     window.addEventListener('condomit:language-changed',injectAdvancedNavigation);

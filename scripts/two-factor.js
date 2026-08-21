@@ -1,7 +1,11 @@
 (function () {
     'use strict';
 
+<<<<<<< HEAD
     const ENDPOINT = '/.netlify/functions/two-factor';
+=======
+    const ENDPOINT = window.condomitApiUrl?.('/.netlify/functions/two-factor') || '/.netlify/functions/two-factor';
+>>>>>>> 48db672 (Android)
 
     async function request(payload, accessToken = '') {
         const response = await fetch(ENDPOINT, {

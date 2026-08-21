@@ -1,9 +1,40 @@
 {
+<<<<<<< HEAD
   "dependencies": {
+=======
+  "name": "condomit",
+  "version": "0.30.0",
+  "private": true,
+  "description": "Plataforma Condomit para web, PWA, Android e iOS.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "mobile:build": "node mobile/build-web.mjs",
+    "mobile:configure-native": "node mobile/configure-native.mjs",
+    "mobile:sync": "npm run mobile:build && npx cap sync && npm run mobile:configure-native",
+    "mobile:android": "npm run mobile:sync && npx cap open android",
+    "mobile:ios": "npm run mobile:sync && npx cap open ios",
+    "mobile:run:android": "npm run mobile:sync && npx cap run android",
+    "mobile:run:ios": "npm run mobile:sync && npx cap run ios",
+    "mobile:doctor": "npx cap doctor"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+>>>>>>> 48db672 (Android)
     "@getbrevo/brevo": "^6.0.2",
     "@supabase/supabase-js": "^2.111.0",
     "livekit-client": "^2.21.0",
     "livekit-server-sdk": "^2.17.0",
     "nodemailer": "^9.0.1"
+<<<<<<< HEAD
+=======
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "typescript": "^7.0.2"
+>>>>>>> 48db672 (Android)
   }
 }

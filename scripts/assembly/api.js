@@ -306,7 +306,11 @@
 
     try {
       return await requireAuthenticatedApiFetch(
+<<<<<<< HEAD
         '/.netlify/functions/livekit-token',
+=======
+        (window.condomitApiUrl?.('/.netlify/functions/livekit-token') || '/.netlify/functions/livekit-token'),
+>>>>>>> 48db672 (Android)
         {
           method:
             'POST',
@@ -368,7 +372,11 @@
 
     try {
       return await requireAuthenticatedApiFetch(
+<<<<<<< HEAD
         '/.netlify/functions/assembly-action',
+=======
+        (window.condomitApiUrl?.('/.netlify/functions/assembly-action') || '/.netlify/functions/assembly-action'),
+>>>>>>> 48db672 (Android)
         {
           method:
             'POST',
@@ -435,7 +443,11 @@
      * para RPC.
      */
     return requireAuthenticatedApiFetch(
+<<<<<<< HEAD
       '/.netlify/functions/send-chat',
+=======
+      (window.condomitApiUrl?.('/.netlify/functions/send-chat') || '/.netlify/functions/send-chat'),
+>>>>>>> 48db672 (Android)
       {
         method:
           'POST',
@@ -469,7 +481,11 @@
     }
 
     return requireAuthenticatedApiFetch(
+<<<<<<< HEAD
       '/.netlify/functions/vote-poll',
+=======
+      (window.condomitApiUrl?.('/.netlify/functions/vote-poll') || '/.netlify/functions/vote-poll'),
+>>>>>>> 48db672 (Android)
       {
         method:
           'POST',
@@ -499,7 +515,11 @@
     }
 
     return requireAuthenticatedApiFetch(
+<<<<<<< HEAD
       '/.netlify/functions/raise-hand',
+=======
+      (window.condomitApiUrl?.('/.netlify/functions/raise-hand') || '/.netlify/functions/raise-hand'),
+>>>>>>> 48db672 (Android)
       {
         method:
           'POST',
@@ -532,7 +552,11 @@
 
     try {
       return await requireAuthenticatedApiFetch(
+<<<<<<< HEAD
         '/.netlify/functions/confirm-presence',
+=======
+        (window.condomitApiUrl?.('/.netlify/functions/confirm-presence') || '/.netlify/functions/confirm-presence'),
+>>>>>>> 48db672 (Android)
         {
           method:
             'POST',
@@ -864,7 +888,11 @@
 
     try {
       return await apiFetch(
+<<<<<<< HEAD
         `/.netlify/functions/list-polls?assemblyId=${encodeURIComponent(
+=======
+        `${window.CondomitPlatform?.isNativeApp?.() ? window.CondomitPlatform.backendOrigin : ''}/.netlify/functions/list-polls?assemblyId=${encodeURIComponent(
+>>>>>>> 48db672 (Android)
           assemblyId
         )}`
       );
@@ -900,7 +928,11 @@
 
     try {
       return await apiFetch(
+<<<<<<< HEAD
         `/.netlify/functions/list-agenda?assemblyId=${encodeURIComponent(
+=======
+        `${window.CondomitPlatform?.isNativeApp?.() ? window.CondomitPlatform.backendOrigin : ''}/.netlify/functions/list-agenda?assemblyId=${encodeURIComponent(
+>>>>>>> 48db672 (Android)
           assemblyId
         )}`
       );

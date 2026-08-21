@@ -17,7 +17,11 @@ function getAccessToken() {
 
 async function postPresence(payload) {
   const token = getAccessToken();
+<<<<<<< HEAD
   const res = await fetch('/.netlify/functions/assembly-presence', {
+=======
+  const res = await fetch(window.condomitApiUrl?.('/.netlify/functions/assembly-presence') || '/.netlify/functions/assembly-presence', {
+>>>>>>> 48db672 (Android)
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
