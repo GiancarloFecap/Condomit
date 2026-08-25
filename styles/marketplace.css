@@ -8,8 +8,8 @@
 .product-card .card-footer,
 .detail-meta,
 .seller-box,
-.modal-header,
-.modal-actions,
+.marketplace-modal-header,
+.marketplace-modal-actions,
 .category-shortcuts {
     display: flex;
     align-items: center;
@@ -19,8 +19,8 @@
 .section-head,
 .detail-meta,
 .product-card .card-footer,
-.modal-header,
-.modal-actions {
+.marketplace-modal-header,
+.marketplace-modal-actions {
     justify-content: space-between;
 }
 
@@ -86,7 +86,7 @@
 .primary-action,
 .category-chip,
 .product-card,
-.modal-close,
+.marketplace-modal-close,
 .modal-form input,
 .modal-form textarea,
 .modal-form select {
@@ -96,7 +96,7 @@
 .toolbar-actions select,
 .ghost-btn,
 .category-chip,
-.modal-close,
+.marketplace-modal-close,
 .modal-form input,
 .modal-form textarea,
 .modal-form select {
@@ -294,7 +294,7 @@
     color: #64748b;
 }
 
-.modal-backdrop {
+.marketplace-modal-backdrop {
     position: fixed;
     inset: 0;
     background: rgba(15, 23, 42, 0.48);
@@ -306,11 +306,11 @@
     overflow-y: auto;
 }
 
-.modal-backdrop.open {
+.marketplace-modal-backdrop.open {
     display: flex;
 }
 
-.modal-card {
+.marketplace-modal-card {
     width: min(100%, 560px);
     background: #fff;
     border-radius: 22px;
@@ -320,7 +320,7 @@
     overflow-y: auto;
 }
 
-.modal-close {
+.marketplace-modal-close {
     width: 42px;
     height: 42px;
     cursor: pointer;
@@ -408,11 +408,11 @@
         padding: 20px;
     }
 
-    .modal-backdrop {
+    .marketplace-modal-backdrop {
         padding: 12px;
     }
 
-    .modal-card {
+    .marketplace-modal-card {
         width: 100%;
         max-height: calc(100vh - 24px);
         padding: 18px;
@@ -463,7 +463,7 @@ body.marketplace-modal-open {
     overflow: hidden;
 }
 
-.modal-backdrop {
+.marketplace-modal-backdrop {
     z-index: 20000;
     align-items: center;
     padding: 24px;
@@ -471,7 +471,7 @@ body.marketplace-modal-open {
     overscroll-behavior: contain;
 }
 
-.modal-card {
+.marketplace-modal-card {
     margin: 0;
     max-height: calc(100dvh - 48px);
     overflow-y: auto;
@@ -479,12 +479,12 @@ body.marketplace-modal-open {
 }
 
 @media (max-width: 640px) {
-    .modal-backdrop {
+    .marketplace-modal-backdrop {
         align-items: flex-start;
         padding: 12px;
     }
 
-    .modal-card {
+    .marketplace-modal-card {
         max-height: calc(100dvh - 24px);
     }
 }
@@ -524,3 +524,33 @@ body.marketplace-modal-open {
 
 /* 027 - status persistente do marketplace */
 .market-status{display:inline-flex;align-items:center;width:max-content;border-radius:999px;padding:4px 8px;font-size:.72rem;font-weight:700}.market-status-disponivel{background:#ecfdf5;color:#047857}.market-status-reservado{background:#fff7ed;color:#c2410c}.market-status-vendido,.market-status-doado{background:#eff6ff;color:#1d4ed8}.market-status-expirado{background:#f1f5f9;color:#64748b}.marketplace-status-actions{display:flex;flex-wrap:wrap;gap:8px;width:100%}
+
+
+/* ============================================================
+   Condomit 035 - modal isolado + estados de exclusão
+============================================================ */
+.marketplace-detail [data-delete-loading="true"] {
+    pointer-events: none;
+    opacity: .72;
+}
+
+.marketplace-detail .danger-action:focus-visible {
+    outline: 3px solid rgba(220, 38, 38, .18);
+    outline-offset: 2px;
+}
+
+.marketplace-modal-backdrop {
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+}
+
+@media (max-width: 640px) {
+    .marketplace-modal-backdrop {
+        padding-top: max(10px, env(safe-area-inset-top));
+        padding-right: max(10px, env(safe-area-inset-right));
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+        padding-left: max(10px, env(safe-area-inset-left));
+    }
+}

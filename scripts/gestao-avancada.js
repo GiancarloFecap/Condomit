@@ -76,30 +76,71 @@
   function initials(name){ return String(name).split(/\s+/).filter(Boolean).map(p=>p[0]).join('').slice(0,2).toUpperCase() || 'US'; }
 
   function bindNavigation(){
-    document.querySelectorAll('.advanced-nav-item').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.advanced-nav-item[data-view]').forEach(btn => btn.addEventListener('click', () => {
       switchView(btn.dataset.view);
       document.body.classList.remove('advanced-menu-open');
     }));
     document.querySelectorAll('[data-jump]').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.jump)));
+
+    const moduleSearch = $('advancedModuleSearch');
+    moduleSearch?.addEventListener('input', () => filterAdvancedNav(moduleSearch.value));
+    document.addEventListener('keydown', e => {
+      const targetTag = String(e.target?.tagName || '').toLowerCase();
+      const typing = ['input','textarea','select'].includes(targetTag) || e.target?.isContentEditable;
+      if (e.key === '/' && !typing && moduleSearch) {
+        e.preventDefault();
+        moduleSearch.focus();
+      }
+      if (e.key === 'Escape') document.body.classList.remove('advanced-menu-open');
+    });
+
     $('advancedMenuBtn')?.addEventListener('click', () => document.body.classList.toggle('advanced-menu-open'));
     document.addEventListener('click', e => {
       if (document.body.classList.contains('advanced-menu-open') && !e.target.closest('.advanced-sidebar') && !e.target.closest('#advancedMenuBtn')) document.body.classList.remove('advanced-menu-open');
     });
-    $('refreshAdvancedBtn')?.addEventListener('click', loadAll);
+    $('refreshAdvancedBtn')?.addEventListener('click', refreshAdvancedData);
     $('advancedSupportBtn')?.addEventListener('click', () => {
       window.location.href='mailto:contato.condomit@gmail.com?subject=Contato%20Condomit';
     });
     $('advancedLogoutBtn')?.addEventListener('click', async () => {
-      const button=$('advancedLogoutBtn'); if(button)button.disabled=true;
+      const button=$('advancedLogoutBtn');
+      const previous=button?.innerHTML || '';
+      if(button){button.disabled=true;button.innerHTML='<i class="fas fa-spinner fa-spin"></i><span>Saindo...</span>';}
       try {
         if (typeof window.performFullLogout === 'function') await window.performFullLogout('../inicio.html');
         else { try{await window.supabase?.auth?.signOut?.();}catch(_){} sessionStorage.clear(); location.replace('../inicio.html'); }
-      } finally { if(button)button.disabled=false; }
+      } finally { if(button){button.disabled=false;button.innerHTML=previous;} }
     });
   }
 
+  function filterAdvancedNav(value=''){
+    const query=String(value||'').trim().toLocaleLowerCase('pt-BR');
+    document.querySelectorAll('#advancedNav .advanced-nav-item[data-view]').forEach(button=>{
+      const label=String(button.textContent||'').trim().toLocaleLowerCase('pt-BR');
+      button.classList.toggle('search-hidden',Boolean(query)&&!label.includes(query));
+    });
+    document.querySelectorAll('#advancedNav [data-nav-group]').forEach(group=>{
+      const hasVisible=[...group.querySelectorAll('.advanced-nav-item[data-view]')].some(button=>!button.hidden&&!button.classList.contains('search-hidden'));
+      group.classList.toggle('search-hidden',!hasVisible);
+    });
+  }
+
+  async function refreshAdvancedData(){
+    const button=$('refreshAdvancedBtn');
+    if(button?.disabled)return;
+    const previous=button?.innerHTML || '';
+    if(button){button.disabled=true;button.innerHTML='<i class="fas fa-spinner fa-spin"></i> Atualizando...';}
+    try{await loadAll();}
+    finally{if(button){button.disabled=false;button.innerHTML=previous;}}
+  }
+
   function switchView(name){
-    document.querySelectorAll('.advanced-nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+    if (!name) return;
+    document.querySelectorAll('.advanced-nav-item[data-view]').forEach(b => {
+      const active=b.dataset.view === name;
+      b.classList.toggle('active',active);
+      b.setAttribute('aria-pressed',active?'true':'false');
+    });
     document.querySelectorAll('.advanced-view').forEach(v => v.classList.toggle('active', v.dataset.viewPanel === name));
     const label = document.querySelector(`.advanced-nav-item[data-view="${CSS.escape(name)}"] span`)?.textContent || 'Gestão Avançada';
     const subtitles = {
@@ -240,6 +281,11 @@
       await Promise.allSettled([loadDocuments(),loadFinancial(),loadUtilities(),loadAssets(),loadTemplates(),loadTickets(),loadMobility(),loadEmergencies(),loadSurveys(),loadCalendar(),loadBadges(),loadTasks(),loadPermissions(),loadAudits(),loadManagedCondos(),loadSessions()]);
       $('migrationWarning').hidden = true;
       await loadMetrics();
+      const updated=$('advancedLastUpdated');
+      if(updated){
+        const time=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        updated.innerHTML=`<i class="fas fa-check-circle"></i> Atualizado às ${time}`;
+      }
     } catch(e){ handleSchemaError(e); }
   }
   function handleSchemaError(e){

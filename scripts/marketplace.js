@@ -1460,8 +1460,8 @@ function renderMarketplaceDetail(
 
     detail
         .querySelector('#deleteOwnMarketplaceItem')
-        ?.addEventListener('click', () => {
-            deleteOwnMarketplaceItem(selected);
+        ?.addEventListener('click', async (event) => {
+            await deleteOwnMarketplaceItem(selected, event.currentTarget);
         });
 
     detail.querySelector('#contactMarketplaceSeller')?.addEventListener('click', () => {
@@ -1549,8 +1549,8 @@ function openMarketplaceModal(item = null) {
             ? Number(item.dbId)
             : null;
 
-    const titleEl = modal.querySelector('.modal-header h3');
-    const subtitleEl = modal.querySelector('.modal-header p');
+    const titleEl = modal.querySelector('.marketplace-modal-header h3');
+    const subtitleEl = modal.querySelector('.marketplace-modal-header p');
     const submitButton = modal.querySelector('button[type="submit"]');
 
     if (titleEl) {
@@ -1619,7 +1619,7 @@ function closeMarketplaceModal() {
     resetMarketplaceImagePreview();
 }
 
-async function deleteOwnMarketplaceItem(item) {
+async function deleteOwnMarketplaceItem(item, triggerButton = null) {
     if (!item?.dbId || !isOwnMarketplaceItem(item)) {
         window.showToast?.(
             'Você só pode excluir anúncios publicados pela sua conta.',
@@ -1645,6 +1645,14 @@ async function deleteOwnMarketplaceItem(item) {
 
     if (!confirmed) return;
 
+    if (triggerButton?.dataset.deleteLoading === 'true') return;
+    const originalButtonHtml = triggerButton?.innerHTML || '';
+    if (triggerButton) {
+        triggerButton.dataset.deleteLoading = 'true';
+        triggerButton.disabled = true;
+        triggerButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Excluindo...';
+    }
+
     try {
         await window.communityHub.deleteMarketplaceItem(
             item.dbId,
@@ -1659,11 +1667,18 @@ async function deleteOwnMarketplaceItem(item) {
             'success'
         );
     } catch (error) {
+        console.error('Erro ao excluir anúncio:', error);
         window.showToast?.(
             error?.message ||
             'Não foi possível excluir o anúncio.',
             'error'
         );
+    } finally {
+        if (triggerButton?.isConnected) {
+            triggerButton.dataset.deleteLoading = 'false';
+            triggerButton.disabled = false;
+            triggerButton.innerHTML = originalButtonHtml;
+        }
     }
 }
 

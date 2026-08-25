@@ -1,30 +1,30 @@
-CONDOMIT 033 — REGRESSÕES WEB + MOBILE
+CONDOMIT 035 — CORREÇÕES E UX
 
-Principais correções:
-- Restaurado o layout mobile da referência "Aplicativo - web" (responsivo 029).
-- Restaurados Entrar + Cadastre-se lado a lado no cabeçalho mobile da landing page.
-- Logo Condomit aumentada no cabeçalho da página inicial.
-- Safe area Android reforçada de forma nativa para barra de status, navegação e recortes de tela.
-- Mantido viewport-fit=cover e proteção específica de chats/assembleias.
-- Restaurada Gestão Avançada no menu do síndico.
-- Restauradas páginas/arquivos de Gestão Avançada e painel da Administradora.
-- Restaurado advanced-global, API pública protegida e módulos avançados do commit de referência.
-- Restaurados recursos avançados do Mural, Entregas/QR, Marketplace e Achados e Perdidos.
-- Restaurado botão de virar câmera na sala de assembleia.
-- Mantidas as correções de segurança da versão 031/032, incluindo código seguro de acesso ao condomínio.
-- Mantidos ícones Condomit e ícones corrigidos de Morador/Síndico/Porteiro.
+1. Marketplace
+- Corrigido o botão Excluir anúncio.
+- A causa era uma colisão de CSS: o modal do Marketplace usava a mesma classe .modal-backdrop do modal global de confirmação e escondia a confirmação de exclusão.
+- O modal do Marketplace agora usa classes isoladas marketplace-modal-*.
+- O botão de exclusão mostra estado “Excluindo...” e bloqueia cliques repetidos.
 
-VALIDAÇÃO
-- tools/check-project.mjs: 52 HTMLs e 90 JavaScripts verificados, sem problemas.
-- JavaScript verificado com node --check.
-- www e android/app/src/main/assets/public já foram reconstruídos nesta cópia.
+2. Gestão Avançada
+- Barra lateral reorganizada por Resumo, Operação, Gestão e Governança/Sistema.
+- Busca de módulos na barra lateral; pressione / para focar a busca no desktop.
+- Central de Suporte e Sair usam o mesmo padrão visual das outras sidebars do Condomit.
+- Hero, indicadores, atalhos, formulários, listas e cards receberam nova hierarquia visual e feedback de estados.
+- Atualização manual mostra carregamento e horário da última atualização.
+- Melhorias adicionais de mobile, safe areas, acessibilidade e modo escuro.
 
-PARA ATUALIZAR NO CELULAR VIA USB
-1. Na raiz do projeto, execute: npm.cmd install (somente se node_modules ainda não existir).
-2. Execute: npm.cmd run mobile:sync
-3. Execute: npx.cmd cap open android
-4. Conecte e autorize o celular por USB.
-5. No Android Studio, selecione o aparelho e clique em Run 'app'.
+3. UX global
+- Novo styles/ux-polish.css carregado nas páginas do projeto.
+- Foco de teclado mais visível, alvos de toque melhores, feedback disabled/active, formulários mais estáveis no celular e refinamentos de cards/navegação.
+- Mantido viewport-fit=cover e as proteções de safe area.
 
-Se o Gradle voltar a reclamar de C:\Users\...\.gradle\init.gradle ou init.d\repositories.gradle,
-esses scripts globais precisam continuar desativados conforme a correção anterior.
+4. Android
+Após substituir os arquivos:
+  npm.cmd run mobile:sync
+  npx.cmd cap open android
+Depois selecione o celular e execute Run 'app'.
+
+5. Banco
+A correção principal do botão Excluir anúncio é de interface/CSS e não exige uma migration nova.
+Se o Supabase retornar erro de permissão/RLS ao confirmar a exclusão, confirme que a migration 025 já foi executada no banco.

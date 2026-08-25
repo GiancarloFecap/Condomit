@@ -9,10 +9,11 @@
   <link rel="manifest" href="../manifest.webmanifest">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../styles/theme.css?v=027">
-  <link rel="stylesheet" href="../styles/gestao-avancada.css?v=034">
-  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=034">
+  <link rel="stylesheet" href="../styles/gestao-avancada.css?v=035">
+  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=035">
 </head>
-<body>
+<body class="advanced-page">
 <div class="advanced-shell">
   <aside class="advanced-sidebar" id="advancedSidebar">
     <div class="advanced-brand">
@@ -22,26 +23,48 @@
     <nav class="advanced-primary-nav" aria-label="Navegação principal">
       <a id="advancedHomeLink" class="advanced-nav-item advanced-home-item" href="index.html"><i class="fas fa-home"></i><span>Início</span></a>
     </nav>
-    <div class="advanced-nav-title">Módulos</div>
-    <nav id="advancedNav">
-      <button class="advanced-nav-item active" data-view="overview"><i class="fas fa-chart-line"></i><span>Visão geral</span></button>
-      <button class="advanced-nav-item" data-view="documents"><i class="fas fa-folder-open"></i><span>Documentos e IA</span></button>
-      <button class="advanced-nav-item management-only" data-view="financial"><i class="fas fa-wallet"></i><span>Financeiro e consumo</span></button>
-      <button class="advanced-nav-item management-only" data-view="assets"><i class="fas fa-building-circle-check"></i><span>Patrimônio</span></button>
-      <button class="advanced-nav-item" data-view="tickets"><i class="fas fa-headset"></i><span>Chamados e SLA</span></button>
-      <button class="advanced-nav-item" data-view="mobility"><i class="fas fa-car-side"></i><span>Vagas e recarga</span></button>
-      <button class="advanced-nav-item" data-view="community"><i class="fas fa-people-group"></i><span>Comunidade</span></button>
-      <button class="advanced-nav-item management-only" data-view="governance"><i class="fas fa-shield-halved"></i><span>Governança</span></button>
-      <button class="advanced-nav-item management-only" data-view="admin"><i class="fas fa-city"></i><span>Administradora</span></button>
-      <button class="advanced-nav-item" data-view="integrations"><i class="fas fa-plug"></i><span>Integrações</span></button>
+
+    <label class="advanced-nav-search" for="advancedModuleSearch">
+      <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+      <input id="advancedModuleSearch" type="search" placeholder="Buscar módulo" autocomplete="off" aria-label="Buscar módulo da gestão avançada">
+      <kbd>/</kbd>
+    </label>
+
+    <nav id="advancedNav" class="advanced-nav-groups" aria-label="Módulos da gestão avançada">
+      <div class="advanced-nav-group" data-nav-group>
+        <div class="advanced-nav-title">Resumo</div>
+        <button class="advanced-nav-item active" type="button" data-view="overview"><i class="fas fa-chart-line"></i><span>Visão geral</span></button>
+      </div>
+
+      <div class="advanced-nav-group" data-nav-group>
+        <div class="advanced-nav-title">Operação</div>
+        <button class="advanced-nav-item" type="button" data-view="documents"><i class="fas fa-folder-open"></i><span>Documentos e IA</span></button>
+        <button class="advanced-nav-item" type="button" data-view="tickets"><i class="fas fa-headset"></i><span>Chamados e SLA</span></button>
+        <button class="advanced-nav-item" type="button" data-view="mobility"><i class="fas fa-car-side"></i><span>Vagas e recarga</span></button>
+        <button class="advanced-nav-item" type="button" data-view="community"><i class="fas fa-people-group"></i><span>Comunidade</span></button>
+      </div>
+
+      <div class="advanced-nav-group management-only" data-nav-group>
+        <div class="advanced-nav-title">Gestão</div>
+        <button class="advanced-nav-item" type="button" data-view="financial"><i class="fas fa-wallet"></i><span>Financeiro e consumo</span></button>
+        <button class="advanced-nav-item" type="button" data-view="assets"><i class="fas fa-building-circle-check"></i><span>Patrimônio</span></button>
+      </div>
+
+      <div class="advanced-nav-group" data-nav-group>
+        <div class="advanced-nav-title">Governança e sistema</div>
+        <button class="advanced-nav-item management-only" type="button" data-view="governance"><i class="fas fa-shield-halved"></i><span>Governança</span></button>
+        <button class="advanced-nav-item management-only" type="button" data-view="admin"><i class="fas fa-city"></i><span>Administradora</span></button>
+        <button class="advanced-nav-item" type="button" data-view="integrations"><i class="fas fa-plug"></i><span>Integrações</span></button>
+      </div>
     </nav>
+
     <div class="advanced-settings-block">
       <div class="advanced-nav-title">Configurações</div>
       <a class="advanced-nav-item" href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a>
     </div>
-    <div class="advanced-sidebar-footer">
-      <button id="advancedSupportBtn" class="advanced-footer-btn" type="button"><i class="fas fa-headset"></i><span>Central de Suporte</span></button>
-      <button id="advancedLogoutBtn" class="advanced-footer-btn advanced-logout-btn" type="button"><i class="fas fa-right-from-bracket"></i><span>Sair</span></button>
+    <div class="advanced-sidebar-footer sidebar-footer">
+      <button id="advancedSupportBtn" class="btn-support" type="button"><i class="fas fa-headset"></i><span>Central de Suporte</span></button>
+      <button id="advancedLogoutBtn" class="btn-logout-sidebar" type="button"><i class="fas fa-sign-out-alt"></i><span>Sair</span></button>
     </div>
   </aside>
 
@@ -54,7 +77,11 @@
     <div id="migrationWarning" class="migration-warning" hidden><i class="fas fa-database"></i><div><strong>Recursos avançados ainda não estão ativos no banco.</strong><span>Execute <code>supabase/migrations/024_advanced_management_suite.sql</code> no Supabase SQL Editor.</span></div></div>
 
     <section class="advanced-view active" data-view-panel="overview">
-      <div class="hero-panel"><div><span class="eyebrow">CONDOMIT 027</span><h2>Centro operacional do condomínio</h2><p>Documentos, finanças, patrimônio, chamados, mobilidade, comunidade, auditoria e automações reunidos em um só lugar.</p></div><button id="refreshAdvancedBtn" class="primary-btn"><i class="fas fa-rotate"></i> Atualizar dados</button></div>
+      <div class="hero-panel">
+        <div class="hero-copy"><span class="eyebrow">CENTRO DE GESTÃO</span><h2>Controle o condomínio sem perder o contexto</h2><p>Documentos, finanças, patrimônio, chamados, mobilidade, comunidade, auditoria e automações organizados em uma visão operacional única.</p></div>
+        <div class="hero-actions"><span class="advanced-update-status" id="advancedLastUpdated"><i class="fas fa-circle-info"></i> Dados sendo carregados</span><button id="refreshAdvancedBtn" class="primary-btn" type="button"><i class="fas fa-rotate"></i> Atualizar dados</button></div>
+      </div>
+      <div class="advanced-block-heading"><div><strong>Atalhos rápidos</strong><small>Acesse os módulos mais usados sem percorrer o menu.</small></div></div>
       <div class="advanced-shortcuts" aria-label="Atalhos da gestão avançada">
         <button class="advanced-shortcut" data-jump="documents"><i class="fas fa-folder-open"></i><span><strong>Documentos e IA</strong><small>Arquivos, contratos e conhecimento</small></span></button>
         <button class="advanced-shortcut management-only" data-jump="financial"><i class="fas fa-wallet"></i><span><strong>Financeiro</strong><small>Receitas, despesas e consumo</small></span></button>
@@ -65,6 +92,7 @@
         <button class="advanced-shortcut management-only" data-jump="governance"><i class="fas fa-shield-halved"></i><span><strong>Governança</strong><small>Tarefas, permissões e auditoria</small></span></button>
         <button class="advanced-shortcut" data-jump="integrations"><i class="fas fa-plug"></i><span><strong>Integrações</strong><small>PWA, API e segurança</small></span></button>
       </div>
+      <div class="advanced-block-heading advanced-block-heading--metrics"><div><strong>Indicadores principais</strong><small>Resumo atualizado das operações do condomínio.</small></div></div>
       <div class="metric-grid" id="advancedMetrics">
         <article class="metric-card"><i class="fas fa-file-lines"></i><span>Documentos</span><strong data-metric="documents">0</strong></article>
         <article class="metric-card"><i class="fas fa-ticket"></i><span>Chamados abertos</span><strong data-metric="tickets">0</strong></article>
@@ -176,10 +204,10 @@
   </main>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../scripts/supabase-client.js?v=034"></script>
+<script src="../scripts/supabase-client.js?v=035"></script>
 <script type="module" src="../scripts/supabase-auth.js"></script>
 <script src="../scripts/condomit-alerts.js?v=027"></script>
-<script src="../scripts/gestao-avancada.js?v=034"></script>
-<script src="../scripts/advanced-global.js?v=034"></script>
+<script src="../scripts/gestao-avancada.js?v=035"></script>
+<script src="../scripts/advanced-global.js?v=035"></script>
 </body>
 </html>

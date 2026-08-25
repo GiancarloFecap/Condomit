@@ -283,3 +283,355 @@ button, input, select, textarea { font: inherit; }
 .advanced-footer-btn i { width:20px; text-align:center; }
 .advanced-logout-btn { background:rgba(127,29,29,.24); }
 .advanced-logout-btn:hover { background:rgba(127,29,29,.36); }
+
+
+/* ============================================================
+   Condomit 035 - UX da Gestão Avançada
+   Mantém a identidade visual e aproxima a sidebar do padrão
+   das demais telas de síndico.
+============================================================ */
+.advanced-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,.25) transparent;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.advanced-brand {
+    padding: 4px 8px 16px;
+    margin-bottom: 8px;
+}
+
+.advanced-brand-logo {
+    width: 84px;
+    height: 84px;
+    margin-bottom: 6px;
+}
+
+.advanced-primary-nav {
+    padding: 0;
+    margin-bottom: 8px;
+}
+
+.advanced-nav-search {
+    display: grid;
+    grid-template-columns: 20px minmax(0,1fr) auto;
+    align-items: center;
+    gap: 8px;
+    margin: 2px 2px 12px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,.20);
+    border-radius: 10px;
+    background: rgba(255,255,255,.08);
+    color: rgba(255,255,255,.78);
+}
+
+.advanced-nav-search:focus-within {
+    border-color: rgba(255,255,255,.46);
+    background: rgba(255,255,255,.12);
+    box-shadow: 0 0 0 3px rgba(255,255,255,.07);
+}
+
+.advanced-nav-search input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #fff;
+    font-size: .82rem;
+}
+
+.advanced-nav-search input::placeholder { color: rgba(255,255,255,.58); }
+.advanced-nav-search kbd {
+    min-width: 22px;
+    padding: 2px 6px;
+    border: 1px solid rgba(255,255,255,.20);
+    border-radius: 6px;
+    background: rgba(15,23,42,.16);
+    color: rgba(255,255,255,.72);
+    font: 700 .68rem/1.4 inherit;
+    text-align: center;
+}
+
+.advanced-nav-groups { display: grid; gap: 8px !important; }
+.advanced-nav-group { display: grid; gap: 2px; }
+.advanced-nav-group.search-hidden,
+.advanced-nav-item.search-hidden { display: none !important; }
+
+.advanced-nav-title {
+    margin: 3px 10px 4px;
+    font-size: .68rem;
+    letter-spacing: .05em;
+}
+
+.advanced-nav-item {
+    min-height: 36px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    font-size: .9rem;
+    font-weight: 500;
+}
+
+.advanced-nav-item.active {
+    background: #0ea5a4;
+    font-weight: 600;
+    box-shadow: inset 3px 0 rgba(255,255,255,.24);
+}
+
+.advanced-nav-item:focus-visible,
+.advanced-footer-btn:focus-visible,
+.advanced-sidebar .btn-support:focus-visible,
+.advanced-sidebar .btn-logout-sidebar:focus-visible {
+    outline: 3px solid rgba(255,255,255,.24);
+    outline-offset: 2px;
+}
+
+.advanced-settings-block {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,.10);
+}
+
+.advanced-settings-block > .advanced-nav-item {
+    margin: 0;
+    width: 100%;
+}
+
+/* Exatamente o mesmo padrão visual dos botões das sidebars principais. */
+.advanced-sidebar-footer.sidebar-footer {
+    margin-top: auto;
+    padding: 10px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    border-top: 1px solid rgba(255,255,255,.15);
+}
+
+.advanced-sidebar .btn-support,
+.advanced-sidebar .btn-logout-sidebar {
+    width: 100%;
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 25px;
+    background: rgba(255,255,255,.15);
+    border: 2px solid rgba(255,255,255,.3);
+    color: #fff;
+    cursor: pointer;
+    transition: background .2s ease,border-color .2s ease,transform .2s ease;
+    font-weight: 600;
+    font-size: .85rem;
+}
+
+.advanced-sidebar .btn-support:hover {
+    background: rgba(255,255,255,.25);
+    border-color: rgba(255,255,255,.5);
+    transform: translateY(-1px);
+}
+
+.advanced-sidebar .btn-logout-sidebar:hover {
+    background: rgba(239,68,68,.3);
+    border-color: rgba(252,165,165,.6);
+    transform: translateY(-1px);
+}
+
+.advanced-sidebar .btn-support i,
+.advanced-sidebar .btn-logout-sidebar i { width: 20px; text-align: center; }
+
+.advanced-topbar {
+    min-height: 82px;
+    padding-top: max(16px, env(safe-area-inset-top));
+}
+
+.advanced-user {
+    padding: 7px 10px 7px 8px;
+    border: 1px solid #e5eaf2;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.hero-panel {
+    min-height: 164px;
+    padding: 30px;
+    border-left: 0;
+    background:
+        radial-gradient(circle at 92% 18%, rgba(14,165,164,.12), transparent 29%),
+        linear-gradient(135deg,#fff 0%,#f8fbff 100%);
+}
+
+.hero-panel::after {
+    right: -58px;
+    top: -90px;
+    width: 250px;
+    height: 250px;
+    background: rgba(36,87,197,.055);
+}
+
+.hero-copy { position: relative; z-index: 1; min-width: 0; }
+.hero-copy h2 { max-width: 720px; }
+.hero-actions {
+    position: relative;
+    z-index: 1;
+    min-width: 190px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.advanced-update-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #64748b;
+    font-size: .76rem;
+    font-weight: 650;
+}
+.advanced-update-status .fa-check-circle { color: #0f9f6e; }
+
+.advanced-block-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 2px 2px 11px;
+}
+.advanced-block-heading strong { display: block; color: #22304a; font-size: .96rem; }
+.advanced-block-heading small { display: block; margin-top: 3px; color: #7a879b; font-size: .77rem; }
+.advanced-block-heading--metrics { margin-top: 4px; }
+
+.advanced-shortcuts { gap: 14px; margin-bottom: 24px; }
+.advanced-shortcut {
+    min-height: 98px;
+    padding: 17px;
+    border-color: #e3e9f2;
+    box-shadow: 0 7px 18px rgba(15,23,42,.04);
+}
+.advanced-shortcut > i {
+    width: 46px;
+    height: 46px;
+    flex-basis: 46px;
+    border-radius: 14px;
+    background: linear-gradient(145deg,#edf4ff,#f3fffd);
+    box-shadow: inset 0 0 0 1px rgba(30,64,175,.05);
+}
+.advanced-shortcut strong { font-size: .96rem; }
+.advanced-shortcut small { font-size: .76rem; }
+
+.metric-card {
+    position: relative;
+    min-height: 128px;
+    padding: 18px;
+    overflow: hidden;
+    transition: transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.metric-card::after {
+    content: "";
+    position: absolute;
+    right: -30px;
+    bottom: -35px;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: rgba(37,99,235,.045);
+}
+.metric-card:hover { transform: translateY(-2px); border-color: #cbd9ee; box-shadow: 0 12px 24px rgba(15,23,42,.07); }
+.metric-card i {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    background: #eef4ff;
+    color: #2457c5;
+}
+.metric-card span { margin-top: 12px; }
+.metric-card strong { position: relative; z-index: 1; font-size: 1.34rem; }
+
+.panel-card {
+    border-color: #e3e9f2;
+    box-shadow: 0 9px 24px rgba(15,23,42,.05);
+}
+.panel-card > h3:first-child { padding-bottom: 12px; border-bottom: 1px solid #edf1f6; }
+.panel-heading { padding-bottom: 12px; border-bottom: 1px solid #edf1f6; }
+
+.list-item {
+    background: #fff;
+    border-color: #e6ebf2;
+    transition: border-color .16s ease,background .16s ease,box-shadow .16s ease;
+}
+.list-item:hover { border-color: #cbd8eb; background: #fbfdff; box-shadow: 0 4px 12px rgba(15,23,42,.035); }
+
+.advanced-form input,
+.advanced-form select,
+.advanced-form textarea,
+.mini-search,
+.mini-select { min-height: 44px; background: #fcfdff; }
+.advanced-form textarea { min-height: 108px; resize: vertical; }
+
+.primary-btn:disabled,
+.secondary-btn:disabled,
+.danger-btn:disabled,
+.text-btn:disabled,
+.advanced-sidebar button:disabled { cursor: wait; opacity: .68; transform: none !important; }
+
+.empty-state {
+    min-height: 72px;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    border: 1px dashed #d9e1ec;
+    border-radius: 12px;
+    background: #fbfcfe;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .advanced-sidebar {
+        padding-top: max(14px, env(safe-area-inset-top));
+        padding-bottom: max(14px, env(safe-area-inset-bottom));
+    }
+    .advanced-user { padding: 0; border: 0; background: transparent; }
+    .hero-actions { width: 100%; min-width: 0; align-items: stretch; }
+    .hero-actions .primary-btn { width: 100%; }
+    .advanced-update-status { justify-content: flex-start; }
+}
+
+@media (max-width: 600px) {
+    .advanced-brand-logo { width: 82px; height: 82px; }
+    .advanced-nav-search { margin-bottom: 10px; }
+    .advanced-nav-search kbd { display: none; }
+    .advanced-topbar { min-height: 70px; }
+    .advanced-view { padding-bottom: max(34px, env(safe-area-inset-bottom)); }
+    .hero-panel { min-height: 0; padding: 20px 18px; }
+    .hero-panel h2 { font-size: 1.45rem; }
+    .advanced-shortcut { min-height: 78px; }
+    .advanced-block-heading small { font-size: .72rem; }
+    .metric-card { min-height: 116px; }
+}
+
+html[data-theme="dark"] .advanced-main,
+html[data-theme="dark"] body.advanced-page { background: #0b1120; color: #e2e8f0; }
+html[data-theme="dark"] .advanced-topbar,
+html[data-theme="dark"] .hero-panel,
+html[data-theme="dark"] .panel-card,
+html[data-theme="dark"] .metric-card,
+html[data-theme="dark"] .advanced-shortcut,
+html[data-theme="dark"] .advanced-user { background: #111827; border-color: #2d3b50; color: #f8fafc; }
+html[data-theme="dark"] .hero-panel { background: radial-gradient(circle at 92% 18%,rgba(45,212,191,.08),transparent 29%),linear-gradient(135deg,#111827,#121c2e); }
+html[data-theme="dark"] .hero-panel h2,
+html[data-theme="dark"] .section-heading h2,
+html[data-theme="dark"] .panel-card h3,
+html[data-theme="dark"] .advanced-block-heading strong,
+html[data-theme="dark"] .metric-card strong,
+html[data-theme="dark"] .advanced-shortcut strong { color: #f8fafc; }
+html[data-theme="dark"] .list-item,
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .advanced-form input,
+html[data-theme="dark"] .advanced-form select,
+html[data-theme="dark"] .advanced-form textarea,
+html[data-theme="dark"] .mini-search,
+html[data-theme="dark"] .mini-select { background: #0f172a; color: #f8fafc; border-color: #2d3b50; }
