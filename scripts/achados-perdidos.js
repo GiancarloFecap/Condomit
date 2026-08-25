@@ -55,6 +55,20 @@ function setupLostFoundShell(currentUser) {
             window.communityHub.getCondominiumName(currentUser)
         );
     }
+
+    const role = window.communityHub.getUserType(currentUser);
+    const roleLabel = role === 'sindico' ? 'Síndico' : role === 'porteiro' ? 'Porteiro' : 'Morador';
+    const name = currentUser?.name || 'Usuário';
+    const nameEl = document.getElementById('lostFoundProfileName');
+    const typeEl = document.getElementById('lostFoundProfileType');
+    const avatarEl = document.getElementById('lostFoundProfileAvatar');
+    if (nameEl) nameEl.textContent = name;
+    if (typeEl) typeEl.textContent = roleLabel;
+    if (avatarEl) {
+        const photo = currentUser?.profilePhoto || currentUser?.profile_photo;
+        if (photo) avatarEl.innerHTML = `<img src="${escapeHtml(photo)}" alt="Foto de perfil">`;
+        else avatarEl.textContent = name.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'US';
+    }
 }
 
 function setupLostFoundActions() {

@@ -8,10 +8,11 @@
   <link rel="icon" type="image/png" href="../assets/favicon.png">
   <link rel="manifest" href="../manifest.webmanifest">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../styles/index.css?v=016">
   <link rel="stylesheet" href="../styles/theme.css?v=027">
-  <link rel="stylesheet" href="../styles/gestao-avancada.css?v=035">
-  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
-    <link rel="stylesheet" href="../styles/ux-polish.css?v=035">
+  <link rel="stylesheet" href="../styles/gestao-avancada.css?v=036">
+  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=036">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=036">
 </head>
 <body class="advanced-page">
 <div class="advanced-shell">
@@ -20,15 +21,15 @@
       <img src="../assets/logo-lado.png" alt="Condomit" class="advanced-brand-logo">
       <h2 id="sidebarCondo">Gestão Avançada</h2>
     </div>
-    <nav class="advanced-primary-nav" aria-label="Navegação principal">
-      <a id="advancedHomeLink" class="advanced-nav-item advanced-home-item" href="index.html"><i class="fas fa-home"></i><span>Início</span></a>
-    </nav>
-
     <label class="advanced-nav-search" for="advancedModuleSearch">
       <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
       <input id="advancedModuleSearch" type="search" placeholder="Buscar módulo" autocomplete="off" aria-label="Buscar módulo da gestão avançada">
       <kbd>/</kbd>
     </label>
+
+    <nav class="advanced-primary-nav" aria-label="Navegação principal">
+      <a id="advancedHomeLink" class="advanced-nav-item advanced-home-item" href="index.html"><i class="fas fa-home"></i><span>Início</span></a>
+    </nav>
 
     <nav id="advancedNav" class="advanced-nav-groups" aria-label="Módulos da gestão avançada">
       <div class="advanced-nav-group" data-nav-group>
@@ -69,9 +70,24 @@
   </aside>
 
   <main class="advanced-main">
-    <header class="advanced-topbar">
-      <div class="advanced-topbar-left"><button id="advancedMenuBtn" class="icon-square" aria-label="Menu"><i class="fas fa-bars"></i></button><div><h1 id="pageTitle">Gestão Avançada</h1><p id="pageSubtitle">Indicadores e operações do condomínio</p></div></div>
-      <div class="advanced-user"><div id="advancedAvatar" class="advanced-avatar">US</div><div><strong id="advancedUserName">Usuário</strong><small id="advancedUserRole">Perfil</small></div></div>
+    <header class="top-bar advanced-topbar">
+      <button id="advancedMenuBtn" class="mobile-menu-btn advanced-menu-btn" type="button" aria-label="Abrir menu" aria-expanded="false"><i class="fas fa-bars"></i></button>
+      <div class="top-bar-left">
+        <h1 id="pageTitle">Gestão Avançada</h1>
+        <p id="pageSubtitle">Indicadores e operações do condomínio</p>
+      </div>
+      <div class="top-bar-right">
+        <div class="top-icons">
+          <button class="icon-btn" type="button" aria-label="Chat"><i class="fas fa-comments"></i></button>
+          <button class="icon-btn" type="button" aria-label="Assembleias"><i class="fas fa-video"></i></button>
+          <button class="icon-btn" type="button" aria-label="Notificações"><i class="fas fa-bell"></i></button>
+          <button class="icon-btn" type="button" aria-label="Perfil"><i class="fas fa-user-circle"></i></button>
+        </div>
+        <div class="user-profile-small advanced-user">
+          <div class="user-info-small"><div class="name" id="advancedUserName">Usuário</div><div class="type" id="advancedUserRole">Perfil</div></div>
+          <div id="advancedAvatar" class="avatar advanced-avatar">US</div>
+        </div>
+      </div>
     </header>
 
     <div id="migrationWarning" class="migration-warning" hidden><i class="fas fa-database"></i><div><strong>Recursos avançados ainda não estão ativos no banco.</strong><span>Execute <code>supabase/migrations/024_advanced_management_suite.sql</code> no Supabase SQL Editor.</span></div></div>
@@ -204,10 +220,11 @@
   </main>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="../scripts/supabase-client.js?v=035"></script>
+<script src="../scripts/supabase-client.js?v=036"></script>
 <script type="module" src="../scripts/supabase-auth.js"></script>
 <script src="../scripts/condomit-alerts.js?v=027"></script>
-<script src="../scripts/gestao-avancada.js?v=035"></script>
-<script src="../scripts/advanced-global.js?v=035"></script>
+<script src="../scripts/gestao-avancada.js?v=036"></script>
+<script src="../scripts/topbar-actions.js?v=036"></script>
+<script src="../scripts/advanced-global.js?v=036"></script>
 </body>
 </html>

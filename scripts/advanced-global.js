@@ -53,9 +53,16 @@
   }
 
 
+  function createSessionId(){return (crypto?.randomUUID?.()||('sess-'+Date.now()+'-'+Math.random().toString(36).slice(2)));}
+  function rotateSessionId(){
+    const id=createSessionId();
+    try{localStorage.setItem('condomitSessionId027',id);localStorage.setItem('condomitSessionStartedAt',String(Date.now()));}catch(_){}
+    return id;
+  }
+  window.condomitRotateSessionId=rotateSessionId;
   function getSessionId(){
     let id='';try{id=localStorage.getItem('condomitSessionId027')||'';}catch(_){}
-    if(!id){id=(crypto?.randomUUID?.()||('sess-'+Date.now()+'-'+Math.random().toString(36).slice(2)));try{localStorage.setItem('condomitSessionId027',id);}catch(_){}}
+    if(!id)id=rotateSessionId();
     return id;
   }
   function deviceLabel(){const ua=navigator.userAgent||'';if(/iPhone|iPad|iPod/i.test(ua))return 'iPhone/iPad';if(/Android/i.test(ua))return 'Android';if(/Windows/i.test(ua))return 'Windows';if(/Macintosh|Mac OS/i.test(ua))return 'Mac';return 'Navegador';}
@@ -66,8 +73,16 @@
       const existing=await window.supabaseFetch(`/user_session_log?select=session_id,revoked_at&session_id=eq.${encodeURIComponent(sessionId)}&limit=1`);
       const row=Array.isArray(existing)?existing[0]:null;
       if(row?.revoked_at){
-        try{await window.supabase?.auth?.signOut?.();}catch(_){}
-        sessionStorage.clear();
+        const startedAt=Number(localStorage.getItem('condomitSessionStartedAt')||0);
+        const revokedAt=Date.parse(row.revoked_at)||0;
+        // Se houve um novo login depois da revogação, não reaproveita o ID
+        // antigo: cria uma nova sessão de dispositivo e mantém o usuário logado.
+        if(startedAt && revokedAt && startedAt>revokedAt){
+          rotateSessionId();
+          return registerSession();
+        }
+        try{await window.supabase?.auth?.signOut?.({scope:'local'});}catch(_){}
+        try{sessionStorage.clear();localStorage.removeItem('condomitPersistentSessionUser');}catch(_){}
         location.replace(inPages()?'../inicio.html':'inicio.html');
         return;
       }

@@ -139,6 +139,23 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionStorage.removeItem('condomitPendingTwoFactorLogin');
             sessionStorage.removeItem('condomitVerifiedTwoFactorUserType');
             try { localStorage.removeItem('authExplicitLogoutAt'); } catch (_) {}
+            try {
+                if (typeof window.condomitRotateSessionId === 'function') window.condomitRotateSessionId();
+                else {
+                    const sid = (window.crypto?.randomUUID?.() || `sess-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+                    localStorage.setItem('condomitSessionId027', sid);
+                    localStorage.setItem('condomitSessionStartedAt', String(Date.now()));
+                }
+                if (typeof window.fetchUserByEmail === 'function') {
+                    const profile = await window.fetchUserByEmail(authData.session.user.email).catch(() => null);
+                    if (profile) {
+                        const safeProfile = { ...profile, id: authData.session.user.id, type: userType };
+                        delete safeProfile.password;
+                        sessionStorage.setItem('condominiumUser', JSON.stringify(safeProfile));
+                        localStorage.setItem('condomitPersistentSessionUser', JSON.stringify(safeProfile));
+                    }
+                }
+            } catch (_) {}
 
             /*
              * Se o projeto possuir o restaurador de sessão carregado, usa-o

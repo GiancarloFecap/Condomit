@@ -2,6 +2,28 @@
   'use strict';
 
   const BACKEND_ORIGIN = 'https://condomit.netlify.app';
+  const PERSISTENT_USER_KEY = 'condomitPersistentSessionUser';
+
+  /*
+   * O WebView do Android pode recriar o contexto da página quando o app muda
+   * de estado. sessionStorage pode desaparecer nesse processo, embora a sessão
+   * Supabase continue válida em armazenamento persistente. Restauramos apenas
+   * uma cópia sanitizada do perfil (nunca senha/token) antes dos scripts de
+   * cada página verificarem se há usuário logado.
+   */
+  function restorePersistentUserSnapshot() {
+    try {
+      if (sessionStorage.getItem('condominiumUser')) return;
+      const raw = localStorage.getItem(PERSISTENT_USER_KEY);
+      if (!raw) return;
+      const user = JSON.parse(raw);
+      if (!user || typeof user !== 'object' || !user.email) return;
+      delete user.password;
+      sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+    } catch (_) {}
+  }
+
+  restorePersistentUserSnapshot();
 
   function isNativeApp() {
     try {

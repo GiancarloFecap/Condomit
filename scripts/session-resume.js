@@ -154,6 +154,7 @@
                     type: user.type || null,
                     t: Date.now()
                 }));
+                localStorage.setItem('condomitPersistentSessionUser', JSON.stringify(user));
             } catch (_) {}
 
             if (options.redirect) {

@@ -659,6 +659,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 type: getNormalizedUserType(rawUser),
                 profilePhoto: rawUser.profile_photo || rawUser.profilePhoto || null
             };
+            // Nunca persistir senha no navegador.
+            delete loadedUser.password;
 
             /*
              * O usuário informou as credenciais e o login foi concluído.
@@ -682,6 +684,20 @@ document.addEventListener('DOMContentLoaded', async function() {
                         t: Date.now()
                     })
                 );
+                localStorage.setItem(
+                    'condomitPersistentSessionUser',
+                    JSON.stringify(loadedUser)
+                );
+                // Um novo login precisa receber um novo identificador de
+                // dispositivo. Isso impede que uma sessão antiga/revogada seja
+                // reutilizada no Android e encerre o login recém-concluído.
+                if (typeof window.condomitRotateSessionId === 'function') {
+                    window.condomitRotateSessionId();
+                } else {
+                    const id = (window.crypto?.randomUUID?.() || `sess-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+                    localStorage.setItem('condomitSessionId027', id);
+                    localStorage.setItem('condomitSessionStartedAt', String(Date.now()));
+                }
             } catch (_) {}
 
             if (typeof syncAllAvatars === 'function') {

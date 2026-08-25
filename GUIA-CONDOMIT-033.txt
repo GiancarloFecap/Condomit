@@ -1,30 +1,22 @@
-CONDOMIT 035 — CORREÇÕES E UX
+CONDOMIT 036 — CORREÇÕES
 
-1. Marketplace
-- Corrigido o botão Excluir anúncio.
-- A causa era uma colisão de CSS: o modal do Marketplace usava a mesma classe .modal-backdrop do modal global de confirmação e escondia a confirmação de exclusão.
-- O modal do Marketplace agora usa classes isoladas marketplace-modal-*.
-- O botão de exclusão mostra estado “Excluindo...” e bloqueia cliques repetidos.
+1. Sessão mobile
+- Perfil sanitizado persistido no WebView para sobreviver a recriações do contexto.
+- Novo login rotaciona o identificador local de sessão para não reutilizar sessão revogada.
+- sessionStorage é restaurado antes dos scripts das páginas autenticadas.
 
-2. Gestão Avançada
-- Barra lateral reorganizada por Resumo, Operação, Gestão e Governança/Sistema.
-- Busca de módulos na barra lateral; pressione / para focar a busca no desktop.
-- Central de Suporte e Sair usam o mesmo padrão visual das outras sidebars do Condomit.
-- Hero, indicadores, atalhos, formulários, listas e cards receberam nova hierarquia visual e feedback de estados.
-- Atualização manual mostra carregamento e horário da última atualização.
-- Melhorias adicionais de mobile, safe areas, acessibilidade e modo escuro.
+2. Achados e Perdidos
+- Top bar igual ao padrão do dashboard: chat, assembleias, notificações, perfil e avatar.
+- Botão Registrar achado movido para a barra de ferramentas da página.
 
-3. UX global
-- Novo styles/ux-polish.css carregado nas páginas do projeto.
-- Foco de teclado mais visível, alvos de toque melhores, feedback disabled/active, formulários mais estáveis no celular e refinamentos de cards/navegação.
-- Mantido viewport-fit=cover e as proteções de safe area.
+3. Gestão Avançada
+- Top bar padronizada com a index.
+- Logo da sidebar com 160 px, igual ao padrão da index.
+- Busca de módulos posicionada acima de Início.
+- Suporte/Sair mantidos no padrão das demais páginas.
 
-4. Android
-Após substituir os arquivos:
-  npm.cmd run mobile:sync
-  npx.cmd cap open android
-Depois selecione o celular e execute Run 'app'.
+4. IA Condomit
+- Área de pergunta maior.
+- Placeholder centralizado e caixa de entrada centralizada no conteúdo.
 
-5. Banco
-A correção principal do botão Excluir anúncio é de interface/CSS e não exige uma migration nova.
-Se o Supabase retornar erro de permissão/RLS ao confirmar a exclusão, confirme que a migration 025 já foi executada no banco.
+Versão: 0.36.0

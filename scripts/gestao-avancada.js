@@ -94,7 +94,12 @@
       if (e.key === 'Escape') document.body.classList.remove('advanced-menu-open');
     });
 
-    $('advancedMenuBtn')?.addEventListener('click', () => document.body.classList.toggle('advanced-menu-open'));
+    $('advancedMenuBtn')?.addEventListener('click', () => {
+      const open = !document.body.classList.contains('advanced-menu-open');
+      document.body.classList.toggle('advanced-menu-open', open);
+      $('advancedMenuBtn')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+      const icon=$('advancedMenuBtn')?.querySelector('i'); if(icon)icon.className=open?'fas fa-xmark':'fas fa-bars';
+    });
     document.addEventListener('click', e => {
       if (document.body.classList.contains('advanced-menu-open') && !e.target.closest('.advanced-sidebar') && !e.target.closest('#advancedMenuBtn')) document.body.classList.remove('advanced-menu-open');
     });
