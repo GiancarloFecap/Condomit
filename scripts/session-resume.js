@@ -15,7 +15,6 @@
     function normalizeType(user) {
         const raw = String(user?.user_type || user?.type || '').trim().toLowerCase();
         if (raw === 'síndico') return 'sindico';
-        if (raw.startsWith('administra') || raw === 'admin') return 'administradora';
         return raw;
     }
 
@@ -92,7 +91,6 @@
         if (type === 'sindico') return pageUrl(hasCondominium ? 'index.html' : 'condominio_register.html');
         if (type === 'morador') return pageUrl(hasCondominium ? 'index-morador.html' : 'entrar-condominio.html');
         if (type === 'porteiro') return pageUrl(hasCondominium ? 'index-porteiro.html' : 'entrar-condominio-porteiro.html');
-        if (type === 'administradora') return pageUrl('index-administradora.html');
         return pageUrl('entrar.html');
     }
 

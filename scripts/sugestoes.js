@@ -510,7 +510,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                 if (persist && persist.email && typeof fetchUserByEmail === 'function') {
                     const fresh = await fetchUserByEmail(persist.email).catch(() => null);
                     if (fresh) {
-                        const restored = { ...fresh, password: fresh.password || null };
+                        const restored = { ...fresh };
+                        delete restored.password;
                         sessionStorage.setItem('condominiumUser', JSON.stringify(restored));
                         raw = sessionStorage.getItem('condominiumUser');
                         if (typeof syncAllAvatars === 'function') syncAllAvatars(restored);

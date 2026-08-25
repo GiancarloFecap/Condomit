@@ -164,113 +164,43 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (!password) {
-            showFieldError('condominiumPassword', 'Senha do condomínio é obrigatória');
+            showFieldError('condominiumPassword', 'Código de acesso é obrigatório');
             return null;
         }
 
         return { apartment, block, condominiumId, password };
     }
 
-    // Validar dados contra banco de dados
+    // Validar e vincular no banco de dados em uma única RPC segura.
+    // O código nunca é comparado no navegador e seu hash não é exposto ao cliente.
     async function validateAgainstDatabase(data) {
         try {
-            // 1. Verificar se o condomínio existe (CEP = condominiumId)
-            const condominiumResponse = await proxyFetch(
-                `/api/condominiums?cep=eq.${encodeURIComponent(data.condominiumId)}`
-            );
-            
-            if (!condominiumResponse || condominiumResponse.length === 0) {
-                showAlert('ID do condomínio não encontrado.', 'error');
-                showFieldError('condominiumId', 'Condomínio não encontrado');
-                return null;
+            if (typeof window.supabaseFetch !== 'function') {
+                throw new Error('Sessão do Supabase indisponível. Entre novamente.');
             }
 
-            const condominium = condominiumResponse[0];
-
-            // 2. Verificar se a senha do condomínio é idêntica ao condominium_name
-            if (data.password !== condominium.condominium_name) {
-                showAlert('Senha do condomínio incorreta.', 'error');
-                showFieldError('condominiumPassword', 'Senha incorreta');
-                return null;
-            }
-
-            // 3. Verificar se o apartamento está no intervalo válido (1 a total_apartments)
-            if (data.apartment < 1 || data.apartment > condominium.total_apartments) {
-                showAlert(`Apartamento deve estar entre 1 e ${condominium.total_apartments}.`, 'error');
-                showFieldError('apartment', `Inválido para este condomínio`);
-                return null;
-            }
-
-            // 4. Verificar se o bloco existe no array block_names
-            if (!condominium.block_names || !condominium.block_names.includes(data.block)) {
-                showAlert(`Bloco "${data.block}" não existe neste condomínio.`, 'error');
-                showFieldError('block', 'Bloco não encontrado');
-                return null;
-            }
-
-            // 5. Verificar se o usuário está autenticado (já feito no checkAuthAndRedirect)
-            // 6. Verificar se o usuário possui cadastro válido
-            const userResponse = await fetchUserByEmail(currentUser.email);
-            
-            if (!userResponse) {
-                showAlert('Usuário não encontrado no banco de dados.', 'error');
-                return null;
-            }
-
-            return condominium;
+            return await window.supabaseFetch('/rpc/condomit_join_condominium_secure', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    target_cep: data.condominiumId,
+                    access_code: data.password,
+                    target_apartment: String(data.apartment),
+                    target_block: data.block
+                })
+            });
         } catch (error) {
-            console.error('Erro na validação:', error);
-            showAlert('Erro ao validar dados: ' + error.message, 'error');
+            console.error('Erro ao validar código de acesso:', error);
+            const message = error?.message || 'Não foi possível validar o código de acesso.';
+            showAlert(message, 'error');
+            showFieldError('condominiumPassword', message);
             return null;
         }
     }
 
-    // Salvar vinculação do usuário ao condomínio
-    async function saveToDatabaseAndUpdate(data, condominium) {
-        try {
-            // Salvar na tabela user_condominiums
-            const userCondominiumPayload = {
-                user_email: currentUser.email,
-                condominium_id: data.condominiumId,
-                apartment: data.apartment,
-                block: data.block
-            };
-
-            const insertResponse = await proxyFetch('/api/user_condominiums', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(userCondominiumPayload)
-            });
-
-            if (!insertResponse) {
-                throw new Error('Erro ao salvar vinculação');
-            }
-
-            // Atualizar campo condominium da tabela users
-            const condominiumData = {
-                condominium_id: data.condominiumId,
-                apartment: data.apartment,
-                block: data.block
-            };
-
-            const userResponse = await fetchUserByEmail(currentUser.email);
-            if (userResponse) {
-                const updatedCondominium = userResponse.condominium || {};
-                Object.assign(updatedCondominium, condominiumData);
-
-                await proxyFetch(`/api/users?email=${encodeURIComponent(currentUser.email)}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ condominium: updatedCondominium })
-                });
-            }
-
-            return true;
-        } catch (error) {
-            console.error('Erro ao salvar vinculação:', error);
-            showAlert('Erro ao salvar vinculação: ' + error.message, 'error');
-            return false;
-        }
+    async function saveToDatabaseAndUpdate() {
+        // A RPC condomit_join_condominium_secure já cria o vínculo e atualiza users.condominium.
+        return true;
     }
 
     // Submissão do formulário

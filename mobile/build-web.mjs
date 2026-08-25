@@ -7,7 +7,7 @@ const root = resolve(mobileDir, '..');
 const out = join(root, 'www');
 
 const folders = ['assets', 'pages', 'scripts', 'styles'];
-const rootFiles = ['inicio.html', 'manifest.webmanifest', 'service-worker.js'];
+const rootFiles = ['inicio.html', 'manifest.webmanifest', 'service-worker.js', 'privacidade.html', 'suporte.html', 'excluir-conta.html'];
 
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });

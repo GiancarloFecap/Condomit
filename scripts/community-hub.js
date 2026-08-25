@@ -1,25 +1,25 @@
 (() => {
     const CATEGORY_IMAGES = {
         moveis:
-            'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=modern%20neutral%20beige%20three-seater%20sofa%20in%20a%20bright%20living%20room%2C%20realistic%20product%20photo%2C%20soft%20natural%20light&image_size=landscape_4_3',
+            '../assets/logo-icon.png',
 
         eletrodomesticos:
-            'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=stainless%20steel%20refrigerator%20studio%20product%20photo%2C%20clean%20white%20background%2C%20realistic%20ecommerce%20style&image_size=landscape_4_3',
+            '../assets/logo-icon.png',
 
         esportes:
-            'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=black%20mountain%20bike%20side%20view%20studio%20product%20photo%2C%20clean%20background%2C%20realistic%20retail%20image&image_size=landscape_4_3',
+            '../assets/logo-icon.png',
 
         infantil:
-            'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=colorful%20children%20toys%20organized%20on%20wooden%20shelves%2C%20bright%20playroom%2C%20realistic%20product%20photo&image_size=landscape_4_3',
+            '../assets/logo-icon.png',
 
         livros:
-            'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=stack%20of%20books%20on%20clean%20desk%2C%20warm%20natural%20light%2C%20realistic%20ecommerce%20product%20photo&image_size=landscape_4_3',
+            '../assets/logo-icon.png',
 
         eletronicos:
-            'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=modern%20smart%20tv%20on%20minimal%20wood%20stand%2C%20living%20room%20scene%2C%20realistic%20product%20photo&image_size=landscape_4_3',
+            '../assets/logo-icon.png',
 
         outros:
-            'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=clean%20minimal%20home%20item%20arrangement%20for%20community%20marketplace%2C%20soft%20light%2C%20realistic%20photo&image_size=landscape_4_3'
+            '../assets/logo-icon.png'
     };
 
     const MARKETPLACE_CATEGORY_MAP = {
@@ -1312,10 +1312,7 @@
                     .toISOString(),
 
             status:
-                String(row?.item_status || 'disponivel'),
-
-            expiresAt:
-                row?.expires_at || null,
+                'Disponível',
 
             image:
                 row?.image_url ||
@@ -1670,33 +1667,6 @@
             throw new Error('Não foi possível identificar o anunciante.');
         }
 
-        // 028: usa uma RPC que valida o proprietário no servidor. Isso evita
-        // inconsistências de DELETE/RETURNING com RLS em instalações antigas.
-        try {
-            const result = await window.supabaseFetch(
-                '/rpc/condomit_delete_marketplace_item',
-                {
-                    method: 'POST',
-                    body: JSON.stringify({ target_item_id: id })
-                }
-            );
-
-            if (result === true || result === 'true' || result?.deleted === true) {
-                return true;
-            }
-        } catch (rpcError) {
-            const msg = String(rpcError?.message || rpcError || '').toLowerCase();
-            const missingRpc =
-                msg.includes('condomit_delete_marketplace_item') ||
-                msg.includes('schema cache') ||
-                msg.includes('could not find the function') ||
-                msg.includes('pgrst202');
-
-            if (!missingRpc) {
-                throw rpcError;
-            }
-        }
-
         const rows = await window.supabaseFetch(
             `/marketplace_items?id=eq.${encodeURIComponent(id)}&seller_email=eq.${encodeURIComponent(sellerEmail)}`,
             {
@@ -1709,7 +1679,7 @@
 
         if (!Array.isArray(rows) || !rows.length) {
             throw new Error(
-                'O anúncio não foi excluído. Confirme se ele pertence à sua conta e execute a migration 025.'
+                'O anúncio não foi excluído. Confirme se ele pertence à sua conta.'
             );
         }
 

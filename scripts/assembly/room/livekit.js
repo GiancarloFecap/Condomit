@@ -6,7 +6,7 @@ import {
 
 import {
   state
-} from './state.js?v=027';
+} from './state.js';
 
 import {
   renderGrid,
@@ -18,7 +18,7 @@ import {
   setConnectionConnecting,
   setConnectionDisconnected,
   setConnectionReconnecting
-} from './ui.js?v=027';
+} from './ui.js';
 
 let intentionalDisconnect =
   false;
@@ -1118,8 +1118,8 @@ function getInitialDevicePrefs() {
   }
 
   if (isMobileCameraDevice()) {
-    /* A frontal continua sendo o padrão. Se o usuário escolheu uma câmera
-       na preparação, o facing real será confirmado pelo track após a conexão. */
+    /* A reunião sempre inicia pela câmera frontal no celular. */
+    preferences.cameraDeviceId = null;
     state.mobileCameraFacing = 'user';
   }
 
@@ -1172,10 +1172,10 @@ async function enableInitialCamera(
   preferences
 ) {
   try {
-    const options = preferences.cameraDeviceId
-      ? { deviceId: preferences.cameraDeviceId }
-      : isMobileCameraDevice()
-        ? { facingMode: 'user' }
+    const options = isMobileCameraDevice()
+      ? { facingMode: 'user' }
+      : preferences.cameraDeviceId
+        ? { deviceId: preferences.cameraDeviceId }
         : undefined;
 
     await room
@@ -1184,15 +1184,6 @@ async function enableInitialCamera(
         preferences.cameraOn,
         options
       );
-
-    // Confirma qual sensor ficou realmente ativo. Em alguns Androids o
-    // deviceId escolhido na preparação é a câmera traseira, mas o estado
-    // local ainda começava como "user" (frontal), fazendo o primeiro toque
-    // em "Virar câmera" tentar selecionar a traseira novamente.
-    if (preferences.cameraOn && isMobileCameraDevice()) {
-      await new Promise((resolve) => setTimeout(resolve, 180));
-      state.mobileCameraFacing = getFacingModeFromPublication(room);
-    }
   } catch (error) {
     warnLiveKit(
       'Não foi possível ativar a câmera inicial.',
@@ -1932,134 +1923,42 @@ export async function switchMobileCamera() {
   const room = state.room;
   if (!room || !state.connected || !isMobileCameraDevice()) return false;
 
-  const participant = room.localParticipant;
-  const cameraEnabled = participant.isCameraEnabled ?? false;
-
+  const cameraEnabled = room.localParticipant.isCameraEnabled ?? false;
   if (!cameraEnabled) {
-    try {
-      await participant.setCameraEnabled(true, { facingMode: 'user' });
-      state.mobileCameraFacing = 'user';
-      setControlActive('btn-camera', true);
-      syncMediaFromRoom(room);
-      return true;
-    } catch (error) {
-      console.error('[LiveKit] Não foi possível reativar a câmera:', error);
-      return false;
-    }
+    await room.localParticipant.setCameraEnabled(true, { facingMode: 'user' });
+    state.mobileCameraFacing = 'user';
+    setControlActive('btn-camera', true);
+    syncMediaFromRoom(room);
+    return true;
   }
 
   const currentFacing = getFacingModeFromPublication(room);
   const nextFacing = currentFacing === 'environment' ? 'user' : 'environment';
 
-  const publication = participant.getTrackPublication?.(Track.Source.Camera);
-  let localTrack = publication?.track;
-  let devices = [];
   try {
-    devices = await Room.getLocalDevices('videoinput', true);
-  } catch (_) {}
+    const devices = await Room.getLocalDevices('videoinput', true);
+    const activeDeviceId = room.getActiveDevice?.('videoinput') || '';
+    const targetDevice = findCameraForFacing(devices, nextFacing, activeDeviceId);
 
-  const currentDeviceId =
-    localTrack?.mediaStreamTrack?.getSettings?.().deviceId ||
-    room.getActiveDevice?.('videoinput') ||
-    '';
+    if (targetDevice?.deviceId) {
+      const switched = await room.switchActiveDevice('videoinput', targetDevice.deviceId, true);
+      if (switched !== false) {
+        state.mobileCameraFacing = nextFacing;
+        syncMediaFromRoom(room);
+        return true;
+      }
+    }
 
-  const targetDevice = findCameraForFacing(devices, nextFacing, currentDeviceId);
-
-  const verifyCamera = async (expectedFacing, expectedDeviceId = '') => {
-    // Em alguns Androids os settings só mudam alguns frames depois.
-    await new Promise(resolve => setTimeout(resolve, 220));
-    const pub = participant.getTrackPublication?.(Track.Source.Camera);
-    const track = pub?.track?.mediaStreamTrack;
-    const settings = track?.getSettings?.() || {};
-    const actualDeviceId = String(settings.deviceId || room.getActiveDevice?.('videoinput') || '');
-    const actualFacing = String(settings.facingMode || '');
-    const label = String(track?.label || '').toLowerCase();
-
-    if (expectedDeviceId && actualDeviceId && actualDeviceId === String(expectedDeviceId)) return true;
-    if (actualFacing === expectedFacing) return true;
-    if (expectedFacing === 'environment' && /back|rear|environment|traseir|facing\s*back|camera\s*0/i.test(label)) return true;
-    if (expectedFacing === 'user' && /front|user|facetime|frontal|frente|facing\s*front|camera\s*1/i.test(label)) return true;
-    return false;
-  };
-
-  const finish = () => {
+    /* Fallback para navegadores móveis que não expõem labels/deviceIds úteis. */
+    await room.localParticipant.setCameraEnabled(false);
+    await room.localParticipant.setCameraEnabled(true, { facingMode: nextFacing });
     state.mobileCameraFacing = nextFacing;
     setControlActive('btn-camera', true);
     syncMediaFromRoom(room);
-    renderParticipantsList(room);
     return true;
-  };
-
-  try {
-    // 1) Em celulares com duas câmeras enumeráveis, prefira o deviceId exato.
-    // Isso evita aparelhos que aceitam facingMode mas continuam no mesmo sensor.
-    if (targetDevice?.deviceId && localTrack && typeof localTrack.restartTrack === 'function') {
-      try {
-        await localTrack.restartTrack({ deviceId: targetDevice.deviceId });
-        if (await verifyCamera(nextFacing, targetDevice.deviceId)) return finish();
-      } catch (error) {
-        warnLiveKit('Troca de câmera por deviceId falhou; tentando facingMode.', error);
-      }
-    }
-
-    // 2) Caminho recomendado pelo LiveKit para alternar frontal/traseira.
-    if (localTrack && typeof localTrack.restartTrack === 'function') {
-      try {
-        await localTrack.restartTrack({ facingMode: nextFacing });
-        if (await verifyCamera(nextFacing)) return finish();
-      } catch (error) {
-        warnLiveKit('Troca de câmera por facingMode falhou; tentando dispositivo ativo.', error);
-      }
-    }
-
-    // 3) Tenta trocar o dispositivo ativo da sala.
-    if (targetDevice?.deviceId && typeof room.switchActiveDevice === 'function') {
-      try {
-        const switched = await room.switchActiveDevice('videoinput', targetDevice.deviceId, true);
-        if (switched !== false && await verifyCamera(nextFacing, targetDevice.deviceId)) return finish();
-      } catch (error) {
-        warnLiveKit('switchActiveDevice não conseguiu selecionar a câmera desejada.', error);
-      }
-    }
-
-    // 4) Recria a publicação. Primeiro pelo deviceId; depois pelo facingMode.
-    await participant.setCameraEnabled(false);
-    await new Promise(resolve => setTimeout(resolve, 180));
-
-    const captureOptions = targetDevice?.deviceId
-      ? { deviceId: targetDevice.deviceId }
-      : { facingMode: nextFacing };
-
-    await participant.setCameraEnabled(true, captureOptions);
-    if (await verifyCamera(nextFacing, targetDevice?.deviceId || '')) return finish();
-
-    // Alguns Samsung/Chrome Android ignoram a primeira constraint. Força uma
-    // nova captura por facingMode como tentativa final.
-    await participant.setCameraEnabled(false);
-    await new Promise(resolve => setTimeout(resolve, 180));
-    await participant.setCameraEnabled(true, { facingMode: nextFacing });
-
-    if (await verifyCamera(nextFacing)) return finish();
-
-    throw new Error(`O navegador manteve a câmera ${currentFacing === 'user' ? 'frontal' : 'traseira'} ativa.`);
   } catch (error) {
     console.error('[LiveKit] Erro ao alternar câmera frontal/traseira:', error);
-
-    // Evita deixar o usuário sem vídeo se alguma tentativa desativou a câmera.
-    try {
-      if (!(participant.isCameraEnabled ?? false)) {
-        const fallback = targetDevice?.deviceId
-          ? { deviceId: targetDevice.deviceId }
-          : { facingMode: nextFacing };
-        await participant.setCameraEnabled(true, fallback);
-      }
-    } catch (_) {}
-
-    syncMediaFromRoom(room);
-    window.AssemblyUtils?.showToast?.(
-      'Não foi possível ativar a outra câmera. Verifique a permissão de câmera do navegador e tente novamente.',
-      'error'
-    );
+    window.AssemblyUtils?.showToast?.('Não foi possível trocar a câmera do celular.', 'error');
     return false;
   }
 }
@@ -2155,18 +2054,6 @@ export async function toggleScreenShare() {
       false
     );
 
-  /* Compartilhamento web depende da Screen Capture API do navegador.
-     Em navegadores móveis que não expõem getDisplayMedia não existe
-     captura de tela que o JavaScript possa forçar. Evitamos o erro
-     genérico e mantemos a função ativa nos navegadores que suportam. */
-  if (enabled && typeof navigator.mediaDevices?.getDisplayMedia !== 'function') {
-    window.AssemblyUtils?.showToast?.(
-      'Este navegador móvel não oferece compartilhamento de tela pelo site. Use um navegador/dispositivo com suporte à captura de tela.',
-      'warning'
-    );
-    return false;
-  }
-
   try {
     /*
      * Se está PARANDO:
@@ -2196,8 +2083,7 @@ export async function toggleScreenShare() {
     await room
       .localParticipant
       .setScreenShareEnabled(
-        enabled,
-        enabled ? { audio: false } : undefined
+        enabled
       );
 
     setControlActive(
@@ -2233,20 +2119,12 @@ export async function toggleScreenShare() {
       false
     );
 
-    const errorName = String(error?.name || '');
-    const message = errorName === 'NotAllowedError'
-      ? 'O compartilhamento de tela foi cancelado ou bloqueado pelo navegador.'
-      : errorName === 'NotSupportedError'
-        ? 'Este navegador não oferece compartilhamento de tela nesta plataforma.'
-        : 'Não foi possível compartilhar tela neste navegador.';
-
     window
       .AssemblyUtils
       ?.showToast?.(
-        message,
-        errorName === 'NotAllowedError' ? 'warning' : 'error'
+        'Não foi possível compartilhar tela.',
+        'error'
       );
-    return false;
   }
 }
 

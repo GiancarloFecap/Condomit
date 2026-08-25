@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return null;
         }
         if (!password) {
-            showFieldError('condominiumPassword', 'Senha do condomínio é obrigatória');
+            showFieldError('condominiumPassword', 'Código de acesso é obrigatório');
             return null;
         }
 
@@ -163,78 +163,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function validateAgainstDatabase(data) {
         try {
-            const condominiumResponse = await proxyFetch(
-                `/api/condominiums?cep=eq.${encodeURIComponent(data.condominiumId)}`
-            );
-
-            if (!condominiumResponse || condominiumResponse.length === 0) {
-                showAlert('ID do condomínio não encontrado.', 'error');
-                showFieldError('condominiumId', 'Condomínio não encontrado');
-                return null;
+            if (typeof window.supabaseFetch !== 'function') {
+                throw new Error('Sessão do Supabase indisponível. Entre novamente.');
             }
 
-            const condominium = condominiumResponse[0];
-
-            if (data.password !== condominium.condominium_name) {
-                showAlert('Senha do condomínio incorreta.', 'error');
-                showFieldError('condominiumPassword', 'Senha incorreta');
-                return null;
-            }
-
-            return condominium;
+            return await window.supabaseFetch('/rpc/condomit_join_condominium_secure', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    target_cep: data.condominiumId,
+                    access_code: data.password,
+                    target_apartment: null,
+                    target_block: null
+                })
+            });
         } catch (error) {
-            console.error('Erro na validacao:', error);
-            showAlert('Erro ao validar dados: ' + error.message, 'error');
+            console.error('Erro ao validar código de acesso:', error);
+            const message = error?.message || 'Não foi possível validar o código de acesso.';
+            showAlert(message, 'error');
+            showFieldError('condominiumPassword', message);
             return null;
         }
     }
 
-    async function saveToDatabaseAndUpdate(data, condominium) {
-        try {
-            const userCondominiumPayload = {
-                user_email: currentUser.email,
-                condominium_id: data.condominiumId
-            };
-
-            try {
-                await proxyFetch('/api/user_condominiums', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(userCondominiumPayload)
-                });
-            } catch (insertErr) {
-                const msg = String(insertErr?.message || '').toLowerCase();
-                const isDuplicate = msg.includes('duplicate') || msg.includes('já existe') ||
-                    msg.includes('already exists') || msg.includes('23505');
-                if (!isDuplicate) throw insertErr;
-            }
-
-            const userResponse = (typeof fetchUserByEmail === 'function')
-                ? await fetchUserByEmail(currentUser.email)
-                : await proxyFetch(
-                    `/api/users?select=*&email=eq.${encodeURIComponent(currentUser.email)}`
-                  ).then(res => (Array.isArray(res) ? res[0] : res)).catch(() => null);
-
-            if (userResponse) {
-                const updatedCondominium = userResponse.condominium || {};
-                Object.assign(updatedCondominium, {
-                    condominium_id: data.condominiumId,
-                    name: condominium.condominium_name
-                });
-
-                await proxyFetch(`/api/users?email=${encodeURIComponent(currentUser.email)}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ condominium: updatedCondominium })
-                });
-            }
-
-            return true;
-        } catch (error) {
-            console.error('Erro ao salvar vinculacao:', error);
-            showAlert('Erro ao salvar vinculação: ' + error.message, 'error');
-            return false;
-        }
+    async function saveToDatabaseAndUpdate() {
+        // A RPC segura já cria o vínculo e atualiza o perfil do porteiro.
+        return true;
     }
 
     form.addEventListener('submit', async function(e) {

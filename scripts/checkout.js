@@ -11,29 +11,6 @@ let checkoutRecoveryTimeout = null;
 let checkoutPendingHardTimeout = null;
 let lastCheckoutInitiatedAt = 0;
 
-const DEBUG_SERVER_URL = 'http://127.0.0.1:7777/event';
-const DEBUG_SESSION_ID = 'mercadopago-button-error';
-
-function reportDebugEvent({ runId, hypothesisId, location, msg, data, traceId }) {
-    try {
-        fetch(DEBUG_SERVER_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                sessionId: DEBUG_SESSION_ID,
-                runId,
-                hypothesisId,
-                location,
-                msg,
-                data,
-                traceId,
-                ts: Date.now()
-            })
-        }).catch(() => { });
-    } catch (_) { }
-}
 
 document.addEventListener('DOMContentLoaded', async function () {
     const loggedInUser = sessionStorage.getItem('condominiumUser');
@@ -115,19 +92,7 @@ async function fetchMercadoPagoConfig() {
     const response = await fetch('/api/mercadopago/config');
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.publicKey) {
-        // #region debug-point B:config-failed
-        reportDebugEvent({
-            runId: 'pre-fix',
-            hypothesisId: 'B',
-            location: 'scripts/checkout.js:fetchMercadoPagoConfig',
-            msg: '[DEBUG] Mercado Pago config endpoint failed',
-            data: {
-                status: response.status,
-                payload
-            }
-        });
-        // #endregion
-        throw new Error(payload.error || 'Mercado Pago nao configurado para este ambiente.');
+throw new Error(payload.error || 'Mercado Pago nao configurado para este ambiente.');
     }
     return payload;
 }
@@ -268,78 +233,23 @@ async function initCheckoutButton() {
                 onSubmit: async () => {
                     markCheckoutPendingState();
                     const traceId = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}`;
-                    // #region debug-point A:onSubmit-start
-                    reportDebugEvent({
-                        runId: 'pre-fix',
-                        hypothesisId: 'A',
-                        location: 'scripts/checkout.js:onSubmit',
-                        msg: '[DEBUG] Wallet Brick onSubmit triggered',
-                        data: {
-                            email: currentUser?.email || null,
-                            selectedPlanId: selectedPlan?.id || null,
-                            selectedPlanName: selectedPlan?.nome || null
-                        },
-                        traceId
-                    });
-                    // #endregion
-                    showPaymentFeedback('info', 'Criando seu pagamento no Mercado Pago...');
+showPaymentFeedback('info', 'Criando seu pagamento no Mercado Pago...');
                     try {
                         const pendingPayment = await createPendingPayment(selectedPlan, traceId);
                         const preference = await createPaymentPreference(selectedPlan, pendingPayment, traceId);
 
                         sessionStorage.setItem('lastPendingPaymentId', String(preference.paymentId || pendingPayment.id || ''));
                         sessionStorage.setItem('lastMercadoPagoPreferenceId', String(preference.preferenceId || ''));
-
-                        // #region debug-point A:onSubmit-success
-                        reportDebugEvent({
-                            runId: 'pre-fix',
-                            hypothesisId: 'A',
-                            location: 'scripts/checkout.js:onSubmit',
-                            msg: '[DEBUG] Wallet Brick onSubmit resolved preference',
-                            data: {
-                                preferenceId: preference?.preferenceId || null,
-                                paymentId: preference?.paymentId || pendingPayment?.id || null
-                            },
-                            traceId
-                        });
-                        // #endregion
-
-                        return preference.preferenceId;
+return preference.preferenceId;
                     } catch (error) {
-                        // #region debug-point A:onSubmit-failed
-                        reportDebugEvent({
-                            runId: 'pre-fix',
-                            hypothesisId: 'A',
-                            location: 'scripts/checkout.js:onSubmit',
-                            msg: '[DEBUG] Wallet Brick onSubmit failed',
-                            data: {
-                                message: error?.message || String(error),
-                                stack: error?.stack || null
-                            },
-                            traceId
-                        });
-                        // #endregion
-                        clearCheckoutPendingState();
+clearCheckoutPendingState();
                         showPaymentFeedback('error', error?.message || 'Nao foi possivel criar o pagamento.');
                         throw error;
                     }
                 },
                 onError: (error) => {
                     resetCheckoutAfterPending('Nao foi possivel abrir o checkout agora. Tente novamente.');
-                    // #region debug-point E:brick-error
-                    reportDebugEvent({
-                        runId: 'pre-fix',
-                        hypothesisId: 'E',
-                        location: 'scripts/checkout.js:onError',
-                        msg: '[DEBUG] Wallet Brick onError triggered',
-                        data: {
-                            message: error?.message || String(error),
-                            stack: error?.stack || null,
-                            name: error?.name || null
-                        }
-                    });
-                    // #endregion
-                    showPaymentFeedback('error', 'Nao foi possivel abrir o popup do Mercado Pago. Tente novamente.');
+showPaymentFeedback('error', 'Nao foi possivel abrir o popup do Mercado Pago. Tente novamente.');
                 }
             }
         });
@@ -371,30 +281,7 @@ async function createPendingPayment(plan, traceId) {
         status_pagamento: 'pendente',
         data_pagamento: new Date().toISOString()
     };
-
-    // #region debug-point A:pending-request
-    reportDebugEvent({
-        runId: 'pre-fix',
-        hypothesisId: 'A',
-        location: 'scripts/checkout.js:createPendingPayment',
-        msg: '[DEBUG] Creating pending payment via /api/pagamento',
-        data: {
-            requestBody: {
-                email: requestBody.email,
-                cep: requestBody.cep,
-                plano_id: requestBody.plano_id,
-                total_apartamentos: requestBody.total_apartamentos,
-                valor_por_unidade: requestBody.valor_por_unidade,
-                valor_minimo: requestBody.valor_minimo,
-                valor_pago: requestBody.valor_pago,
-                status_pagamento: requestBody.status_pagamento
-            }
-        },
-        traceId
-    });
-    // #endregion
-
-    const response = await fetch('/api/pagamento', {
+const response = await fetch('/api/pagamento', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -403,23 +290,7 @@ async function createPendingPayment(plan, traceId) {
     });
 
     const payload = await response.json().catch(() => ({}));
-
-    // #region debug-point A:pending-response
-    reportDebugEvent({
-        runId: 'pre-fix',
-        hypothesisId: 'A',
-        location: 'scripts/checkout.js:createPendingPayment',
-        msg: '[DEBUG] Pending payment response received',
-        data: {
-            status: response.status,
-            ok: response.ok,
-            payload
-        },
-        traceId
-    });
-    // #endregion
-
-    const resolved = Array.isArray(payload) ? payload[0] : payload;
+const resolved = Array.isArray(payload) ? payload[0] : payload;
 
     if (!response.ok) {
         throw new Error(payload.error || payload.message || `[api/pagamento ${response.status}] Falha ao criar pagamento pendente.`);
@@ -453,30 +324,7 @@ async function createPaymentPreference(plan, pendingPayment, traceId) {
         valor_pago: computed.valorPago,
         user: currentUser
     };
-
-    // #region debug-point A:preference-request
-    reportDebugEvent({
-        runId: 'pre-fix',
-        hypothesisId: 'A',
-        location: 'scripts/checkout.js:createPaymentPreference',
-        msg: '[DEBUG] Creating Mercado Pago preference via /api/mercadopago/preference',
-        data: {
-            requestBody: {
-                email: requestBody.email,
-                cep: requestBody.cep,
-                planId: requestBody.planId,
-                pendingPaymentId: requestBody.pendingPaymentId,
-                total_apartamentos: requestBody.total_apartamentos,
-                valor_por_unidade: requestBody.valor_por_unidade,
-                valor_minimo: requestBody.valor_minimo,
-                valor_pago: requestBody.valor_pago
-            }
-        },
-        traceId
-    });
-    // #endregion
-
-    const response = await fetch('/api/mercadopago/preference', {
+const response = await fetch('/api/mercadopago/preference', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -485,23 +333,7 @@ async function createPaymentPreference(plan, pendingPayment, traceId) {
     });
 
     const payload = await response.json().catch(() => ({}));
-
-    // #region debug-point A:preference-response
-    reportDebugEvent({
-        runId: 'pre-fix',
-        hypothesisId: response.ok ? 'A' : 'B',
-        location: 'scripts/checkout.js:createPaymentPreference',
-        msg: '[DEBUG] Preference response received',
-        data: {
-            status: response.status,
-            ok: response.ok,
-            payload
-        },
-        traceId
-    });
-    // #endregion
-
-    if (!response.ok) {
+if (!response.ok) {
         throw new Error(payload.error || payload.message || `[api/mercadopago/preference ${response.status}] Falha ao criar preferencia no Mercado Pago.`);
     }
 

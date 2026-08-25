@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Condomit - Configurações</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -10,12 +10,7 @@
     <link rel="stylesheet" href="../styles/configuracoes.css?v=022">
     <link rel="stylesheet" href="../styles/theme.css?v=0151">
     <link rel="stylesheet" href="../styles/profile-photo-editor.css?v=015">
-    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=029">
-  <link rel="manifest" href="../manifest.webmanifest">
-<<<<<<< HEAD
-=======
-  <script src="../scripts/platform-config.js?v=030"></script>
->>>>>>> 48db672 (Android)
+    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=025">
 </head>
 <body>
     <div class="dashboard-sindico">
@@ -327,6 +322,11 @@
                             <span>Informações do condomínio</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
+                        <div class="form-group" id="condominiumAccessCodeRow" onclick="openCondominiumAccessCodeModal()" hidden>
+                            <i class="fas fa-key"></i>
+                            <span>Gerar código de acesso</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
                         <div class="form-group" onclick="openConfigSection('contato-uteis')">
                             <i class="fas fa-phone-alt"></i>
                             <span>Contatos úteis</span>
@@ -399,14 +399,16 @@
             </div>
         </main>
     </div>
+    <script src="../scripts/platform-config.js?v=031"></script>
+
 
     <script src="../scripts/supabase-client.js?v=023"></script>
     <script type="module" src="../scripts/supabase-auth.js"></script>
-    <script src="../scripts/sidebar-links.js?v=029"></script>
+    <script src="../scripts/sidebar-links.js?v=023"></script>
     <script src="../scripts/visitor-registration.js"></script>
     <script src="../scripts/two-factor.js?v=016"></script>
     <script src="../scripts/configuracoes.js?v=023"></script>
-    <script src="../scripts/config-access-012.js?v=027"></script>
+    <script src="../scripts/config-access-012.js?v=024"></script>
     <script src="../scripts/profile-photo-editor.js?v=015"></script>
 
     <div class="reservas-modal-overlay" id="reservasModal">
@@ -542,6 +544,5 @@
     <script src="../scripts/topbar-actions.js?v=024"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>
-<script src="../scripts/advanced-global.js?v=029"></script>
 </body>
 </html>

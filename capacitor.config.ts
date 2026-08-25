@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Condomit',
   webDir: 'www',
   backgroundColor: '#f3f4f6',
-  loggingBehavior: 'debug',
+  loggingBehavior: 'production',
   server: {
     hostname: 'localhost',
     androidScheme: 'https',
@@ -14,7 +14,7 @@ const config: CapacitorConfig = {
   },
   android: {
     backgroundColor: '#f3f4f6',
-    loggingBehavior: 'debug',
+    loggingBehavior: 'production',
     buildOptions: {
       releaseType: 'AAB'
     }
@@ -22,7 +22,7 @@ const config: CapacitorConfig = {
   ios: {
     backgroundColor: '#f3f4f6',
     preferredContentMode: 'mobile',
-    loggingBehavior: 'debug',
+    loggingBehavior: 'production',
     buildOptions: {
       signingStyle: 'automatic',
       exportMethod: 'app-store-connect'

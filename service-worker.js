@@ -1,5 +1,5 @@
-const CACHE='condomit-shell-v029';
-const CORE=['/inicio.html','/pages/entrar.html','/pages/tipo-usuario.html','/styles/theme.css','/styles/responsive-mobile.css','/assets/favicon.png','/assets/icon-192.png','/assets/icon-512.png','/manifest.webmanifest'];
+const CACHE='condomit-shell-v031';
+const CORE=['/inicio.html','/pages/entrar.html','/pages/tipo-usuario.html','/styles/theme.css','/styles/responsive-mobile.css','/assets/favicon.png','/assets/icon-192.png','/assets/icon-512.png','/manifest.webmanifest','/privacidade.html','/suporte.html','/excluir-conta.html'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).catch(()=>{}));

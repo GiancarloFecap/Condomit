@@ -905,6 +905,67 @@ async function sendPaymentConfirmationEmailOnce(transactionId, toEmail, usuario,
   return promise;
 }
 
+
+function getRequestBearerToken(event) {
+  const headers = event?.headers || {};
+  const raw = headers.authorization || headers.Authorization || '';
+  const match = String(raw).match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : '';
+}
+
+async function getAuthenticatedSupabaseUser(event) {
+  const token = getRequestBearerToken(event);
+  if (!token) return null;
+  try {
+    const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (!response.ok) return null;
+    const user = await response.json().catch(() => null);
+    return user?.email ? user : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function getApplicationUserByEmail(email) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email,user_type,condominium&email=eq.${encodeURIComponent(String(email || '').trim().toLowerCase())}&limit=1`, {
+    headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+  });
+  if (!response.ok) return null;
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+function normalizedCep(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
+async function applicationUserBelongsToCep(profile, cep) {
+  const target = normalizedCep(cep);
+  if (!target || !profile?.email) return false;
+  const condo = profile.condominium && typeof profile.condominium === 'object' ? profile.condominium : {};
+  const candidates = [condo.cep, condo.condominium_id, condo.condominium_cep].map(normalizedCep);
+  if (candidates.includes(target)) return true;
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/user_condominiums?select=condominium_id&user_email=eq.${encodeURIComponent(profile.email)}`, {
+    headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+  });
+  if (!response.ok) return false;
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) && rows.some((row) => normalizedCep(row?.condominium_id) === target);
+}
+
+function allowedCorsOrigin(event) {
+  const origin = String(event?.headers?.origin || event?.headers?.Origin || '').trim();
+  if (!origin) return 'https://condomit.netlify.app';
+  if (origin === 'https://condomit.netlify.app' || origin === 'https://localhost' || origin === 'http://localhost' || origin === 'capacitor://localhost') return origin;
+  if (/^https:\/\/[a-z0-9-]+--condomit\.netlify\.app$/i.test(origin)) return origin;
+  return 'https://condomit.netlify.app';
+}
+
 async function proxySupabaseRequest(body, pathSuffix, method) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1${pathSuffix}`, {
     method,
@@ -939,19 +1000,30 @@ async function fetchSupabaseUsersByEmail(email) {
 }
 
 async function updateSupabasePassword(email, password) {
-  const updateResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`, {
-    method: 'PATCH',
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation'
-    },
-    body: JSON.stringify({ password })
-  });
-  if (!updateResponse.ok) throw new Error('Falha ao atualizar senha no Supabase');
-  const updatedUsers = await updateResponse.json().catch(() => []);
-  return Array.isArray(updatedUsers) ? updatedUsers.length : 0;
+  // Senhas pertencem exclusivamente ao Supabase Auth. Nunca gravamos a senha
+  // em public.users, pois isso duplicaria uma credencial sensível em uma tabela
+  // de perfil acessível pela API de dados.
+  const authUser = await fetchAuthAdminUserByEmail(email);
+  if (!authUser?.id) return 0;
+
+  const updateResponse = await fetch(
+    `${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(authUser.id)}`,
+    {
+      method: 'PUT',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password })
+    }
+  );
+
+  if (!updateResponse.ok) {
+    const details = await updateResponse.text().catch(() => '');
+    throw new Error(`Falha ao atualizar senha no Supabase Auth. ${details}`.trim());
+  }
+  return 1;
 }
 
 async function getKeycloakAdminToken() {
@@ -1133,10 +1205,12 @@ async function fetchAuthAdminUserByEmail(email) {
   return users.length ? users[0] : null;
 }
 
-async function reactivateSoftDeletedAuthUser({ uid, email, newPassword }) {
+async function reactivateSoftDeletedAuthUser({ uid, email }) {
   if (!uid) return { reactivated: false, reason: 'missing-uid' };
+  // Reativar uma conta não pode trocar a senha com um valor fornecido por uma
+  // requisição pública. A recuperação de senha continua sendo feita pelo link
+  // enviado ao endereço de e-mail do titular.
   const patchPayload = { deleted_at: null, banned_until: null };
-  if (newPassword) patchPayload.password = newPassword;
   const patchResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(uid)}`, {
     method: 'PUT',
     headers: {
@@ -1211,7 +1285,6 @@ async function createAuthAdminUser({ email, password, userMetadata, emailConfirm
 
 async function handleAuthReactivateUser(event, body) {
   const email = String(body?.email || '').trim().toLowerCase();
-  const newPassword = body?.password ? String(body.password) : null;
   const userType = body?.user_type ? String(body.user_type).trim().toLowerCase() : null;
   const redirectTo = body?.emailRedirectTo || `${APP_BASE_URL}/pages/entrar.html`;
   const probeOnly = Boolean(body?.probe_only);
@@ -1272,8 +1345,7 @@ async function handleAuthReactivateUser(event, body) {
   try {
     const result = await reactivateSoftDeletedAuthUser({
       uid: authUser.id,
-      email,
-      newPassword
+      email
     });
     if (!result.reactivated) throw new Error('Falha interna na reativação');
 
@@ -1357,8 +1429,7 @@ async function handleAdminSignupUser(event, body) {
     try {
       const result = await reactivateSoftDeletedAuthUser({
         uid: existingAuth.id,
-        email,
-        newPassword: password
+        email
       });
       if (result?.reactivated) {
         reactivated = true;
@@ -1577,18 +1648,12 @@ async function handleCreateScheduledAssembly(event, body) {
 
 async function handleForgotPassword(event, body) {
   const { email, resetPageUrl } = body || {};
-  // #region debug-point C:netlify-handler-start
-  fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handleForgotPassword:start",msg:"[DEBUG] Handler de recuperacao iniciou no Netlify proxy",data:{path:event.path||event.rawPath||null,email,resetPageUrl},ts:Date.now()})}).catch(()=>{});
-  // #endregion
-  if (!email) {
+if (!email) {
     return { statusCode: 400, body: JSON.stringify({ error: 'E-mail é obrigatório' }) };
   }
   const normalizedEmail = String(email).trim().toLowerCase();
   const users = await fetchSupabaseUsersByEmail(normalizedEmail);
-  // #region debug-point C:netlify-users-result
-  fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handleForgotPassword:users",msg:"[DEBUG] Consulta de usuario concluida no Netlify proxy",data:{normalizedEmail,userCount:Array.isArray(users)?users.length:null},ts:Date.now()})}).catch(()=>{});
-  // #endregion
-  let keycloakUser = null;
+let keycloakUser = null;
   if (hasKeycloakConfig()) {
     try {
       keycloakUser = await findKeycloakUserByEmail(normalizedEmail);
@@ -1604,15 +1669,9 @@ async function handleForgotPassword(event, body) {
   const usuario = users?.[0] || keycloakUser || { name: normalizedEmail.split('@')[0] };
   try {
     await sendResetEmail(normalizedEmail, usuario, resetLink);
-    // #region debug-point C:netlify-email-sent
-    fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handleForgotPassword:sendResetEmail",msg:"[DEBUG] Envio de email concluido no Netlify proxy",data:{normalizedEmail},ts:Date.now()})}).catch(()=>{});
-    // #endregion
-    console.log(`E-mail de reset enviado para ${normalizedEmail}`);
+console.log(`E-mail de reset enviado para ${normalizedEmail}`);
   } catch (emailError) {
-    // #region debug-point C:netlify-email-error
-    fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"post-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handleForgotPassword:sendResetEmail:catch",msg:"[DEBUG] Envio de email falhou no Netlify proxy",data:{normalizedEmail,message:getBrevoErrorMessage(emailError)},ts:Date.now()})}).catch(()=>{});
-    // #endregion
-    console.error('[Email Error] Falha ao enviar e-mail:', getBrevoErrorMessage(emailError));
+console.error('[Email Error] Falha ao enviar e-mail:', getBrevoErrorMessage(emailError));
     const errorMessage = emailError?.message === 'BREVO_API_KEY não configurada'
       ? 'Serviço de e-mail não configurado. Defina BREVO_API_KEY no Netlify.'
       : emailError?.message === 'BREVO_SENDER_EMAIL não configurado'
@@ -1718,7 +1777,7 @@ function parseQuery(event) {
 exports.handler = async (event, context) => {
   const headers = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': allowedCorsOrigin(event),
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
     'Access-Control-Max-Age': '86400'
@@ -1744,35 +1803,64 @@ exports.handler = async (event, context) => {
   try {
     console.log('[api-proxy] method=', rawMethod, 'pathname=', pathname, 'query=', JSON.stringify(query));
     if (pathname === '/esqueceu-senha' || pathname === '/forgot-password') {
-      // #region debug-point C:netlify-route-match
-      fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handler:route-match",msg:"[DEBUG] Rota de recuperacao atingida no Netlify proxy",data:{pathname,rawMethod,query,hasBody:Boolean(body)},ts:Date.now()})}).catch(()=>{});
-      // #endregion
-    }
+}
     if (pathname === '/register' && rawMethod === 'POST') {
-      const result = await proxySupabaseRequest(body, '/users', 'POST');
-      return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
+      // Endpoint legado desativado: ele inseria perfis via service role e podia
+      // aceitar campos de privilégio/credenciais vindos diretamente do cliente.
+      // O cadastro atual usa Supabase Auth e o fluxo de perfil protegido pelo banco.
+      return {
+        statusCode: 410,
+        headers,
+        body: JSON.stringify({
+          error: 'Endpoint legado desativado. Use o cadastro autenticado do Condomit.'
+        })
+      };
     }
 
     if (pathname === '/condominiums' && rawMethod === 'POST') {
+      const authUser = await getAuthenticatedSupabaseUser(event);
+      const profile = authUser ? await getApplicationUserByEmail(authUser.email) : null;
+      const role = String(profile?.user_type || '').toLowerCase();
+      if (!authUser || role !== 'sindico') {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Apenas um síndico autenticado pode cadastrar condomínio.' }) };
+      }
       const result = await proxySupabaseRequest(body, '/condominiums', 'POST');
       return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
     }
 
     if (pathname === '/users' && rawMethod === 'GET') {
-      const email = query.email;
-      if (!email) {
-        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro email é obrigatório' }) };
+      const authUser = await getAuthenticatedSupabaseUser(event);
+      if (!authUser) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Autenticação necessária.' }) };
+      let pathSuffix = '/users?select=email,name,phone,cpf,user_type,condominium,profile_photo,two_factor_enabled,two_factor_enabled_at';
+      if (query.email) {
+        const value = String(query.email).replace(/^eq\./, '');
+        pathSuffix += `&email=eq.${encodeURIComponent(value)}`;
+      } else if (query.cpf) {
+        const value = String(query.cpf).replace(/^eq\./, '');
+        pathSuffix += `&cpf=eq.${encodeURIComponent(value)}`;
+      } else {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Informe email ou cpf.' }) };
       }
-      const result = await proxySupabaseRequest(null, `/users?select=*&email=eq.${encodeURIComponent(email)}`, 'GET');
+      const result = await proxySupabaseRequest(null, pathSuffix, 'GET');
       return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
     }
 
     if (pathname === '/users' && rawMethod === 'PATCH') {
-      const email = query.email;
-      if (!email) {
-        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro email é obrigatório' }) };
+      const email = String(query.email || '').replace(/^eq\./, '').trim().toLowerCase();
+      const authUser = await getAuthenticatedSupabaseUser(event);
+      if (!email) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro email é obrigatório' }) };
+      if (!authUser || String(authUser.email || '').trim().toLowerCase() !== email) {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Você só pode alterar o próprio perfil por este endpoint.' }) };
       }
-      const result = await proxySupabaseRequest(body, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
+      const allowedFields = new Set(['name', 'email', 'phone', 'profile_photo', 'condominium']);
+      const safePatch = {};
+      for (const [key, value] of Object.entries(body || {})) {
+        if (allowedFields.has(key)) safePatch[key] = value;
+      }
+      if (!Object.keys(safePatch).length) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Nenhum campo permitido para atualização.' }) };
+      }
+      const result = await proxySupabaseRequest(safePatch, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
       return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
     }
 
@@ -1781,7 +1869,11 @@ exports.handler = async (event, context) => {
       if (!email) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro email é obrigatório' }) };
       }
-      const normalizedEmail = String(email).trim().toLowerCase();
+      const normalizedEmail = String(email).replace(/^eq\./, '').trim().toLowerCase();
+      const authUser = await getAuthenticatedSupabaseUser(event);
+      if (!authUser || String(authUser.email || '').trim().toLowerCase() !== normalizedEmail) {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Você só pode excluir a própria conta.' }) };
+      }
       let authDeleteResult = { skipped: true };
       try {
         const authUser = await fetchAuthAdminUserByEmail(normalizedEmail);
@@ -1804,9 +1896,14 @@ exports.handler = async (event, context) => {
     }
 
     if (pathname === '/condominiums' && rawMethod === 'DELETE') {
-      const cep = query.cep;
-      if (!cep) {
-        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro cep é obrigatório' }) };
+      const cep = String(query.cep || '').replace(/^eq\./, '');
+      if (!cep) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Parâmetro cep é obrigatório' }) };
+      const authUser = await getAuthenticatedSupabaseUser(event);
+      const profile = authUser ? await getApplicationUserByEmail(authUser.email) : null;
+      const role = String(profile?.user_type || '').toLowerCase();
+      const belongs = profile ? await applicationUserBelongsToCep(profile, cep) : false;
+      if (!authUser || role !== 'sindico' || !belongs) {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Somente o síndico autenticado deste condomínio pode excluí-lo.' }) };
       }
       const result = await proxySupabaseRequest(null, `/condominiums?cep=eq.${encodeURIComponent(cep)}`, 'DELETE');
       return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
@@ -1925,10 +2022,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: 'Endpoint não encontrado', debug: { pathname, rawPath: event.path, rawPath2: event.rawPath, method: rawMethod, query } })
     };
   } catch (error) {
-    // #region debug-point C:netlify-handler-error
-    fetch("http://127.0.0.1:7777/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId:"forgot-password-error",runId:"pre-fix",hypothesisId:"C",location:"netlify/functions/api-proxy.js:handler:catch",msg:"[DEBUG] Handler principal do Netlify proxy falhou",data:{message:error?.message||String(error),stack:error?.stack||null},ts:Date.now()})}).catch(()=>{});
-    // #endregion
-    console.error('Handler error:', error);
+console.error('Handler error:', error);
     return {
       statusCode: 500,
       headers,

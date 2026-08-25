@@ -101,21 +101,8 @@ function bindDeliveryControls() {
 
 async function loadPackages() {
     try {
-        /* Gera os avisos das encomendas antigas sem interromper a listagem
-           quando a migration 024 ainda não tiver sido aplicada. */
-        rpc('condomit_notify_old_packages').catch(() => {});
-
         const rows = await rpc('condomit_list_packages');
         deliveryState.packages = Array.isArray(rows) ? rows : [];
-
-        /* O RPC legado continua compatível com instalações antigas. Os campos
-           avançados são mesclados por uma consulta RLS-safe quando existem. */
-        try {
-            const advanced = await window.supabaseFetch('/packages?select=id,pickup_code,package_photo_url,overdue_notified_at&order=received_at.desc');
-            const byId = new Map((Array.isArray(advanced) ? advanced : []).map(item => [Number(item.id), item]));
-            deliveryState.packages = deliveryState.packages.map(pkg => ({ ...pkg, ...(byId.get(Number(pkg.id)) || {}) }));
-        } catch (_) {}
-
         populateBlocks();
         renderDeliveryPage();
     } catch (error) {
@@ -158,7 +145,7 @@ function populateBlocks() {
 function applyFilters() {
     return deliveryState.packages.filter((pkg) => {
         const normalized = normalizeStatus(pkg.status);
-        const searchBase = [pkg.id, pkg.tracking_code, pkg.package_description, pkg.recipient_name, pkg.recipient_email, pkg.carrier, pkg.apartment, pkg.block, pkg.pickup_code]
+        const searchBase = [pkg.id, pkg.tracking_code, pkg.package_description, pkg.recipient_name, pkg.recipient_email, pkg.carrier, pkg.apartment, pkg.block]
             .join(' ').toLowerCase();
         const date = toDateKey(pkg.received_at);
         const tabOk = deliveryState.filters.tab === 'all' || normalized === deliveryState.filters.tab;
@@ -206,7 +193,7 @@ function renderTable(packages) {
         const unit = [pkg.apartment ? `Apto ${pkg.apartment}` : '', pkg.block ? `Bloco ${pkg.block}` : ''].filter(Boolean);
         return `
             <tr>
-                <td><div class="delivery-code">${pkg.package_photo_url ? `<img class="package-thumb" src="${escapeHtml(pkg.package_photo_url)}" alt="Foto da encomenda" loading="lazy" referrerpolicy="no-referrer">` : ''}<strong>${escapeHtml(code)}</strong><small>${escapeHtml(pkg.package_description || 'Encomenda')}</small>${pkg.pickup_code ? `<small class="pickup-code">Retirada: <b>${escapeHtml(pkg.pickup_code)}</b> <button class="inline-qr-btn" type="button" data-package-qr="${pkg.id}" title="Mostrar QR Code"><i class="fas fa-qrcode"></i></button></small>` : ''}${packageWaitingBadge(pkg)}</div></td>
+                <td><div class="delivery-code"><strong>${escapeHtml(code)}</strong><small>${escapeHtml(pkg.package_description || 'Encomenda')}</small></div></td>
                 <td><div class="resident-cell"><span class="mini-avatar">${escapeHtml(getInitials(pkg.recipient_name))}</span><div><strong>${escapeHtml(pkg.recipient_name)}</strong><small>${escapeHtml(pkg.recipient_email || '')}</small></div></div></td>
                 <td>${unit.length ? unit.map(escapeHtml).join('<br>') : '--'}</td>
                 <td><strong>${escapeHtml(pkg.carrier || 'Não informada')}</strong></td>
@@ -223,35 +210,6 @@ function renderTable(packages) {
     tbody.querySelectorAll('[data-package-action]').forEach((button) => {
         button.addEventListener('click', () => changePackageStatus(Number(button.dataset.id), button.dataset.packageAction));
     });
-    tbody.querySelectorAll('[data-package-qr]').forEach((button) => {
-        button.addEventListener('click', () => showPackageQr(Number(button.dataset.packageQr)));
-    });
-}
-
-function packageWaitingBadge(pkg) {
-    if (normalizeStatus(pkg.status) !== 'pending' || !pkg.received_at) return '';
-    const days = Math.max(0, Math.floor((Date.now() - new Date(pkg.received_at).getTime()) / 86400000));
-    if (days < 1) return '';
-    return `<small class="package-age ${days >= 3 ? 'overdue' : ''}">Na portaria há ${days} dia${days === 1 ? '' : 's'}</small>`;
-}
-
-function showPackageQr(id) {
-    const pkg = deliveryState.packages.find(item => Number(item.id) === Number(id));
-    if (!pkg?.pickup_code) return;
-    let modal = document.getElementById('packageQrModal027');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'packageQrModal027';
-        modal.className = 'package-qr-modal';
-        modal.innerHTML = `<div class="package-qr-card"><button type="button" class="package-qr-close" aria-label="Fechar">×</button><h3>QR Code de retirada</h3><div id="packageQrCanvas027"></div><strong id="packageQrCode027"></strong><p>Confirme este código antes de entregar a encomenda.</p></div>`;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', event => { if (event.target === modal || event.target.closest('.package-qr-close')) modal.remove(); });
-    }
-    const canvas = modal.querySelector('#packageQrCanvas027');
-    const code = modal.querySelector('#packageQrCode027');
-    canvas.innerHTML = '';
-    code.textContent = pkg.pickup_code;
-    if (window.QRCode) new QRCode(canvas, { text: `CONDOMIT:PACKAGE:${pkg.id}:${pkg.pickup_code}`, width: 180, height: 180 });
 }
 
 async function changePackageStatus(id, status) {

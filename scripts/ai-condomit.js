@@ -125,48 +125,16 @@
 
         await new Promise((resolve) => setTimeout(resolve, 350));
         hideTyping();
-        const answer = await buildAnswer(message);
+        const answer = buildAnswer(message);
         addMessage('ai', answer.text, answer.actions || []);
     }
 
-    async function buildAnswer(question) {
+    function buildAnswer(question) {
         const q = normalize(question);
         const role = normalizeRole(state.user);
         const condo = condoName(state.user);
         const isPorter = role === 'porteiro';
         const isSindico = role === 'sindico';
-
-        // 027 - Copiloto do síndico: responde com dados reais do condomínio.
-        if (isSindico && includesAny(q, ['resumo do condominio', 'resumo do condomínio', 'painel', 'indicadores', 'como esta o condominio', 'como está o condomínio'])) {
-            const summary = await buildManagementSummary();
-            if (summary) return summary;
-        }
-        if (isSindico && includesAny(q, ['manutencao atrasada', 'manutencoes atrasadas', 'manutenção atrasada', 'manutenções atrasadas'])) {
-            const data = await getOperationalRows('maintenance_items', 'title,next_date,status', 'status=neq.concluida&order=next_date.asc&limit=20');
-            const overdue = data.filter((item) => item.next_date && new Date(item.next_date) < new Date());
-            return { text: overdue.length ? `Existem ${overdue.length} manutenções atrasadas. As primeiras são: ${overdue.slice(0, 5).map((item) => `${item.title} (${formatAiDate(item.next_date)})`).join('; ')}.` : 'Não encontrei manutenções preventivas atrasadas neste momento.', actions: [{ label: 'Abrir Manutenção Preventiva', href: 'manutencao-preventiva.html', icon: 'fa-screwdriver-wrench' }] };
-        }
-        if (isSindico && includesAny(q, ['chamados abertos', 'tickets abertos', 'sla'])) {
-            const data = await getOperationalRows('service_tickets', 'id,title,status,sla_due_at', 'order=created_at.desc&limit=100');
-            const open = data.filter((item) => !['resolvido','cancelado'].includes(item.status));
-            const late = open.filter((item) => item.sla_due_at && new Date(item.sla_due_at) < new Date());
-            return { text: `Há ${open.length} chamado(s) aberto(s), sendo ${late.length} fora do prazo de SLA.`, actions: [{ label: 'Abrir Gestão Avançada', href: 'gestao-avancada.html', icon: 'fa-headset' }] };
-        }
-        if (isSindico && includesAny(q, ['gere um comunicado', 'gerar comunicado', 'crie um comunicado', 'criar comunicado'])) {
-            const raw=String(question||'').trim();
-            const topic=raw.replace(/^(por favor,?\s*)?(gere|gerar|crie|criar)\s+(um\s+)?comunicado\s*(sobre|a respeito de|para)?\s*/i,'').trim() || 'uma atualização importante do condomínio';
-            return {
-                text: `Sugestão de comunicado:\n\nPrezados moradores,\n\nInformamos ${topic}. Pedimos que acompanhem as orientações publicadas no Condomit e, em caso de dúvidas, entrem em contato com a administração.\n\nAtenciosamente,\nAdministração do condomínio.`,
-                actions: [
-                    { label: 'Abrir IA de Comunicados', href: 'ai-comunicados.html', icon: 'fa-wand-magic-sparkles' },
-                    { label: 'Abrir Mural de Avisos', href: 'mural-avisos.html', icon: 'fa-bullhorn' }
-                ]
-            };
-        }
-
-        // 027 - RAG local simples: pesquisa os documentos cadastrados no próprio condomínio.
-        const documentAnswer = await answerFromCondominiumDocuments(question);
-        if (documentAnswer) return documentAnswer;
 
         if (includesAny(q, ['reserva', 'churrasqueira', 'salao de festas', 'salao', 'area comum'])) {
             return {
@@ -254,81 +222,6 @@
             actions: [{ label: 'Ir para o início', href: role === 'sindico' ? 'index.html' : role === 'porteiro' ? 'index-porteiro.html' : 'index-morador.html', icon: 'fa-house' }]
         };
     }
-
-
-    async function getAiCep() {
-        try {
-            if (typeof window.supabaseFetch === 'function') {
-                const value = await window.supabaseFetch('/rpc/condomit_current_user_cep', { method: 'POST', body: '{}' });
-                if (typeof value === 'string' && value) return value;
-            }
-        } catch (_) {}
-        const condo = state.user?.condominium && typeof state.user.condominium === 'object' ? state.user.condominium : {};
-        return String(condo.cep || condo.condominium_id || '').replace(/\D/g, '');
-    }
-
-    async function getOperationalRows(table, select, extra = '') {
-        try {
-            if (typeof window.supabaseFetch !== 'function') return [];
-            const cep = await getAiCep();
-            if (!cep) return [];
-            const suffix = extra ? `&${extra}` : '';
-            const rows = await window.supabaseFetch(`/${table}?select=${encodeURIComponent(select)}&cep=eq.${encodeURIComponent(cep)}${suffix}`);
-            return Array.isArray(rows) ? rows : [];
-        } catch (_) { return []; }
-    }
-
-    async function answerFromCondominiumDocuments(question) {
-        try {
-            const docs = await getOperationalRows('condominium_documents', 'id,title,category,description,content,file_url,version,visibility,updated_at', 'order=updated_at.desc&limit=150');
-            if (!docs.length) return null;
-            const terms = normalize(question).split(/[^a-z0-9]+/).filter((term) => term.length >= 4 && !['qual','quais','como','onde','quando','sobre','para','isso','essa','este','esta','condominio','condomínio'].includes(term));
-            if (!terms.length) return null;
-            const scored = docs.map((doc) => {
-                const hay = normalize(`${doc.title} ${doc.category} ${doc.description} ${doc.content}`);
-                const score = terms.reduce((sum, term) => sum + (hay.includes(term) ? (normalize(doc.title).includes(term) ? 3 : 1) : 0), 0);
-                return { doc, score };
-            }).filter((entry) => entry.score > 0).sort((a,b) => b.score - a.score);
-            if (!scored.length || scored[0].score < 2) return null;
-            const best = scored[0].doc;
-            const sourceText = String(best.content || best.description || '').trim();
-            const excerpt = sourceText ? sourceText.slice(0, 650) : 'O documento foi localizado, mas ainda não possui conteúdo textual cadastrado para consulta.';
-            return {
-                text: `Encontrei essa informação na Central de Documentos, em “${best.title}” (versão ${best.version || 1}): ${excerpt}${sourceText.length > 650 ? '…' : ''}`,
-                actions: [
-                    { label: 'Abrir Central de Documentos', href: 'gestao-avancada.html', icon: 'fa-folder-open' },
-                    ...(best.file_url ? [{ label: 'Abrir arquivo', href: best.file_url, icon: 'fa-arrow-up-right-from-square' }] : [])
-                ]
-            };
-        } catch (_) { return null; }
-    }
-
-    async function buildManagementSummary() {
-        try {
-            const [tickets, maintenance, alerts, finance] = await Promise.all([
-                getOperationalRows('service_tickets', 'id,status,sla_due_at', 'limit=500'),
-                getOperationalRows('maintenance_items', 'id,status,next_date', 'limit=500'),
-                getOperationalRows('emergency_alerts', 'id,active', 'limit=100'),
-                getOperationalRows('financial_entries', 'entry_type,amount,status', 'limit=1000')
-            ]);
-            const openTickets = tickets.filter((x) => !['resolvido','cancelado'].includes(x.status));
-            const lateTickets = openTickets.filter((x) => x.sla_due_at && new Date(x.sla_due_at) < new Date());
-            const pendingMaintenance = maintenance.filter((x) => x.status !== 'concluida');
-            const lateMaintenance = pendingMaintenance.filter((x) => x.next_date && new Date(x.next_date) < new Date());
-            const emergencies = alerts.filter((x) => x.active).length;
-            const balance = finance.reduce((sum, x) => sum + (x.entry_type === 'receita' ? 1 : -1) * Number(x.amount || 0), 0);
-            return {
-                text: `Resumo atual: ${openTickets.length} chamado(s) aberto(s) (${lateTickets.length} fora do SLA), ${pendingMaintenance.length} manutenção(ões) pendente(s) (${lateMaintenance.length} atrasada(s)), ${emergencies} alerta(s) de emergência ativo(s) e saldo registrado de ${balance.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}.`,
-                actions: [{ label: 'Abrir Gestão Avançada', href: 'gestao-avancada.html', icon: 'fa-chart-line' }]
-            };
-        } catch (_) { return null; }
-    }
-
-    function formatAiDate(value) {
-        const date = new Date(value);
-        return Number.isNaN(date.getTime()) ? String(value || '--') : date.toLocaleDateString('pt-BR');
-    }
-
 
     function addMessage(type, text, actions = []) {
         const messages = $('chatMessages');

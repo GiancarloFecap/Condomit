@@ -1,6 +1,6 @@
 .chat-page {
     padding: 20px 0 0 0;
-    height: calc(100svh - 100px);
+    height: calc(100vh - 100px);
     display: flex;
     flex-direction: column;
     gap: 16px;

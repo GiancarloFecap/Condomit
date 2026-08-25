@@ -674,35 +674,11 @@ async function refreshPreJoinPermissions() {
     }
 }
 
-function isMobilePreJoinDevice() {
-    const ua = String(navigator.userAgent || '');
-    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua)
-        || window.matchMedia?.('(pointer: coarse)')?.matches === true;
-}
-
-function normalizePreJoinCameras(devices) {
-    const cameras = Array.isArray(devices) ? devices.filter(Boolean) : [];
-    if (!isMobilePreJoinDevice() || cameras.length <= 1) {
-        return cameras.map((device, index) => ({ device, label: device.label || `Câmera ${index + 1}` }));
-    }
-    const labelOf = (device) => String(device?.label || '').toLowerCase();
-    let front = cameras.find((device) => /facing\s*front|camera\s*1|front|user|frontal|frente|facetime/.test(labelOf(device)));
-    let back = cameras.find((device) => /facing\s*back|camera\s*0|back|rear|environment|traseir/.test(labelOf(device)));
-    if (!front) front = cameras[0] || null;
-    if (!back) back = cameras.find((device) => device !== front) || null;
-    const result = [];
-    if (front) result.push({ device: front, label: 'Câmera frontal' });
-    if (back && back !== front) result.push({ device: back, label: 'Câmera traseira' });
-    return result;
-}
-
 function populateDeviceSelect(selectId, devices, selectedValue, emptyLabel) {
     const select = $(selectId);
     if (!select) return;
 
-    const rawDevices = Array.isArray(devices) ? devices : [];
-    const cameraEntries = selectId === 'prejoin-video-input' ? normalizePreJoinCameras(rawDevices) : null;
-    const safeDevices = cameraEntries ? cameraEntries.map((entry) => entry.device) : rawDevices;
+    const safeDevices = Array.isArray(devices) ? devices : [];
     select.innerHTML = '';
 
     if (!safeDevices.length) {
@@ -717,9 +693,7 @@ function populateDeviceSelect(selectId, devices, selectedValue, emptyLabel) {
     safeDevices.forEach((device, index) => {
         const option = document.createElement('option');
         option.value = device.deviceId || '';
-        option.textContent = cameraEntries
-            ? cameraEntries[index].label
-            : (device.label || `${emptyLabel} ${index + 1}`);
+        option.textContent = device.label || `${emptyLabel} ${index + 1}`;
         select.appendChild(option);
     });
 
@@ -757,9 +731,7 @@ async function refreshPreJoinDevices() {
         }
 
         if (!assemblyState.preJoinSelections.videoInput && videoInputs[0]) {
-            const preferredVideoDevices = normalizePreJoinCameras(videoInputs);
-            const preferredCamera = preferredVideoDevices[0]?.device || videoInputs[0];
-            assemblyState.preJoinSelections.videoInput = preferredCamera.deviceId || '';
+            assemblyState.preJoinSelections.videoInput = videoInputs[0].deviceId || '';
         }
 
         if (!assemblyState.preJoinSelections.audioOutput && audioOutputs[0]) {
@@ -1237,11 +1209,12 @@ async function ensureAudioEnabled() {
 async function ensureVideoEnabled() {
     const stream = await navigator.mediaDevices.getUserMedia({
         video: {
+            facingMode: 'user',
             width: { ideal: 1280 },
             height: { ideal: 720 },
             ...(assemblyState.preJoinSelections.videoInput
                 ? { deviceId: { exact: assemblyState.preJoinSelections.videoInput } }
-                : { facingMode: { ideal: 'user' } })
+                : {})
         },
         audio: false
     });
@@ -2011,7 +1984,8 @@ async function bootstrapUser() {
                 if (persisted && persisted.email && typeof fetchUserByEmail === 'function') {
                     const fresh = await fetchUserByEmail(persisted.email).catch(() => null);
                     if (fresh) {
-                        const restored = { ...fresh, password: fresh.password || null };
+                        const restored = { ...fresh };
+                        delete restored.password;
                         sessionStorage.setItem('condominiumUser', JSON.stringify(restored));
                         storedUser = sessionStorage.getItem('condominiumUser');
                     }

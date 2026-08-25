@@ -521,6 +521,3 @@ body.marketplace-modal-open {
         flex: 1 1 auto;
     }
 }
-
-/* 027 - status persistente do marketplace */
-.market-status{display:inline-flex;align-items:center;width:max-content;border-radius:999px;padding:4px 8px;font-size:.72rem;font-weight:700}.market-status-disponivel{background:#ecfdf5;color:#047857}.market-status-reservado{background:#fff7ed;color:#c2410c}.market-status-vendido,.market-status-doado{background:#eff6ff;color:#1d4ed8}.market-status-expirado{background:#f1f5f9;color:#64748b}.marketplace-status-actions{display:flex;flex-wrap:wrap;gap:8px;width:100%}

@@ -3,20 +3,19 @@ const lostFoundState = {
     search: '',
     type: 'encontrado',
     status: 'todos',
-    draftImage: '',
-    matches: []
+    draftImage: ''
 };
 
 const LOST_FOUND_IMAGES = {
-    chaves: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=realistic%20photo%20of%20car%20keys%20and%20house%20keys%20on%20a%20neutral%20surface%2C%20soft%20light&image_size=landscape_4_3',
-    carteira: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=realistic%20brown%20leather%20wallet%20on%20clean%20light%20background%2C%20product%20photo&image_size=landscape_4_3',
-    celular: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=realistic%20black%20smartphone%20on%20minimal%20light%20surface%2C%20product%20photo&image_size=landscape_4_3',
-    mochila: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=realistic%20black%20backpack%20studio%20photo%20on%20light%20background&image_size=landscape_4_3',
-    oculos: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=realistic%20eyeglasses%20on%20clean%20light%20surface%2C%20product%20photo&image_size=landscape_4_3',
-    fone: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=realistic%20wireless%20earbuds%20charging%20case%20on%20light%20surface%2C%20product%20photo&image_size=landscape_4_3',
-    garrafa: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=realistic%20metal%20water%20bottle%20on%20clean%20neutral%20background%2C%20product%20photo&image_size=landscape_4_3',
-    pelucia: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=realistic%20teddy%20bear%20toy%20on%20soft%20light%20background%2C%20product%20photo&image_size=landscape_4_3',
-    default: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=realistic%20lost%20and%20found%20item%20on%20clean%20light%20background%2C%20product%20photo&image_size=landscape_4_3'
+    chaves: '../assets/logo-icon.png',
+    carteira: '../assets/logo-icon.png',
+    celular: '../assets/logo-icon.png',
+    mochila: '../assets/logo-icon.png',
+    oculos: '../assets/logo-icon.png',
+    fone: '../assets/logo-icon.png',
+    garrafa: '../assets/logo-icon.png',
+    pelucia: '../assets/logo-icon.png',
+    default: '../assets/logo-icon.png'
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -162,14 +161,13 @@ async function fetchLostFoundFromSupabase() {
         if (!Array.isArray(rows)) return [];
         return rows.map((row) => ({
             id: `db-lf-${row.id}`,
-            dbId: row.id,
             title: row.item_name || '',
             description: row.item_name || '',
             location: row.location || '',
             date: row.item_date || new Date().toISOString().slice(0, 10),
-            status: row.item_status === 'arquivado' ? 'arquivado' : 'disponivel',
+            status: 'disponivel',
             type: dbItemTypeToType(row.item_type),
-            author: row.created_by || 'Condomínio',
+            author: 'Condomínio',
             image: row.image_url || LOST_FOUND_IMAGES.default
         }));
     } catch (err) {
@@ -227,9 +225,7 @@ async function saveLostFoundToSupabase(
 
     image_url:
       item.image ||
-      LOST_FOUND_IMAGES.default,
-
-    created_by: lostFoundState.currentUser?.email || null
+      LOST_FOUND_IMAGES.default
   };
 
   const rows =
@@ -290,12 +286,6 @@ function setLostFoundItems(items) {
 }
 
 async function renderLostFoundPage() {
-    try {
-        await window.supabaseFetch('/rpc/condomit_archive_old_lost_found', {method:'POST',body:'{}'});
-        await window.supabaseFetch('/rpc/condomit_suggest_lost_found_matches', {method:'POST',body:'{}'});
-        const cep = getLostFoundUserCep();
-        lostFoundState.matches = await window.supabaseFetch(`/lost_found_matches?select=*&cep=eq.${encodeURIComponent(cep)}&status=eq.sugerido&order=confidence.desc`).catch(()=>[]);
-    } catch (_) { lostFoundState.matches = []; }
     const items = (await getLostFoundItems()).filter((item) => {
         const matchesType = lostFoundState.type === 'todos' || item.type === lostFoundState.type;
         const matchesStatus = lostFoundState.status === 'todos' || item.status === lostFoundState.status;
@@ -339,7 +329,6 @@ function renderLostFoundGrid(items) {
                     <span class="status-chip ${item.status}">
                         ${getStatusLabel(item.status)}
                     </span>
-                    ${getSuggestedMatch(item) ? `<span class="match-chip"><i class="fas fa-wand-magic-sparkles"></i> Correspondência ${getSuggestedMatch(item).confidence}%</span>` : ''}
                 </div>
                 <p class="res-item-copy">${escapeHtml(item.description)}</p>
                 <div class="res-item-meta">
@@ -349,12 +338,6 @@ function renderLostFoundGrid(items) {
             </div>
         </article>
     `).join('');
-}
-
-function getSuggestedMatch(item) {
-    const id = Number(item?.dbId || String(item?.id || '').replace('db-lf-', ''));
-    if (!Number.isFinite(id)) return null;
-    return (Array.isArray(lostFoundState.matches) ? lostFoundState.matches : []).find(match => Number(match.lost_item_id) === id || Number(match.found_item_id) === id) || null;
 }
 
 function syncTypeCards() {
@@ -454,7 +437,6 @@ async function saveLostFoundItem() {
 function getStatusLabel(status) {
     if (status === 'devolvido') return 'Devolvido';
     if (status === 'em-analise') return 'Em análise';
-    if (status === 'arquivado') return 'Arquivado';
     return 'Disponível';
 }
 

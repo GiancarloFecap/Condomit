@@ -1148,37 +1148,3 @@ body {
   cursor: wait;
   transform: none;
 }
-
-
-/* 026 - Foto de perfil nos avatares da sala */
-.tile-avatar,
-.panel-item-avatar {
-  overflow: hidden;
-}
-.tile-avatar img,
-.panel-item-avatar img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  border-radius: inherit;
-}
-.tile-avatar.has-photo,
-.panel-item-avatar.has-photo {
-  background: #e2e8f0;
-}
-
-/* 026 - Fotos de perfil nos avatares da sala e do chat */
-.chat-msg-avatar {
-  overflow: hidden;
-}
-.chat-msg-avatar img,
-.participant-avatar img,
-.tile-avatar img,
-.call-avatar img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  border-radius: inherit;
-}

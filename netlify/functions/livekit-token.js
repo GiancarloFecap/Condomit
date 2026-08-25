@@ -332,7 +332,7 @@ exports.handler = async (event) => {
     } = await supabase
       .from('users')
       .select(
-        'name, email, user_type, cpf, phone, condominium, profile_photo'
+        'name, email, user_type, cpf, phone, condominium'
       )
       .eq('email', userEmail)
       .maybeSingle();
@@ -756,9 +756,6 @@ exports.handler = async (event) => {
 
         cep:
           userCep,
-
-        profile_photo:
-          user.profile_photo || null,
       },
 
       assembly: {

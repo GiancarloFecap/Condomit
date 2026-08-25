@@ -150,9 +150,7 @@
                 <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
                 <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} transcrito${state.transcripts.length === 1 ? '' : 's'}</span>
-            </div>
-            ${currentUserRole() === 'sindico' ? '<div class="summary-hero-actions"><button type="button" id="generateAssemblyTasks027" class="summary-primary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button></div>' : ''}`;
-        hero.querySelector('#generateAssemblyTasks027')?.addEventListener('click', generateAssemblyDecisionTasks);
+            </div>`;
     }
 
     function renderMinutes() {
@@ -223,16 +221,7 @@
             ? `<div class="minutes-transcription-ok"><i class="fas fa-microphone-lines"></i><div><strong>Transcrição automática registrada</strong><span>${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} de fala salvo${state.transcripts.length === 1 ? '' : 's'} durante a reunião.</span></div></div>`
             : `<div class="minutes-transcription-empty"><i class="fas fa-wave-square"></i><span>Nenhum trecho de fala transcrito foi registrado nesta assembleia.</span></div>`;
 
-        const decisionRows = state.polls.map((poll) => {
-            const opts = state.options.filter(option => String(option.poll_id) === String(poll.id));
-            if (!opts.length) return null;
-            const ranked = opts.map(option => ({ option, votes: getVoteCount(poll.id, option.id) })).sort((a,b) => b.votes - a.votes);
-            const winner = ranked[0];
-            return winner ? `<li><strong>${esc(poll.title || 'Votação')}:</strong> ${esc(winner.option.option_text || 'Opção')} (${winner.votes} voto${winner.votes === 1 ? '' : 's'})</li>` : null;
-        }).filter(Boolean);
-        const decisions = decisionRows.length ? `<div class="minutes-decisions"><strong>Decisões em destaque</strong><ul>${decisionRows.join('')}</ul></div>` : '';
-
-        container.innerHTML = intro + transcriptionState + decisions + (events.length
+        container.innerHTML = intro + transcriptionState + (events.length
             ? `<div class="minutes-timeline">${events.map((event) => `<article class="minute-event ${event.kind === 'speech' ? 'speech-event' : ''}"><time class="minute-time">${formatTime(event.time)}</time><div class="minute-card"><strong>${esc(event.title)}</strong><p>${esc(event.text)}</p></div></article>`).join('')}</div>`
             : '<div class="summary-empty">Nenhum evento persistido foi encontrado.</div>');
     }
@@ -391,33 +380,6 @@
                 if (submit) submit.disabled = false;
             }
         });
-    }
-
-    async function generateAssemblyDecisionTasks() {
-        if (currentUserRole() !== 'sindico') return;
-        const button = document.getElementById('generateAssemblyTasks027');
-        if (button) button.disabled = true;
-        try {
-            const cepResult = await window.supabaseFetch('/rpc/condomit_current_user_cep', { method:'POST', body:'{}' });
-            const cep = typeof cepResult === 'string' ? cepResult : String(cepResult?.cep || '');
-            if (!cep) throw new Error('Não foi possível identificar o condomínio.');
-            const existing = await fetchRows(`/assembly_tasks?select=id,title&assembly_id=eq.${state.id}`).catch(()=>[]);
-            const existingTitles = new Set(existing.map(row => String(row.title || '').toLowerCase()));
-            const tasks = [];
-            state.polls.forEach(poll => {
-                const options = state.options.filter(option => String(option.poll_id) === String(poll.id));
-                if (!options.length) return;
-                const ranked = options.map(option => ({option,votes:getVoteCount(poll.id,option.id)})).sort((a,b)=>b.votes-a.votes);
-                const winner = ranked[0];
-                if (!winner) return;
-                const title = `Executar decisão: ${poll.title || 'Votação'} — ${winner.option.option_text || 'Opção vencedora'}`;
-                if (!existingTitles.has(title.toLowerCase())) tasks.push({cep,assembly_id:state.id,title,description:`Gerada automaticamente a partir da votação. Resultado vencedor: ${winner.option.option_text || 'Opção'} com ${winner.votes} voto(s).`,status:'pendente',created_by:state.user.email});
-            });
-            if (!tasks.length) { window.showToast?.('Nenhuma nova tarefa foi gerada. As decisões já possuem tarefas ou não há votações.', 'info'); return; }
-            await window.supabaseFetch('/assembly_tasks', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(tasks)});
-            window.showToast?.(`${tasks.length} tarefa(s) criada(s) na Gestão Avançada.`, 'success');
-        } catch(error) { window.showToast?.(error?.message || 'Não foi possível gerar as tarefas.', 'error'); }
-        finally { if (button) button.disabled = false; }
     }
 
     function getVoteCount(pollId, optionId) {
