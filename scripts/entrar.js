@@ -59,7 +59,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function getNormalizedUserType(user) {
-        return String(user.user_type || user.type || '').trim().toLowerCase();
+        const raw = String(user.user_type || user.type || '').trim().toLowerCase();
+        if (raw === 'síndico') return 'sindico';
+        if (raw.startsWith('administra') || raw === 'admin') return 'administradora';
+        return raw;
     }
 
     async function resolveCompletedCondominium(user) {
@@ -116,6 +119,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             localStorage.setItem('condominiumPersistentUser', JSON.stringify(persistent));
         } catch(_) {}
         if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
+
+        if (type === 'administradora') {
+            window.location.href = 'index-administradora.html';
+            return;
+        }
 
         if (type === 'sindico') {
             if (!user.condominium) {

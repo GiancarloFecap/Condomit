@@ -1172,13 +1172,11 @@ async function fetchUserByEmail(
   email
 ) {
   try {
-    const accessToken = await resolveSupabaseAccessToken();
     const response =
       await fetch(
         `/api/users?email=${encodeURIComponent(
           email
-        )}`,
-        { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {} }
+        )}`
       );
 
     const contentType =
@@ -1310,8 +1308,7 @@ async function fetchUserByCpf(
       await fetch(
         `/api/users?cpf=eq.${encodeURIComponent(
           normalizedCpf
-        )}`,
-        { headers: (await resolveSupabaseAccessToken()) ? { Authorization: `Bearer ${await resolveSupabaseAccessToken()}` } : {} }
+        )}`
       );
 
     if (
@@ -1348,8 +1345,7 @@ async function fetchUserByCpf(
       await fetch(
         `/api/users?cpf=eq.${encodeURIComponent(
           maskedCpf
-        )}`,
-        { headers: (await resolveSupabaseAccessToken()) ? { Authorization: `Bearer ${await resolveSupabaseAccessToken()}` } : {} }
+        )}`
       );
 
     if (
@@ -1471,11 +1467,67 @@ async function fetchUserByCpf(
   }
 }
 
+async function createUser(
+  user
+) {
+  const response =
+    await fetch(
+      '/api/register',
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+
+        body:
+          JSON.stringify(
+            user
+          )
+      }
+    );
+
+  const text =
+    await response.text();
+
+  let data = null;
+
+  try {
+    data =
+      text
+        ? JSON.parse(text)
+        : null;
+  } catch (error) {
+    if (response.ok) {
+      throw new Error(
+        'Erro ao cadastrar usuário: resposta inesperada do servidor'
+      );
+    }
+
+    data = {
+      error:
+        `Erro ${response.status} ao cadastrar`
+    };
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error ||
+      data?.message ||
+      'Erro ao cadastrar usuário'
+    );
+  }
+
+  return Array.isArray(data)
+    ? data[0]
+    : data;
+}
+
 async function updateUserByEmail(
   email,
   updates
 ) {
-  const accessToken = await resolveSupabaseAccessToken();
   const response =
     await fetch(
       `/api/users?email=${encodeURIComponent(
@@ -1485,8 +1537,8 @@ async function updateUserByEmail(
         method: 'PATCH',
 
         headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+          'Content-Type':
+            'application/json'
         },
 
         body:
@@ -1536,7 +1588,6 @@ async function updateUserByEmail(
 async function createCondominium(
   condo
 ) {
-  const accessToken = await resolveSupabaseAccessToken();
   const response =
     await fetch(
       '/api/condominiums',
@@ -1544,8 +1595,8 @@ async function createCondominium(
         method: 'POST',
 
         headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+          'Content-Type':
+            'application/json'
         },
 
         body:
@@ -2876,6 +2927,15 @@ function getNormalizedUserType(
     return 'porteiro';
   }
 
+  if (
+    t.startsWith('administra') ||
+    t === 'admin' ||
+    t === 'administradora' ||
+    t === 'administrador'
+  ) {
+    return 'administradora';
+  }
+
   return t || 'morador';
 }
 
@@ -2931,7 +2991,8 @@ async function refreshCurrentUserFromDb() {
         [
           'sindico',
           'morador',
-          'porteiro'
+          'porteiro',
+          'administradora'
         ].includes(
           freshType
         )
@@ -2959,7 +3020,8 @@ async function refreshCurrentUserFromDb() {
         ![
           'sindico',
           'morador',
-          'porteiro'
+          'porteiro',
+          'administradora'
         ].includes(
           getNormalizedUserType(merged)
         )
@@ -5057,6 +5119,10 @@ function getCondomitRoleHomePath(role) {
     return 'index-porteiro.html';
   }
 
+  if (normalized === 'administradora') {
+    return 'index-administradora.html';
+  }
+
   return 'index-morador.html';
 }
 
@@ -5156,7 +5222,8 @@ async function syncCondomitRoleNow(options = {}) {
       [
         'index.html',
         'index-morador.html',
-        'index-porteiro.html'
+        'index-porteiro.html',
+        'index-administradora.html'
       ].includes(
         currentPage
       );
@@ -5187,7 +5254,9 @@ async function syncCondomitRoleNow(options = {}) {
             ? 'Síndico'
             : currentRole === 'porteiro'
               ? 'Porteiro'
-              : 'Morador';
+              : currentRole === 'administradora'
+                ? 'Administradora'
+                : 'Morador';
 
         window.showToast?.(
           `Seu cargo foi atualizado para ${label}. Atualizando o sistema...`,

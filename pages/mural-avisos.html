@@ -8,9 +8,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=016">
     <link rel="stylesheet" href="../styles/theme.css?v=0151">
-    <link rel="stylesheet" href="../styles/notificacoes.css?v=018">
+    <link rel="stylesheet" href="../styles/notificacoes.css?v=033">
     <link rel="stylesheet" href="../styles/mural-avisos.css?v=018">
-    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=032">
+    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=033">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="stylesheet" href="../styles/mural-feed-027.css?v=033">
 </head>
 <body>
     <div class="dashboard-sindico">
@@ -132,6 +134,14 @@
                     Aviso
                     <textarea id="wallNoticeMessage" rows="7" maxlength="4000" required></textarea>
                 </label>
+                <label>
+                    Link de anexo
+                    <input id="wallNoticeAttachment" type="url" maxlength="1200" placeholder="https://... (opcional)">
+                </label>
+                <div class="wall-create-options">
+                    <label><input id="wallNoticePinned" type="checkbox"> Fixar no topo do mural</label>
+                    <label><input id="wallNoticeComments" type="checkbox" checked> Permitir comentários</label>
+                </div>
                 <div class="modal-actions">
                     <button class="ghost-btn" id="cancelWallCreateModal" type="button">Cancelar</button>
                     <button class="primary-action" type="submit"><i class="fas fa-bullhorn"></i> Publicar no mural</button>
@@ -176,6 +186,7 @@
                 <div class="notification-detail-copy">
                     <h4>Informações do aviso</h4>
                     <p id="wallDetailFullText">--</p>
+                    <a id="wallDetailAttachment" class="wall-attachment-link" href="#" target="_blank" rel="noopener" hidden><i class="fas fa-paperclip"></i> Abrir anexo</a>
                 </div>
             </div>
             <div class="modal-actions">
@@ -183,15 +194,16 @@
             </div>
         </div>
     </div>
-    <script src="../scripts/platform-config.js?v=032"></script>
+    <script src="../scripts/platform-config.js?v=033"></script>
 
 
-    <script src="../scripts/supabase-client.js?v=023"></script>
-    <script src="../scripts/community-hub.js?v=018"></script>
-    <script src="../scripts/sidebar-links.js?v=023"></script>
-    <script src="../scripts/mural-avisos.js?v=020"></script>
-    <script src="../scripts/topbar-actions.js?v=024"></script>
+    <script src="../scripts/supabase-client.js?v=033"></script>
+    <script src="../scripts/community-hub.js?v=033"></script>
+    <script src="../scripts/sidebar-links.js?v=033"></script>
+    <script src="../scripts/mural-avisos.js?v=033"></script>
+    <script src="../scripts/topbar-actions.js?v=033"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>
+    <script src="../scripts/advanced-global.js?v=033"></script>
 </body>
 </html>

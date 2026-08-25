@@ -397,6 +397,13 @@
 
         renderContacts();
 
+        const pendingTarget=normalizeEmail(sessionStorage.getItem('condomitChatTargetEmail')||'');
+        if(pendingTarget && state.contacts.some(item=>normalizeEmail(item.email)===pendingTarget)){
+            sessionStorage.removeItem('condomitChatTargetEmail');
+            await openConversation(pendingTarget);
+            return;
+        }
+
         const hasContactsList = Boolean(document.getElementById('conversationsList'));
 
         // Telas de conversa única (como chat com o síndico) não possuem

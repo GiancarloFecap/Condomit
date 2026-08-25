@@ -1,5 +1,5 @@
 .ai-chat-container {
-    height: calc(100vh - 88px);
+    height: calc(100svh - 88px);
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
     background: linear-gradient(180deg, #f7faff 0%, #f8fafc 100%);

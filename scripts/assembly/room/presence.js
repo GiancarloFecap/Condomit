@@ -1,4 +1,4 @@
-import { state } from './state.js';
+import { state } from './state.js?v=026';
 
 function getAccessToken() {
   try {

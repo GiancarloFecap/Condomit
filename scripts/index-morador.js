@@ -83,8 +83,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         if (persist && persist.email && typeof fetchUserByEmail === 'function') {
                             const fresh = await fetchUserByEmail(persist.email).catch(() => null);
                             if (fresh) {
-                                const restored = { ...fresh };
-                                delete restored.password;
+                                const restored = { ...fresh, password: fresh.password || null };
                                 sessionStorage.setItem('condominiumUser', JSON.stringify(restored));
                                 raw = sessionStorage.getItem('condominiumUser');
                                 if (typeof syncAllAvatars === 'function') syncAllAvatars(restored);
@@ -112,8 +111,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     if (currentUser.email && typeof fetchUserByEmail === 'function') {
                         const fresh = await fetchUserByEmail(currentUser.email).catch(() => null);
                         if (fresh) {
-                            const updated = { ...currentUser, ...fresh };
-                            delete updated.password;
+                            const updated = { ...currentUser, ...fresh, password: currentUser.password || fresh.password };
                             if (fresh.condominium && typeof fresh.condominium === 'object' && currentUser.condominium) {
                                 updated.condominium = { ...currentUser.condominium, ...fresh.condominium };
                             } else if (fresh.condominium) {

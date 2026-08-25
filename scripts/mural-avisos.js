@@ -67,19 +67,34 @@ function setupWallActions() {
         const category = document.getElementById('wallNoticeCategory')?.value || 'Avisos';
         const title = document.getElementById('wallNoticeTitle')?.value.trim() || '';
         const message = document.getElementById('wallNoticeMessage')?.value.trim() || '';
+        const attachmentUrl = document.getElementById('wallNoticeAttachment')?.value.trim() || null;
+        const pinned = document.getElementById('wallNoticePinned')?.checked === true;
+        const commentsEnabled = document.getElementById('wallNoticeComments')?.checked !== false;
         if (!title || !message) return;
 
         const submitButton = event.submitter || event.target.querySelector('button[type="submit"]');
         if (submitButton) submitButton.disabled = true;
 
         try {
-            await window.communityHub.createWallNotice({
+            const savedNotice = await window.communityHub.createWallNotice({
                 category,
                 title,
                 message,
                 details: message,
                 source: 'manual'
             }, wallState.currentUser);
+
+            if (savedNotice?.dbId && (pinned || !commentsEnabled || attachmentUrl)) {
+                await window.supabaseFetch('/rpc/condomit_set_notice_options', {
+                    method:'POST',
+                    body:JSON.stringify({
+                        target_notice_id:Number(savedNotice.dbId),
+                        target_pinned:pinned,
+                        target_comments_enabled:commentsEnabled,
+                        target_attachment_url:attachmentUrl
+                    })
+                });
+            }
 
             event.target.reset();
             closeWallCreateModal();
@@ -98,6 +113,14 @@ function setupWallActions() {
 async function renderWallPage() {
     try {
         wallState.notices = await window.communityHub.getWallNotices(wallState.currentUser);
+        /* 027: mescla opções do feed (fixado/comentários/anexo) sem exigir
+           alteração do RPC legado condomit_list_wall_notices. */
+        try {
+            const extras = await window.supabaseFetch('/condominium_notices?select=id,is_pinned,comments_enabled,attachment_url');
+            const byId = new Map((Array.isArray(extras) ? extras : []).map(row => [Number(row.id), row]));
+            wallState.notices = wallState.notices.map(notice => ({ ...notice, ...(byId.get(Number(notice.dbId)) || {}) }));
+            wallState.notices.sort((a,b) => Number(Boolean(b.is_pinned)) - Number(Boolean(a.is_pinned)) || new Date(b.createdAt) - new Date(a.createdAt));
+        } catch (_) {}
     } catch (error) {
         console.error('Erro ao carregar Mural de Avisos:', error);
         wallState.notices = [];
@@ -168,6 +191,7 @@ function renderWallNotices(notices) {
                     <small class="muted">${formatWallDate(notice.createdAt)}</small>
                 </div>
                 <div class="notification-badges">
+                    ${notice.is_pinned ? '<span class="tag wall-pinned"><i class="fas fa-thumbtack"></i> Fixado</span>' : ''}
                     <span class="tag category">${escapeWallHtml(notice.category)}</span>
                     <span class="tag category">${escapeWallHtml(notice.author || 'Condomit')}</span>
                 </div>
@@ -204,15 +228,26 @@ function renderWallSummary(notices) {
     if (latest) latest.textContent = notices[0] ? formatWallDate(notices[0].createdAt) : '--';
 }
 
+function syncWallModalBodyLock() {
+    const hasOpenModal = Boolean(document.querySelector('.modal-backdrop.open'));
+    document.body.classList.toggle('condomit-modal-open', hasOpenModal);
+}
+
 function openWallCreateModal() {
-    document.getElementById('wallCreateModal')?.classList.add('open');
+    const modal = document.getElementById('wallCreateModal');
+    modal?.classList.add('open');
+    modal?.setAttribute('aria-hidden', 'false');
+    syncWallModalBodyLock();
 }
 
 function closeWallCreateModal() {
-    document.getElementById('wallCreateModal')?.classList.remove('open');
+    const modal = document.getElementById('wallCreateModal');
+    modal?.classList.remove('open');
+    modal?.setAttribute('aria-hidden', 'true');
+    syncWallModalBodyLock();
 }
 
-function openWallDetail(noticeId) {
+async function openWallDetail(noticeId) {
     const notice = window.communityHub.getWallNoticeById(noticeId);
     if (!notice) return;
 
@@ -226,13 +261,110 @@ function openWallDetail(noticeId) {
     setText('wallDetailMessage', notice.message || '--');
     setText('wallDetailFullText', notice.details || notice.message || '--');
     setText('wallDetailSource', labelForWallSource(notice.source));
+    const attachment=document.getElementById('wallDetailAttachment');
+    if(attachment){
+        const url=String(notice.attachment_url||'').trim();
+        attachment.hidden=!url;
+        if(url)attachment.href=url;
+    }
 
-    document.getElementById('wallDetailModal')?.classList.add('open');
+    const detailModal = document.getElementById('wallDetailModal');
+    detailModal?.classList.add('open');
+    detailModal?.setAttribute('aria-hidden', 'false');
+    syncWallModalBodyLock();
+    detailModal?.querySelector('.modal-close')?.focus?.({ preventScroll: true });
+    await renderWallInteractions(notice);
 }
+
+async function resolveWallCep() {
+    try {
+        const value = await window.supabaseFetch('/rpc/condomit_current_user_cep', { method: 'POST', body: '{}' });
+        return typeof value === 'string' ? value : String(value?.cep || '');
+    } catch (_) {
+        const condo = wallState.currentUser?.condominium || {};
+        return String(condo?.cep || condo?.condominium_id || '');
+    }
+}
+
+function ensureWallInteractionRoot() {
+    const modal = document.getElementById('wallDetailModal');
+    if (!modal) return null;
+    let root = modal.querySelector('#wallInteractions027');
+    if (!root) {
+        const action = document.getElementById('closeWallDetailAction');
+        root = document.createElement('section');
+        root.id = 'wallInteractions027';
+        root.className = 'wall-interactions';
+        root.innerHTML = `<div class="wall-reaction-row"><button data-wall-reaction="curtir">👍 Curtir</button><button data-wall-reaction="apoio">🤝 Apoio</button><button data-wall-reaction="importante">⭐ Importante</button></div><div class="wall-read-row"><span id="wallReadState027">Abrindo...</span><span id="wallReadStats027" class="wall-read-stats" hidden></span><button id="wallPin027" type="button" hidden></button></div><div id="wallReactionCounts027" class="wall-counts"></div><div id="wallComments027" class="wall-comments"></div><form id="wallCommentForm027" class="wall-comment-form"><input id="wallCommentInput027" maxlength="1000" placeholder="Escreva um comentário..." required><button type="submit">Enviar</button></form>`;
+        action?.parentElement?.parentElement?.insertBefore(root, action.parentElement);
+        root.addEventListener('click', async event => {
+            const reaction = event.target.closest('[data-wall-reaction]')?.dataset.wallReaction;
+            if (reaction) await saveWallReaction(reaction);
+            if (event.target.closest('#wallPin027')) await toggleWallPin();
+        });
+        root.querySelector('#wallCommentForm027')?.addEventListener('submit', async event => { event.preventDefault(); await saveWallComment(); });
+    }
+    return root;
+}
+
+async function renderWallInteractions(notice) {
+    const root = ensureWallInteractionRoot();
+    if (!root || !notice?.dbId) return;
+    root.dataset.noticeId = notice.dbId;
+    const cep = await resolveWallCep();
+    const email = String(wallState.currentUser?.email || '').toLowerCase();
+    const management = window.communityHub?.getUserType?.(wallState.currentUser) === 'sindico';
+    const pin = root.querySelector('#wallPin027');
+    if (pin) { pin.hidden = !management; pin.textContent = notice.is_pinned ? 'Desafixar aviso' : 'Fixar aviso'; }
+    const form = root.querySelector('#wallCommentForm027');
+    if (form) form.hidden = notice.comments_enabled === false;
+    try {
+        await window.supabaseFetch('/communication_reads?on_conflict=resource_type,resource_id,user_email', { method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'}, body:JSON.stringify({cep,resource_type:'mural',resource_id:String(notice.dbId),user_email:email,acknowledged:true,read_at:new Date().toISOString()}) });
+        root.querySelector('#wallReadState027').textContent = '✓ Leitura confirmada';
+    } catch (_) { root.querySelector('#wallReadState027').textContent = 'Leitura registrada localmente'; }
+    const [comments,reactions,reads,residents] = await Promise.all([
+        window.supabaseFetch(`/wall_comments?select=*&notice_id=eq.${notice.dbId}&order=created_at.asc`).catch(()=>[]),
+        window.supabaseFetch(`/wall_reactions?select=reaction,user_email&notice_id=eq.${notice.dbId}`).catch(()=>[]),
+        management ? window.supabaseFetch(`/communication_reads?select=user_email,acknowledged&resource_type=eq.mural&resource_id=eq.${notice.dbId}&cep=eq.${encodeURIComponent(cep)}`).catch(()=>[]) : Promise.resolve([]),
+        management ? window.supabaseFetch('/rpc/condomit_list_condo_residents',{method:'POST',body:'{}'}).catch(()=>[]) : Promise.resolve([])
+    ]);
+    const commentsRoot=root.querySelector('#wallComments027');
+    commentsRoot.innerHTML=(Array.isArray(comments)?comments:[]).map(c=>`<article><strong>${escapeWallHtml(c.user_name||c.user_email)}</strong><p>${escapeWallHtml(c.comment)}</p><small>${formatWallDate(c.created_at,true)}</small></article>`).join('') || '<p class="muted">Nenhum comentário ainda.</p>';
+    const counts=(Array.isArray(reactions)?reactions:[]).reduce((a,r)=>(a[r.reaction]=(a[r.reaction]||0)+1,a),{});
+    root.querySelector('#wallReactionCounts027').textContent = `👍 ${counts.curtir||0} · 🤝 ${counts.apoio||0} · ⭐ ${counts.importante||0}`;
+    const readStats=root.querySelector('#wallReadStats027');
+    if(readStats){
+        const total=Array.isArray(residents)?residents.length:0;
+        const readCount=new Set((Array.isArray(reads)?reads:[]).filter(r=>r.acknowledged!==false).map(r=>String(r.user_email||'').toLowerCase()).filter(Boolean)).size;
+        readStats.hidden=!management;
+        if(management)readStats.textContent=`${readCount} de ${total} moradores confirmaram a leitura`;
+    }
+    root.querySelectorAll('[data-wall-reaction]').forEach(btn=>btn.classList.toggle('active',(reactions||[]).some(r=>String(r.user_email).toLowerCase()===email&&r.reaction===btn.dataset.wallReaction)));
+}
+
+async function saveWallReaction(reaction) {
+    const root=ensureWallInteractionRoot(); const notice=window.communityHub.getWallNoticeById(wallState.selectedNoticeId); if(!notice)return;
+    const cep=await resolveWallCep(); const email=String(wallState.currentUser?.email||'').toLowerCase();
+    try { await window.supabaseFetch('/wall_reactions?on_conflict=notice_id,user_email',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({notice_id:notice.dbId,cep,user_email:email,reaction})}); await renderWallInteractions(notice); } catch(e){window.showToast?.(e?.message||'Não foi possível reagir.','error');}
+}
+
+async function saveWallComment() {
+    const root=ensureWallInteractionRoot(); const input=root?.querySelector('#wallCommentInput027'); const notice=window.communityHub.getWallNoticeById(wallState.selectedNoticeId); const comment=String(input?.value||'').trim(); if(!notice||!comment)return;
+    try { const cep=await resolveWallCep(); await window.supabaseFetch('/wall_comments',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({notice_id:notice.dbId,cep,user_email:wallState.currentUser.email,user_name:wallState.currentUser.name||'',comment})}); input.value=''; await renderWallInteractions(notice); } catch(e){window.showToast?.(e?.message||'Não foi possível comentar.','error');}
+}
+
+async function toggleWallPin() {
+    const notice=window.communityHub.getWallNoticeById(wallState.selectedNoticeId); if(!notice)return;
+    try { await window.supabaseFetch('/rpc/condomit_set_notice_options',{method:'POST',body:JSON.stringify({target_notice_id:notice.dbId,target_pinned:!notice.is_pinned,target_comments_enabled:null,target_attachment_url:null})}); notice.is_pinned=!notice.is_pinned; await renderWallPage(); await renderWallInteractions(notice); } catch(e){window.showToast?.(e?.message||'Não foi possível fixar o aviso.','error');}
+}
+
 
 function closeWallDetailModal() {
     wallState.selectedNoticeId = null;
-    document.getElementById('wallDetailModal')?.classList.remove('open');
+    const modal = document.getElementById('wallDetailModal');
+    modal?.classList.remove('open');
+    modal?.setAttribute('aria-hidden', 'true');
+    syncWallModalBodyLock();
 }
 
 function setText(id, value) {

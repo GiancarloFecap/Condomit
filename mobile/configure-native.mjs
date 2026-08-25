@@ -44,6 +44,68 @@ async function patchAndroid() {
   return true;
 }
 
+async function patchAndroidSafeInsets() {
+  const activityPath = join(root, 'android', 'app', 'src', 'main', 'java', 'com', 'condomit', 'app', 'MainActivity.java');
+  if (!(await exists(activityPath))) return;
+  const activity = `package com.condomit.app;
+
+import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
+
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        applySystemBarInsets();
+    }
+
+    private void applySystemBarInsets() {
+        final View webView = getBridge().getWebView();
+        if (webView == null) return;
+        ViewCompat.setOnApplyWindowInsetsListener(webView, (view, windowInsets) -> {
+            Insets safe = windowInsets.getInsets(
+                WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
+            );
+            ViewGroup.LayoutParams rawParams = view.getLayoutParams();
+            if (rawParams instanceof ViewGroup.MarginLayoutParams) {
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) rawParams;
+                if (params.leftMargin != safe.left || params.topMargin != safe.top ||
+                    params.rightMargin != safe.right || params.bottomMargin != safe.bottom) {
+                    params.setMargins(safe.left, safe.top, safe.right, safe.bottom);
+                    view.setLayoutParams(params);
+                }
+            } else {
+                view.setPadding(safe.left, safe.top, safe.right, safe.bottom);
+            }
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(webView);
+    }
+}
+`;
+  await writeFile(activityPath, activity, 'utf8');
+
+  const buildPath = join(root, 'android', 'app', 'build.gradle');
+  if (await exists(buildPath)) {
+    let build = await readFile(buildPath, 'utf8');
+    if (!build.includes('androidx.core:core:$androidxCoreVersion')) {
+      build = build.replace(
+        '    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"',
+        '    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"\n    implementation "androidx.core:core:$androidxCoreVersion"'
+      );
+      await writeFile(buildPath, build, 'utf8');
+    }
+  }
+  console.log('[Condomit] Safe area nativa Android configurada.');
+}
+
 function plistPair(key, value) {
   return `\t<key>${key}</key>\n\t<string>${value}</string>`;
 }
@@ -67,6 +129,7 @@ async function patchIos() {
 }
 
 const android = await patchAndroid();
+if (android) await patchAndroidSafeInsets();
 const ios = await patchIos();
 if (!android && !ios) {
   console.log('[Condomit] Nenhum projeto nativo encontrado ainda. Execute npx cap add android e/ou npx cap add ios.');

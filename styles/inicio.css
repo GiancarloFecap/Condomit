@@ -69,7 +69,7 @@ body {
 }
 
 .logo { 
-    height: 150px;
+    height: 170px;
     margin-left: 20px; 
 } 
 .header-nav { 
@@ -973,8 +973,58 @@ body {
     }
 }
 
-/* PWA install button shares the hero secondary action visual. */
-button.btn-secondary[data-install-condomit] {
-    cursor: pointer;
-    font-family: inherit;
+
+/* ============================================================
+   026 - Cabeçalho mobile da landing: Entrar + Cadastre-se
+============================================================ */
+@media (max-width: 768px) {
+    .header-content {
+        width: 100%;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .header-nav {
+        display: flex !important;
+        margin-left: auto !important;
+        gap: 6px !important;
+        min-width: 0;
+    }
+
+    .header-nav > a:not(.btn-login):not(.btn-signup) {
+        display: none !important;
+    }
+
+    .header-nav .btn-login,
+    .header-nav .btn-signup {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        white-space: nowrap;
+        padding: 8px 11px;
+        font-size: 12.5px;
+    }
+
+    .logo {
+        width: min(36vw, 165px) !important;
+        min-width: 110px;
+        margin: 0 !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .container { padding-left: 12px; padding-right: 12px; }
+    .logo {
+        width: min(34vw, 128px) !important;
+        min-width: 108px;
+    }
+    .header-nav .btn-login,
+    .header-nav .btn-signup {
+        min-height: 40px;
+        padding: 7px 9px;
+        font-size: 11.5px;
+        border-radius: 8px;
+    }
+    .header-nav .btn-login i { margin-right: 3px; }
 }

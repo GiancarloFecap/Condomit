@@ -3,7 +3,8 @@ const lostFoundState = {
     search: '',
     type: 'encontrado',
     status: 'todos',
-    draftImage: ''
+    draftImage: '',
+    matches: []
 };
 
 const LOST_FOUND_IMAGES = {
@@ -161,13 +162,14 @@ async function fetchLostFoundFromSupabase() {
         if (!Array.isArray(rows)) return [];
         return rows.map((row) => ({
             id: `db-lf-${row.id}`,
+            dbId: row.id,
             title: row.item_name || '',
             description: row.item_name || '',
             location: row.location || '',
             date: row.item_date || new Date().toISOString().slice(0, 10),
-            status: 'disponivel',
+            status: row.item_status === 'arquivado' ? 'arquivado' : 'disponivel',
             type: dbItemTypeToType(row.item_type),
-            author: 'Condomínio',
+            author: row.created_by || 'Condomínio',
             image: row.image_url || LOST_FOUND_IMAGES.default
         }));
     } catch (err) {
@@ -225,7 +227,9 @@ async function saveLostFoundToSupabase(
 
     image_url:
       item.image ||
-      LOST_FOUND_IMAGES.default
+      LOST_FOUND_IMAGES.default,
+
+    created_by: lostFoundState.currentUser?.email || null
   };
 
   const rows =
@@ -286,6 +290,12 @@ function setLostFoundItems(items) {
 }
 
 async function renderLostFoundPage() {
+    try {
+        await window.supabaseFetch('/rpc/condomit_archive_old_lost_found', {method:'POST',body:'{}'});
+        await window.supabaseFetch('/rpc/condomit_suggest_lost_found_matches', {method:'POST',body:'{}'});
+        const cep = getLostFoundUserCep();
+        lostFoundState.matches = await window.supabaseFetch(`/lost_found_matches?select=*&cep=eq.${encodeURIComponent(cep)}&status=eq.sugerido&order=confidence.desc`).catch(()=>[]);
+    } catch (_) { lostFoundState.matches = []; }
     const items = (await getLostFoundItems()).filter((item) => {
         const matchesType = lostFoundState.type === 'todos' || item.type === lostFoundState.type;
         const matchesStatus = lostFoundState.status === 'todos' || item.status === lostFoundState.status;
@@ -329,6 +339,7 @@ function renderLostFoundGrid(items) {
                     <span class="status-chip ${item.status}">
                         ${getStatusLabel(item.status)}
                     </span>
+                    ${getSuggestedMatch(item) ? `<span class="match-chip"><i class="fas fa-wand-magic-sparkles"></i> Correspondência ${getSuggestedMatch(item).confidence}%</span>` : ''}
                 </div>
                 <p class="res-item-copy">${escapeHtml(item.description)}</p>
                 <div class="res-item-meta">
@@ -338,6 +349,12 @@ function renderLostFoundGrid(items) {
             </div>
         </article>
     `).join('');
+}
+
+function getSuggestedMatch(item) {
+    const id = Number(item?.dbId || String(item?.id || '').replace('db-lf-', ''));
+    if (!Number.isFinite(id)) return null;
+    return (Array.isArray(lostFoundState.matches) ? lostFoundState.matches : []).find(match => Number(match.lost_item_id) === id || Number(match.found_item_id) === id) || null;
 }
 
 function syncTypeCards() {
@@ -437,6 +454,7 @@ async function saveLostFoundItem() {
 function getStatusLabel(status) {
     if (status === 'devolvido') return 'Devolvido';
     if (status === 'em-analise') return 'Em análise';
+    if (status === 'arquivado') return 'Arquivado';
     return 'Disponível';
 }
 
