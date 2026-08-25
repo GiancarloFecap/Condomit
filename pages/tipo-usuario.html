@@ -2,13 +2,13 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Condomit - Escolha seu Perfil</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/tipo-usuario.css">
     <link rel="stylesheet" href="../styles/theme.css?v=0151">
-    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=025">
+    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=032">
 </head>
 <body>
     <div class="page-bg">
@@ -39,15 +39,8 @@
             <div class="type-grid">
                 <div class="type-card morador-card" data-type="morador" onclick="selectType('morador')">
                     <div class="type-icon-circle morador-circle">
-                        <svg width="68" height="68" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M14 32L34 16L54 32V54C54 56.7614 51.7614 59 49 59H19C16.2386 59 14 56.7614 14 54V32Z" stroke="#059669" stroke-width="3" stroke-linejoin="round" fill="none"/>
-                            <path d="M14 32L34 16L54 32" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M27 50V40H41V50" stroke="#059669" stroke-width="3" stroke-linecap="round"/>
-                            <rect x="40" y="35" width="9" height="9" rx="1.5" stroke="#059669" stroke-width="3" fill="none"/>
-                            <rect x="45" y="52" width="3" height="3" rx="1" fill="#059669"/>
-                            <rect x="49" y="50" width="3" height="3" rx="1" fill="#059669"/>
-                            <rect x="52" y="53" width="3" height="3" rx="1" fill="#059669"/>
-                        </svg>
+                        <i class="fa-solid fa-house-user" aria-hidden="true"></i>
+                        <span class="sr-only">Ícone de morador</span>
                     </div>
                     <h3 class="type-title morador-title">Morador</h3>
                     <div class="type-divider morador-divider"></div>
@@ -59,27 +52,8 @@
 
                 <div class="type-card sindico-card" data-type="sindico" onclick="selectType('sindico')">
                     <div class="type-icon-circle sindico-circle">
-                        <svg width="68" height="68" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="20" y="12" width="28" height="48" rx="3" stroke="#7C3AED" stroke-width="3" fill="none"/>
-                            <path d="M14 60H54" stroke="#7C3AED" stroke-width="3" stroke-linecap="round"/>
-                            <rect x="26" y="48" width="16" height="12" rx="1.5" stroke="#7C3AED" stroke-width="3" fill="none"/>
-                            <rect x="24" y="18" width="8" height="9" rx="1" stroke="#7C3AED" stroke-width="2.5" fill="none"/>
-                            <rect x="36" y="18" width="8" height="9" rx="1" stroke="#7C3AED" stroke-width="2.5" fill="none"/>
-                            <rect x="24" y="31" width="8" height="9" rx="1" stroke="#7C3AED" stroke-width="2.5" fill="none"/>
-                            <rect x="36" y="31" width="8" height="9" rx="1" stroke="#7C3AED" stroke-width="2.5" fill="none"/>
-                            <g>
-                                <rect x="9" y="34" width="6" height="8" rx="1" stroke="#7C3AED" stroke-width="2.2" fill="none"/>
-                                <circle cx="12" cy="51.5" r="2.8" stroke="#7C3AED" stroke-width="2.2" fill="none"/>
-                                <path d="M12 54.3V60" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round"/>
-                                <path d="M7 60H17" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round"/>
-                            </g>
-                            <g>
-                                <rect x="53" y="34" width="6" height="8" rx="1" stroke="#7C3AED" stroke-width="2.2" fill="none"/>
-                                <circle cx="56" cy="51.5" r="2.8" stroke="#7C3AED" stroke-width="2.2" fill="none"/>
-                                <path d="M56 54.3V60" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round"/>
-                                <path d="M51 60H61" stroke="#7C3AED" stroke-width="2.2" stroke-linecap="round"/>
-                            </g>
-                        </svg>
+                        <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
+                        <span class="sr-only">Ícone de síndico</span>
                     </div>
                     <h3 class="type-title sindico-title">Síndico</h3>
                     <div class="type-divider sindico-divider"></div>
@@ -91,22 +65,8 @@
 
                 <div class="type-card porteiro-card" data-type="porteiro" onclick="selectType('porteiro')">
                     <div class="type-icon-circle porteiro-circle">
-                        <svg width="68" height="68" viewBox="0 0 68 68" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M34 12C39.5228 12 44 16.4772 44 22C44 27.5228 39.5228 32 34 32C28.4772 32 24 27.5228 24 22C24 16.4772 28.4772 12 34 12Z" stroke="#1D4ED8" stroke-width="3" fill="#DBEAFE"/>
-                            <path d="M25 9.5C25 7.567 26.567 6 28.5 6H39.5C41.433 6 43 7.567 43 9.5V12H25V9.5Z" stroke="#1D4ED8" stroke-width="3" fill="#1D4ED8"/>
-                            <path d="M34 4C32.6193 4 31.5 5.11929 31.5 6.5V9H36.5V6.5C36.5 5.11929 35.3807 4 34 4Z" fill="#1E3A8A"/>
-                            <path d="M34 8L29 10.3" stroke="#FCD34D" stroke-width="2" stroke-linecap="round"/>
-                            <path d="M34 8L39 10.3" stroke="#FCD34D" stroke-width="2" stroke-linecap="round"/>
-                            <path d="M23 58C23 49.1634 27.9249 43 34 43C40.0751 43 45 49.1634 45 58" stroke="#1D4ED8" stroke-width="3" stroke-linecap="round" fill="#DBEAFE"/>
-                            <path d="M23.5 38L30.5 35.5L34 38.8L37.5 35.5L44.5 38L46.5 48H21.5L23.5 38Z" stroke="#1D4ED8" stroke-width="3" stroke-linejoin="round" fill="#1D4ED8"/>
-                            <path d="M30.2 35.6L34 39.1L37.8 35.6L36.2 46H31.8L30.2 35.6Z" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" fill="#FFFFFF"/>
-                            <path d="M34 39.5V48" stroke="#1D4ED8" stroke-width="2.4" stroke-linecap="round"/>
-                            <rect x="28.2" y="41.3" width="4.2" height="4.2" rx="0.8" stroke="#93C5FD" stroke-width="2" fill="none"/>
-                            <rect x="35.6" y="41.3" width="4.2" height="4.2" rx="0.8" stroke="#93C5FD" stroke-width="2" fill="none"/>
-                            <circle cx="30" cy="21.5" r="1.8" fill="#1D4ED8"/>
-                            <circle cx="38" cy="21.5" r="1.8" fill="#1D4ED8"/>
-                            <path d="M30.8 27C31.8 27.9 32.7 28.3 34 28.3C35.3 28.3 36.2 27.9 37.2 27" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
+                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                        <span class="sr-only">Ícone de porteiro</span>
                     </div>
                     <h3 class="type-title porteiro-title">Porteiro</h3>
                     <div class="type-divider porteiro-divider"></div>
@@ -131,7 +91,7 @@
             </div>
         </div>
     </div>
-    <script src="../scripts/platform-config.js?v=031"></script>
+    <script src="../scripts/platform-config.js?v=032"></script>
 
 
     <script src="../scripts/supabase-client.js?v=020"></script>

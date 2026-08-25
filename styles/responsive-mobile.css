@@ -539,3 +539,153 @@ svg {
         display: none !important;
     }
 }
+
+
+/* ============================================================
+   Condomit 032 - Safe areas Android/iOS + WebView edge-to-edge
+   Capacitor 8 injeta --safe-area-inset-* em Android moderno.
+   env(safe-area-inset-*) mantém compatibilidade com iOS/PWA.
+============================================================ */
+:root {
+    --condomit-safe-top: max(var(--safe-area-inset-top, 0px), env(safe-area-inset-top, 0px));
+    --condomit-safe-right: max(var(--safe-area-inset-right, 0px), env(safe-area-inset-right, 0px));
+    --condomit-safe-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
+    --condomit-safe-left: max(var(--safe-area-inset-left, 0px), env(safe-area-inset-left, 0px));
+}
+
+html,
+body {
+    min-height: 100%;
+}
+
+@media (max-width: 900px) {
+    /* A cor/fundo da pagina pode continuar atras das barras do sistema,
+       mas os controles clicaveis ficam sempre dentro da area segura. */
+    .top-bar {
+        padding-top: calc(10px + var(--condomit-safe-top)) !important;
+        padding-left: max(12px, var(--condomit-safe-left)) !important;
+        padding-right: max(12px, var(--condomit-safe-right)) !important;
+    }
+
+    .hero-section .header-content {
+        padding-top: calc(10px + var(--condomit-safe-top)) !important;
+        padding-left: var(--condomit-safe-left) !important;
+        padding-right: var(--condomit-safe-right) !important;
+    }
+
+    .type-selection-page {
+        padding-top: calc(20px + var(--condomit-safe-top)) !important;
+        padding-left: max(16px, var(--condomit-safe-left)) !important;
+        padding-right: max(16px, var(--condomit-safe-right)) !important;
+        padding-bottom: calc(32px + var(--condomit-safe-bottom)) !important;
+    }
+
+    .dashboard-sindico > .sidebar,
+    .sidebar {
+        top: var(--condomit-safe-top) !important;
+        bottom: var(--condomit-safe-bottom) !important;
+        height: auto !important;
+        max-height: none !important;
+    }
+
+    .sidebar .sidebar-header {
+        padding-top: 10px !important;
+    }
+
+    /* Evita botoes, formularios e rodapes por baixo da barra de gestos/navegacao. */
+    .main-content,
+    .type-selection-page,
+    .hero-section > .container {
+        padding-bottom: var(--condomit-safe-bottom);
+    }
+
+    /* Chats nativos usam flex em vez de alturas baseadas em 100vh.
+       Isso impede o campo de mensagem de ficar atras da barra de navegacao
+       e evita o painel crescer/encolher com a UI do navegador/WebView. */
+    html.capacitor-native body:has(.chat-page) {
+        height: 100dvh;
+        min-height: 100dvh;
+        overflow: hidden !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .dashboard-sindico {
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        overflow: hidden !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .main-content {
+        height: 100%;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        padding-bottom: var(--condomit-safe-bottom) !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .top-bar {
+        flex: 0 0 auto;
+    }
+
+    html.capacitor-native body:has(.chat-page) .chat-page {
+        flex: 1 1 auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        padding-top: 12px !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .chat-layout,
+    html.capacitor-native body:has(.chat-page) .chat-single-layout {
+        height: 100% !important;
+        min-height: 0 !important;
+        padding-bottom: 12px !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .chat-panel,
+    html.capacitor-native body:has(.chat-page) .chat-main,
+    html.capacitor-native body:has(.chat-page) .messages-container {
+        min-height: 0 !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .chat-input-area {
+        flex: 0 0 auto;
+        padding-bottom: 14px !important;
+    }
+}
+
+
+/* Controles fixos que também precisam respeitar a barra de gestos. */
+@media (max-width: 900px) {
+    .bottom-actions,
+    .room-controls,
+    .meeting-controls,
+    .assembly-controls {
+        padding-bottom: max(14px, var(--condomit-safe-bottom)) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    html.capacitor-native .call-header {
+        height: calc(60px + var(--condomit-safe-top)) !important;
+        min-height: calc(60px + var(--condomit-safe-top)) !important;
+        padding-top: var(--condomit-safe-top) !important;
+        padding-left: max(10px, var(--condomit-safe-left)) !important;
+        padding-right: max(10px, var(--condomit-safe-right)) !important;
+    }
+
+    html.capacitor-native .call-panel {
+        top: calc(60px + var(--condomit-safe-top)) !important;
+        bottom: calc(68px + var(--condomit-safe-bottom)) !important;
+    }
+
+    html.capacitor-native .call-controls {
+        height: calc(68px + var(--condomit-safe-bottom)) !important;
+        min-height: calc(68px + var(--condomit-safe-bottom)) !important;
+        padding:
+            8px
+            max(8px, var(--condomit-safe-right))
+            max(8px, var(--condomit-safe-bottom))
+            max(8px, var(--condomit-safe-left)) !important;
+    }
+}

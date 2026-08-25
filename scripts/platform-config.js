@@ -23,6 +23,13 @@
     return value;
   }
 
+  try {
+    document.documentElement.classList.toggle('capacitor-native', isNativeApp());
+    if (isNativeApp()) {
+      document.documentElement.setAttribute('data-condomit-platform', window.Capacitor?.getPlatform?.() || 'native');
+    }
+  } catch (_) {}
+
   window.CondomitPlatform = Object.freeze({
     backendOrigin: BACKEND_ORIGIN,
     isNativeApp,

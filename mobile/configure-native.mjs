@@ -1,4 +1,4 @@
-import { access, readFile, writeFile } from 'node:fs/promises';
+import { access, cp, readFile, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,7 +25,22 @@ async function patchAndroid() {
     text = text.replace(/<application\b/, `${missing.join('\n    ')}\n\n    <application`);
     await writeFile(path, text, 'utf8');
   }
-  console.log('[Condomit] AndroidManifest configurado para câmera e microfone.');
+  if (!text.includes('android:windowSoftInputMode="adjustResize"')) {
+    text = text.replace(
+      'android:launchMode="singleTask"',
+      'android:launchMode="singleTask"\n            android:windowSoftInputMode="adjustResize"'
+    );
+    await writeFile(path, text, 'utf8');
+  }
+
+  const iconSource = join(root, 'mobile', 'android-res');
+  const iconTarget = join(root, 'android', 'app', 'src', 'main', 'res');
+  if (await exists(iconSource)) {
+    await cp(iconSource, iconTarget, { recursive: true, force: true });
+    console.log('[Condomit] Ícones Android da Condomit restaurados.');
+  }
+
+  console.log('[Condomit] AndroidManifest configurado para câmera, microfone e teclado.');
   return true;
 }
 
