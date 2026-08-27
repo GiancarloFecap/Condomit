@@ -1,0 +1,33 @@
+{
+  "name": "Condomit - O app do seu condomínio",
+  "short_name": "Condomit",
+  "start_url": "/inicio.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2457c5",
+  "description": "Gestão, comunicação, segurança e serviços do condomínio em um só lugar.",
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "/",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "categories": [
+    "productivity",
+    "utilities"
+  ]
+}

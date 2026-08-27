@@ -1,0 +1,1075 @@
+/* ============================================================
+   Condomit 025 - Camada global de responsividade para celulares
+   Carregada por ultimo para neutralizar larguras/posicionamentos
+   de desktop sem alterar o layout em telas grandes.
+============================================================ */
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    max-width: 100%;
+}
+
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+img,
+video,
+canvas,
+iframe,
+svg {
+    max-width: 100%;
+}
+
+.dashboard-sindico,
+.main-content {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.main-content {
+    width: 100%;
+}
+
+/* Elementos de dados largos devem rolar apenas dentro do bloco. */
+.table-responsive,
+.table-container,
+.table-wrapper,
+.maintenance-table-wrapper,
+.access-table-wrapper,
+.residents-table-wrapper,
+.occurrence-table-wrapper,
+.visitantes-table-wrapper,
+.sugestoes-table-wrapper,
+.table-wrap,
+.occurrence-table-wrap,
+.sugestoes-table-container,
+.calendar-wrapper,
+.calendar-container {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Botao inserido por responsive-nav.js. */
+.mobile-menu-btn {
+    display: none;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 11px;
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 1.05rem;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(30, 64, 175, .08);
+}
+
+.mobile-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3990;
+    background: rgba(15, 23, 42, .52);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .22s ease, visibility .22s ease;
+    backdrop-filter: blur(2px);
+}
+
+.mobile-sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+@media (max-width: 900px) {
+    html,
+    body {
+        width: 100%;
+        min-width: 0;
+        overflow-x: hidden !important;
+    }
+
+    body.mobile-sidebar-open {
+        overflow: hidden !important;
+        touch-action: none;
+    }
+
+    .dashboard-sindico {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 100dvh;
+    }
+
+    /*
+      A regra antiga de theme.css tornava a sidebar sticky no mobile.
+      Isso fazia os 300px do menu ocuparem permanentemente a viewport.
+      Aqui ela vira drawer/off-canvas.
+    */
+    .dashboard-sindico > .sidebar,
+    .sidebar {
+        position: fixed !important;
+        inset: 0 auto 0 0 !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: min(86vw, 320px) !important;
+        max-width: 320px !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        z-index: 4000 !important;
+        transform: translate3d(-105%, 0, 0) !important;
+        transition: transform .25s ease !important;
+        box-shadow: 12px 0 34px rgba(15, 23, 42, .22) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .dashboard-sindico > .sidebar.open,
+    .sidebar.open {
+        transform: translate3d(0, 0, 0) !important;
+    }
+
+    .sidebar .sidebar-header {
+        padding-top: max(10px, env(safe-area-inset-top)) !important;
+    }
+
+    .sidebar .sidebar-logo,
+    .sidebar.sindico-sidebar .sidebar-logo,
+    .sidebar.morador-sidebar .sidebar-logo,
+    .sidebar.porteiro-sidebar .sidebar-logo,
+    .sidebar .sidebar-header .sidebar-logo,
+    .sidebar.sindico-sidebar .sidebar-header .sidebar-logo,
+    .sidebar.morador-sidebar .sidebar-header .sidebar-logo,
+    .sidebar.porteiro-sidebar .sidebar-header .sidebar-logo {
+        height: 112px !important;
+        max-width: 90% !important;
+    }
+
+    .main-content {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100vw !important;
+        margin: 0 !important;
+        overflow-x: clip !important;
+    }
+
+    .top-bar {
+        position: sticky !important;
+        top: 0;
+        z-index: 120 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        padding: 12px 16px !important;
+        gap: 10px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        flex-wrap: nowrap !important;
+        box-shadow: 0 2px 14px rgba(15, 23, 42, .08) !important;
+    }
+
+    .mobile-menu-btn {
+        display: inline-flex;
+        order: -2;
+    }
+
+    .top-bar-left {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .top-bar-left h1 {
+        margin: 0 !important;
+        font-size: clamp(1rem, 4.5vw, 1.3rem) !important;
+        line-height: 1.2 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .top-bar-left p {
+        margin: 3px 0 0 !important;
+        font-size: .78rem !important;
+        line-height: 1.25 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .top-bar-right {
+        flex: 0 0 auto;
+        min-width: 0;
+        gap: 8px !important;
+    }
+
+    .top-icons {
+        gap: 6px !important;
+    }
+
+    .icon-btn {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        padding: 0 !important;
+        border-radius: 10px !important;
+    }
+
+    .user-profile-small {
+        gap: 7px !important;
+    }
+
+    .user-profile-small .avatar {
+        width: 38px !important;
+        height: 38px !important;
+        flex: 0 0 38px !important;
+        font-size: .88rem !important;
+    }
+
+    /* Conteudo principal das telas autenticadas. */
+    .dashboard-grid,
+    .porteiro-page,
+    .lost-found-page,
+    .ai-comunicados-page,
+    .assembly-detail,
+    .assembly-summary-page,
+    .access-page,
+    .chat-page,
+    .config-content,
+    .residents-page,
+    .maintenance-page,
+    .marketplace-page,
+    .notifications-page,
+    .occurrences-page,
+    .visitor-page,
+    .visitantes-liberados-page,
+    .reservas-content,
+    .sugestoes-content,
+    #main-content:not(.main-content) {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .dashboard-grid {
+        padding: 16px !important;
+        gap: 14px !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    .bottom-actions {
+        padding: 0 16px 18px !important;
+        gap: 12px !important;
+    }
+
+    .card,
+    .info-card,
+    .quick-card,
+    .config-card,
+    .welcome-card {
+        max-width: 100%;
+    }
+
+    /* Formularios nunca devem extrapolar a largura do aparelho. */
+    form,
+    fieldset,
+    input,
+    select,
+    textarea,
+    button {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    select,
+    textarea {
+        width: 100%;
+    }
+
+    /* 16px evita zoom automatico em browsers moveis baseados em WebKit. */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    /* Grids comuns passam a duas ou uma coluna quando necessario. */
+    .overview-strip,
+    .quick-grid,
+    .support-layout,
+    .stats-grid,
+    .summary-grid,
+    .filters-grid,
+    .form-grid,
+    .cards-grid,
+    .action-grid,
+    .maintenance-head {
+        min-width: 0 !important;
+    }
+
+    /* Tabelas grandes permanecem utilizaveis por scroll horizontal. */
+    .maintenance-table,
+    .access-table,
+    .provider-table,
+    .visitantes-table,
+    .occurrence-table,
+    .residents-table,
+    .sugestoes-table,
+    .spaces-table {
+        width: max(100%, 680px);
+    }
+
+    .modal,
+    .modal-card,
+    .modal-content,
+    .quick-chat-card,
+    .prejoin-card,
+    .dialog,
+    [role="dialog"] {
+        max-width: calc(100vw - 24px) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .top-bar {
+        padding: 10px 12px !important;
+    }
+
+    .mobile-menu-btn {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+    }
+
+    .top-bar-left p {
+        display: none !important;
+    }
+
+    .user-profile-small {
+        display: none !important;
+    }
+
+    .top-bar-right {
+        gap: 4px !important;
+    }
+
+    .top-icons {
+        gap: 4px !important;
+    }
+
+    .icon-btn {
+        width: 36px !important;
+        height: 36px !important;
+        min-width: 36px !important;
+        font-size: .92rem !important;
+    }
+
+    .user-profile-small .avatar {
+        width: 36px !important;
+        height: 36px !important;
+        flex-basis: 36px !important;
+    }
+
+    .dashboard-grid {
+        padding: 12px !important;
+    }
+
+    .card {
+        padding: 16px !important;
+        border-radius: 13px !important;
+    }
+
+    .quick-chat-card {
+        padding: 20px 16px !important;
+    }
+
+    .quick-chat-options {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Barra de acoes fixa/rodape deve respeitar notch e gestos. */
+    .bottom-actions,
+    .room-controls,
+    .meeting-controls,
+    .assembly-controls {
+        padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .top-bar-left h1 {
+        font-size: .98rem !important;
+    }
+
+    .top-icons .icon-btn {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+    }
+
+    .user-profile-small .avatar {
+        width: 34px !important;
+        height: 34px !important;
+        flex-basis: 34px !important;
+    }
+}
+
+/* Sala da assembleia em smartphones: preserva o palco e os controles. */
+@media (max-width: 640px) {
+    .call-page {
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+    }
+
+    .call-header {
+        height: 60px !important;
+        min-height: 60px !important;
+        padding: 0 10px !important;
+        gap: 8px !important;
+    }
+
+    .call-header-left,
+    .call-header-right {
+        gap: 7px !important;
+        min-width: 0 !important;
+    }
+
+    .call-brand {
+        gap: 0 !important;
+        flex: 0 0 auto;
+    }
+
+    .call-brand img {
+        height: 42px !important;
+        width: auto !important;
+        max-width: 52px !important;
+    }
+
+    .call-brand > span,
+    .call-header-divider,
+    .call-assembly-meta,
+    .call-connection > span:not(.dot) {
+        display: none !important;
+    }
+
+    .call-assembly-title {
+        max-width: 42vw !important;
+        font-size: .78rem !important;
+    }
+
+    .call-connection {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        padding: 0 !important;
+        justify-content: center !important;
+    }
+
+    .call-stage {
+        padding: 8px !important;
+    }
+
+    .call-grid {
+        gap: 8px !important;
+        padding-right: 0 !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    .call-tile {
+        min-height: min(52vh, 360px) !important;
+        border-radius: 14px !important;
+    }
+
+    .call-panel {
+        top: 60px !important;
+        bottom: 68px !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+    }
+
+    .panel-tabs {
+        padding: 8px !important;
+    }
+
+    .panel-tab {
+        flex: 0 0 auto;
+        padding: 9px 10px !important;
+    }
+
+    .call-controls {
+        height: 68px !important;
+        min-height: 68px !important;
+        padding: 8px max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)) !important;
+        justify-content: flex-start !important;
+        gap: 7px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .call-controls::-webkit-scrollbar {
+        display: none;
+    }
+
+    .control-btn {
+        width: 50px !important;
+        min-width: 50px !important;
+        height: 50px !important;
+        flex: 0 0 50px !important;
+        padding: 0 !important;
+        border-radius: 13px !important;
+        scroll-snap-align: start;
+    }
+
+    .control-btn span {
+        display: none !important;
+    }
+}
+
+
+/* ============================================================
+   Condomit 026 - Responsividade reforçada para celular/tablet
+   - conteúdos dinâmicos não extrapolam cards
+   - tabelas compactas no painel do síndico
+   - chats usam viewport estável (svh), evitando "pular" com a
+     barra do navegador móvel
+   - top bar encostada no topo útil da página
+============================================================ */
+
+:root {
+    --condomit-mobile-topbar-h: 62px;
+}
+
+@media (max-width: 900px) {
+    body,
+    .dashboard-sindico,
+    .main-content {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    /* Algumas folhas antigas aplicam `main { padding: 1rem }` no mobile.
+       Como .main-content e um <main>, isso afastava a top bar do topo e das
+       laterais. O conteudo interno ja possui padding proprio. */
+    .dashboard-sindico > .main-content,
+    main.main-content {
+        padding: 0 !important;
+    }
+
+    .main-content > .top-bar:first-child,
+    .dashboard-sindico > .main-content > .top-bar:first-child {
+        top: 0 !important;
+        margin-top: 0 !important;
+        transform: none !important;
+    }
+
+    /* Qualquer texto vindo do banco deve quebrar dentro do card. */
+    .card,
+    .card *,
+    .status-item,
+    .maintenance-item,
+    .quick-action-btn,
+    .comm-btn,
+    .bottom-actions button,
+    .ai-category-card,
+    .suggestion-btn,
+    .notification-card,
+    .assembly-item,
+    .panel-item,
+    .conversation-item {
+        min-width: 0;
+    }
+
+    .status-item span,
+    .maintenance-item span,
+    .card p,
+    .card td,
+    .card th,
+    .ai-category-card span,
+    .ai-category-card strong,
+    .ai-category-card small,
+    .suggestion-btn,
+    .assembly-info,
+    .panel-item-info,
+    .conversation-info {
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+
+    .quick-action-btn,
+    .comm-btn,
+    .bottom-actions button,
+    .ai-category-card,
+    .suggestion-btn {
+        white-space: normal !important;
+        text-align: center;
+    }
+
+    /* A lista do condomínio não deve empurrar o nome do proprietário
+       para fora da tela. No celular as três colunas passam a ocupar
+       percentuais fixos e o nome pode quebrar em mais de uma linha. */
+    .residents-card,
+    .residents-table {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        overflow-x: hidden !important;
+    }
+
+    .residents-table table {
+        width: 100% !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
+    }
+
+    .residents-table th,
+    .residents-table td {
+        padding: 9px 6px !important;
+        vertical-align: top !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    .residents-table th:nth-child(1),
+    .residents-table td:nth-child(1) { width: 27%; }
+    .residents-table th:nth-child(2),
+    .residents-table td:nth-child(2) { width: 20%; }
+    .residents-table th:nth-child(3),
+    .residents-table td:nth-child(3) { width: 53%; }
+
+    /* Dúvidas do condomínio: nenhum card/chip fica cortado. */
+    .ai-chat-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: calc(100svh - var(--condomit-mobile-topbar-h)) !important;
+        min-height: calc(100svh - var(--condomit-mobile-topbar-h)) !important;
+    }
+
+    .ai-assistant-toolbar,
+    .welcome-card,
+    .chat-input-container,
+    .chat-content-wrapper,
+    .ai-category-grid,
+    .suggestions-container {
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .ai-category-card {
+        width: 100% !important;
+        overflow: hidden !important;
+        align-items: flex-start !important;
+    }
+
+    .ai-category-card > span:last-child {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .suggestions-container {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .suggestion-btn {
+        width: 100% !important;
+        justify-content: center !important;
+        border-radius: 14px !important;
+        padding: 9px 10px !important;
+        line-height: 1.25 !important;
+    }
+
+    /* Chats comuns: altura baseada em svh (viewport estável), não vh/dvh.
+       Assim a área de mensagens não cresce/encolhe quando a barra do
+       navegador aparece ou desaparece durante a rolagem. */
+    .chat-page {
+        height: calc(100svh - var(--condomit-mobile-topbar-h)) !important;
+        min-height: calc(100svh - var(--condomit-mobile-topbar-h)) !important;
+        max-height: calc(100svh - var(--condomit-mobile-topbar-h)) !important;
+        overflow: hidden !important;
+        padding-top: 10px !important;
+    }
+
+    .chat-layout,
+    .chat-single-layout {
+        height: 100% !important;
+        min-height: 0 !important;
+        max-height: 100% !important;
+        overflow: hidden !important;
+    }
+
+    .chat-layout {
+        grid-template-rows: minmax(132px, 32%) minmax(0, 68%) !important;
+    }
+
+    .chat-panel,
+    .chat-panel.conversations,
+    .chat-panel.chat-main,
+    .messages-container,
+    .conversations-list,
+    .conversations-scroll {
+        min-height: 0 !important;
+        max-height: none !important;
+    }
+
+    .messages-container,
+    .conversations-scroll {
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+@media (max-width: 640px) {
+    :root { --condomit-mobile-topbar-h: 58px; }
+
+    .top-bar {
+        min-height: var(--condomit-mobile-topbar-h) !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    #main-content {
+        padding: 12px !important;
+    }
+
+    #main-content > .card,
+    #main-content > section > .card {
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    .dashboard-grid {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .residents-card .card,
+    .residents-card {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    .quick-actions-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+    }
+
+    .quick-action-btn {
+        width: 100% !important;
+        min-height: 82px !important;
+        padding: 10px 8px !important;
+    }
+
+    .suggestions-container {
+        grid-template-columns: 1fr !important;
+    }
+
+    .ai-assistant-toolbar,
+    .welcome-card,
+    .chat-input-container {
+        margin-left: 10px !important;
+        margin-right: 10px !important;
+    }
+
+    .welcome-card {
+        padding: 18px !important;
+    }
+
+    .ai-category-card {
+        padding: 12px !important;
+        min-height: 78px !important;
+    }
+
+    .chat-layout,
+    .chat-single-layout {
+        padding: 0 10px 10px !important;
+        gap: 9px !important;
+    }
+
+    .chat-header {
+        padding: 10px 12px !important;
+        min-height: 58px !important;
+    }
+
+    .chat-header-actions {
+        gap: 5px !important;
+    }
+
+    .icon-chat-btn {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+    }
+
+    .messages-container {
+        padding: 12px !important;
+    }
+
+    .chat-input-area {
+        padding: 10px 12px 12px !important;
+    }
+
+    .message {
+        max-width: 94% !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .top-bar {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+        gap: 6px !important;
+    }
+
+    .mobile-menu-btn {
+        width: 36px !important;
+        height: 36px !important;
+        flex-basis: 36px !important;
+    }
+
+    .top-bar-left h1 {
+        font-size: .94rem !important;
+    }
+
+    .top-icons {
+        gap: 3px !important;
+    }
+
+    .top-icons .icon-btn {
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        border-radius: 9px !important;
+    }
+
+    .residents-table th,
+    .residents-table td {
+        font-size: .78rem !important;
+        padding: 8px 4px !important;
+    }
+}
+
+/* 026 - Dúvidas do condomínio: o conteúdo inicial precisa poder rolar
+   dentro do espaço entre top bar e caixa de mensagem. Sem isso, em telas
+   baixas os últimos atalhos (como Assembleia/Notificações) eram cortados. */
+@media (max-width: 900px) {
+    .ai-chat-container .chat-content-wrapper {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ai-chat-container .welcome-card {
+        flex: 0 0 auto !important;
+    }
+
+    .ai-chat-container .chat-messages {
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .ai-category-grid {
+        grid-template-columns: 1fr !important;
+        gap: 9px !important;
+    }
+
+    .ai-category-card {
+        min-height: 70px !important;
+        padding: 11px 12px !important;
+    }
+
+    .ai-category-icon {
+        width: 38px !important;
+        height: 38px !important;
+        flex: 0 0 38px !important;
+    }
+}
+
+/* ============================================================
+   Condomit 033 - Safe areas nativas sem alterar o layout mobile
+   Mantem o responsivo 029 (referencia Aplicativo - web) e aplica
+   apenas os insets do Android/iOS quando o app roda no Capacitor.
+============================================================ */
+:root {
+    --condomit-safe-top: max(var(--safe-area-inset-top, 0px), env(safe-area-inset-top, 0px));
+    --condomit-safe-right: max(var(--safe-area-inset-right, 0px), env(safe-area-inset-right, 0px));
+    --condomit-safe-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
+    --condomit-safe-left: max(var(--safe-area-inset-left, 0px), env(safe-area-inset-left, 0px));
+}
+
+@media (max-width: 900px) {
+    /* Cabeçalhos dos dashboards: conserva altura/layout antigo e só abre
+       espaço para a barra de status quando o WebView está edge-to-edge. */
+    html.capacitor-native .top-bar {
+        padding-top: calc(10px + var(--condomit-safe-top)) !important;
+        padding-left: max(12px, var(--condomit-safe-left)) !important;
+        padding-right: max(12px, var(--condomit-safe-right)) !important;
+    }
+
+    /* Landing: os botões Entrar/Cadastre-se continuam lado a lado; somente
+       a margem superior leva em conta a barra de status. */
+    html.capacitor-native .hero-section .header-content {
+        padding-top: calc(10px + var(--condomit-safe-top)) !important;
+    }
+
+    html.capacitor-native .type-selection-page {
+        padding-top: calc(20px + var(--condomit-safe-top)) !important;
+        padding-left: max(16px, var(--condomit-safe-left)) !important;
+        padding-right: max(16px, var(--condomit-safe-right)) !important;
+        padding-bottom: calc(32px + var(--condomit-safe-bottom)) !important;
+    }
+
+    html.capacitor-native .dashboard-sindico > .sidebar,
+    html.capacitor-native .sidebar {
+        top: var(--condomit-safe-top) !important;
+        bottom: var(--condomit-safe-bottom) !important;
+        height: auto !important;
+        max-height: none !important;
+    }
+
+    /* Telas centralizadas de autenticação/cadastro. Mantém o desenho antigo,
+       acrescentando somente o espaço ocupado pelas barras do sistema. */
+    html.capacitor-native body:has(.login-page) {
+        min-height: 100dvh !important;
+        padding-top: calc(20px + var(--condomit-safe-top)) !important;
+        padding-bottom: calc(20px + var(--condomit-safe-bottom)) !important;
+        padding-left: max(20px, var(--condomit-safe-left)) !important;
+        padding-right: max(20px, var(--condomit-safe-right)) !important;
+    }
+
+    html.capacitor-native body:has(.signup-page) {
+        min-height: 100dvh !important;
+        padding-top: calc(40px + var(--condomit-safe-top)) !important;
+        padding-bottom: calc(40px + var(--condomit-safe-bottom)) !important;
+        padding-left: max(20px, var(--condomit-safe-left)) !important;
+        padding-right: max(20px, var(--condomit-safe-right)) !important;
+    }
+
+    html.capacitor-native body:has(.condominio-page),
+    html.capacitor-native body:has(.porteiro-page),
+    html.capacitor-native body:has(.register-page),
+    html.capacitor-native body:has(.checkout-wrapper) {
+        min-height: 100dvh !important;
+        padding-top: calc(20px + var(--condomit-safe-top)) !important;
+        padding-bottom: calc(20px + var(--condomit-safe-bottom)) !important;
+        padding-left: max(20px, var(--condomit-safe-left)) !important;
+        padding-right: max(20px, var(--condomit-safe-right)) !important;
+    }
+
+    /* Botões de voltar absolutos das telas públicas não podem ficar sob a
+       barra de status. */
+    html.capacitor-native body:has(.login-page) > .btn-back,
+    html.capacitor-native body:has(.signup-page) > .btn-back,
+    html.capacitor-native .login-container > .btn-back,
+    html.capacitor-native .condominio-container > .btn-back,
+    html.capacitor-native .porteiro-container > .btn-back {
+        top: calc(20px + var(--condomit-safe-top)) !important;
+    }
+
+    /* Chats: mantém o visual antigo, mas no app nativo usa a altura útil real
+       e reserva o inset inferior para o compositor. */
+    html.capacitor-native body:has(.chat-page) {
+        height: 100dvh;
+        min-height: 100dvh;
+        overflow: hidden !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .dashboard-sindico {
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        overflow: hidden !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .main-content {
+        height: 100% !important;
+        min-height: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        padding-bottom: var(--condomit-safe-bottom) !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .top-bar {
+        flex: 0 0 auto;
+    }
+
+    html.capacitor-native body:has(.chat-page) .chat-page {
+        flex: 1 1 auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: hidden !important;
+        padding-top: 10px !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .chat-layout,
+    html.capacitor-native body:has(.chat-page) .chat-single-layout {
+        height: 100% !important;
+        min-height: 0 !important;
+        max-height: 100% !important;
+        padding-bottom: 10px !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .chat-panel,
+    html.capacitor-native body:has(.chat-page) .chat-main,
+    html.capacitor-native body:has(.chat-page) .messages-container,
+    html.capacitor-native body:has(.chat-page) .conversations-scroll {
+        min-height: 0 !important;
+    }
+
+    html.capacitor-native body:has(.chat-page) .chat-input-area {
+        flex: 0 0 auto;
+        padding-bottom: max(12px, var(--condomit-safe-bottom)) !important;
+    }
+
+    /* Rodapés/controles fixos. */
+    html.capacitor-native .bottom-actions,
+    html.capacitor-native .room-controls,
+    html.capacitor-native .meeting-controls,
+    html.capacitor-native .assembly-controls {
+        padding-bottom: max(14px, var(--condomit-safe-bottom)) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    html.capacitor-native .call-header {
+        height: calc(60px + var(--condomit-safe-top)) !important;
+        min-height: calc(60px + var(--condomit-safe-top)) !important;
+        padding-top: var(--condomit-safe-top) !important;
+        padding-left: max(10px, var(--condomit-safe-left)) !important;
+        padding-right: max(10px, var(--condomit-safe-right)) !important;
+    }
+
+    html.capacitor-native .call-panel {
+        top: calc(60px + var(--condomit-safe-top)) !important;
+        bottom: calc(68px + var(--condomit-safe-bottom)) !important;
+    }
+
+    html.capacitor-native .call-controls {
+        height: calc(68px + var(--condomit-safe-bottom)) !important;
+        min-height: calc(68px + var(--condomit-safe-bottom)) !important;
+        padding: 8px max(8px, var(--condomit-safe-right)) max(8px, var(--condomit-safe-bottom)) max(8px, var(--condomit-safe-left)) !important;
+    }
+}
+

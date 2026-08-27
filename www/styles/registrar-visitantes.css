@@ -1,0 +1,340 @@
+.visitor-page {
+    padding: 28px 32px 32px;
+}
+
+.ghost-btn,
+.primary-action,
+.top-bar-right,
+.section-title,
+.form-actions,
+.security-note,
+.reason-item,
+.presence-item {
+    display: flex;
+    align-items: center;
+}
+
+.ghost-btn,
+.primary-action {
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ghost-btn {
+    border: 1px solid #dbe2f0;
+    background: #fff;
+    color: #334155;
+}
+
+.primary-action {
+    border: none;
+    background: linear-gradient(135deg, #1e40af 0%, #0ea5a4 100%);
+    color: #fff;
+}
+
+.card-shell {
+    background: #fff;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.visitor-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(290px, 0.8fr);
+    gap: 24px;
+}
+
+.visitor-sidebar {
+    display: grid;
+    gap: 18px;
+}
+
+.section-title {
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+.section-icon,
+.security-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: #ecfeff;
+    color: #0891b2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.section-title h2,
+.side-card h3,
+.warning-card h3 {
+    color: #0f172a;
+}
+
+.visitor-form {
+    display: grid;
+    gap: 18px;
+}
+
+.visitor-form .form-row {
+    display: grid;
+    grid-auto-flow: row;
+    gap: 16px;
+    width: 100%;
+}
+
+.visitor-form .form-row-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+}
+
+.visitor-form .form-row-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+}
+
+.visitor-form .form-row-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+}
+
+.visitor-form .form-row > label {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.visitor-form .form-row > label input,
+.visitor-form .form-row > label textarea {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.responsible-grid {
+    align-items: start;
+}
+
+.visitor-form label {
+    display: grid;
+    gap: 8px;
+    color: #334155;
+    font-weight: 600;
+}
+
+.visitor-form input,
+.visitor-form textarea {
+    padding: 12px 14px;
+    border: 1px solid #dbe2f0;
+    border-radius: 12px;
+    font: inherit;
+    color: #475569;
+    background: #fff;
+}
+
+.visitor-form textarea {
+    resize: vertical;
+    min-height: 84px;
+}
+
+.visitor-form input[readonly] {
+    background: #f8fafc;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.visitor-feedback {
+    display: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.visitor-feedback[data-state="info"] {
+    display: block;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.visitor-feedback[data-state="success"] {
+    display: block;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.visitor-feedback[data-state="error"] {
+    display: block;
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.security-note {
+    gap: 14px;
+    padding: 18px;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.security-note strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #0f172a;
+}
+
+.security-note p,
+.presence-copy small,
+.warning-card p,
+.metric-highlight span {
+    color: #64748b;
+}
+
+.form-actions {
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.presence-list {
+    display: grid;
+    gap: 12px;
+}
+
+.presence-item {
+    gap: 12px;
+    padding: 14px;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.presence-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa 0%, #22c1d6 100%);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.presence-copy {
+    flex: 1;
+}
+
+.presence-copy strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #0f172a;
+}
+
+.presence-badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.metric-highlight {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 14px;
+}
+
+.metric-highlight strong {
+    font-size: 2rem;
+    color: #0ea5a4;
+}
+
+.sparkline-chart {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    align-items: end;
+    gap: 8px;
+    min-height: 110px;
+}
+
+.sparkline-chart span {
+    display: block;
+    border-radius: 999px 999px 6px 6px;
+    background: linear-gradient(180deg, #22c1d6 0%, #0ea5a4 100%);
+}
+
+.sparkline-chart span:nth-child(1) { height: 24px; }
+.sparkline-chart span:nth-child(2) { height: 38px; }
+.sparkline-chart span:nth-child(3) { height: 32px; }
+.sparkline-chart span:nth-child(4) { height: 64px; }
+.sparkline-chart span:nth-child(5) { height: 88px; }
+.sparkline-chart span:nth-child(6) { height: 58px; }
+.sparkline-chart span:nth-child(7) { height: 30px; }
+.sparkline-chart span:nth-child(8) { height: 18px; }
+
+.reason-item {
+    justify-content: space-between;
+    margin-top: 12px;
+    color: #334155;
+}
+
+.reason-bar {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+.reason-bar span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #22c1d6 0%, #0ea5a4 100%);
+}
+
+.warning-card {
+    background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
+}
+
+.primary-action.loading {
+    opacity: 0.75;
+    pointer-events: none;
+}
+
+@media (max-width: 1180px) {
+    .visitor-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .form-row-2,
+    .form-row-3,
+    .form-row-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .visitor-page {
+        padding: 20px;
+    }
+
+    .top-bar-right,
+    .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

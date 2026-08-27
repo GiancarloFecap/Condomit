@@ -1,0 +1,543 @@
+.notifications-page {
+    padding: 28px 32px 32px;
+}
+
+.page-head,
+.section-head,
+.notification-item,
+.notification-meta,
+.summary-stat,
+.category-pill,
+.category-summary-item,
+.help-card,
+.modal-header,
+.modal-actions {
+    display: flex;
+    align-items: center;
+}
+
+.page-head,
+.section-head,
+.modal-header,
+.modal-actions {
+    justify-content: space-between;
+}
+
+.page-head {
+    margin-bottom: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.page-head h2 {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+}
+
+.page-head p,
+.muted,
+.notification-text p,
+.summary-stat span,
+.help-card p,
+.modal-header p {
+    color: #6b7280;
+}
+
+.page-actions,
+.filter-tabs,
+.summary-stats {
+    display: flex;
+    gap: 12px;
+}
+
+.page-actions {
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-tabs {
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.category-pill,
+.ghost-btn,
+.primary-action,
+.modal-close,
+.modal-form input,
+.modal-form textarea,
+.modal-form select {
+    border-radius: 12px;
+}
+
+.category-pill,
+.ghost-btn,
+.modal-close {
+    border: 1px solid #dbe2f0;
+    background: #fff;
+}
+
+.category-pill,
+.ghost-btn,
+.primary-action {
+    padding: 12px 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.category-pill,
+.ghost-btn,
+.primary-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    line-height: 1;
+}
+
+.category-pill strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.16);
+    font-size: 0.78rem;
+    line-height: 1;
+}
+
+.category-pill {
+    color: #475569;
+}
+
+.category-pill.active {
+    background: #ecfeff;
+    border-color: #22c1d6;
+    color: #0f766e;
+}
+
+.category-pill.active strong {
+    background: rgba(34, 193, 214, 0.16);
+}
+
+.ghost-btn {
+    color: #334155;
+}
+
+.primary-action {
+    border: none;
+    background: linear-gradient(135deg, #1e40af 0%, #0ea5a4 100%);
+    color: #fff;
+}
+
+.primary-action i,
+.ghost-btn i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.notifications-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
+    gap: 24px;
+}
+
+.card-shell {
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.notifications-list {
+    margin-top: 12px;
+}
+
+.notification-item {
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px 6px;
+    border-bottom: 1px solid #edf2f7;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-item:hover {
+    background: #f8fafc;
+}
+
+.notification-item.unread {
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.notification-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.notification-item[data-category="Avisos"] .notification-icon {
+    background: #fff7ed;
+    color: #f97316;
+}
+
+.notification-item[data-category="Reservas"] .notification-icon {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.notification-item[data-category="Assembleias"] .notification-icon {
+    background: #f5f3ff;
+    color: #7c3aed;
+}
+
+.notification-item[data-category="Entregas"] .notification-icon {
+    background: #ecfdf5;
+    color: #10b981;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-meta {
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.notification-text h4 {
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+
+.notification-text p {
+    line-height: 1.55;
+}
+
+.notification-badges {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tag {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.tag.category {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.tag.status {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.tag.status.read {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.notification-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #2563eb;
+    margin-top: 6px;
+    border: none;
+    flex-shrink: 0;
+}
+
+.notification-dot.read {
+    background: #cbd5e1;
+}
+
+.notifications-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.summary-stats {
+    flex-direction: column;
+    margin-top: 16px;
+}
+
+.summary-stat {
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.summary-stat:last-child {
+    border-bottom: none;
+}
+
+.summary-stat strong {
+    font-size: 1.1rem;
+}
+
+.help-card {
+    gap: 14px;
+    background: linear-gradient(135deg, #ecfeff 0%, #f8fafc 100%);
+}
+
+.help-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #22c1d6 0%, #1d4ed8 100%);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state {
+    padding: 32px 18px;
+    text-align: center;
+    color: #64748b;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+}
+
+.modal-backdrop.open {
+    display: flex;
+}
+
+.modal-card {
+    width: min(100%, 560px);
+    background: #fff;
+    border-radius: 22px;
+    padding: 24px;
+}
+
+.detail-modal-card {
+    width: min(100%, 640px);
+}
+
+.modal-close {
+    width: 42px;
+    height: 42px;
+    cursor: pointer;
+}
+
+.modal-form {
+    margin-top: 18px;
+    display: grid;
+    gap: 16px;
+}
+
+.modal-form label {
+    display: grid;
+    gap: 8px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.modal-form input,
+.modal-form textarea,
+.modal-form select {
+    padding: 12px 14px;
+    border: 1px solid #dbe2f0;
+    font: inherit;
+}
+
+.notification-detail-body {
+    margin-top: 18px;
+    display: grid;
+    gap: 18px;
+}
+
+.notification-detail-meta,
+.notification-detail-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.detail-line {
+    flex: 1 1 220px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.detail-line span {
+    display: block;
+    margin-bottom: 6px;
+    color: #64748b;
+    font-size: 0.83rem;
+}
+
+.detail-line strong {
+    color: #0f172a;
+}
+
+.notification-detail-copy {
+    padding: 18px;
+    border-radius: 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.notification-detail-copy h4 {
+    margin-bottom: 8px;
+    color: #0f172a;
+}
+
+.notification-detail-copy p {
+    margin: 0;
+    color: #475569;
+    line-height: 1.6;
+    white-space: pre-line;
+}
+
+@media (max-width: 1080px) {
+    .notifications-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .notifications-page {
+        padding: 20px;
+    }
+
+    .page-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .ghost-btn,
+    .primary-action {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.notification-wall-link {
+    margin-top: 12px;
+    width: auto;
+    padding: 10px 12px;
+}
+
+
+/* CONDOMIT 028 - modais seguros em celular/tablet */
+body.condomit-modal-open {
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+.modal-backdrop {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding:
+        max(20px, env(safe-area-inset-top))
+        max(20px, env(safe-area-inset-right))
+        max(20px, env(safe-area-inset-bottom))
+        max(20px, env(safe-area-inset-left));
+}
+
+.modal-card {
+    max-height: calc(100dvh - max(40px, env(safe-area-inset-top) + env(safe-area-inset-bottom) + 24px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+.modal-header {
+    position: sticky;
+    top: -24px;
+    z-index: 4;
+    margin: -24px -24px 0;
+    padding: 24px 24px 14px;
+    background: #fff;
+    border-radius: 22px 22px 0 0;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.modal-actions {
+    position: sticky;
+    bottom: -24px;
+    z-index: 4;
+    margin: 4px -24px -24px;
+    padding: 14px 24px 24px;
+    background: #fff;
+    border-top: 1px solid #eef2f7;
+    border-radius: 0 0 22px 22px;
+}
+
+@media (max-width: 768px) {
+    .modal-backdrop {
+        align-items: flex-start;
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .modal-card,
+    .detail-modal-card {
+        width: 100%;
+        max-width: none;
+        max-height: calc(100dvh - max(24px, env(safe-area-inset-top) + env(safe-area-inset-bottom) + 12px));
+        border-radius: 18px;
+        padding: 18px;
+    }
+
+    .modal-header {
+        top: -18px;
+        margin: -18px -18px 0;
+        padding: 18px 18px 12px;
+        border-radius: 18px 18px 0 0;
+        align-items: flex-start;
+    }
+
+    .modal-header > div:first-child {
+        min-width: 0;
+        padding-right: 8px;
+    }
+
+    .modal-header h3,
+    .modal-header p,
+    .notification-detail-copy p,
+    .detail-line strong {
+        overflow-wrap: anywhere;
+    }
+
+    .modal-actions {
+        bottom: -18px;
+        margin: 4px -18px -18px;
+        padding: 12px 18px max(18px, env(safe-area-inset-bottom));
+        border-radius: 0 0 18px 18px;
+        gap: 8px;
+    }
+}

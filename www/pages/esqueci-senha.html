@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Condomit - Recuperação de senha</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/entrar.css">
+    <link rel="stylesheet" href="../styles/esqueci-senha.css">
+    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=035">
+</head>
+<body>
+    <main class="login-page forgot-password-page">
+        <section class="login-container forgot-password-container">
+            <div class="login-header forgot-password-header">
+                <img src="../assets/logo-full.png" alt="Condomit Logo" class="login-logo">
+                <div class="reset-icon" aria-hidden="true">
+                    <i class="fas fa-envelope-open-text"></i>
+                </div>
+                <h1>Esqueceu sua senha?</h1>
+                <p class="subtitle">
+                    Informe o e-mail cadastrado para receber um link seguro de recuperação.
+                </p>
+            </div>
+
+            <div id="feedbackMessage" class="feedback-message" role="alert" aria-live="polite"></div>
+
+            <form id="resetForm" class="reset-form" novalidate>
+                <div class="form-group">
+                    <label for="email">E-mail cadastrado</label>
+                    <div class="email-input-group">
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            placeholder="seuemail@exemplo.com"
+                            autocomplete="email"
+                            required
+                        >
+                        <i class="fas fa-at"></i>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="btn btn-primary btn-large">
+                    Enviar link de recuperação
+                </button>
+            </form>
+
+            <div id="successPanel" class="success-panel" hidden>
+                <i class="fas fa-circle-check"></i>
+                <h2>Solicitação enviada</h2>
+                <p>
+                    Se o e-mail informado estiver cadastrado, você receberá uma mensagem com o link para redefinir sua senha.
+                </p>
+            </div>
+
+            <div class="forgot-password-actions">
+                <a href="entrar.html" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    Voltar para o login
+                </a>
+            </div>
+        </section>
+    </main>
+    <script src="../scripts/platform-config.js?v=035"></script>
+
+
+    <script src="../scripts/esqueci-senha.js?v=035"></script>
+    <script src="../scripts/condomit-alerts.js?v=014"></script>
+    <script src="../scripts/advanced-global.js?v=035"></script>
+</body>
+</html>

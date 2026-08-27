@@ -1,0 +1,183 @@
+/* ============================================================
+   Condomit 035 - Camada global de UX
+   Melhorias não destrutivas: foco, toque, feedback, cards,
+   formulários, navegação e segurança de viewport móvel.
+============================================================ */
+:root {
+    --ux-focus: rgba(37, 99, 235, .22);
+    --ux-border: #e3e8ef;
+    --ux-soft: #f8fafc;
+    --ux-shadow: 0 8px 24px rgba(15, 23, 42, .055);
+}
+
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 96px;
+}
+
+body {
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+}
+
+button,
+a,
+[role="button"],
+input,
+select,
+textarea {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button,
+[role="button"],
+.nav-item,
+.icon-btn,
+.btn-primary,
+.btn-secondary,
+.primary-action,
+.ghost-btn {
+    touch-action: manipulation;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid var(--ux-focus);
+    outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: #7ba2e8;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.09);
+}
+
+button:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.primary-action:disabled,
+.ghost-btn:disabled {
+    cursor: not-allowed;
+    opacity: .62;
+    transform: none !important;
+}
+
+body:not(.advanced-page) .top-bar {
+    border-bottom: 1px solid #edf1f6;
+    box-shadow: 0 3px 14px rgba(15,23,42,.05);
+}
+
+body:not(.advanced-page) .sidebar .nav-item,
+body:not(.advanced-page) .sidebar .btn-support,
+body:not(.advanced-page) .sidebar .btn-logout-sidebar {
+    min-height: 40px;
+}
+
+body:not(.advanced-page) .sidebar .nav-item:focus-visible,
+body:not(.advanced-page) .sidebar .btn-support:focus-visible,
+body:not(.advanced-page) .sidebar .btn-logout-sidebar:focus-visible {
+    outline-color: rgba(255,255,255,.28);
+}
+
+body:not(.advanced-page) :where(.card,.info-card,.quick-card,.config-card,.welcome-card,.card-shell,.panel,.content-card) {
+    border-color: var(--ux-border);
+}
+
+body:not(.advanced-page) :where(.btn-primary,.btn-secondary,.primary-action,.ghost-btn,.action-btn,.save-btn,.submit-btn) {
+    transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
+}
+
+body:not(.advanced-page) :where(.empty-state,.no-data,.no-results) {
+    border-radius: 14px;
+}
+
+.table-responsive,
+.table-container,
+.table-wrapper,
+.table-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+:where(.modal-backdrop,.modal-overlay,.modal) {
+    overscroll-behavior: contain;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    body:not(.advanced-page) :where(.card,.info-card,.quick-card,.config-card,.welcome-card,.card-shell) {
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    body:not(.advanced-page) :where(.card,.info-card,.quick-card,.config-card,.welcome-card,.card-shell):hover {
+        border-color: #d7e0ec;
+    }
+    body:not(.advanced-page) :where(.btn-primary,.btn-secondary,.primary-action,.ghost-btn,.action-btn):not(:disabled):active {
+        transform: translateY(1px);
+    }
+}
+
+@media (max-width: 900px) {
+    body:not(.advanced-page) .top-bar {
+        padding-top: max(12px, env(safe-area-inset-top)) !important;
+        padding-right: max(12px, env(safe-area-inset-right)) !important;
+        padding-left: max(12px, env(safe-area-inset-left)) !important;
+    }
+
+    body:not(.advanced-page) .sidebar {
+        padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    }
+
+    body:not(.advanced-page) .sidebar-footer {
+        padding-bottom: max(2px, env(safe-area-inset-bottom));
+    }
+
+    body:not(.advanced-page) .main-content {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea {
+        font-size: 16px;
+    }
+
+    body:not(.advanced-page) :where(.btn-primary,.btn-secondary,.primary-action,.ghost-btn,.action-btn,.icon-btn,.mobile-menu-btn) {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 600px) {
+    body:not(.advanced-page) :where(.card,.info-card,.quick-card,.config-card,.welcome-card,.card-shell) {
+        border-radius: 16px;
+    }
+
+    body:not(.advanced-page) :where(.modal-content,.modal-card,.dialog-card) {
+        max-height: calc(100dvh - max(24px, env(safe-area-inset-top)) - max(24px, env(safe-area-inset-bottom)));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}
+
+html[data-theme="dark"] {
+    --ux-focus: rgba(96,165,250,.35);
+    --ux-border: #2d3b50;
+    --ux-soft: #111827;
+}
