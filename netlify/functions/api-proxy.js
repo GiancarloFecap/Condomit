@@ -1188,21 +1188,44 @@ async function patchSupabaseUserPlan(email, planId) {
 }
 
 async function fetchAuthAdminUserByEmail(email) {
-  if (!email) return null;
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(email)}`, {
-    method: 'GET',
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return null;
+
+  // A API administrativa do GoTrue é paginada e nem todas as versões
+  // respeitam um filtro `?email=`. Fazemos a busca paginada e comparamos o
+  // e-mail explicitamente para evitar falso positivo/negativo.
+  const perPage = 200;
+  for (let page = 1; page <= 50; page += 1) {
+    const response = await fetch(
+      `${SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=${perPage}`,
+      {
+        method: 'GET',
+        headers: {
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) return null;
+      throw new Error(`Auth admin lookup falhou (HTTP ${response.status})`);
     }
-  });
-  if (!response.ok) {
-    if (response.status === 404) return null;
-    throw new Error(`Auth admin lookup falhou (HTTP ${response.status})`);
+
+    const payload = await response.json().catch(() => ({}));
+    const users = Array.isArray(payload?.users)
+      ? payload.users
+      : (Array.isArray(payload) ? payload : []);
+
+    const match = users.find(
+      (user) => String(user?.email || '').trim().toLowerCase() === normalizedEmail
+    );
+    if (match) return match;
+
+    if (users.length < perPage) break;
   }
-  const payload = await response.json().catch(() => ({}));
-  const users = Array.isArray(payload?.users) ? payload.users : [];
-  return users.length ? users[0] : null;
+
+  return null;
 }
 
 async function reactivateSoftDeletedAuthUser({ uid, email }) {
@@ -1445,7 +1468,7 @@ async function handleAdminSignupUser(event, body) {
       ...(name ? { name } : {}),
       ...(phone ? { phone } : {}),
       ...(cpf ? { cpf } : {}),
-      ...(userType ? { user_type: userType } : {})
+      ...(userType ? { user_type: userType, type: userType } : {})
     };
     const createResult = await createAuthAdminUser({
       email,
@@ -1878,21 +1901,48 @@ exports.handler = async (event, context) => {
       if (!authUser || String(authUser.email || '').trim().toLowerCase() !== normalizedEmail) {
         return { statusCode: 403, headers, body: JSON.stringify({ error: 'Você só pode excluir a própria conta.' }) };
       }
+      // Primeiro remove o perfil e os dados dependentes. Se houver alguma
+      // restrição de banco, a conta de autenticação permanece intacta e o
+      // usuário pode tentar novamente após a correção, evitando uma conta
+      // parcialmente excluída.
+      const profileDelete = await proxySupabaseRequest(
+        null,
+        `/users?email=eq.${encodeURIComponent(normalizedEmail)}`,
+        'DELETE'
+      );
+
+      if (profileDelete.status >= 400 && profileDelete.status !== 404) {
+        return {
+          statusCode: profileDelete.status,
+          headers,
+          body: JSON.stringify({
+            error: profileDelete.data?.message || profileDelete.data?.error || 'Não foi possível remover os dados da conta.'
+          })
+        };
+      }
+
       let authDeleteResult = { skipped: true };
       try {
-        const authUser = await fetchAuthAdminUserByEmail(normalizedEmail);
+        // O token já identifica inequivocamente a conta atual. Usar o ID da
+        // sessão evita procurar o usuário por e-mail na API administrativa e
+        // elimina o risco de remover uma conta diferente em listagens paginadas.
         if (authUser?.id) {
           authDeleteResult = await deleteAuthAdminUserById(authUser.id);
         }
       } catch (authErr) {
-        console.warn('[DELETE /users] Aviso ao remover auth.user:', authErr?.message || authErr);
+        console.error('[DELETE /users] Falha ao remover auth.user:', authErr?.message || authErr);
+        return {
+          statusCode: 502,
+          headers,
+          body: JSON.stringify({ error: 'Os dados do perfil foram removidos, mas a autenticação não pôde ser finalizada. Contate o suporte.' })
+        };
       }
-      const result = await proxySupabaseRequest(null, `/users?email=eq.${encodeURIComponent(normalizedEmail)}`, 'DELETE');
+
       return {
-        statusCode: result.status,
+        statusCode: 200,
         headers,
         body: JSON.stringify({
-          ...(result.data || {}),
+          deleted: true,
           authDeleted: authDeleteResult.deleted || false,
           authSkipped: authDeleteResult.skipped || false
         })

@@ -1571,11 +1571,24 @@ async function executeDeleteAccount() {
     msg.textContent = 'Excluindo conta, aguarde...';
 
     try {
+        const accessToken = typeof window.resolveSupabaseAccessToken === 'function'
+            ? await window.resolveSupabaseAccessToken()
+            : (typeof window.getSupabaseAccessToken === 'function' ? window.getSupabaseAccessToken() : null);
+
+        if (!accessToken) {
+            throw new Error('Sua sessão expirou. Entre novamente antes de excluir a conta.');
+        }
+
+        const authenticatedHeaders = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        };
+
         if (user.type === 'sindico' && user.condominium && user.condominium.cep) {
             try {
                 const delCondo = await fetch(`/api/condominiums?cep=${encodeURIComponent(user.condominium.cep)}`, {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: authenticatedHeaders
                 });
                 console.log('[DeleteAccount] Exclusao condominio status:', delCondo.status);
             } catch (condoErr) {
@@ -1585,7 +1598,7 @@ async function executeDeleteAccount() {
 
         const delUser = await fetch(`/api/users?email=${encodeURIComponent(user.email)}`, {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
+            headers: authenticatedHeaders
         });
 
         if (!delUser.ok && delUser.status !== 404) {

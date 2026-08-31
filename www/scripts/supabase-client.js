@@ -4260,6 +4260,22 @@ const CONDOMIT_PLAN_LABELS = Object.freeze({
   3: 'Premium'
 });
 
+const CONDOMIT_PORTER_FULL_ACCESS_PAGES = Object.freeze(new Set([
+  'index-porteiro.html',
+  'notificacoes.html',
+  'ocorrencias.html',
+  'liberacao-visitantes.html',
+  'registrar-visitantes.html',
+  'registro-entrada-saida.html',
+  'visitantes-liberados.html',
+  'autorizacao-entregas.html',
+  'controle-prestadores.html',
+  'chat-sindico.html',
+  'chat-moradores.html',
+  'configuracoes.html',
+  'ai-condomit.html'
+]));
+
 const CONDOMIT_PAGE_MIN_PLAN = Object.freeze({
   'chat-sindico.html': 2,
   'chat-moradores.html': 2,
@@ -4306,6 +4322,17 @@ function getCondomitRequiredPlanLevel(pageName) {
   const page = String(
     pageName || window.location.pathname.split('/').pop() || ''
   ).trim().toLowerCase();
+
+  const currentUser = getStoredCondominiumUser();
+  const currentRole = getNormalizedUserType(currentUser || {});
+
+  // Porteiros só existem em condomínios Pro/Premium. Uma vez que o
+  // condomínio cumpra esse requisito global, todas as ferramentas que
+  // pertencem à área da portaria ficam disponíveis nos dois planos.
+  if (currentRole === 'porteiro' && CONDOMIT_PORTER_FULL_ACCESS_PAGES.has(page)) {
+    return 1;
+  }
+
   return CONDOMIT_PAGE_MIN_PLAN[page] || 1;
 }
 
@@ -4430,13 +4457,19 @@ function requireCondomitMinimumPlan(planName) {
 function applyCondomitPlanVisibility(root = document) {
   const user = getStoredCondominiumUser();
   const currentLevel = Number(user?.plan_level || 0);
+  const currentRole = getNormalizedUserType(user || {});
   if (!currentLevel || !root?.querySelectorAll) return;
 
   root.querySelectorAll('[data-min-plan]').forEach((element) => {
     const required = getCondomitPlanLevelFromName(element.getAttribute('data-min-plan'));
     if (!required) return;
-    element.hidden = currentLevel < required;
-    element.setAttribute('aria-hidden', currentLevel < required ? 'true' : 'false');
+
+    // Dentro da interface de porteiro, Pro e Premium possuem exatamente o
+    // mesmo conjunto de ferramentas operacionais.
+    const porterOperationalAccess = currentRole === 'porteiro' && currentLevel >= 2;
+    const hidden = porterOperationalAccess ? false : currentLevel < required;
+    element.hidden = hidden;
+    element.setAttribute('aria-hidden', hidden ? 'true' : 'false');
   });
 }
 
@@ -4484,7 +4517,28 @@ function showCondomitPlanLock(access, requiredLevel) {
 }
 
 async function enforceCondomitPlanAccess(options = {}) {
+  const currentUser = getStoredCondominiumUser();
+  const currentRole = getNormalizedUserType(currentUser || {});
   const requiredLevel = getCondomitRequiredPlanLevel(options.pageName);
+
+  // A existência da conta de porteiro não basta: o condomínio precisa estar
+  // em Pro ou Premium. Esta verificação também cobre vínculos antigos criados
+  // antes da regra de planos.
+  if (currentRole === 'porteiro') {
+    const porterAccess = await getCondomitPlanAccess(options.billing || null, Boolean(options.force));
+    if (porterAccess.resolved && porterAccess.level < 2) {
+      showCondomitPlanLock(porterAccess, 2);
+      return false;
+    }
+
+    if (porterAccess.resolved && CONDOMIT_PORTER_FULL_ACCESS_PAGES.has(
+      String(options.pageName || window.location.pathname.split('/').pop() || '').trim().toLowerCase()
+    )) {
+      applyCondomitPlanVisibility();
+      return true;
+    }
+  }
+
   if (requiredLevel <= 1) {
     applyCondomitPlanVisibility();
     return true;

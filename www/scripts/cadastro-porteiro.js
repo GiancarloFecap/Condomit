@@ -468,7 +468,8 @@
                         name,
                         phone,
                         cpf,
-                        user_type: type
+                        user_type: type,
+                        type
                     },
                     emailRedirectTo
                 }
@@ -484,7 +485,12 @@
                     authError.code === 'over_email_send_rate_limit' ||
                     authError.code === 'email_rate_limit_exceeded' ||
                     authError.code === '429';
-                if (isRateLimit) {
+                const isServerSignupFailure =
+                    errMsg.includes('database error saving new user') ||
+                    errMsg.includes('unexpected_failure') ||
+                    errMsg.includes('internal server error') ||
+                    Number(authError.status || 0) >= 500;
+                if (isRateLimit || isServerSignupFailure) {
                     const fallback = await tryAdminSignup({
                         email,
                         password,

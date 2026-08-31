@@ -1133,7 +1133,11 @@ function buildSidebarNav(userType, currentPage, lang = getAppLanguage()) {
     const config = getSidebarConfig(userType)
         .map((section) => ({
             ...section,
-            items: section.items.filter((item) => planLevel >= getSidebarRouteMinPlanLevel(item.route))
+            // Porteiro é um benefício disponível apenas a partir do Pro; dentro
+            // dessa área, Pro e Premium exibem o mesmo conjunto operacional.
+            items: userType === 'porteiro'
+                ? section.items
+                : section.items.filter((item) => planLevel >= getSidebarRouteMinPlanLevel(item.route))
         }))
         .filter((section) => section.items.length > 0);
     const navId = userType === 'morador'
