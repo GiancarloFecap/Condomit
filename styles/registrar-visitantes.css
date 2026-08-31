@@ -32,7 +32,7 @@
 
 .primary-action {
     border: none;
-    background: linear-gradient(135deg, #1e40af 0%, #0ea5a4 100%);
+    background: linear-gradient(135deg, #1B449F 0%, #0ea5a4 100%);
     color: #fff;
 }
 
@@ -162,7 +162,7 @@
 .visitor-feedback[data-state="info"] {
     display: block;
     background: #eff6ff;
-    color: #1d4ed8;
+    color: #1B449F;
 }
 
 .visitor-feedback[data-state="success"] {

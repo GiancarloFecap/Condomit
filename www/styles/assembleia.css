@@ -19,7 +19,7 @@ body {
 
 /* Header antigo removido */
 .header-old {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    background: linear-gradient(135deg, #183B86 0%, #1B449F 100%);
     color: white;
     padding: 1.5rem 2rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -122,7 +122,7 @@ nav {
     font-size: 0.75rem;
     font-weight: 500;
     background: white;
-    color: #1e40af;
+    color: #1B449F;
     width: fit-content;
 }
 
@@ -166,7 +166,7 @@ nav {
 
 .form-group input:focus {
     outline: none;
-    border-color: #1e40af;
+    border-color: #1B449F;
 }
 
 .form-row {
@@ -209,11 +209,11 @@ nav {
 
 .welcome-card {
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border-left: 4px solid #1e40af;
+    border-left: 4px solid #1B449F;
 }
 
 .welcome-card h2 {
-    color: #1e3a8a;
+    color: #183B86;
     margin-bottom: 0.75rem;
     font-size: 1.4rem;
 }
@@ -224,7 +224,7 @@ nav {
 }
 
 .section-block h2 {
-    color: #1e3a8a;
+    color: #183B86;
     margin-bottom: 1.5rem;
     font-size: 1.4rem;
     display: flex;
@@ -259,7 +259,7 @@ nav {
 }
 
 .assembly-item:hover {
-    border-color: #1e40af;
+    border-color: #1B449F;
     background: #f8fafc;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
@@ -323,12 +323,12 @@ nav {
 }
 
 .btn-primary {
-    background: #1e40af;
+    background: #1B449F;
     color: white;
 }
 
 .btn-primary:hover {
-    background: #1e3a8a;
+    background: #183B86;
     transform: translateY(-1px);
     box-shadow: 0 4px 6px rgba(30, 64, 175, 0.2);
 }
@@ -469,7 +469,7 @@ nav {
     width: 90px;
     height: 90px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #3D6DD4 0%, #1B449F 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -520,7 +520,7 @@ nav {
 }
 
 .badge-morador {
-    background: #3b82f6;
+    background: #3D6DD4;
 }
 
 .controls {
@@ -666,7 +666,7 @@ nav {
 }
 
 .message.received .message-header strong {
-    color: #1e40af;
+    color: #1B449F;
 }
 
 .message.sent .message-header strong {
@@ -778,7 +778,7 @@ nav {
 }
 
 .chat-input input[type="text"]:focus {
-    border-color: #1e40af;
+    border-color: #1B449F;
 }
 
 .image-btn, .send-btn {
@@ -805,12 +805,12 @@ nav {
 }
 
 .send-btn {
-    background: #1e40af;
+    background: #1B449F;
     color: white;
 }
 
 .send-btn:hover {
-    background: #1e3a8a;
+    background: #183B86;
 }
 
 .detail-container {
@@ -1056,7 +1056,7 @@ nav {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #3D6DD4 0%, #1B449F 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1100,7 +1100,7 @@ nav {
 
 .comment-type.morador {
     background: #dbeafe;
-    color: #1e40af;
+    color: #1B449F;
 }
 
 .comment-type.sindico {
@@ -1138,7 +1138,7 @@ nav {
 }
 
 .comment-input-section textarea:focus {
-    border-color: #1e40af;
+    border-color: #1B449F;
 }
 
 .comment-input-section button {
@@ -1153,7 +1153,7 @@ nav {
     padding: 0.9rem 1rem;
     border-radius: 12px;
     background: #eff6ff;
-    color: #1d4ed8;
+    color: #1B449F;
     font-size: 0.95rem;
 }
 
@@ -1259,7 +1259,7 @@ nav {
     padding: 0.35rem 0.8rem;
     border-radius: 999px;
     background: #dbeafe;
-    color: #1d4ed8;
+    color: #1B449F;
     font-size: 0.82rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1280,7 +1280,7 @@ nav {
 .prejoin-user-avatar,
 .prejoin-avatar {
     overflow: hidden;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #3D6DD4 0%, #1B449F 100%);
     color: #ffffff;
     display: flex;
     align-items: center;
@@ -1316,7 +1316,7 @@ nav {
 
 .prejoin-user-copy span {
     font-size: 0.9rem;
-    color: #1d4ed8;
+    color: #1B449F;
     font-weight: 600;
 }
 
@@ -1443,7 +1443,7 @@ nav {
 .prejoin-toggle-btn.active {
     background: #eff6ff;
     border-color: #93c5fd;
-    color: #1d4ed8;
+    color: #1B449F;
 }
 
 .prejoin-toggle-btn.inactive {
@@ -1499,7 +1499,7 @@ nav {
 }
 
 .prejoin-meter-header strong {
-    color: #1d4ed8;
+    color: #1B449F;
     font-size: 0.92rem;
 }
 
@@ -1514,7 +1514,7 @@ nav {
     width: 0;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #22c55e 0%, #0ea5e9 45%, #2563eb 100%);
+    background: linear-gradient(90deg, #22c55e 0%, #0ea5e9 45%, #2252BD 100%);
     transition: width 0.12s linear;
 }
 
@@ -1547,7 +1547,7 @@ nav {
 
 .prejoin-field select:focus {
     outline: none;
-    border-color: #60a5fa;
+    border-color: #7FA2F0;
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.14);
 }
 
@@ -1568,7 +1568,7 @@ nav {
 
 .prejoin-message-info {
     background: #eff6ff;
-    color: #1d4ed8;
+    color: #1B449F;
 }
 
 .prejoin-message-warning {
@@ -1887,7 +1887,7 @@ nav {
 
 /* Ajuste 011 - ação de detalhes de assembleia realizada */
 .past-details-btn {
-    background: linear-gradient(135deg, #1d4ed8, #0f766e) !important;
+    background: linear-gradient(135deg, #1B449F, #0f766e) !important;
     border-color: transparent !important;
     color: #fff !important;
 }

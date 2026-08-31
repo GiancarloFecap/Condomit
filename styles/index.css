@@ -17,7 +17,7 @@ body {
 
 .sidebar {
     width: 300px;
-    background: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%);
+    background: linear-gradient(180deg, #1B449F 0%, #183B86 100%);
     color: white;
     display: flex;
     flex-direction: column;
@@ -266,7 +266,7 @@ body {
     width: 45px;
     height: 45px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #3D6DD4 0%, #1B449F 100%);
     color: white;
     display: flex;
     align-items: center;
@@ -349,7 +349,7 @@ body {
 }
 
 .status-item i {
-    color: #1e40af;
+    color: #1B449F;
     width: 20px;
 }
 
@@ -375,9 +375,9 @@ body {
 }
 
 .quick-action-btn:hover {
-    border-color: #1e40af;
+    border-color: #1B449F;
     background: #f0f9ff;
-    color: #1e40af;
+    color: #1B449F;
 }
 
 .quick-action-btn i {
@@ -449,7 +449,7 @@ body {
 .stat-value {
     font-size: 1.8rem;
     font-weight: 700;
-    color: #1e40af;
+    color: #1B449F;
 }
 
 .communication-actions {
@@ -474,9 +474,9 @@ body {
 }
 
 .comm-btn:hover {
-    border-color: #1e40af;
+    border-color: #1B449F;
     background: #f0f9ff;
-    color: #1e40af;
+    color: #1B449F;
 }
 
 .bottom-actions {
@@ -501,7 +501,7 @@ body {
 }
 
 .btn-primary-large {
-    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+    background: linear-gradient(135deg, #1B449F 0%, #183B86 100%);
     color: white;
     box-shadow: 0 4px 15px rgba(30, 64, 175, 0.3);
 }
@@ -513,8 +513,8 @@ body {
 
 .btn-secondary-large {
     background: white;
-    color: #1e40af;
-    border: 2px solid #1e40af;
+    color: #1B449F;
+    border: 2px solid #1B449F;
 }
 
 .btn-secondary-large:hover {
@@ -629,7 +629,7 @@ body {
     place-items: center;
     border-radius: 16px;
     background: #eff6ff;
-    color: #2563eb;
+    color: #2252BD;
     font-size: 1.35rem;
     margin-bottom: 16px;
 }
@@ -658,12 +658,12 @@ body {
 }
 .quick-chat-options button:hover {
     transform: translateY(-2px);
-    border-color: #2563eb;
+    border-color: #2252BD;
     box-shadow: 0 12px 24px rgba(37, 99, 235, .10);
 }
 .quick-chat-options button > i {
     font-size: 2rem;
-    color: #2563eb;
+    color: #2252BD;
 }
 .quick-chat-options span { display: grid; gap: 6px; }
 .quick-chat-options strong { font-size: 1rem; color: var(--text-primary, #0f172a); }

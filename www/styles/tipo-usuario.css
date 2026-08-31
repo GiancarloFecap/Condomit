@@ -683,3 +683,145 @@ body.condomit-app-page {
     .condomit-app-page .brand-logo-img { max-height: 86px; }
     .condomit-app-page .page-title-area { margin-top: 6px; margin-bottom: 30px; }
 }
+
+
+/* ============================================================
+   047 - Moldura da escolha de usuário redesenhada
+   IMPORTANTE: os três .type-card e seus conteúdos permanecem intactos.
+============================================================ */
+body.condomit-app-page {
+    background: #F4F7FC;
+}
+.condomit-app-page .page-bg {
+    background:
+        radial-gradient(circle at 8% 8%, rgba(34,82,189,.10), transparent 28%),
+        radial-gradient(circle at 92% 5%, rgba(18,191,193,.10), transparent 25%),
+        linear-gradient(180deg, #F8FAFE 0%, #EEF3FA 100%);
+}
+.condomit-app-page .page-bg-overlay {
+    background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(238,243,250,.25));
+}
+.condomit-app-page .page-bg-glow {
+    width: 900px;
+    height: 580px;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,.96) 0%, rgba(224,233,247,.45) 48%, transparent 72%);
+    filter: blur(34px);
+}
+.condomit-app-page .bg-corner { opacity: .10; }
+.condomit-app-page .type-selection-page {
+    max-width: 1160px;
+    padding: 22px 24px 54px;
+}
+.condomit-app-page .top-header {
+    min-height: 76px;
+    margin-bottom: 34px;
+    padding: 10px 14px;
+    border: 1px solid #E0E7F1;
+    border-radius: 20px;
+    background: rgba(255,255,255,.88);
+    box-shadow: 0 10px 28px rgba(31,55,99,.07);
+    backdrop-filter: blur(18px);
+}
+.condomit-app-page .btn-back {
+    min-height: 42px;
+    padding: 0 16px;
+    background: #F7F9FD;
+    color: #2252BD;
+    border: 1px solid #D8E1F0;
+    border-radius: 13px;
+    box-shadow: none;
+}
+.condomit-app-page .btn-back:hover {
+    background: #EEF3FF;
+    border-color: #C5D3F1;
+    box-shadow: 0 7px 16px rgba(34,82,189,.09);
+}
+.condomit-app-page .brand-header {
+    gap: 10px;
+    justify-content: center;
+}
+.condomit-app-page .brand-logo-img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    max-height: none;
+    max-width: none;
+    filter: drop-shadow(0 7px 14px rgba(34,82,189,.16));
+}
+.condomit-app-page .brand-name {
+    display: inline-block;
+    color: #173A85;
+    font-size: 1.32rem;
+    font-weight: 800;
+    letter-spacing: -.025em;
+}
+.condomit-app-page .header-spacer { width: 102px; }
+.condomit-app-page .page-title-area {
+    max-width: 720px;
+    margin: 0 auto 34px;
+    text-align: center;
+}
+.condomit-app-page .page-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 0 11px;
+    margin-bottom: 13px;
+    border: 1px solid #D7E2F5;
+    border-radius: 999px;
+    background: #EDF3FF;
+    color: #2252BD;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+}
+.condomit-app-page .page-title {
+    margin: 0 0 10px;
+    color: #14213A;
+    font-size: clamp(2.15rem, 4.7vw, 3.15rem);
+    font-weight: 850;
+    letter-spacing: -.045em;
+    line-height: 1.06;
+    text-shadow: none;
+}
+.condomit-app-page .gradient-text { background: none; color: inherit; }
+.condomit-app-page .subtitle {
+    max-width: 620px;
+    margin: 0 auto;
+    color: #617086;
+    font-size: 1.04rem;
+    line-height: 1.55;
+    text-shadow: none;
+}
+.condomit-app-page .type-grid {
+    margin-bottom: 34px;
+}
+.condomit-app-page .trust-banner {
+    max-width: 760px;
+    padding: 18px 22px;
+    background: rgba(255,255,255,.91);
+    border: 1px solid #DEE6F1;
+    border-radius: 18px;
+    box-shadow: 0 10px 28px rgba(31,55,99,.065);
+}
+.condomit-app-page .trust-icon {
+    width: 54px;
+    height: 54px;
+    background: #EAF0FF;
+}
+.condomit-app-page .trust-icon svg path:first-child { stroke: #2252BD; fill: #EAF0FF; }
+.condomit-app-page .trust-icon svg path:last-child { stroke: #2252BD; }
+.condomit-app-page .trust-text h4 { color: #1E2E4B; }
+.condomit-app-page .trust-text p { color: #66758A; }
+@media (max-width: 600px) {
+    .condomit-app-page .type-selection-page { padding: 14px 12px 38px; }
+    .condomit-app-page .top-header { min-height: auto; padding: 9px 10px; margin-bottom: 26px; }
+    .condomit-app-page .brand-header { order: 1; width: auto; margin-top: 0; }
+    .condomit-app-page .btn-back { order: 0; }
+    .condomit-app-page .header-spacer { display: none; }
+    .condomit-app-page .brand-logo-img { width: 42px; height: 42px; }
+    .condomit-app-page .brand-name { font-size: 1.08rem; }
+    .condomit-app-page .page-title-area { margin-bottom: 28px; }
+    .condomit-app-page .page-kicker { font-size: .72rem; }
+}

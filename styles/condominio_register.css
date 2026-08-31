@@ -75,7 +75,7 @@ body {
 .section-number {
     width: 28px;
     height: 28px;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #2252BD 0%, #1B449F 100%);
     color: white;
     border-radius: 50%;
     display: flex;
@@ -129,14 +129,14 @@ body {
 
 .form-group input:focus,
 .form-group select:focus {
-    border-color: #2563eb;
+    border-color: #2252BD;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .btn-add {
     background: none;
     border: none;
-    color: #2563eb;
+    color: #2252BD;
     font-weight: 600;
     font-size: 0.9rem;
     cursor: pointer;
@@ -221,7 +221,7 @@ body {
 }
 
 .btn-edit {
-    color: #2563eb;
+    color: #2252BD;
 }
 
 .btn-delete {
@@ -292,7 +292,7 @@ body {
 
 .btn-submit {
     padding: 12px 30px;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #2252BD 0%, #1B449F 100%);
     color: white;
     border: none;
     border-radius: 8px;
@@ -302,7 +302,7 @@ body {
 }
 
 .btn-submit:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    background: linear-gradient(135deg, #1B449F 0%, #1B449F 100%);
 }
 
 @media (max-width: 768px) {

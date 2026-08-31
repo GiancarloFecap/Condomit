@@ -10,7 +10,7 @@
 }
 
 body {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    background: linear-gradient(135deg, #183B86 0%, #1B449F 100%);
     color: #333;
     min-height: 100vh;
     display: flex;
@@ -118,11 +118,11 @@ body {
 }
 
 .alert-info {
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid #3D6DD4;
 }
 
 .alert-info .alert-content i {
-    color: #3b82f6;
+    color: #3D6DD4;
 }
 
 .btn-close {
@@ -151,7 +151,7 @@ body {
     left: 20px;
     padding: 10px 20px;
     background: rgba(255, 255, 255, 0.9);
-    color: #1e3a8a;
+    color: #183B86;
     border: none;
     border-radius: 25px;
     font-size: 1rem;
@@ -255,7 +255,7 @@ body {
 
 .form-group input:focus {
     outline: none;
-    border-color: #1e3a8a;
+    border-color: #183B86;
     background: white;
     box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
 }
@@ -350,7 +350,7 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    background: linear-gradient(135deg, #183B86 0%, #1B449F 100%);
     color: white;
 }
 
@@ -392,14 +392,14 @@ body {
 }
 
 .condominio-footer a {
-    color: #1e3a8a;
+    color: #183B86;
     text-decoration: none;
     font-weight: 600;
     transition: color 0.2s;
 }
 
 .condominio-footer a:hover {
-    color: #1e40af;
+    color: #1B449F;
     text-decoration: underline;
 }
 

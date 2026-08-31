@@ -95,7 +95,7 @@
 
 .metric-icon-blue {
     background: rgba(59, 130, 246, 0.12);
-    color: #3b82f6;
+    color: #3D6DD4;
 }
 
 .metric-label {
@@ -123,7 +123,7 @@
 
 .metric-caption-green { color: #10b981; }
 .metric-caption-purple { color: #8b5cf6; }
-.metric-caption-blue { color: #3b82f6; }
+.metric-caption-blue { color: #3D6DD4; }
 
 .dot-green,
 .dot-purple,
@@ -136,7 +136,7 @@
 
 .dot-green { background: #10b981; }
 .dot-purple { background: #8b5cf6; }
-.dot-blue { background: #3b82f6; }
+.dot-blue { background: #3D6DD4; }
 
 /* ================= Filtros ================= */
 .filters-row {
@@ -178,7 +178,7 @@
 }
 
 .search-input-wrap input:focus {
-    border-color: #3b82f6;
+    border-color: #3D6DD4;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
@@ -198,7 +198,7 @@
 }
 
 .filter-select:focus {
-    border-color: #3b82f6;
+    border-color: #3D6DD4;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
@@ -473,7 +473,7 @@
 }
 
 .page-size-select:focus {
-    border-color: #3b82f6;
+    border-color: #3D6DD4;
 }
 
 .page-size-wrap {
@@ -551,16 +551,16 @@ html[data-theme="dark"] .metric-icon-purple {
 
 html[data-theme="dark"] .metric-icon-blue {
     background: rgba(96, 165, 250, 0.14);
-    color: #60a5fa;
+    color: #7FA2F0;
 }
 
 html[data-theme="dark"] .metric-caption-green { color: #34d399; }
 html[data-theme="dark"] .metric-caption-purple { color: #a78bfa; }
-html[data-theme="dark"] .metric-caption-blue { color: #60a5fa; }
+html[data-theme="dark"] .metric-caption-blue { color: #7FA2F0; }
 
 html[data-theme="dark"] .dot-green { background: #34d399; }
 html[data-theme="dark"] .dot-purple { background: #a78bfa; }
-html[data-theme="dark"] .dot-blue { background: #60a5fa; }
+html[data-theme="dark"] .dot-blue { background: #7FA2F0; }
 
 html[data-theme="dark"] .search-input-wrap input {
     background: #0f172a;
@@ -573,7 +573,7 @@ html[data-theme="dark"] .search-input-wrap input::placeholder {
 }
 
 html[data-theme="dark"] .search-input-wrap input:focus {
-    border-color: #60a5fa;
+    border-color: #7FA2F0;
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.42);
 }
 
@@ -590,7 +590,7 @@ html[data-theme="dark"] .page-size-select {
 
 html[data-theme="dark"] .filter-select:focus,
 html[data-theme="dark"] .page-size-select:focus {
-    border-color: #60a5fa;
+    border-color: #7FA2F0;
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.42);
 }
 
@@ -695,7 +695,7 @@ html[data-theme="dark"] .page-btn-active {
 
 html[data-theme="dark"] .visitante-avatar {
     background: linear-gradient(135deg, #172554, #134e4a);
-    color: #60a5fa;
+    color: #7FA2F0;
 }
 
 /* ================= Modal Visitante (Perfil) ================= */
@@ -734,7 +734,7 @@ html[data-theme="dark"] .visitante-avatar {
 }
 
 .info-title i {
-    color: #1e40af;
+    color: #1B449F;
     font-size: 13px;
 }
 
@@ -797,7 +797,7 @@ html[data-theme="dark"] .info-title {
 }
 
 html[data-theme="dark"] .info-title i {
-    color: #60a5fa;
+    color: #7FA2F0;
 }
 
 html[data-theme="dark"] .info-row > span:first-child {

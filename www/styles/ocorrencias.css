@@ -1,6 +1,6 @@
 :root {
-    --occ-blue: #2563eb;
-    --occ-blue-dark: #1d4ed8;
+    --occ-blue: #2252BD;
+    --occ-blue-dark: #1B449F;
     --occ-blue-soft: #eff6ff;
     --occ-green: #16a34a;
     --occ-green-soft: #ecfdf3;
@@ -98,7 +98,7 @@
     place-items: center;
     color: #ffffff;
     font-size: 2.35rem;
-    background: linear-gradient(145deg, #2563eb, #1e40af);
+    background: linear-gradient(145deg, #2252BD, #1B449F);
     box-shadow: 0 20px 45px rgba(37, 99, 235, 0.28);
 }
 
@@ -239,7 +239,7 @@
 .filter-field select:focus,
 .book-field input:focus,
 .book-field textarea:focus {
-    border-color: #60a5fa;
+    border-color: #7FA2F0;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
 }
 
@@ -345,7 +345,7 @@
     font-size: 0.74rem;
     font-weight: 800;
     background: #eff6ff;
-    color: #1d4ed8;
+    color: #1B449F;
 }
 
 .role-badge.role-porteiro { background: #f3e8ff; color: #7e22ce; }

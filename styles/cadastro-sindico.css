@@ -119,7 +119,7 @@ body {
     left: 20px;
     padding: 10px 20px;
     background: rgba(255, 255, 255, 0.9);
-    color: #1e3a8a;
+    color: #183B86;
     border: none;
     border-radius: 25px;
     font-size: 1rem;
@@ -163,7 +163,7 @@ body {
 
 .user-icon i {
     font-size: 1.4rem;
-    color: #1e3a8a;
+    color: #183B86;
 }
 
 .signup-header h1 {
@@ -174,7 +174,7 @@ body {
 }
 
 .highlight-text {
-    color: #1e3a8a;
+    color: #183B86;
     font-weight: 700;
 }
 
@@ -275,7 +275,7 @@ body {
     justify-content: center;
     gap: 8px;
     color: white;
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    background: linear-gradient(135deg, #183B86 0%, #1B449F 100%);
     width: 100%;
     margin-top: 3px;
 }

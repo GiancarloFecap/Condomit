@@ -5,7 +5,7 @@
     --text-primary: #1f2937;
     --text-secondary: #6b7280;
     --border-color: #e5e7eb;
-    --sidebar-gradient: linear-gradient(180deg, #1e40af 0%, #1e3a8a 100%);
+    --sidebar-gradient: linear-gradient(180deg, #1B449F 0%, #183B86 100%);
     --topbar-bg: white;
     --form-group-color: #374151;
 }
@@ -124,7 +124,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     width: 70px;
     height: 70px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #3D6DD4 0%, #1B449F 100%);
     color: white;
     display: flex;
     align-items: center;
@@ -163,7 +163,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .detail-item i {
-    color: #1d4ed8;
+    color: #1B449F;
     width: 18px;
 }
 
@@ -200,7 +200,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .config-card .form-group i:first-of-type {
-    color: #1d4ed8;
+    color: #1B449F;
     font-size: 1rem;
     width: 20px;
 }
@@ -229,9 +229,9 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .btn-edit-profile:hover {
-    border-color: #1d4ed8;
+    border-color: #1B449F;
     background: #eff6ff;
-    color: #1d4ed8;
+    color: #1B449F;
 }
 
 .btn-logout {
@@ -535,14 +535,14 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .theme-btn.active, .font-btn.active {
-    background: #1e40af;
+    background: #1B449F;
     color: white;
-    border-color: #1e40af;
+    border-color: #1B449F;
 }
 
 [data-theme="dark"] .theme-btn.active, [data-theme="dark"] .font-btn.active {
-    background: #3b82f6;
-    border-color: #3b82f6;
+    background: #3D6DD4;
+    border-color: #3D6DD4;
 }
 
 .theme-btn, .font-btn {
@@ -583,7 +583,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .profile-avatar {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #3D6DD4 0%, #1B449F 100%);
 }
 
 .theme-selector label, .font-size-selector label, .language-selector label {
@@ -617,7 +617,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .language-select:focus {
-    border-color: #1d4ed8;
+    border-color: #1B449F;
     box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
 }
 
@@ -639,7 +639,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 
 .language-select-wrap > .fa-globe {
     padding-left: 16px;
-    color: #1d4ed8;
+    color: #1B449F;
     font-size: 1rem;
 }
 
@@ -668,7 +668,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .language-select-wrap:focus-within {
-    border-color: #1d4ed8;
+    border-color: #1B449F;
     box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.12);
 }
 
@@ -820,9 +820,9 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .visitor-submit-btn {
-    background: #1d4ed8 !important;
+    background: #1B449F !important;
     color: #fff !important;
-    border-color: #1d4ed8 !important;
+    border-color: #1B449F !important;
 }
 
 .visitor-feedback {
@@ -835,7 +835,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 .visitor-feedback[data-state="info"] {
     display: block;
     background: #eff6ff;
-    color: #1d4ed8;
+    color: #1B449F;
 }
 
 .visitor-feedback[data-state="success"] {
@@ -1001,12 +1001,12 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     gap: 10px;
     transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-.access-kind-card:hover { transform: translateY(-2px); border-color: #2563eb; box-shadow: 0 12px 24px rgba(37, 99, 235, .10); }
-.access-kind-card i { font-size: 2rem; color: #2563eb; }
+.access-kind-card:hover { transform: translateY(-2px); border-color: #2252BD; box-shadow: 0 12px 24px rgba(37, 99, 235, .10); }
+.access-kind-card i { font-size: 2rem; color: #2252BD; }
 .access-kind-card strong { font-size: 1rem; }
 .access-kind-card span { color: var(--text-secondary); font-size: .88rem; line-height: 1.45; }
 .access-registration-form[hidden], .access-kind-selector[hidden] { display: none !important; }
-.access-back-btn { width: max-content; border: 0; background: transparent; color: #2563eb; font-weight: 700; cursor: pointer; padding: 0 0 6px; }
+.access-back-btn { width: max-content; border: 0; background: transparent; color: #2252BD; font-weight: 700; cursor: pointer; padding: 0 0 6px; }
 @media (max-width: 720px) { .access-kind-selector { grid-template-columns: 1fr; } .access-kind-card { min-height: 130px; } }
 
 /* ============================================================
@@ -1038,7 +1038,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     padding: 18px;
     border-radius: 16px;
     background: #eff6ff;
-    color: #1e3a8a;
+    color: #183B86;
     margin-bottom: 18px;
 }
 
@@ -1085,7 +1085,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 
 .settings-document-section a,
 .settings-contact-card {
-    color: #1d4ed8;
+    color: #1B449F;
 }
 
 .settings-company-hero {
@@ -1147,7 +1147,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     border-radius: 13px;
     display: grid;
     place-items: center;
-    color: #1d4ed8;
+    color: #1B449F;
     background: #eff6ff;
 }
 
@@ -1227,7 +1227,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     place-items: center;
     border-radius: 12px;
     background: #eff6ff;
-    color: #1d4ed8;
+    color: #1B449F;
 }
 
 .settings-provider-card > div:nth-child(2) {
@@ -1772,4 +1772,26 @@ html[data-theme="dark"] .condomit-app-page .language-select-wrap:focus-within {
 html[data-theme="dark"] .condomit-app-page .language-select {
     background: transparent !important;
     color: #eef3f8 !important;
+}
+
+
+/* 047 - Ícones de Configurações na paleta Condomit */
+.config-card .form-group i:first-of-type,
+.detail-item i,
+.access-kind-card i,
+.section-icon,
+.config-section-icon,
+.setting-icon,
+.profile-details i {
+    color: #2252BD !important;
+}
+.config-card .form-group:hover i:first-of-type { color: #183E92 !important; }
+html[data-theme="dark"] .config-card .form-group i:first-of-type,
+html[data-theme="dark"] .detail-item i,
+html[data-theme="dark"] .access-kind-card i,
+html[data-theme="dark"] .section-icon,
+html[data-theme="dark"] .config-section-icon,
+html[data-theme="dark"] .setting-icon,
+html[data-theme="dark"] .profile-details i {
+    color: #8CAAF0 !important;
 }

@@ -687,7 +687,7 @@ body {
   padding: 3px 8px;
   border-radius: 999px;
   background: rgba(59, 130, 246, 0.18);
-  color: #60a5fa;
+  color: #7FA2F0;
 }
 
 .poll-timer.ended {
@@ -716,7 +716,7 @@ body {
 .poll-result-fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  background: linear-gradient(90deg, #3D6DD4, #6366f1);
   transition: width 300ms ease;
 }
 
@@ -834,7 +834,7 @@ body {
 }
 
 .btn:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #3D6DD4;
   outline-offset: 2px;
 }
 
@@ -845,15 +845,15 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #2252BD 0%, #1B449F 100%);
   color: #ffffff;
-  border-color: #1d4ed8;
+  border-color: #1B449F;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-  border-color: #1e40af;
+  background: linear-gradient(135deg, #1B449F 0%, #1B449F 100%);
+  border-color: #1B449F;
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
   transform: translateY(-1px);
@@ -889,13 +889,13 @@ body {
 
 .btn-outline {
   background: transparent;
-  color: #3b82f6;
-  border-color: #3b82f6;
+  color: #3D6DD4;
+  border-color: #3D6DD4;
 }
 
 .btn-outline:hover {
   background: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
+  color: #7FA2F0;
 }
 
 .btn-sm {
@@ -910,15 +910,15 @@ body {
   font-size: 12px;
   border-radius: 8px;
   white-space: nowrap;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #2252BD 0%, #1B449F 100%);
   color: #ffffff !important;
-  border-color: #1d4ed8;
+  border-color: #1B449F;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
   font-weight: 700;
 }
 
 .btn-inline-add:hover {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: linear-gradient(135deg, #1B449F 0%, #1B449F 100%);
   color: #ffffff !important;
   box-shadow: 0 3px 10px rgba(37, 99, 235, 0.55);
   transform: translateY(-1px);
@@ -1061,13 +1061,13 @@ body {
 }
 
 .modal-root .btn-primary {
-  background: #3b82f6;
+  background: #3D6DD4;
   color: white;
-  border-color: #3b82f6;
+  border-color: #3D6DD4;
 }
 
 .modal-root .btn-primary:hover {
-  background: #2563eb;
+  background: #2252BD;
 }
 
 .modal-root .btn-primary:disabled {

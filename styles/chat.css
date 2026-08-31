@@ -105,9 +105,9 @@ html[data-theme="dark"] .conversations-header {
 }
 
 .new-chat-btn:hover {
-    background: #1e40af;
+    background: #1B449F;
     color: #ffffff;
-    border-color: #1e40af;
+    border-color: #1B449F;
 }
 
 html[data-theme="dark"] .new-chat-btn {
@@ -117,8 +117,8 @@ html[data-theme="dark"] .new-chat-btn {
 }
 
 html[data-theme="dark"] .new-chat-btn:hover {
-    background: var(--primary-fill, #2563eb);
-    border-color: var(--primary-color, #60a5fa);
+    background: var(--primary-fill, #2252BD);
+    border-color: var(--primary-color, #7FA2F0);
     color: #ffffff;
 }
 
@@ -153,7 +153,7 @@ html[data-theme="dark"] .new-chat-btn:hover {
 }
 
 .search-input:focus {
-    border-color: #1e40af;
+    border-color: #1B449F;
     background: #ffffff;
     box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
 }
@@ -170,7 +170,7 @@ html[data-theme="dark"] .search-input::placeholder {
 
 html[data-theme="dark"] .search-input:focus {
     background: var(--input-bg, #0f172a);
-    border-color: var(--primary-color, #60a5fa);
+    border-color: var(--primary-color, #7FA2F0);
     box-shadow: 0 0 0 3px var(--focus-ring, rgba(96, 165, 250, 0.42));
 }
 
@@ -215,7 +215,7 @@ html[data-theme="dark"] .conversation-item.active {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1e40af, #2563eb);
+    background: linear-gradient(135deg, #1B449F, #2252BD);
     color: #ffffff;
     font-weight: 600;
     font-size: 14px;
@@ -311,7 +311,7 @@ html[data-theme="dark"] .status-dot {
 }
 
 .conversation-badge {
-    background: #2563eb;
+    background: #2252BD;
     color: #ffffff;
     font-size: 10px;
     font-weight: 700;
@@ -324,7 +324,7 @@ html[data-theme="dark"] .status-dot {
 }
 
 html[data-theme="dark"] .conversation-badge {
-    background: var(--primary-fill, #2563eb);
+    background: var(--primary-fill, #2252BD);
 }
 
 .conversation-meta {
@@ -364,7 +364,7 @@ html[data-theme="dark"] .chat-header {
     width: 46px;
     height: 46px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1e40af, #2563eb);
+    background: linear-gradient(135deg, #1B449F, #2252BD);
     color: #ffffff;
     font-weight: 600;
     font-size: 15px;
@@ -429,7 +429,7 @@ html[data-theme="dark"] .chat-header {
 
 .icon-chat-btn:hover {
     background: #eff6ff;
-    color: #1e40af;
+    color: #1B449F;
     border-color: #dbeafe;
 }
 
@@ -441,7 +441,7 @@ html[data-theme="dark"] .icon-chat-btn {
 
 html[data-theme="dark"] .icon-chat-btn:hover {
     background: var(--selected-bg, #172554);
-    color: var(--primary-color, #60a5fa);
+    color: var(--primary-color, #7FA2F0);
     border-color: rgba(96, 165, 250, 0.3);
 }
 
@@ -520,7 +520,7 @@ html[data-theme="dark"] .message-divider span {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1e40af, #2563eb);
+    background: linear-gradient(135deg, #1B449F, #2252BD);
     color: #ffffff;
     font-weight: 600;
     font-size: 11px;
@@ -572,16 +572,16 @@ html[data-theme="dark"] .message-bubble {
 }
 
 .message.mine .message-bubble {
-    background: linear-gradient(135deg, #1e40af, #2563eb);
+    background: linear-gradient(135deg, #1B449F, #2252BD);
     color: #ffffff;
-    border-color: #2563eb;
+    border-color: #2252BD;
     border-bottom-left-radius: 16px;
     border-bottom-right-radius: 6px;
 }
 
 html[data-theme="dark"] .message.mine .message-bubble {
-    background: linear-gradient(135deg, var(--primary-color, #60a5fa), var(--primary-fill, #2563eb));
-    border-color: var(--primary-fill, #2563eb);
+    background: linear-gradient(135deg, var(--primary-color, #7FA2F0), var(--primary-fill, #2252BD));
+    border-color: var(--primary-fill, #2252BD);
     color: #ffffff;
 }
 
@@ -625,7 +625,7 @@ html[data-theme="dark"] .chat-input-area {
 }
 
 .chat-input-wrapper:focus-within {
-    border-color: #1e40af;
+    border-color: #1B449F;
     background: #ffffff;
     box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
 }
@@ -637,7 +637,7 @@ html[data-theme="dark"] .chat-input-wrapper {
 
 html[data-theme="dark"] .chat-input-wrapper:focus-within {
     background: var(--input-bg, #0f172a);
-    border-color: var(--primary-color, #60a5fa);
+    border-color: var(--primary-color, #7FA2F0);
     box-shadow: 0 0 0 3px var(--focus-ring, rgba(96, 165, 250, 0.42));
 }
 
@@ -658,7 +658,7 @@ html[data-theme="dark"] .chat-input-wrapper:focus-within {
 
 .chat-tool-btn:hover {
     background: #e5e7eb;
-    color: #1e40af;
+    color: #1B449F;
 }
 
 html[data-theme="dark"] .chat-tool-btn {
@@ -667,7 +667,7 @@ html[data-theme="dark"] .chat-tool-btn {
 
 html[data-theme="dark"] .chat-tool-btn:hover {
     background: var(--hover-bg, #1e293b);
-    color: var(--primary-color, #60a5fa);
+    color: var(--primary-color, #7FA2F0);
 }
 
 .chat-textarea {
@@ -702,7 +702,7 @@ html[data-theme="dark"] .chat-textarea::placeholder {
     height: 40px;
     border-radius: 10px;
     border: none;
-    background: linear-gradient(135deg, #1e40af, #2563eb);
+    background: linear-gradient(135deg, #1B449F, #2252BD);
     color: #ffffff;
     display: flex;
     align-items: center;
@@ -766,7 +766,7 @@ html[data-theme="dark"] .chat-textarea::placeholder {
 }
 
 .ai-comunicados-header h1 i {
-    background: linear-gradient(135deg, #1e40af, #7c3aed);
+    background: linear-gradient(135deg, #1B449F, #7c3aed);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -838,7 +838,7 @@ html[data-theme="dark"] .ai-card {
     padding: 5px 11px;
     border-radius: 999px;
     background: #eff6ff;
-    color: #1e40af;
+    color: #1B449F;
     font-size: 11.5px;
     font-weight: 600;
     margin-bottom: 8px;
@@ -846,14 +846,14 @@ html[data-theme="dark"] .ai-card {
 
 html[data-theme="dark"] .step-badge {
     background: var(--selected-bg, #172554);
-    color: var(--primary-color, #60a5fa);
+    color: var(--primary-color, #7FA2F0);
 }
 
 .step-badge .step-num {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #1e40af;
+    background: #1B449F;
     color: #ffffff;
     display: inline-flex;
     align-items: center;
@@ -863,7 +863,7 @@ html[data-theme="dark"] .step-badge {
 }
 
 html[data-theme="dark"] .step-badge .step-num {
-    background: var(--primary-fill, #2563eb);
+    background: var(--primary-fill, #2252BD);
     color: #ffffff;
 }
 
@@ -923,7 +923,7 @@ html[data-theme="dark"] .step-badge.success .step-num {
 }
 
 .ai-textarea:focus {
-    border-color: #1e40af;
+    border-color: #1B449F;
     background: #ffffff;
     box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
 }
@@ -940,7 +940,7 @@ html[data-theme="dark"] .ai-textarea::placeholder {
 
 html[data-theme="dark"] .ai-textarea:focus {
     background: var(--input-bg, #0f172a);
-    border-color: var(--primary-color, #60a5fa);
+    border-color: var(--primary-color, #7FA2F0);
     box-shadow: 0 0 0 3px var(--focus-ring, rgba(96, 165, 250, 0.42));
 }
 
@@ -964,7 +964,7 @@ html[data-theme="dark"] .ai-textarea:focus {
     padding: 8px 14px;
     border-radius: 9px;
     border: none;
-    background: linear-gradient(135deg, #1e40af, #7c3aed);
+    background: linear-gradient(135deg, #1B449F, #7c3aed);
     color: #ffffff;
     font-size: 12.5px;
     font-weight: 600;
@@ -1020,7 +1020,7 @@ html[data-theme="dark"] .btn-secondary-ai:hover {
 .btn-outline-ai {
     background: transparent;
     border: 1px solid #e5e7eb;
-    color: #1e40af;
+    color: #1B449F;
 }
 
 .btn-outline-ai:hover {
@@ -1030,7 +1030,7 @@ html[data-theme="dark"] .btn-secondary-ai:hover {
 
 html[data-theme="dark"] .btn-outline-ai {
     border-color: var(--border-color, #2d3b50);
-    color: var(--primary-color, #60a5fa);
+    color: var(--primary-color, #7FA2F0);
 }
 
 html[data-theme="dark"] .btn-outline-ai:hover {
@@ -1278,7 +1278,7 @@ html[data-theme="dark"] .tips-list li:hover {
     justify-content: center;
     flex-shrink: 0;
     background: #dbeafe;
-    color: #1d4ed8;
+    color: #1B449F;
 }
 
 .chat-attachment-selected-info,
@@ -1376,7 +1376,7 @@ html[data-theme="dark"] .tips-list li:hover {
 }
 
 .message-attachment-download {
-    color: #2563eb;
+    color: #2252BD;
     flex-shrink: 0;
 }
 

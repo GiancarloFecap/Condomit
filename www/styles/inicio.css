@@ -117,7 +117,7 @@ body {
 }
 
 .btn-signup {
-    background: #2563eb;
+    background: #2252BD;
     color: white;
     text-decoration: none;
     font-size: 13px;
@@ -128,7 +128,7 @@ body {
 }
 
 .btn-signup:hover {
-    background: #1d4ed8;
+    background: #1B449F;
 }
 
 /* Hero Content */
@@ -163,7 +163,7 @@ body {
 }
 
 .btn-primary {
-    background: #2563eb;
+    background: #2252BD;
     color: white;
     text-decoration: none;
     font-weight: 600;
@@ -174,7 +174,7 @@ body {
 }
 
 .btn-primary:hover {
-    background: #1d4ed8;
+    background: #1B449F;
     transform: translateY(-1px);
     box-shadow: 0 8px 22px rgba(37, 99, 235, 0.4);
 }
@@ -262,7 +262,7 @@ body {
 
 .feature-card i {
     font-size: 22px;
-    color: #2563eb;
+    color: #2252BD;
     margin-bottom: 7px;
 }
 
@@ -305,7 +305,7 @@ body {
 .stat-icon {
     width: 36px;
     height: 36px;
-    background: linear-gradient(135deg, #2563eb, #0ea5e9);
+    background: linear-gradient(135deg, #2252BD, #0ea5e9);
     border-radius: 9px;
     display: flex;
     align-items: center;
@@ -369,7 +369,7 @@ body {
 }
 
 .plano-card.featured {
-    border: 2px solid #2563eb;
+    border: 2px solid #2252BD;
     box-shadow: 0 8px 34px rgba(37, 99, 235, 0.13);
     transform: scale(1.02);
 }
@@ -392,7 +392,7 @@ body {
     top: -11px;
     left: 50%;
     transform: translateX(-50%);
-    background: #2563eb;
+    background: #2252BD;
     color: white;
     padding: 5px 16px;
     border-radius: 17px;
@@ -448,7 +448,7 @@ body {
 .plano-value-Pro {
     font-size: 38px;
     font-weight: 700;
-    color: #0D4DFF;
+    color: #2252BD;
 }
 .plano-value-Premium {
     font-size: 38px;
@@ -486,9 +486,9 @@ body {
     text-align: center;
     padding: 10px 0;
     background: white;
-    color: #2563eb;
+    color: #2252BD;
     text-decoration: none;
-    border: 2px solid #2563eb;
+    border: 2px solid #2252BD;
     border-radius: 8px;
     font-weight: 600;
     font-size: 12px;
@@ -496,17 +496,17 @@ body {
 }
 
 .btn-plano:hover {
-    background: #2563eb;
+    background: #2252BD;
     color: white;
 }
 
 .btn-plano.featured {
-    background: #2563eb;
+    background: #2252BD;
     color: white;
 }
 
 .btn-plano.featured:hover {
-    background: #1d4ed8;
+    background: #1B449F;
 }
 
 /* FAQ Section */
@@ -657,7 +657,7 @@ body {
 }
 
 .social-links a:hover {
-    background: #2563eb;
+    background: #2252BD;
 }
 
 .footer-col h4 {
@@ -685,7 +685,7 @@ body {
 }
 
 .footer-col ul li a:hover {
-    color: #60a5fa;
+    color: #7FA2F0;
 }
 
 .footer-col p {
@@ -1107,3 +1107,106 @@ body {
     }
     .landing-language-switcher > .fa-globe { font-size: 10px; }
 }
+
+
+/* ============================================================
+   047 - Planos alinhados + seletor de idioma Condomit
+============================================================ */
+.planos-grid { align-items: stretch; }
+.plano-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+.plano-header { flex: 0 0 auto; }
+.plano-features {
+    flex: 1 1 auto;
+    margin-bottom: 26px;
+}
+.btn-plano { margin-top: auto; }
+
+.plano-card.featured {
+    border-color: #2252BD;
+    box-shadow: 0 12px 32px rgba(34, 82, 189, .13);
+}
+.plano-badge-Pro { background: #2252BD; }
+.plano-value-Pro { color: #2252BD; }
+.btn-plano {
+    color: #2252BD;
+    border-color: #2252BD;
+}
+.btn-plano:hover,
+.btn-plano.featured {
+    background: #2252BD;
+    border-color: #2252BD;
+    color: #fff;
+}
+.btn-plano.featured:hover { background: #1B449F; }
+
+/* Seletor único, sem caixa interna e com aparência de controle nativo premium */
+.landing-language-switcher {
+    height: 38px;
+    display: grid;
+    grid-template-columns: 30px minmax(76px, auto) 24px;
+    align-items: center;
+    padding: 0 4px;
+    border: 1px solid rgba(255,255,255,.62);
+    border-radius: 999px;
+    background: rgba(255,255,255,.94);
+    color: #2252BD;
+    box-shadow: 0 8px 22px rgba(7, 27, 74, .13);
+    backdrop-filter: blur(14px);
+    overflow: visible;
+    transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+}
+.landing-language-switcher:hover,
+.landing-language-switcher:focus-within {
+    background: #fff;
+    border-color: rgba(255,255,255,.9);
+    box-shadow: 0 10px 26px rgba(7, 27, 74, .17);
+    transform: translateY(-1px);
+}
+.landing-language-switcher > .fa-globe {
+    text-align: center;
+    color: #2252BD;
+    font-size: 12px;
+    opacity: 1;
+}
+#landing-language-select {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    padding: 0 3px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: 0;
+    background: transparent !important;
+    color: #173A85;
+    appearance: none;
+    -webkit-appearance: none;
+    font: 700 12px/1 'Segoe UI', Roboto, Arial, sans-serif;
+    cursor: pointer;
+}
+#landing-language-select:focus { box-shadow: none !important; }
+#landing-language-select option { background: #fff; color: #1f2937; }
+.landing-language-arrow {
+    color: #2252BD;
+    font-size: 9px;
+    opacity: .82;
+    text-align: center;
+}
+@media (max-width: 768px) {
+    .landing-language-switcher {
+        grid-template-columns: 26px minmax(62px, auto) 20px;
+        height: 38px;
+        border-radius: 999px;
+    }
+    #landing-language-select { width: 70px; font-size: 11px; }
+}
+@media (max-width: 620px) {
+    .landing-language-switcher { grid-template-columns: 24px 50px 18px; }
+    #landing-language-select { width: 50px; font-size: 10.5px; }
+}
+/* Mantém os três CTAs na mesma linha visual, inclusive o plano em destaque. */
+.plano-card.featured { transform: none; }

@@ -52,7 +52,7 @@
 }
 
 .primary-action {
-    background: linear-gradient(135deg, #1e40af 0%, #0ea5a4 100%);
+    background: linear-gradient(135deg, #1B449F 0%, #0ea5a4 100%);
     color: #fff;
 }
 
@@ -138,7 +138,7 @@
     height: 50px;
     border-radius: 16px;
     background: #eff6ff;
-    color: #2563eb;
+    color: #2252BD;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -220,7 +220,7 @@
 
 .status-chip.devolvido {
     background: #dbeafe;
-    color: #1d4ed8;
+    color: #1B449F;
 }
 
 .status-chip.em-analise {

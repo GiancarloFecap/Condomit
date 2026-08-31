@@ -119,7 +119,7 @@ body {
     left: 20px;
     padding: 10px 20px;
     background: rgba(255, 255, 255, 0.9);
-    color: #1e3a8a;
+    color: #183B86;
     border: none;
     border-radius: 25px;
     font-size: 1rem;
@@ -163,7 +163,7 @@ body {
 
 .user-icon i {
     font-size: 1.4rem;
-    color: #2563eb;
+    color: #2252BD;
 }
 
 .signup-header h1 {
@@ -174,7 +174,7 @@ body {
 }
 
 .highlight-text {
-    color: #2563eb;
+    color: #2252BD;
     font-weight: 700;
 }
 

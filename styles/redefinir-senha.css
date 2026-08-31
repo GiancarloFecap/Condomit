@@ -21,7 +21,7 @@
     align-items: center;
     justify-content: center;
     background: linear-gradient(135deg, rgba(30, 64, 175, 0.12), rgba(59, 130, 246, 0.2));
-    color: #1e40af;
+    color: #1B449F;
 }
 
 .reset-icon i {
@@ -80,7 +80,7 @@
 
 .password-input input:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: #2252BD;
     background: #ffffff;
     box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
@@ -102,7 +102,7 @@
 }
 
 .toggle-password:hover {
-    color: #1e40af;
+    color: #1B449F;
     background: rgba(30, 64, 175, 0.08);
 }
 
@@ -238,7 +238,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    color: #1e40af;
+    color: #1B449F;
     font-size: 1rem;
     font-weight: 700;
     text-decoration: none;

@@ -6,11 +6,11 @@
     <title>Condomit - Escolha seu Perfil</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/tipo-usuario.css?v=046">
+    <link rel="stylesheet" href="../styles/tipo-usuario.css?v=047">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="../styles/ux-polish.css?v=046">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=047">
 </head>
 <body class="condomit-app-page">
     <div class="page-bg">
@@ -27,15 +27,17 @@
                 <button class="btn-back" onclick="window.location.href='../inicio.html'">
                     <i class="fas fa-arrow-left"></i> Voltar
                 </button>
-                <div class="brand-header">
-                    <img src="../assets/logo-lado.png" alt="Condomit Logo" class="brand-logo-img" onerror="this.onerror=null; this.src='../assets/logo-full2.png';">
+                <div class="brand-header" aria-label="Condomit">
+                    <img src="../assets/logo-icon.png" alt="Logo Condomit" class="brand-logo-img">
+                    <span class="brand-name">Condomit</span>
                 </div>
                 <div class="header-spacer"></div>
             </header>
 
             <div class="page-title-area">
-                <h2 class="page-title">Bem-vindo ao <span class="gradient-text">Condomit</span></h2>
-                <p class="subtitle">Selecione seu perfil para acessar a plataforma</p>
+                <span class="page-kicker"><i class="fas fa-user-check"></i> Acesso à plataforma</span>
+                <h2 class="page-title">Escolha seu perfil</h2>
+                <p class="subtitle">Selecione como você utiliza o condomínio para continuar.</p>
             </div>
 
             <div class="type-grid">
@@ -99,6 +101,6 @@
     <script src="../scripts/supabase-client.js?v=043"></script>
     <script src="../scripts/tipo-usuario.js"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
-    <script src="../scripts/advanced-global.js?v=046"></script>
+    <script src="../scripts/advanced-global.js?v=047"></script>
 </body>
 </html>
