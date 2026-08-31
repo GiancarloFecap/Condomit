@@ -49,6 +49,19 @@ function normalizeMercadoPagoEnvironment(value) {
   return ['production', 'prod', 'live'].includes(normalized) ? 'production' : 'test';
 }
 
+function detectMercadoPagoCredentialMode(value) {
+  const raw = String(value || '').trim();
+  if (raw.startsWith('TEST-')) return 'test';
+  if (raw.startsWith('APP_USR-')) return 'production';
+  return null;
+}
+
+function getMercadoPagoEffectiveEnvironment() {
+  // A credencial é a fonte mais confiável. Isso evita abrir sandbox com token
+  // de produção (ou o inverso) quando MERCADO_PAGO_ENV estiver ausente/antigo.
+  return detectMercadoPagoCredentialMode(MERCADO_PAGO_ACCESS_TOKEN) || MERCADO_PAGO_ENV;
+}
+
 function generateResetToken(email) {
   const payload = Buffer.from(JSON.stringify({
     email,
@@ -211,6 +224,10 @@ async function createMercadoPagoPreference({ event, userRecord, planRecord, paym
         failure: new URL('/pages/pagamento-falha.html', baseUrl).toString()
       },
       auto_return: 'approved',
+      // A Condomit libera recursos imediatamente após a confirmação do plano.
+      // O modo binário evita que novos pagamentos fiquem indefinidamente em
+      // `pending`/`in_process`: o Mercado Pago deverá aprová-los ou recusá-los.
+      binary_mode: true,
       notification_url: getMercadoPagoWebhookUrl(event),
       external_reference: externalReference,
       statement_descriptor: 'CONDOMIT',
@@ -250,14 +267,52 @@ async function fetchMercadoPagoPayment(paymentId) {
   return payload;
 }
 
+async function searchMercadoPagoPaymentByExternalReference(externalReference) {
+  const reference = String(externalReference || '').trim();
+  if (!reference) return null;
+
+  const params = new URLSearchParams({
+    sort: 'date_created',
+    criteria: 'desc',
+    external_reference: reference,
+    limit: '1'
+  });
+
+  const response = await fetch(`https://api.mercadopago.com/v1/payments/search?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
+    }
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(getMercadoPagoErrorMessage(payload, 'Falha ao localizar pagamento no Mercado Pago'));
+  }
+
+  return Array.isArray(payload?.results) && payload.results.length ? payload.results[0] : null;
+}
+
 async function confirmMercadoPagoPayment({ paymentId, externalReference, fallbackStatus }) {
   const parsedReference = parseMercadoPagoExternalReference(externalReference);
   let paymentRecord = null;
   let mercadoPagoPayment = null;
   let normalizedStatus = normalizePaymentStatus(fallbackStatus);
+  let resolvedMercadoPagoPaymentId = paymentId ? String(paymentId) : null;
 
-  if (paymentId) {
-    mercadoPagoPayment = await fetchMercadoPagoPayment(paymentId);
+  // Quando o navegador volta pelo histórico, pode existir somente a
+  // external_reference. Nesse caso localizamos o pagamento real pela API do
+  // Mercado Pago em vez de confiar no status guardado no navegador.
+  if (!resolvedMercadoPagoPaymentId && externalReference) {
+    mercadoPagoPayment = await searchMercadoPagoPaymentByExternalReference(externalReference);
+    if (mercadoPagoPayment?.id) {
+      resolvedMercadoPagoPaymentId = String(mercadoPagoPayment.id);
+    }
+  }
+
+  if (resolvedMercadoPagoPaymentId) {
+    if (!mercadoPagoPayment) {
+      mercadoPagoPayment = await fetchMercadoPagoPayment(resolvedMercadoPagoPaymentId);
+    }
     normalizedStatus = normalizePaymentStatus(mercadoPagoPayment.status || fallbackStatus);
     const resolvedReference = parseMercadoPagoExternalReference(mercadoPagoPayment.external_reference || externalReference);
 
@@ -276,12 +331,20 @@ async function confirmMercadoPagoPayment({ paymentId, externalReference, fallbac
     }
 
     if (paymentRecord?.id) {
-      paymentRecord = await patchSupabasePayment(paymentRecord.id, {
+      const paymentUpdates = {
         status_pagamento: normalizedStatus,
         codigo_transacao: String(mercadoPagoPayment.id),
-        data_pagamento: mercadoPagoPayment.date_approved || mercadoPagoPayment.date_last_updated || new Date().toISOString(),
         ...(paymentRecord.plano_id ? {} : resolvedReference.planId ? { plano_id: resolvedReference.planId } : {})
-      });
+      };
+
+      // A data que inicia a validade mensal só deve representar pagamento
+      // realmente aprovado. Enquanto estiver pendente/em análise, preservamos
+      // a data existente e aguardamos a confirmação oficial do Mercado Pago.
+      if (isApprovedPaymentStatus(normalizedStatus)) {
+        paymentUpdates.data_pagamento = mercadoPagoPayment.date_approved || mercadoPagoPayment.date_last_updated || new Date().toISOString();
+      }
+
+      paymentRecord = await patchSupabasePayment(paymentRecord.id, paymentUpdates);
     }
   } else if (parsedReference.paymentId) {
     paymentRecord = await fetchSupabasePaymentById(parsedReference.paymentId);
@@ -308,7 +371,7 @@ async function confirmMercadoPagoPayment({ paymentId, externalReference, fallbac
       ]);
 
       emailResult = await sendPaymentConfirmationEmailOnce(
-        String(mercadoPagoPayment?.id || paymentRecord?.codigo_transacao || paymentRecord?.id || paymentId || Date.now()),
+        String(mercadoPagoPayment?.id || paymentRecord?.codigo_transacao || paymentRecord?.id || resolvedMercadoPagoPaymentId || Date.now()),
         resolvedEmail,
         usuario || { email: resolvedEmail },
         {
@@ -354,22 +417,19 @@ function extractMercadoPagoNotificationData(query, body) {
 async function handleMercadoPagoConfig() {
   //#region debug-point mp-config-token-mode
   const rawToken = String(MERCADO_PAGO_ACCESS_TOKEN || '');
-  const accessTokenMode = rawToken.startsWith('TEST-')
-    ? 'test'
-    : rawToken.startsWith('APP_USR-')
-      ? 'production'
-      : rawToken
-        ? 'unknown'
-        : 'missing';
+  const accessTokenMode = detectMercadoPagoCredentialMode(rawToken) || (rawToken ? 'unknown' : 'missing');
   //#endregion debug-point mp-config-token-mode
 
   return {
     statusCode: isMercadoPagoConfigured() ? 200 : 503,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
+    },
     body: JSON.stringify({
       configured: isMercadoPagoConfigured(),
       publicKey: MERCADO_PAGO_PUBLIC_KEY || null,
-      environment: MERCADO_PAGO_ENV,
+      environment: getMercadoPagoEffectiveEnvironment(),
       accessTokenMode
     })
   };
@@ -463,7 +523,7 @@ async function handleMercadoPagoPreference(event, body) {
       externalReference: preference.externalReference,
       paymentId: paymentRecord?.id || null,
       publicKey: MERCADO_PAGO_PUBLIC_KEY,
-      environment: MERCADO_PAGO_ENV
+      environment: getMercadoPagoEffectiveEnvironment()
     })
   };
 }
@@ -486,12 +546,20 @@ async function handleMercadoPagoConfirm(body, query) {
 
   return {
     statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      Pragma: 'no-cache'
+    },
     body: JSON.stringify({
       ok: true,
       status: result.normalizedStatus,
       payment: result.paymentRecord || null,
       mercadoPagoPaymentId: result.mercadoPagoPayment?.id || paymentId || null,
+      mercadoPagoFound: Boolean(result.mercadoPagoPayment),
+      mercadoPagoStatus: result.mercadoPagoPayment?.status || null,
+      mercadoPagoStatusDetail: result.mercadoPagoPayment?.status_detail || null,
+      mercadoPagoLastUpdated: result.mercadoPagoPayment?.date_last_updated || null,
       userPlanUpdated: result.userPlanUpdated,
       emailResult: result.emailResult
     })
@@ -512,12 +580,17 @@ async function handleMercadoPagoWebhook(body, query) {
 
   return {
     statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
+    },
     body: JSON.stringify({
       received: true,
       processed: Boolean(result),
       paymentId: notification.paymentId,
-      status: result?.normalizedStatus || notification.status || null
+      status: result?.normalizedStatus || notification.status || null,
+      mercadoPagoStatus: result?.mercadoPagoPayment?.status || null,
+      mercadoPagoStatusDetail: result?.mercadoPagoPayment?.status_detail || null
     })
   };
 }

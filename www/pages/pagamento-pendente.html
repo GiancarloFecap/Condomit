@@ -7,10 +7,10 @@
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/theme.css?v=0151">
-    <link rel="stylesheet" href="../styles/checkout.css">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
-    <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=035">
+    <link rel="stylesheet" href="../styles/checkout.css?v=040">
+    <link rel="manifest" href="../manifest.webmanifest">
 </head>
 <body class="payment-result-page">
     <main class="payment-result-card pending" data-payment-result data-status="pending">
@@ -24,13 +24,13 @@
             <span>Aguardando a confirmacao final do pagamento.</span>
         </div>
         <div class="payment-result-actions">
-            <a class="primary" id="payment-result-primary" href="checkout.html">Voltar ao checkout</a>
-            <a class="secondary" id="payment-result-secondary" href="entrar.html">Ir para o login</a>
+            <a class="primary" id="payment-result-primary" href="checkout.html" hidden>Voltar ao checkout</a>
+            <a class="secondary" id="payment-result-secondary" href="entrar.html" hidden>Ir para o login</a>
             <button class="secondary" id="payment-result-refresh" type="button">Atualizar status</button>
         </div>
     </main>
 
-    <script src="../assets/js/retorno-mercado-pago.js"></script>
+    <script src="../assets/js/retorno-mercado-pago.js?v=040"></script>
     <script src="../scripts/platform-config.js?v=035"></script>
 
     <script src="../scripts/condomit-alerts.js?v=014"></script>

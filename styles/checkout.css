@@ -469,3 +469,341 @@ body {
 .mercado-pago-direct-button:hover { filter: brightness(.96); }
 .mercado-pago-direct-button:disabled { opacity: .7; cursor: wait; }
 .payment-direct-fallback p { margin: 0; color: #64748b; font-size: .86rem; line-height: 1.45; text-align: center; }
+
+/* ============================================================
+   Condomit 0.40 - Checkout realmente responsivo para celulares
+============================================================ */
+@media (max-width: 768px) {
+    body {
+        min-width: 0;
+        overflow-x: hidden;
+    }
+
+    .checkout-wrapper {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .container,
+    .checkout-container {
+        width: 100%;
+        max-width: 100%;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .checkout-header {
+        padding: max(16px, env(safe-area-inset-top)) 0 22px;
+        margin-bottom: 22px;
+    }
+
+    .header-top {
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .logo {
+        width: auto;
+        height: 74px;
+        max-width: min(58vw, 210px);
+        object-fit: contain;
+    }
+
+    .back-link {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 42px;
+        padding: 9px 12px;
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        background: var(--white);
+        font-size: .82rem;
+        line-height: 1.2;
+        text-align: center;
+    }
+
+    .header-content h1 {
+        max-width: 650px;
+        font-size: clamp(1.55rem, 7vw, 2rem);
+        line-height: 1.12;
+        margin-bottom: 8px;
+    }
+
+    .header-content p {
+        font-size: .96rem;
+        line-height: 1.5;
+    }
+
+    .checkout-container {
+        margin-bottom: calc(36px + env(safe-area-inset-bottom));
+    }
+
+    .checkout-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
+    }
+
+    .plans-column,
+    .payment-column,
+    .sticky-sidebar,
+    .summary-card {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .sticky-sidebar {
+        position: static;
+        top: auto;
+    }
+
+    .column-title {
+        margin-bottom: 16px;
+        font-size: 1.15rem;
+    }
+
+    .plans-list {
+        gap: 14px;
+    }
+
+    .plan-card-option {
+        padding: 18px;
+        border-radius: 15px;
+    }
+
+    .featured-badge {
+        top: -10px;
+        right: 14px;
+        font-size: .62rem;
+        padding: 4px 9px;
+    }
+
+    .plan-card-header {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+
+    .plan-icon {
+        width: 44px;
+        height: 44px;
+        grid-row: 1;
+        grid-column: 1;
+    }
+
+    .plan-meta {
+        min-width: 0;
+        grid-row: 1;
+        grid-column: 2;
+    }
+
+    .plan-meta h3,
+    .plan-meta p {
+        overflow-wrap: anywhere;
+    }
+
+    .plan-card-price {
+        grid-column: 1 / -1;
+        margin-left: 0;
+        padding-top: 2px;
+        text-align: left;
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+
+    .plan-card-price .amount {
+        font-size: 1.55rem;
+    }
+
+    .plan-mini-features {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 9px;
+        padding-top: 14px;
+    }
+
+    .plan-mini-features li {
+        min-width: 0;
+        align-items: flex-start;
+        line-height: 1.35;
+    }
+
+    .plan-mini-features li i {
+        margin-top: 3px;
+        flex: 0 0 auto;
+    }
+
+    .summary-card {
+        padding: 20px 18px;
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, .07);
+    }
+
+    .summary-title {
+        font-size: 1.28rem;
+        margin-bottom: 20px;
+    }
+
+    .summary-details {
+        margin-bottom: 24px;
+    }
+
+    .summary-line {
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .summary-line .label {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .summary-line .value {
+        flex: 0 1 52%;
+        min-width: 0;
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+    .summary-total {
+        gap: 12px;
+    }
+
+    .total-amount {
+        font-size: clamp(1.35rem, 7vw, 1.7rem);
+        text-align: right;
+    }
+
+    .payment-hint {
+        margin-bottom: 14px;
+        font-size: .82rem;
+        line-height: 1.5;
+    }
+
+    .payment-feedback {
+        padding: 11px 12px;
+        font-size: .85rem;
+        line-height: 1.45;
+    }
+
+    #payment-brick_container,
+    #payment-brick_container > div,
+    #payment-brick_container iframe {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .payment-placeholder {
+        min-height: 96px;
+        padding: 20px 14px;
+    }
+
+    .mercado-pago-direct-button {
+        min-height: 54px;
+        padding: 0 14px;
+        font-size: .95rem;
+    }
+
+    .security-badges {
+        gap: 10px 16px;
+        padding-top: 18px;
+        flex-wrap: wrap;
+    }
+
+    .security-badges span {
+        font-size: .7rem;
+    }
+
+    .payment-result-page {
+        align-items: flex-start;
+        padding: max(20px, env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));
+    }
+
+    .payment-result-card {
+        width: 100%;
+        margin: auto 0;
+        padding: 28px 18px;
+        border-radius: 20px;
+    }
+
+    .payment-result-icon {
+        width: 72px;
+        height: 72px;
+        font-size: 1.75rem;
+        margin-bottom: 16px;
+    }
+
+    .payment-result-card h1 {
+        font-size: clamp(1.55rem, 7vw, 1.85rem);
+        line-height: 1.15;
+    }
+
+    .payment-result-card p {
+        font-size: .93rem;
+        line-height: 1.55;
+    }
+
+    .payment-result-status {
+        margin: 20px 0 18px;
+        padding: 15px;
+        border-radius: 14px;
+        font-size: .9rem;
+        overflow-wrap: anywhere;
+    }
+
+    .payment-result-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        width: 100%;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    .payment-result-actions a,
+    .payment-result-actions button {
+        width: 100%;
+        min-height: 48px;
+        padding: 13px 16px;
+    }
+}
+
+@media (max-width: 390px) {
+    .container,
+    .checkout-container {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .header-top {
+        align-items: center;
+    }
+
+    .logo {
+        height: 62px;
+        max-width: 52vw;
+    }
+
+    .back-link {
+        padding: 8px 9px;
+        font-size: .74rem;
+    }
+
+    .plan-card-option,
+    .summary-card {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+}
+
+@media (max-width: 900px) {
+    html.capacitor-native body:has(.checkout-wrapper) {
+        padding: 0 !important;
+    }
+}

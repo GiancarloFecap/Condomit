@@ -68,6 +68,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         mercadoPagoConfig = null;
     }
 
+    const previousPaymentState = await reconcileStoredMercadoPagoPayment();
+    if (previousPaymentState === 'approved' || previousPaymentState === 'pending') {
+        return;
+    }
+
     await initCheckoutButton();
 });
 
@@ -94,7 +99,7 @@ async function fetchCondominiumBillingStatus(force = false) {
 }
 
 async function fetchMercadoPagoConfig() {
-    const response = await fetch('/api/mercadopago/config');
+    const response = await fetch('/api/mercadopago/config', { cache: 'no-store' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload.publicKey) {
 throw new Error(payload.error || 'Mercado Pago nao configurado para este ambiente.');
@@ -252,6 +257,7 @@ showPaymentFeedback('info', 'Criando seu pagamento no Mercado Pago...');
 
                         sessionStorage.setItem('lastPendingPaymentId', String(preference.paymentId || pendingPayment.id || ''));
                         sessionStorage.setItem('lastMercadoPagoPreferenceId', String(preference.preferenceId || ''));
+                        sessionStorage.setItem('lastMercadoPagoExternalReference', String(preference.externalReference || ''));
 return preference.preferenceId;
                     } catch (error) {
 clearCheckoutPendingState();
@@ -427,6 +433,111 @@ function persistApprovedPlan(paymentOrBilling) {
     sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
 }
 
+async function reconcileStoredMercadoPagoPayment() {
+    let externalReference = '';
+    try {
+        externalReference = String(sessionStorage.getItem('lastMercadoPagoExternalReference') || '').trim();
+    } catch (_) {}
+
+    if (!externalReference) return 'none';
+
+    try {
+        showPaymentFeedback('info', 'Verificando se existe um pagamento anterior em processamento...');
+        const response = await fetch('/api/mercadopago/confirm', {
+            method: 'POST',
+            cache: 'no-store',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            },
+            body: JSON.stringify({
+                external_reference: externalReference,
+                status: 'pending'
+            })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || 'Falha ao revalidar pagamento anterior.');
+
+        if (!payload.mercadoPagoFound && !payload.mercadoPagoPaymentId) {
+            clearStoredMercadoPagoAttempt();
+            showPaymentFeedback('info', 'A tentativa anterior não chegou a gerar uma cobrança no Mercado Pago. Você pode tentar novamente.');
+            return 'failure';
+        }
+
+        const status = normalizeMercadoPagoReturnStatus(payload.mercadoPagoStatus || payload.status);
+        if (status === 'approved') {
+            clearStoredMercadoPagoAttempt();
+            persistApprovedPlan(payload.payment || {});
+            showPaymentFeedback('success', 'Pagamento aprovado. Liberando seu acesso...');
+            window.setTimeout(() => window.location.replace('index.html'), 900);
+            return 'approved';
+        }
+
+        if (status === 'pending') {
+            renderPendingMercadoPagoAttempt(payload.mercadoPagoPaymentId);
+            return 'pending';
+        }
+
+        clearStoredMercadoPagoAttempt();
+        showPaymentFeedback('info', 'O pagamento anterior foi encerrado. Você pode iniciar uma nova tentativa.');
+        return 'failure';
+    } catch (error) {
+        console.warn('[Checkout] Não foi possível reconciliar o pagamento anterior:', error);
+        return 'none';
+    }
+}
+
+function normalizeMercadoPagoReturnStatus(status) {
+    const normalized = String(status || '').trim().toLowerCase();
+    if (['approved', 'aprovado'].includes(normalized)) return 'approved';
+    if (['pending', 'in_process', 'in_mediation', 'authorized', 'pendente', 'em_processo'].includes(normalized)) return 'pending';
+    return 'failure';
+}
+
+function clearStoredMercadoPagoAttempt() {
+    try {
+        sessionStorage.removeItem('lastPendingPaymentId');
+        sessionStorage.removeItem('lastMercadoPagoPreferenceId');
+        sessionStorage.removeItem('lastMercadoPagoExternalReference');
+        sessionStorage.removeItem('condomitMercadoPagoFlowStartedAt');
+    } catch (_) {}
+}
+
+function renderPendingMercadoPagoAttempt(mercadoPagoPaymentId) {
+    const idText = mercadoPagoPaymentId ? ` #${mercadoPagoPaymentId}` : '';
+    showPaymentFeedback(
+        'info',
+        `Seu pagamento Mercado Pago${idText} ainda está em processamento. Para evitar cobrança duplicada, aguarde a confirmação antes de criar outro pagamento.`
+    );
+
+    const container = document.getElementById('payment-brick_container');
+    if (!container) return;
+    container.innerHTML = `
+        <div class="payment-placeholder payment-pending-lock">
+            <i class="fas fa-clock"></i>
+            <p>Existe um pagamento em processamento para este condomínio.</p>
+            <button type="button" id="recheckMercadoPagoPayment" class="mercado-pago-direct-button">
+                <i class="fas fa-rotate"></i>
+                Atualizar status
+            </button>
+        </div>
+    `;
+
+    document.getElementById('recheckMercadoPagoPayment')?.addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
+        const state = await reconcileStoredMercadoPagoPayment();
+        if (state === 'failure' || state === 'none') {
+            await initCheckoutButton();
+        }
+        if (state === 'pending') {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-rotate"></i> Atualizar status';
+        }
+    });
+}
+
 function renderPaymentPlaceholder(message) {
     const container = document.getElementById('payment-brick_container');
     if (!container) return;
@@ -526,6 +637,7 @@ async function logoutCheckoutUser() {
         sessionStorage.removeItem('selectedPlanId');
         sessionStorage.removeItem('lastPendingPaymentId');
         sessionStorage.removeItem('lastMercadoPagoPreferenceId');
+        sessionStorage.removeItem('lastMercadoPagoExternalReference');
         sessionStorage.removeItem('condomitMercadoPagoFlowStartedAt');
     } catch (_) {}
 
@@ -604,8 +716,12 @@ function renderDirectMercadoPagoButton(message) {
             const preference = await createPaymentPreference(selectedPlan, pendingPayment, traceId);
             sessionStorage.setItem('lastPendingPaymentId', String(preference.paymentId || pendingPayment.id || ''));
             sessionStorage.setItem('lastMercadoPagoPreferenceId', String(preference.preferenceId || ''));
+            sessionStorage.setItem('lastMercadoPagoExternalReference', String(preference.externalReference || ''));
 
-            const checkoutUrl = preference.initPoint || preference.sandboxInitPoint;
+            const isTestEnvironment = String(mercadoPagoConfig?.environment || '').toLowerCase() === 'test';
+            const checkoutUrl = isTestEnvironment
+                ? (preference.sandboxInitPoint || preference.initPoint)
+                : (preference.initPoint || preference.sandboxInitPoint);
             if (!checkoutUrl) {
                 throw new Error('O Mercado Pago não retornou a URL do checkout.');
             }
