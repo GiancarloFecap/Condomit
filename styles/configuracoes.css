@@ -1415,3 +1415,278 @@ html[data-theme="dark"] .settings-document-section {
     flex: 0 0 auto;
 }
 .profile-card-actions .btn-logout i { font-size: 0.88rem; }
+
+
+/* ============================================================
+   044 - Contenção de texto + contraste consistente no modo escuro
+============================================================ */
+.config-content,
+.config-grid,
+.config-card,
+.config-card *,
+.profile-preview,
+.profile-info,
+.profile-details,
+.detail-item,
+.config-card .form-group,
+.theme-buttons,
+.font-buttons,
+.language-select-wrap {
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.config-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+.config-card {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
+.config-card h3,
+.profile-name {
+    color: var(--text-primary);
+}
+
+.profile-info,
+.profile-details {
+    flex: 1 1 auto;
+    max-width: 100%;
+}
+
+.profile-name,
+.profile-type,
+.profile-email,
+.detail-item span,
+.config-card .form-group span,
+.config-card p,
+.config-card label,
+.settings-content-card,
+.settings-content-card p,
+.settings-content-card li {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+}
+
+.detail-item,
+.config-card .form-group {
+    width: 100%;
+    max-width: 100%;
+}
+
+.detail-item span,
+.config-card .form-group span {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.config-card .form-group i:first-of-type,
+.config-card .form-group i:last-of-type,
+.detail-item i {
+    flex: 0 0 auto;
+}
+
+.theme-buttons,
+.font-buttons,
+.profile-card-actions,
+.dam-footer {
+    flex-wrap: wrap;
+}
+
+.theme-btn,
+.font-btn,
+.btn-edit-profile,
+.btn-logout,
+.btn-delete-account,
+.dam-btn {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Cores que antes estavam fixas para o tema claro agora acompanham o tema. */
+.config-card .form-group,
+.detail-item,
+.dam-confirm-input label,
+.theme-selector label,
+.font-size-selector label,
+.language-selector label {
+    color: var(--text-secondary);
+}
+
+.profile-type,
+.profile-email,
+.config-footer {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .config-content {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .config-card,
+[data-theme="dark"] .delete-account-box,
+[data-theme="dark"] .reservas-modal-card,
+[data-theme="dark"] .settings-content-card {
+    background: #111827 !important;
+    color: #F8FAFC !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] .config-card h1,
+[data-theme="dark"] .config-card h2,
+[data-theme="dark"] .config-card h3,
+[data-theme="dark"] .config-card h4,
+[data-theme="dark"] .config-card strong,
+[data-theme="dark"] .profile-name,
+[data-theme="dark"] .detail-item,
+[data-theme="dark"] .config-card .form-group,
+[data-theme="dark"] .theme-selector label,
+[data-theme="dark"] .font-size-selector label,
+[data-theme="dark"] .language-selector label,
+[data-theme="dark"] .dam-confirm-input label,
+[data-theme="dark"] .settings-content-card h1,
+[data-theme="dark"] .settings-content-card h2,
+[data-theme="dark"] .settings-content-card h3,
+[data-theme="dark"] .settings-content-card h4 {
+    color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .profile-type,
+[data-theme="dark"] .profile-email,
+[data-theme="dark"] .config-card p,
+[data-theme="dark"] .config-card small,
+[data-theme="dark"] .config-footer,
+[data-theme="dark"] .reservas-modal-header p,
+[data-theme="dark"] .settings-content-card p,
+[data-theme="dark"] .settings-content-card li {
+    color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .theme-btn,
+[data-theme="dark"] .font-btn,
+[data-theme="dark"] .btn-edit-profile,
+[data-theme="dark"] .language-select,
+[data-theme="dark"] .language-select-wrap {
+    background: #182235 !important;
+    color: #F8FAFC !important;
+    border-color: #475569 !important;
+}
+
+[data-theme="dark"] .language-select option {
+    background: #111827;
+    color: #F8FAFC;
+}
+
+[data-theme="dark"] .dam-warning-list {
+    background: #3F1218;
+    border-color: rgba(248, 113, 113, .35);
+}
+
+[data-theme="dark"] .dam-warning-list li {
+    color: #FCA5A5;
+}
+
+@media (max-width: 640px) {
+    .config-content {
+        padding: 16px 12px !important;
+    }
+
+    .config-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 14px;
+    }
+
+    .config-card {
+        padding: 18px 16px;
+    }
+
+    .profile-preview {
+        align-items: flex-start;
+    }
+
+    .profile-avatar {
+        width: 58px;
+        height: 58px;
+        flex-basis: 58px;
+    }
+}
+
+/* 044.1 - Contraste dos modais internos de Configurações */
+.settings-document-intro,
+.settings-company-hero,
+.settings-contact-card,
+.settings-choice-card,
+.settings-provider-card,
+.settings-provider-card > div:nth-child(2),
+.settings-provider-form,
+.settings-provider-form label,
+.two-factor-settings-copy {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.settings-document-intro span,
+.settings-document-section p,
+.settings-document-section li,
+.settings-company-hero p,
+.settings-contact-card span,
+.settings-contact-card strong,
+.settings-contact-note,
+.settings-choice-card strong,
+.settings-choice-card span,
+.settings-provider-card strong,
+.settings-provider-card span,
+.settings-provider-card small,
+.settings-provider-form label,
+.two-factor-settings-copy p,
+.two-factor-settings-copy h4 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+html[data-theme="dark"] .settings-document-intro {
+    background: #172554;
+    color: #DBEAFE;
+}
+
+html[data-theme="dark"] .settings-document-intro span,
+html[data-theme="dark"] .settings-document-section p,
+html[data-theme="dark"] .settings-document-section li,
+html[data-theme="dark"] .settings-company-hero p,
+html[data-theme="dark"] .settings-contact-card span,
+html[data-theme="dark"] .settings-contact-note,
+html[data-theme="dark"] .settings-choice-card span,
+html[data-theme="dark"] .settings-provider-card span,
+html[data-theme="dark"] .settings-provider-card small,
+html[data-theme="dark"] .settings-provider-form label,
+html[data-theme="dark"] .two-factor-settings-copy p,
+html[data-theme="dark"] .two-factor-confirmation-sent p {
+    color: #CBD5E1 !important;
+}
+
+html[data-theme="dark"] .settings-company-hero {
+    background: linear-gradient(135deg, #172554, #134E4A);
+    border-color: #334155;
+}
+
+html[data-theme="dark"] .settings-provider-form input,
+html[data-theme="dark"] .settings-provider-form select {
+    color: #F8FAFC !important;
+}
+
+html[data-theme="dark"] .two-factor-settings-note {
+    background: #182235;
+    color: #CBD5E1;
+}
+
+html[data-theme="dark"] .two-factor-settings-icon {
+    background: #172554;
+    color: #93C5FD;
+}

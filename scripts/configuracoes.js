@@ -165,6 +165,55 @@ async function restorePersistentLogin() {
 function clearLoginPersistent() {
     try { sessionStorage.removeItem('condominiumUser'); } catch(_) {}
     try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
+    try { window.clearPersistedCondomitUser?.(); } catch(_) {}
+}
+
+async function purgeDeletedAccountSession() {
+    // Uma conta excluída nunca deve continuar autenticada apenas porque o JWT
+    // ainda está armazenado no navegador. Primeiro tentamos encerrar a sessão
+    // local no Supabase; em seguida removemos manualmente qualquer cópia de
+    // sessão/cache e gravamos a mesma trava usada pelo logout explícito.
+    try {
+        if (window.supabase?.auth?.signOut) {
+            await window.supabase.auth.signOut({ scope: 'local' });
+        }
+    } catch (error) {
+        console.warn('[DeleteAccount] Não foi possível finalizar a sessão pelo SDK; limpando storage manualmente.', error?.message || error);
+    }
+
+    try { window.clearPersistedCondomitUser?.(); } catch (_) {}
+
+    try {
+        const keys = [];
+        for (let i = 0; i < sessionStorage.length; i += 1) {
+            const key = sessionStorage.key(i);
+            if (key) keys.push(key);
+        }
+        keys.forEach((key) => sessionStorage.removeItem(key));
+    } catch (_) {}
+
+    try {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i += 1) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            const lower = key.toLowerCase();
+            if (
+                key.startsWith('sb-') ||
+                key.startsWith('condomit') ||
+                key.startsWith('condominium') ||
+                /^sb-.*-auth-token$/i.test(key) ||
+                lower.includes('supabase')
+            ) {
+                keys.push(key);
+            }
+        }
+        keys.forEach((key) => localStorage.removeItem(key));
+        // Esta chave fica de propósito após a limpeza. session-resume.js a lê
+        // antes de tentar reaproveitar qualquer sessão persistida.
+        localStorage.setItem('authExplicitLogoutAt', String(Date.now()));
+        localStorage.setItem('accountDeletedAt', String(Date.now()));
+    } catch (_) {}
 }
 
 function updateUIWithUserData(currentUser) {
@@ -1648,16 +1697,15 @@ async function executeDeleteAccount() {
         }
 
         clearLoginPersistent();
-        try { sessionStorage.removeItem('selectedPlan'); } catch(_) {}
-        try { sessionStorage.removeItem('condominiumUser'); } catch(_) {}
-        try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
-        try { localStorage.removeItem('app-theme'); } catch(_) {}
-        try { localStorage.removeItem('app-font-size'); } catch(_) {}
-        try { localStorage.removeItem('app-language'); } catch(_) {}
+        await purgeDeletedAccountSession();
 
         msg.style.color = '#16a34a';
-        msg.textContent = 'Conta excluída com sucesso. Redirecionando...';
-        setTimeout(() => { window.location.href = '../inicio.html'; }, 900);
+        msg.textContent = 'Conta excluída com sucesso. Sua sessão foi encerrada.';
+        setTimeout(() => {
+            // Vai diretamente ao login com uma marca explícita de exclusão.
+            // entrar.js impede a restauração automática de uma sessão antiga.
+            window.location.replace('entrar.html?deleted=1');
+        }, 650);
     } catch (err) {
         console.error('[DeleteAccount] Erro:', err);
         btn.classList.remove('loading');

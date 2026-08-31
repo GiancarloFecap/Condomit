@@ -1325,7 +1325,7 @@ async function reactivateSoftDeletedAuthUser({ uid, email }) {
 
 async function deleteAuthAdminUserById(uid) {
   if (!uid) return { deleted: false, reason: 'missing-uid' };
-  const deleteResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(uid)}`, {
+  const deleteResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(uid)}?should_soft_delete=false`, {
     method: 'DELETE',
     headers: {
       apikey: SUPABASE_SERVICE_ROLE_KEY,

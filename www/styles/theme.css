@@ -1047,3 +1047,34 @@ html[data-theme="dark"] .quick-actions-grid {
     flex: 0 0 auto !important;
     flex-shrink: 0 !important;
 }
+
+
+/* ============================================================
+   044 - Reforço de contraste para conteúdo no modo escuro
+   Evita textos herdados do tema claro (#111/#1f2937/#374151)
+   em superfícies escuras das telas autenticadas.
+============================================================ */
+html[data-theme="dark"] .main-content {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .main-content :where(
+    .page-title,
+    .section-title,
+    .card-title,
+    .modal-title,
+    .profile-name
+) {
+    color: var(--text-primary) !important;
+}
+
+html[data-theme="dark"] .main-content :where(
+    .subtitle,
+    .description,
+    .helper-text,
+    .muted,
+    .profile-email,
+    .profile-type
+) {
+    color: var(--text-secondary) !important;
+}

@@ -1,5 +1,35 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    if (!sessionStorage.getItem('condominiumUser') && typeof window.resumeCondomitSession === 'function') {
+    const deletionRedirect = new URLSearchParams(window.location.search).get('deleted') === '1';
+
+    if (deletionRedirect) {
+        // A API já removeu a conta. Esta limpeza adicional existe para impedir
+        // que um token/cache antigo faça a tela de login restaurar a sessão.
+        try { localStorage.setItem('authExplicitLogoutAt', String(Date.now())); } catch (_) {}
+        try { window.clearPersistedCondomitUser?.(); } catch (_) {}
+        try {
+            sessionStorage.removeItem('condominiumUser');
+            sessionStorage.removeItem('sb-session');
+            sessionStorage.removeItem('sb-access-token');
+        } catch (_) {}
+        try {
+            const removeKeys = [];
+            for (let i = 0; i < localStorage.length; i += 1) {
+                const key = localStorage.key(i);
+                if (!key) continue;
+                if (key.startsWith('sb-') || key.startsWith('condomit') || key.startsWith('condominium') || /^sb-.*-auth-token$/i.test(key)) {
+                    removeKeys.push(key);
+                }
+            }
+            removeKeys.forEach((key) => localStorage.removeItem(key));
+            localStorage.setItem('authExplicitLogoutAt', String(Date.now()));
+            localStorage.setItem('accountDeletedAt', String(Date.now()));
+        } catch (_) {}
+        try {
+            if (window.supabase?.auth?.signOut) await window.supabase.auth.signOut({ scope: 'local' });
+        } catch (_) {}
+    }
+
+    if (!deletionRedirect && !sessionStorage.getItem('condominiumUser') && typeof window.resumeCondomitSession === 'function') {
         try {
             const resumed = await window.resumeCondomitSession({ redirect: true });
             if (resumed?.redirected) return;
@@ -525,84 +555,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 email
             );
 
-        if (
-            probeResult?.exists &&
-            probeResult?.deleted
-        ) {
-            setLoginSubmitting(
-                false
-            );
-
+        if (probeResult?.exists && probeResult?.deleted) {
+            setLoginSubmitting(false);
             showModal({
-                title:
-                    'Esta conta foi removida',
-
-                message:
-                    `Detectamos que o e-mail ${email} já teve uma conta cadastrada anteriormente, mas ela foi inativada.`,
-
-                type:
-                    'warning',
-
-                confirmText:
-                    'Reativar e enviar e-mail',
-
-                cancelText:
-                    'Não, voltar',
-
-                onConfirm:
-                    async () => {
-                        const emailRedirectTo =
-                            `${window.location.origin}/pages/entrar.html`;
-
-                        const reactivateResult =
-                            await tryReactivateDeletedUser(
-                                {
-                                    email,
-                                    password,
-                                    emailRedirectTo
-                                }
-                            );
-
-                        if (
-                            reactivateResult
-                                ?.data
-                                ?.reactivated ===
-                            true
-                        ) {
-                            showModal({
-                                title:
-                                    'Conta reativada!',
-
-                                message:
-                                    'A conta foi reativada. Verifique seu e-mail para recuperar o acesso.',
-
-                                type:
-                                    'success',
-
-                                confirmText:
-                                    'Entendido'
-                            });
-
-                        } else if (
-                            reactivateResult
-                                ?.data
-                                ?.status ===
-                            'already-active'
-                        ) {
-                            showToast(
-                                'Esta conta já está ativa.',
-                                'info'
-                            );
-
-                        } else {
-                            showToast(
-                                'Não foi possível reativar a conta.',
-                                'error'
-                            );
-                        }
-                    }
+                title: 'Conta excluída',
+                message: 'Esta conta foi excluída e não pode ser acessada novamente. Para voltar a usar a Condomit, faça um novo cadastro.',
+                type: 'warning',
+                confirmText: 'Entendi'
             });
-
             return;
         }
 
