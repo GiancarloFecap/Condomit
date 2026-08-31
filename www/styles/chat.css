@@ -1588,3 +1588,9 @@ html[data-theme="dark"] .condomit-app-page .chat-textarea::placeholder {
         flex-basis: 31px;
     }
 }
+
+
+/* 048 - Azul mais leve nos chats */
+.condomit-app-page .chat-send-btn { background:#4A76D4 !important; }
+.condomit-app-page .chat-send-btn:hover { background:#365FBE !important; }
+.condomit-app-page .message.mine .message-bubble { background:#557FD6 !important; border-color:#557FD6 !important; }

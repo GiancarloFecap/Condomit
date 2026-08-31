@@ -825,3 +825,176 @@ body.condomit-app-page {
     .condomit-app-page .page-title-area { margin-bottom: 28px; }
     .condomit-app-page .page-kicker { font-size: .72rem; }
 }
+
+
+/* ============================================================
+   048 - Escolha de perfil totalmente reformulada
+   Os três cards (.type-card) permanecem com o visual já existente.
+============================================================ */
+body.condomit-app-page {
+    background: #F5F7FB !important;
+    align-items: flex-start;
+}
+.condomit-app-page .page-bg {
+    background:
+        radial-gradient(circle at 12% 0%, rgba(74,118,212,.10), transparent 30%),
+        radial-gradient(circle at 88% 10%, rgba(15,127,126,.07), transparent 28%),
+        linear-gradient(180deg, #FAFBFE 0%, #F1F5FA 100%) !important;
+}
+.condomit-app-page .page-bg-overlay,
+.condomit-app-page .page-bg-glow,
+.condomit-app-page .bg-corner { display: none !important; }
+.condomit-app-page .type-selection-page {
+    max-width: 1180px !important;
+    padding: 20px 24px 48px !important;
+}
+.condomit-app-page .top-header {
+    position: relative;
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    min-height: 70px !important;
+    margin: 0 0 30px !important;
+    padding: 8px 4px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+}
+.condomit-app-page .btn-back {
+    justify-self: start;
+    min-height: 42px;
+    padding: 0 15px !important;
+    border-radius: 12px !important;
+    border: 1px solid #D8E1EE !important;
+    background: rgba(255,255,255,.88) !important;
+    color: #365FBE !important;
+    box-shadow: 0 4px 12px rgba(31,55,99,.05) !important;
+}
+.condomit-app-page .btn-back:hover {
+    transform: translateX(-2px);
+    background: #fff !important;
+    border-color: #BFCDE3 !important;
+}
+.condomit-app-page .brand-header {
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.condomit-app-page .brand-mark-shell {
+    width: 74px;
+    height: 74px;
+    display: grid;
+    place-items: center;
+    border-radius: 22px;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F2;
+    box-shadow: 0 10px 28px rgba(31,55,99,.08);
+}
+.condomit-app-page .brand-logo-img {
+    display: block !important;
+    width: 58px !important;
+    height: 58px !important;
+    max-width: 58px !important;
+    max-height: 58px !important;
+    object-fit: contain !important;
+    filter: none !important;
+}
+.condomit-app-page .brand-name { display: none !important; }
+.condomit-app-page .header-spacer { width: auto !important; }
+.condomit-app-page .page-title-area {
+    max-width: 720px !important;
+    margin: 0 auto 32px !important;
+    padding: 0 18px;
+}
+.condomit-app-page .page-kicker {
+    min-height: 30px;
+    padding: 0 11px;
+    margin-bottom: 13px;
+    border: 1px solid #D9E3F3 !important;
+    border-radius: 999px;
+    background: #F1F5FC !important;
+    color: #4A6CB2 !important;
+    font-size: .76rem;
+    font-weight: 750;
+}
+.condomit-app-page .page-title {
+    margin: 0 0 12px !important;
+    color: #17243B !important;
+    font-size: clamp(2.15rem, 4.7vw, 3.05rem) !important;
+    line-height: 1.08 !important;
+    letter-spacing: -.04em !important;
+    text-shadow: none !important;
+}
+.condomit-app-page .subtitle {
+    max-width: 660px;
+    margin: 0 auto !important;
+    color: #68788E !important;
+    font-size: 1.03rem !important;
+    line-height: 1.65 !important;
+    text-shadow: none !important;
+}
+.condomit-app-page .type-grid {
+    margin: 0 auto 28px !important;
+}
+/* Não alterar .type-card, círculos, títulos, divisores e botões dos três perfis. */
+.condomit-app-page .profile-help {
+    max-width: 760px;
+    margin: 0 auto;
+    padding-top: 4px;
+}
+.condomit-app-page .profile-help-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin-bottom: 10px;
+    color: #7A8798;
+    font-size: .78rem;
+    font-weight: 750;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+.condomit-app-page .trust-banner {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 15px 18px !important;
+    border: 1px solid #E0E7F0 !important;
+    border-radius: 16px !important;
+    background: rgba(255,255,255,.78) !important;
+    box-shadow: 0 6px 18px rgba(31,55,99,.045) !important;
+    backdrop-filter: blur(10px);
+}
+.condomit-app-page .trust-icon {
+    width: 46px !important;
+    height: 46px !important;
+    background: #EDF3FD !important;
+}
+.condomit-app-page .trust-icon svg { width: 28px; height: 28px; }
+.condomit-app-page .trust-icon svg path:first-child { stroke:#4A76D4 !important; fill:#EDF3FD !important; }
+.condomit-app-page .trust-icon svg path:last-child { stroke:#4A76D4 !important; }
+.condomit-app-page .trust-text h4 {
+    margin-bottom: 4px !important;
+    color: #24354D !important;
+    font-size: 1.02rem !important;
+}
+.condomit-app-page .trust-text p {
+    color: #6A798E !important;
+    font-size: .92rem !important;
+}
+@media (max-width: 600px) {
+    .condomit-app-page .type-selection-page { padding: 12px 12px 34px !important; }
+    .condomit-app-page .top-header {
+        grid-template-columns: auto 1fr auto !important;
+        margin-bottom: 22px !important;
+    }
+    .condomit-app-page .brand-header { grid-column: 2; }
+    .condomit-app-page .brand-mark-shell { width: 62px; height: 62px; border-radius: 18px; }
+    .condomit-app-page .brand-logo-img { width: 49px !important; height: 49px !important; max-width:49px !important; max-height:49px !important; }
+    .condomit-app-page .page-title-area { padding: 0 6px; margin-bottom: 26px !important; }
+    .condomit-app-page .page-title { font-size: 2rem !important; }
+    .condomit-app-page .subtitle { font-size: .94rem !important; }
+    .condomit-app-page .trust-banner { flex-direction: row !important; text-align: left !important; gap: 12px !important; }
+}

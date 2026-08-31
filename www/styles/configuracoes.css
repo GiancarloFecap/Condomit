@@ -1795,3 +1795,116 @@ html[data-theme="dark"] .setting-icon,
 html[data-theme="dark"] .profile-details i {
     color: #8CAAF0 !important;
 }
+
+
+/* ============================================================
+   048 - Perfil do usuário: mais espaço e ações alinhadas
+============================================================ */
+@media (min-width: 980px) {
+    .config-grid .profile-card {
+        grid-column: span 2;
+        min-width: 0;
+    }
+    .profile-card .profile-details {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 14px;
+    }
+    .profile-card .detail-item { margin-bottom: 0; }
+}
+.profile-card {
+    min-width: 0;
+}
+.profile-card .profile-info,
+.profile-card .profile-details,
+.profile-card .detail-item,
+.profile-card .detail-item span {
+    min-width: 0;
+}
+.profile-card .profile-name,
+.profile-card .profile-email,
+.profile-card .detail-item span {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.profile-card-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 12px !important;
+    margin-top: 20px;
+}
+.profile-card-actions > button {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px !important;
+    margin: 0 !important;
+    padding: 11px 14px !important;
+    border-radius: 11px !important;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.2;
+}
+.btn-edit-profile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #C9D6EA !important;
+    color: #365FBE !important;
+    background: #F7F9FD !important;
+}
+.btn-edit-profile:hover {
+    border-color: #91A9DF !important;
+    color: #2E56B0 !important;
+    background: #EEF3FD !important;
+}
+.btn-logout,
+.btn-delete-account {
+    min-height: 48px !important;
+    padding: 11px 14px !important;
+    border-radius: 11px !important;
+    font-size: .93rem !important;
+    font-weight: 700 !important;
+}
+.btn-logout {
+    border: 1.5px solid #E4A0A0 !important;
+    background: #FFF7F7 !important;
+    color: #C92B2B !important;
+    box-shadow: none !important;
+}
+.btn-logout:hover {
+    border-color: #D97777 !important;
+    background: #FDECEC !important;
+    color: #B42323 !important;
+}
+.btn-delete-account {
+    border: 1.5px solid #D92D2D !important;
+    background: #D92D2D !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+.btn-delete-account:hover {
+    border-color: #BB2424 !important;
+    background: #BB2424 !important;
+    box-shadow: 0 6px 14px rgba(187,36,36,.18) !important;
+}
+.config-card .form-group i:first-of-type,
+.detail-item i {
+    color: #4A76D4 !important;
+}
+html[data-theme="dark"] .btn-edit-profile {
+    background: #18243A !important;
+    border-color: #3D5375 !important;
+    color: #9DBAF5 !important;
+}
+html[data-theme="dark"] .btn-logout {
+    background: rgba(248,113,113,.08) !important;
+    border-color: rgba(248,113,113,.35) !important;
+    color: #FCA5A5 !important;
+}
+@media (max-width: 760px) {
+    .profile-card-actions { grid-template-columns: 1fr !important; }
+    .profile-card .profile-details { display: block; }
+    .profile-card .detail-item { margin-bottom: 10px; }
+}

@@ -118,3 +118,79 @@
 .ai-new-chat:hover { border-color: #2252BD !important; color: #2252BD !important; background: #F1F5FF !important; }
 .message.user .message-bubble { background: #2252BD !important; border-color: #2252BD !important; }
 .ai-action-link { color: #2252BD !important; border-color: #C9D7F5 !important; background: #F1F5FF !important; }
+
+
+/* ============================================================
+   048 - Composer da IA no mesmo padrão compacto dos chats
+============================================================ */
+.condomit-app-page .chat-input-container {
+    margin: 0 30px 14px !important;
+    padding: 8px 10px 9px !important;
+    border: 1px solid #E1E7EF !important;
+    border-radius: 14px !important;
+    background: #FFFFFF !important;
+    box-shadow: 0 3px 12px rgba(15,23,42,.04) !important;
+}
+.condomit-app-page .input-wrapper {
+    min-height: 42px !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 4px 6px !important;
+    border: 1px solid #DCE3EC !important;
+    border-radius: 10px !important;
+    background: #F4F6F9 !important;
+    box-shadow: none !important;
+}
+.condomit-app-page .input-wrapper:focus-within {
+    background: #F8FAFC !important;
+    border-color: #9EB0C7 !important;
+    box-shadow: 0 0 0 3px rgba(74,118,212,.08) !important;
+}
+.condomit-app-page #chatInput {
+    min-height: 28px !important;
+    height: 28px;
+    max-height: 92px !important;
+    padding: 4px 8px !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #27364A !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
+    text-align: left !important;
+    overflow-y: auto;
+}
+.condomit-app-page #chatInput:placeholder-shown { text-align: left !important; }
+.condomit-app-page #chatInput::placeholder { color:#8995A6 !important; }
+.condomit-app-page .char-count { display: none !important; }
+.condomit-app-page .input-actions { gap: 4px !important; }
+.condomit-app-page .send-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    flex: 0 0 32px;
+    border-radius: 8px !important;
+    background: #4A76D4 !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+}
+.condomit-app-page .send-btn:hover {
+    background: #365FBE !important;
+    box-shadow: 0 4px 10px rgba(54,95,190,.16) !important;
+}
+.condomit-app-page .disclaimer {
+    margin: 7px 4px 0 !important;
+}
+html[data-theme="dark"] .condomit-app-page .chat-input-container { background:#101826 !important; border-color:#29374A !important; }
+html[data-theme="dark"] .condomit-app-page .input-wrapper,
+html[data-theme="dark"] .condomit-app-page .input-wrapper:focus-within { background:#303640 !important; border-color:#414A58 !important; }
+html[data-theme="dark"] .condomit-app-page #chatInput { color:#EEF2F7 !important; }
+html[data-theme="dark"] .condomit-app-page #chatInput::placeholder { color:#B2BAC6 !important; }
+@media (max-width:720px) {
+    .condomit-app-page .chat-input-container { margin:0 14px 10px !important; padding:7px 8px 8px !important; }
+    .condomit-app-page .input-wrapper { min-height:40px !important; }
+    .condomit-app-page #chatInput { min-height:28px !important; height:28px; padding:4px 7px !important; }
+    .condomit-app-page .send-btn { width:31px !important; height:31px !important; min-height:31px !important; flex-basis:31px; }
+}

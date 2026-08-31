@@ -986,3 +986,56 @@ html[data-theme="dark"] .condomit-app-page {
 .condomit-app-page .quick-action-btn i,
 .condomit-app-page .status-item i,
 .condomit-app-page .detail-item i { color: #2252BD; }
+
+
+/* ============================================================
+   048 - Paleta Condomit mais clara + navegação com maior contraste
+============================================================ */
+.condomit-app-page {
+    --ux-primary: #4A76D4;
+    --ux-primary-strong: #365FBE;
+    --ux-primary-soft: rgba(74,118,212,.11);
+    --ux-accent: #0F7F7E;
+    --ux-surface-soft: #F8FAFE;
+    --ux-surface-muted: #F0F4FA;
+    --ux-border: #E2E8F2;
+    --ux-border-strong: #D2DDEA;
+}
+html[data-theme="dark"] .condomit-app-page {
+    --ux-primary: #8CAFF6;
+    --ux-primary-strong: #7298E8;
+    --ux-primary-soft: rgba(140,175,246,.15);
+    --ux-accent: #46B9B6;
+}
+.condomit-app-page .sidebar {
+    background: linear-gradient(180deg, #416BC5 0%, #3159AA 55%, #294B91 100%) !important;
+    box-shadow: 9px 0 26px rgba(32,70,145,.12) !important;
+}
+.condomit-app-page .sidebar .nav-item.active {
+    background: #0B7777 !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 8px 18px rgba(4,88,89,.24) !important;
+}
+.condomit-app-page .sidebar .nav-item.active span,
+.condomit-app-page .sidebar .nav-item.active i { color: #FFFFFF !important; }
+.condomit-app-page .sidebar .nav-item:hover {
+    background: rgba(255,255,255,.12) !important;
+    color: #fff !important;
+}
+.condomit-app-page :where(.btn-primary,.btn-submit,.submit-btn,.save-btn,.primary-action) {
+    background: #4A76D4 !important;
+}
+.condomit-app-page :where(.btn-primary,.btn-submit,.submit-btn,.save-btn,.primary-action):hover {
+    background: #365FBE !important;
+    box-shadow: 0 8px 20px rgba(54,95,190,.16) !important;
+}
+.condomit-app-page .section-number { background: #4A76D4 !important; }
+.condomit-app-page input:focus,
+.condomit-app-page select:focus,
+.condomit-app-page textarea:focus {
+    border-color: #91A9DF !important;
+    box-shadow: 0 0 0 3px rgba(74,118,212,.10) !important;
+}
+.condomit-app-page .quick-action-btn i,
+.condomit-app-page .status-item i,
+.condomit-app-page .detail-item i { color: #4A76D4 !important; }

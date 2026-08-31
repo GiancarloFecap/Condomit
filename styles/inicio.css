@@ -1210,3 +1210,90 @@ body {
 }
 /* Mantém os três CTAs na mesma linha visual, inclusive o plano em destaque. */
 .plano-card.featured { transform: none; }
+
+
+/* ============================================================
+   048 - Header da landing: ações e idioma no estilo original
+============================================================ */
+.header-nav .btn-login {
+    color: rgba(255,255,255,.96) !important;
+    background: transparent !important;
+    border: 1px solid rgba(255,255,255,.38) !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    box-shadow: none !important;
+    font-weight: 600 !important;
+}
+.header-nav .btn-login:hover {
+    color: #fff !important;
+    background: rgba(255,255,255,.10) !important;
+    border-color: rgba(255,255,255,.58) !important;
+}
+.header-nav .btn-signup {
+    color: #fff !important;
+    background: #496BDF !important;
+    border: 1px solid #496BDF !important;
+    border-radius: 8px !important;
+    padding: 8px 18px !important;
+    box-shadow: none !important;
+    font-weight: 650 !important;
+}
+.header-nav .btn-signup:hover {
+    background: #3B5FD1 !important;
+    border-color: #3B5FD1 !important;
+}
+.landing-language-switcher {
+    box-sizing: border-box;
+    height: 34px !important;
+    min-height: 34px !important;
+    display: grid !important;
+    grid-template-columns: 23px minmax(70px, auto) 18px !important;
+    align-items: center !important;
+    padding: 0 6px !important;
+    border: 1px solid rgba(255,255,255,.27) !important;
+    border-radius: 8px !important;
+    background: rgba(21,45,122,.38) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(8px);
+    transform: none !important;
+}
+.landing-language-switcher:hover,
+.landing-language-switcher:focus-within {
+    background: rgba(21,45,122,.52) !important;
+    border-color: rgba(255,255,255,.42) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+.landing-language-switcher > .fa-globe,
+.landing-language-arrow {
+    color: rgba(255,255,255,.92) !important;
+}
+.landing-language-switcher > .fa-globe {
+    font-size: 11px !important;
+    text-align: center !important;
+}
+#landing-language-select {
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 3px !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    font-size: 11.5px !important;
+    font-weight: 650 !important;
+    line-height: 32px !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    vertical-align: middle !important;
+}
+#landing-language-select option { color:#1f2937 !important; background:#fff !important; }
+@media (max-width: 768px) {
+    .landing-language-switcher {
+        height: 34px !important;
+        grid-template-columns: 21px 62px 17px !important;
+        padding-inline: 5px !important;
+    }
+    #landing-language-select { width: 62px !important; font-size: 11px !important; }
+}
