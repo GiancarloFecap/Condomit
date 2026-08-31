@@ -53,6 +53,8 @@
 .ai-message-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:9px; }
 .ai-action-link { text-decoration:none; border:1px solid #bfdbfe; color:#1e40af; background:#eff6ff; min-height:34px; padding:0 11px; border-radius:10px; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:750; }
 .ai-action-link:hover { background:#dbeafe; }
+.ai-action-button { font: inherit; cursor: pointer; }
+.ai-action-button:disabled { opacity: .65; cursor: wait; }
 .typing-indicator { display:flex; align-items:center; gap:5px; min-height:18px; }
 .typing-indicator span { width:7px; height:7px; border-radius:50%; background:#94a3b8; animation:aiTyping 1s infinite ease-in-out; }
 .typing-indicator span:nth-child(2) { animation-delay:.14s; }

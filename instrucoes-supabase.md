@@ -75,3 +75,26 @@ https://SEU-DOMINIO/pages/email-confirmado.html
 ```
 
 No desenvolvimento, adicione a mesma rota com a origem local usada pelo projeto.
+
+## Atualização 0.42 — troca de condomínio, código pela IA e exclusão
+
+Execute depois da migration 029:
+
+```text
+030_condominium_switch_ai_access_delete_fixes.sql
+```
+
+Essa migration corrige o tipo de `apartment` na troca de condomínio, adiciona a RPC segura `condomit_get_condominium_access_code_status` e normaliza a exclusão do vínculo `user_condominiums -> users`.
+
+Verificação rápida:
+
+```sql
+select routine_name
+from information_schema.routines
+where routine_schema = 'public'
+  and routine_name in (
+    'condomit_join_condominium_secure',
+    'condomit_change_my_condominium',
+    'condomit_get_condominium_access_code_status'
+  );
+```

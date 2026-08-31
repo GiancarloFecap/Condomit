@@ -136,6 +136,40 @@
         const isPorter = role === 'porteiro';
         const isSindico = role === 'sindico';
 
+        // Código de acesso é informação administrativa exclusiva do síndico.
+        // Moradores e porteiros não recebem o código nem instruções para gerenciá-lo.
+        const asksAccessCode = includesAny(q, [
+            'codigo de acesso', 'chave de acesso', 'codigo do condominio',
+            'codigo do condomínio', 'meu codigo', 'meu código'
+        ]);
+        if (asksAccessCode && !isSindico) {
+            return {
+                text: 'O código de acesso do condomínio é uma informação administrativa exclusiva do síndico. Entre em contato com o síndico do seu condomínio para receber as orientações necessárias.',
+                actions: []
+            };
+        }
+
+        if (isSindico && asksAccessCode) {
+            const asksHow = includesAny(q, [
+                'como gerar', 'como criar', 'onde gerar', 'onde criar', 'onde fica',
+                'como faco', 'como faço', 'como consigo', 'onde encontro'
+            ]);
+            const asksGenerateNow = includesAny(q, [
+                'gerar codigo de acesso', 'gerar código de acesso',
+                'criar codigo de acesso', 'criar código de acesso',
+                'gere um codigo de acesso', 'gere um código de acesso'
+            ]) && !asksHow;
+
+            if (asksGenerateNow) return await generateAccessCodeFromAi();
+            if (asksHow) {
+                return {
+                    text: 'Como síndico, você pode gerar o código em Configurações → Condomínio → Gerar código de acesso. O novo código revoga automaticamente o anterior. Se preferir, posso gerar um código agora pelo próprio chat.',
+                    actions: [{ label: 'Gerar código de acesso', command: 'generate-access-code', icon: 'fa-key' }]
+                };
+            }
+            return await answerCurrentAccessCode();
+        }
+
         // 027 - Copiloto do síndico: responde com dados reais do condomínio.
         if (isSindico && includesAny(q, ['resumo do condominio', 'resumo do condomínio', 'painel', 'indicadores', 'como esta o condominio', 'como está o condomínio'])) {
             const summary = await buildManagementSummary();
@@ -267,6 +301,155 @@
         return String(condo.cep || condo.condominium_id || '').replace(/\D/g, '');
     }
 
+    function getAccessCodeCacheKey(cep) {
+        return `condomitAccessCode:${String(cep || '').replace(/\D/g, '')}`;
+    }
+
+    function readCachedAccessCode(cep) {
+        try {
+            const raw = sessionStorage.getItem(getAccessCodeCacheKey(cep));
+            if (!raw) return null;
+            const cached = JSON.parse(raw);
+            if (!cached?.code) return null;
+            if (cached.expiresAt) {
+                const expiry = new Date(cached.expiresAt);
+                if (!Number.isNaN(expiry.getTime()) && expiry <= new Date()) {
+                    sessionStorage.removeItem(getAccessCodeCacheKey(cep));
+                    return null;
+                }
+            }
+            return cached;
+        } catch (_) { return null; }
+    }
+
+    async function answerCurrentAccessCode() {
+        const cep = await getAiCep();
+        if (!cep) {
+            return { text: 'Não consegui identificar o condomínio vinculado à sua conta de síndico.', actions: [] };
+        }
+
+        const cached = readCachedAccessCode(cep);
+        try {
+            if (typeof window.supabaseFetch !== 'function') throw new Error('Conexão segura indisponível.');
+            const payload = await window.supabaseFetch('/rpc/condomit_get_condominium_access_code_status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_cep: cep })
+            });
+            const status = Array.isArray(payload) ? payload[0] : payload;
+            if (!status?.has_active_code) {
+                try { sessionStorage.removeItem(getAccessCodeCacheKey(cep)); } catch (_) {}
+                return {
+                    text: 'Não há nenhum código de acesso ativo vinculado ao condomínio neste momento.',
+                    actions: [{ label: 'Gerar código de acesso', command: 'generate-access-code', icon: 'fa-key' }]
+                };
+            }
+
+            // Só revela o valor em cache quando os metadados batem com o código
+            // ativo no servidor. Assim, se outro síndico gerar um novo código em
+            // outro dispositivo, um valor antigo da sessão não é exibido como válido.
+            if (cached?.code) {
+                const cachedExpiry = cached.expiresAt ? new Date(cached.expiresAt).getTime() : null;
+                const serverExpiry = status?.expires_at ? new Date(status.expires_at).getTime() : null;
+                const sameExpiry = cachedExpiry === null && serverExpiry === null
+                    ? true
+                    : (Number.isFinite(cachedExpiry) && Number.isFinite(serverExpiry) && Math.abs(cachedExpiry - serverExpiry) < 2000);
+                if (sameExpiry) {
+                    const expiry = status?.expires_at ? new Date(status.expires_at) : null;
+                    const expiryText = expiry && !Number.isNaN(expiry.getTime())
+                        ? ` Ele é válido até ${expiry.toLocaleString('pt-BR')}.`
+                        : '';
+                    return {
+                        text: `O código de acesso gerado nesta sessão é ${cached.code}.${expiryText}`,
+                        actions: [{ label: 'Gerar novo código', command: 'generate-access-code', icon: 'fa-rotate' }]
+                    };
+                }
+                try { sessionStorage.removeItem(getAccessCodeCacheKey(cep)); } catch (_) {}
+            }
+
+            const expiry = status?.expires_at ? new Date(status.expires_at) : null;
+            const expiryText = expiry && !Number.isNaN(expiry.getTime())
+                ? ` até ${expiry.toLocaleString('pt-BR')}`
+                : '';
+            return {
+                text: `Existe um código de acesso ativo${expiryText}. Por segurança, a Condomit armazena somente o hash do código e não consegue exibir novamente o valor original. Você pode gerar um novo código, que substituirá o atual.`,
+                actions: [{ label: 'Gerar novo código', command: 'generate-access-code', icon: 'fa-rotate' }]
+            };
+        } catch (error) {
+            // Se a consulta de status estiver temporariamente indisponível, ainda
+            // podemos mostrar somente um código que foi gerado nesta mesma sessão.
+            if (cached?.code) {
+                return {
+                    text: `O último código gerado nesta sessão foi ${cached.code}. Não consegui confirmar o status dele no servidor agora.`,
+                    actions: [{ label: 'Gerar novo código', command: 'generate-access-code', icon: 'fa-rotate' }]
+                };
+            }
+            return {
+                text: error?.message || 'Não consegui consultar o código de acesso agora.',
+                actions: [{ label: 'Abrir Configurações', href: 'configuracoes.html', icon: 'fa-gear' }]
+            };
+        }
+    }
+
+    async function generateAccessCodeFromAi() {
+        if (normalizeRole(state.user) !== 'sindico') {
+            return { text: 'Somente o síndico pode gerar o código de acesso do condomínio.', actions: [] };
+        }
+        try {
+            if (typeof window.supabaseFetch !== 'function') throw new Error('Conexão segura com o Supabase indisponível.');
+            const cep = await getAiCep();
+            if (!cep) throw new Error('Não foi possível identificar o condomínio desta conta.');
+            const payload = await window.supabaseFetch('/rpc/condomit_create_condominium_access_code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_cep: cep, valid_hours: 168, allowed_uses: 50 })
+            });
+            const data = Array.isArray(payload) ? payload[0] : payload;
+            const code = String(data?.code || '').trim();
+            if (!code) throw new Error('O servidor não retornou o código gerado.');
+
+            try {
+                sessionStorage.setItem(getAccessCodeCacheKey(data?.cep || cep), JSON.stringify({
+                    code,
+                    cep: String(data?.cep || cep).replace(/\D/g, ''),
+                    expiresAt: data?.expires_at || null,
+                    maxUses: Number(data?.max_uses || 50),
+                    createdAt: new Date().toISOString()
+                }));
+            } catch (_) {}
+
+            const expiry = data?.expires_at ? new Date(data.expires_at) : null;
+            const expiryText = expiry && !Number.isNaN(expiry.getTime())
+                ? expiry.toLocaleString('pt-BR')
+                : '7 dias';
+            return {
+                text: `Código de acesso gerado com sucesso: ${code}. Validade: ${expiryText}. O código anterior foi revogado automaticamente.`,
+                actions: [{ label: 'Abrir Configurações', href: 'configuracoes.html', icon: 'fa-gear' }]
+            };
+        } catch (error) {
+            return {
+                text: `Não foi possível gerar o código de acesso: ${error?.message || 'tente novamente.'}`,
+                actions: [{ label: 'Abrir Configurações', href: 'configuracoes.html', icon: 'fa-gear' }]
+            };
+        }
+    }
+
+    async function handleAiCommand(command) {
+        if (command !== 'generate-access-code') return;
+        const input = $('chatInput');
+        $('welcomeCard')?.style.setProperty('display', 'none');
+        addMessage('user', 'Gerar código de acesso');
+        if (input) {
+            input.value = '';
+            input.style.height = 'auto';
+        }
+        updateCharCount();
+        showTyping();
+        const answer = await generateAccessCodeFromAi();
+        hideTyping();
+        addMessage('ai', answer.text, answer.actions || []);
+    }
+
     async function getOperationalRows(table, select, extra = '') {
         try {
             if (typeof window.supabaseFetch !== 'function') return [];
@@ -339,10 +522,18 @@
             <div class="message-avatar">${type === 'ai' ? '<i class="fas fa-sparkles"></i>' : escapeHtml(initials(state.user?.name || 'US'))}</div>
             <div class="message-content">
                 <div class="message-bubble">${escapeHtml(text)}</div>
-                ${actions.length ? `<div class="ai-message-actions">${actions.map((action) => `<a href="${escapeHtml(action.href)}" class="ai-action-link"><i class="fas ${escapeHtml(action.icon || 'fa-arrow-right')}"></i>${escapeHtml(action.label)}</a>`).join('')}</div>` : ''}
+                ${actions.length ? `<div class="ai-message-actions">${actions.map((action) => action.command
+                    ? `<button type="button" class="ai-action-link ai-action-button" data-ai-command="${escapeHtml(action.command)}"><i class="fas ${escapeHtml(action.icon || 'fa-arrow-right')}"></i>${escapeHtml(action.label)}</button>`
+                    : `<a href="${escapeHtml(action.href)}" class="ai-action-link"><i class="fas ${escapeHtml(action.icon || 'fa-arrow-right')}"></i>${escapeHtml(action.label)}</a>`).join('')}</div>` : ''}
                 <div class="message-time">${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
             </div>`;
         messages.appendChild(item);
+        item.querySelectorAll('[data-ai-command]').forEach((button) => {
+            button.addEventListener('click', () => {
+                button.disabled = true;
+                handleAiCommand(button.dataset.aiCommand || '').finally(() => { button.disabled = false; });
+            });
+        });
         state.history.push({ type, text, actions });
         messages.scrollTop = messages.scrollHeight;
     }

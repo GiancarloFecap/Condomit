@@ -284,11 +284,21 @@ async function loadUpcomingAssembly(cep) {
     if (!nextAssemblyEl) return;
 
     try {
-        const assemblies = await getScheduledAssemblies();
+        const assemblies = typeof getScheduledAssembliesByCep === 'function'
+            ? await getScheduledAssembliesByCep(cep)
+            : await getScheduledAssemblies();
         const today = new Date().toISOString().split('T')[0];
+        const targetCep = String(cep || '').replace(/\D/g, '');
         const upcoming = (Array.isArray(assemblies) ? assemblies : [])
+            // Defesa adicional: mesmo que uma API/RLS devolva assembleias de outros
+            // condomínios, o painel nunca usa uma linha de CEP diferente.
+            .filter((a) => {
+                const assemblyCep = String(a?.cep || a?.condominium_cep || a?.condominium_id || '').replace(/\D/g, '');
+                return targetCep && assemblyCep === targetCep;
+            })
             .filter(a => a.date && a.date >= today)
-            .sort((a, b) => a.date.localeCompare(b.date));
+            .filter(a => !['cancelada', 'cancelado', 'encerrada', 'encerrado'].includes(String(a.status || '').toLowerCase()))
+            .sort((a, b) => `${a.date || ''} ${a.start_time || ''}`.localeCompare(`${b.date || ''} ${b.start_time || ''}`));
 
         if (upcoming.length === 0) {
             nextAssemblyEl.textContent = 'Próxima Assembleia: nenhuma agendada';

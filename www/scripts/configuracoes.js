@@ -151,6 +151,16 @@ function updateUIWithUserData(currentUser) {
             ? 'Porteiro'
             : 'Morador';
 
+    // O código de acesso do condomínio é uma função administrativa exclusiva do síndico.
+    // Esta regra independe do plano e é reaplicada ao atualizar os dados do usuário.
+    const accessCodeRow = document.getElementById('condominiumAccessCodeRow');
+    if (accessCodeRow) {
+        const canManageAccessCode = normalizedUserType === 'sindico';
+        accessCodeRow.hidden = !canManageAccessCode;
+        accessCodeRow.setAttribute('aria-hidden', canManageAccessCode ? 'false' : 'true');
+        accessCodeRow.style.display = canManageAccessCode ? '' : 'none';
+    }
+
     // Top bar avatar
     const topAvatar = document.getElementById('user-avatar-top');
     if (topAvatar) {
@@ -1602,7 +1612,9 @@ async function executeDeleteAccount() {
         });
 
         if (!delUser.ok && delUser.status !== 404) {
-            throw new Error('Não foi possível remover a conta no servidor (status ' + delUser.status + ')');
+            const payload = await delUser.json().catch(() => null);
+            const detail = payload?.error || payload?.message || '';
+            throw new Error(detail || ('Não foi possível remover a conta no servidor (status ' + delUser.status + ')'));
         }
 
         clearLoginPersistent();
@@ -2514,6 +2526,18 @@ async function generateCondominiumAccessCode() {
             metaEl.textContent = `Validade: ${expiryText} • Máximo de ${Number(data?.max_uses || allowedUses)} usos.`;
         }
         resultBox?.classList.add('visible');
+        // O banco guarda apenas o hash. Mantemos o código puro somente nesta sessão
+        // para que a IA Condomit consiga informá-lo ao próprio síndico sem reduzir a segurança.
+        try {
+            const normalizedCep = String(data?.cep || cep || '').replace(/\D/g, '');
+            sessionStorage.setItem(`condomitAccessCode:${normalizedCep}`, JSON.stringify({
+                code,
+                cep: normalizedCep,
+                expiresAt: data?.expires_at || null,
+                maxUses: Number(data?.max_uses || allowedUses),
+                createdAt: new Date().toISOString()
+            }));
+        } catch (_) {}
         setCondominiumAccessCodeFeedback('Código gerado com sucesso. O código anterior, se existia, foi revogado.', 'success');
     } catch (error) {
         console.error('[Código de acesso] Erro ao gerar:', error);
@@ -2538,6 +2562,10 @@ async function revokeCondominiumAccessCodes() {
             body: JSON.stringify({ target_cep: cep })
         });
         document.getElementById('condomitAccessCodeResult')?.classList.remove('visible');
+        try {
+            const cep = await resolveCondominiumAccessCodeCep();
+            sessionStorage.removeItem(`condomitAccessCode:${String(cep || '').replace(/\D/g, '')}`);
+        } catch (_) {}
         setCondominiumAccessCodeFeedback(`Códigos ativos revogados. Registros afetados: ${Number(affected || 0)}.`, 'success');
     } catch (error) {
         console.error('[Código de acesso] Erro ao revogar:', error);

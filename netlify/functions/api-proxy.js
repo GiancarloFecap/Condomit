@@ -1974,7 +1974,25 @@ exports.handler = async (event, context) => {
       if (!authUser || String(authUser.email || '').trim().toLowerCase() !== normalizedEmail) {
         return { statusCode: 403, headers, body: JSON.stringify({ error: 'Você só pode excluir a própria conta.' }) };
       }
-      // Primeiro remove o perfil e os dados dependentes. Se houver alguma
+      // Remove primeiro o vínculo do usuário com o condomínio. Bancos antigos
+      // possuem FK user_condominiums -> users com NO ACTION/RESTRICT, que era
+      // a principal causa do HTTP 409 ao excluir a conta.
+      const membershipDelete = await proxySupabaseRequest(
+        null,
+        `/user_condominiums?user_email=eq.${encodeURIComponent(normalizedEmail)}`,
+        'DELETE'
+      );
+      if (membershipDelete.status >= 400 && membershipDelete.status !== 404) {
+        return {
+          statusCode: membershipDelete.status,
+          headers,
+          body: JSON.stringify({
+            error: membershipDelete.data?.message || membershipDelete.data?.error || 'Não foi possível remover o vínculo da conta com o condomínio.'
+          })
+        };
+      }
+
+      // Depois remove o perfil e os dados dependentes. Se houver alguma
       // restrição de banco, a conta de autenticação permanece intacta e o
       // usuário pode tentar novamente após a correção, evitando uma conta
       // parcialmente excluída.
