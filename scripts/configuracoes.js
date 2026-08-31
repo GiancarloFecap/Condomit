@@ -2339,3 +2339,221 @@ async function openTwoFactorSettingsModal() {
     });
 }
 window.openTwoFactorSettingsModal = openTwoFactorSettingsModal;
+
+// ============================================================
+// Condomit 0.41 - Código seguro de acesso ao condomínio
+// Disponível para síndicos em qualquer plano; porteiros continuam limitados a Pro/Premium.
+// O código bruto é retornado somente no momento da geração.
+// ============================================================
+function ensureCondominiumAccessCodeModal() {
+    let modal = document.getElementById('condomitAccessCodeModal');
+    if (modal) return modal;
+
+    const style = document.createElement('style');
+    style.id = 'condomitAccessCodeModalStyles';
+    style.textContent = `
+        .condomit-access-code-overlay{position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.62);display:none;align-items:center;justify-content:center;padding:18px}
+        .condomit-access-code-overlay.open{display:flex}
+        .condomit-access-code-card{width:min(100%,520px);max-height:calc(100vh - 36px);overflow:auto;background:#fff;border-radius:22px;box-shadow:0 28px 80px rgba(15,23,42,.28);padding:26px}
+        .condomit-access-code-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+        .condomit-access-code-head h3{margin:0;color:#172554;font-size:1.35rem}
+        .condomit-access-code-head p{margin:5px 0 0;color:#64748b;font-size:.9rem;line-height:1.5}
+        .condomit-access-code-close{border:0;background:#f1f5f9;color:#334155;width:38px;height:38px;border-radius:10px;cursor:pointer;flex:0 0 auto}
+        .condomit-access-code-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+        .condomit-access-code-fields label{display:grid;gap:7px;color:#334155;font-size:.86rem;font-weight:700}
+        .condomit-access-code-fields select,.condomit-access-code-fields input{width:100%;min-height:44px;border:1px solid #cbd5e1;border-radius:10px;padding:9px 11px;background:#fff;color:#0f172a;font:inherit}
+        .condomit-access-code-actions{display:flex;gap:10px;flex-wrap:wrap}
+        .condomit-access-code-btn{border:0;border-radius:11px;min-height:44px;padding:0 16px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+        .condomit-access-code-btn.primary{background:#1e40af;color:#fff;flex:1}
+        .condomit-access-code-btn.secondary{background:#eef2ff;color:#1e3a8a}
+        .condomit-access-code-btn.danger{background:#fff1f2;color:#be123c}
+        .condomit-access-code-btn:disabled{opacity:.65;cursor:wait}
+        .condomit-access-code-result{margin-top:18px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:15px;padding:16px;display:none}
+        .condomit-access-code-result.visible{display:block}
+        .condomit-access-code-result small{display:block;color:#475569;line-height:1.45}
+        .condomit-access-code-value{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 8px;background:#fff;border:1px solid #93c5fd;border-radius:12px;padding:13px 14px}
+        .condomit-access-code-value strong{font-size:clamp(1.3rem,5vw,1.8rem);letter-spacing:.12em;color:#172554;overflow-wrap:anywhere}
+        .condomit-access-code-copy{border:0;background:#dbeafe;color:#1d4ed8;width:42px;height:42px;border-radius:10px;cursor:pointer;flex:0 0 auto}
+        .condomit-access-code-feedback{min-height:20px;margin-top:12px;color:#64748b;font-size:.86rem;line-height:1.4}
+        .condomit-access-code-feedback.error{color:#b91c1c}.condomit-access-code-feedback.success{color:#047857}
+        @media(max-width:560px){.condomit-access-code-card{padding:20px 16px;border-radius:18px}.condomit-access-code-fields{grid-template-columns:1fr}.condomit-access-code-actions{display:grid;grid-template-columns:1fr}.condomit-access-code-btn{width:100%}}
+    `;
+    document.head.appendChild(style);
+
+    modal = document.createElement('div');
+    modal.id = 'condomitAccessCodeModal';
+    modal.className = 'condomit-access-code-overlay';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+        <section class="condomit-access-code-card" role="dialog" aria-modal="true" aria-labelledby="condomitAccessCodeTitle">
+            <div class="condomit-access-code-head">
+                <div>
+                    <h3 id="condomitAccessCodeTitle"><i class="fas fa-key"></i> Código de acesso do condomínio</h3>
+                    <p>Gere um código temporário para moradores entrarem no condomínio. Porteiros só podem ser vinculados em planos Pro ou Premium.</p>
+                </div>
+                <button type="button" class="condomit-access-code-close" aria-label="Fechar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="condomit-access-code-fields">
+                <label>Validade
+                    <select id="condomitAccessCodeHours">
+                        <option value="24">24 horas</option>
+                        <option value="72">3 dias</option>
+                        <option value="168" selected>7 dias</option>
+                        <option value="720">30 dias</option>
+                    </select>
+                </label>
+                <label>Quantidade máxima de usos
+                    <input id="condomitAccessCodeUses" type="number" min="1" max="10000" value="50" inputmode="numeric">
+                </label>
+            </div>
+            <div class="condomit-access-code-actions">
+                <button type="button" id="condomitGenerateAccessCode" class="condomit-access-code-btn primary"><i class="fas fa-wand-magic-sparkles"></i> Gerar novo código</button>
+                <button type="button" id="condomitRevokeAccessCode" class="condomit-access-code-btn danger"><i class="fas fa-ban"></i> Revogar códigos</button>
+            </div>
+            <div id="condomitAccessCodeResult" class="condomit-access-code-result">
+                <small>Este código é mostrado em texto somente agora. Guarde ou compartilhe-o com quem precisa entrar no condomínio.</small>
+                <div class="condomit-access-code-value">
+                    <strong id="condomitAccessCodeValue">----</strong>
+                    <button type="button" id="condomitCopyAccessCode" class="condomit-access-code-copy" aria-label="Copiar código"><i class="fas fa-copy"></i></button>
+                </div>
+                <small id="condomitAccessCodeMeta"></small>
+            </div>
+            <div id="condomitAccessCodeFeedback" class="condomit-access-code-feedback" aria-live="polite"></div>
+        </section>
+    `;
+    document.body.appendChild(modal);
+
+    const close = () => {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+    };
+    modal.querySelector('.condomit-access-code-close')?.addEventListener('click', close);
+    modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('open')) close();
+    });
+    document.getElementById('condomitGenerateAccessCode')?.addEventListener('click', generateCondominiumAccessCode);
+    document.getElementById('condomitRevokeAccessCode')?.addEventListener('click', revokeCondominiumAccessCodes);
+    document.getElementById('condomitCopyAccessCode')?.addEventListener('click', copyCondominiumAccessCode);
+    return modal;
+}
+
+async function resolveCondominiumAccessCodeCep() {
+    const user = getCurrentUser();
+    if (!user?.email) throw new Error('Sessão inválida. Entre novamente.');
+
+    if (typeof window.resolveUserCondominiumCep === 'function') {
+        const resolved = await window.resolveUserCondominiumCep(user).catch(() => '');
+        if (resolved) return String(resolved).trim();
+    }
+
+    const condominium = user.condominium && typeof user.condominium === 'object' ? user.condominium : {};
+    const cep = condominium.cep || condominium.condominium_id || user.condominium_cep || user.cep || '';
+    if (!String(cep).trim()) throw new Error('Não foi possível identificar o condomínio desta conta.');
+    return String(cep).trim();
+}
+
+function setCondominiumAccessCodeFeedback(message = '', state = '') {
+    const el = document.getElementById('condomitAccessCodeFeedback');
+    if (!el) return;
+    el.textContent = message;
+    el.className = `condomit-access-code-feedback${state ? ` ${state}` : ''}`;
+}
+
+async function openCondominiumAccessCodeModal() {
+    const user = getCurrentUser();
+    const role = typeof window.getNormalizedUserType === 'function'
+        ? window.getNormalizedUserType(user || {})
+        : String(user?.type || '').trim().toLowerCase();
+
+    if (role !== 'sindico') {
+        window.showToast?.('Apenas o síndico pode gerar o código de acesso.', 'error');
+        return;
+    }
+    const modal = ensureCondominiumAccessCodeModal();
+    setCondominiumAccessCodeFeedback('Ao gerar um novo código, qualquer código anterior ativo será revogado automaticamente.');
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+async function generateCondominiumAccessCode() {
+    const button = document.getElementById('condomitGenerateAccessCode');
+    const resultBox = document.getElementById('condomitAccessCodeResult');
+    const valueEl = document.getElementById('condomitAccessCodeValue');
+    const metaEl = document.getElementById('condomitAccessCodeMeta');
+    const validHours = Number(document.getElementById('condomitAccessCodeHours')?.value || 168);
+    const allowedUses = Number(document.getElementById('condomitAccessCodeUses')?.value || 50);
+
+    if (!Number.isInteger(allowedUses) || allowedUses < 1 || allowedUses > 10000) {
+        setCondominiumAccessCodeFeedback('Informe uma quantidade de usos entre 1 e 10.000.', 'error');
+        return;
+    }
+
+    const original = button?.innerHTML;
+    if (button) { button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...'; }
+    setCondominiumAccessCodeFeedback('Gerando código seguro...');
+
+    try {
+        if (typeof window.supabaseFetch !== 'function') throw new Error('Conexão segura com o Supabase indisponível.');
+        const cep = await resolveCondominiumAccessCodeCep();
+        const payload = await window.supabaseFetch('/rpc/condomit_create_condominium_access_code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_cep: cep, valid_hours: validHours, allowed_uses: allowedUses })
+        });
+        const data = Array.isArray(payload) ? payload[0] : payload;
+        const code = String(data?.code || '').trim();
+        if (!code) throw new Error('O servidor não retornou o código gerado.');
+
+        if (valueEl) valueEl.textContent = code;
+        if (metaEl) {
+            const expiry = data?.expires_at ? new Date(data.expires_at) : null;
+            const expiryText = expiry && !Number.isNaN(expiry.getTime())
+                ? expiry.toLocaleString('pt-BR')
+                : 'sem data informada';
+            metaEl.textContent = `Validade: ${expiryText} • Máximo de ${Number(data?.max_uses || allowedUses)} usos.`;
+        }
+        resultBox?.classList.add('visible');
+        setCondominiumAccessCodeFeedback('Código gerado com sucesso. O código anterior, se existia, foi revogado.', 'success');
+    } catch (error) {
+        console.error('[Código de acesso] Erro ao gerar:', error);
+        setCondominiumAccessCodeFeedback(error?.message || 'Não foi possível gerar o código de acesso.', 'error');
+    } finally {
+        if (button) { button.disabled = false; button.innerHTML = original || '<i class="fas fa-wand-magic-sparkles"></i> Gerar novo código'; }
+    }
+}
+
+async function revokeCondominiumAccessCodes() {
+    const button = document.getElementById('condomitRevokeAccessCode');
+    const original = button?.innerHTML;
+    if (button) { button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Revogando...'; }
+    setCondominiumAccessCodeFeedback('Revogando códigos ativos...');
+
+    try {
+        if (typeof window.supabaseFetch !== 'function') throw new Error('Conexão segura com o Supabase indisponível.');
+        const cep = await resolveCondominiumAccessCodeCep();
+        const affected = await window.supabaseFetch('/rpc/condomit_revoke_condominium_access_codes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_cep: cep })
+        });
+        document.getElementById('condomitAccessCodeResult')?.classList.remove('visible');
+        setCondominiumAccessCodeFeedback(`Códigos ativos revogados. Registros afetados: ${Number(affected || 0)}.`, 'success');
+    } catch (error) {
+        console.error('[Código de acesso] Erro ao revogar:', error);
+        setCondominiumAccessCodeFeedback(error?.message || 'Não foi possível revogar os códigos.', 'error');
+    } finally {
+        if (button) { button.disabled = false; button.innerHTML = original || '<i class="fas fa-ban"></i> Revogar códigos'; }
+    }
+}
+
+async function copyCondominiumAccessCode() {
+    const code = String(document.getElementById('condomitAccessCodeValue')?.textContent || '').trim();
+    if (!code || code === '----') return;
+    try {
+        await navigator.clipboard.writeText(code);
+        setCondominiumAccessCodeFeedback('Código copiado para a área de transferência.', 'success');
+    } catch (_) {
+        setCondominiumAccessCodeFeedback(`Código: ${code}`, 'success');
+    }
+}

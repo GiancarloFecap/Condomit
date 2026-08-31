@@ -4464,10 +4464,13 @@ function applyCondomitPlanVisibility(root = document) {
     const required = getCondomitPlanLevelFromName(element.getAttribute('data-min-plan'));
     if (!required) return;
 
+    // A hierarquia é sempre cumulativa:
+    // Essencial = nível 1; Pro = Essencial + nível 2; Premium = Essencial + Pro + nível 3.
     // Dentro da interface de porteiro, Pro e Premium possuem exatamente o
     // mesmo conjunto de ferramentas operacionais.
     const porterOperationalAccess = currentRole === 'porteiro' && currentLevel >= 2;
-    const hidden = porterOperationalAccess ? false : currentLevel < required;
+    const syndicOnlyBlocked = element.hasAttribute('data-sindico-only') && currentRole !== 'sindico';
+    const hidden = syndicOnlyBlocked || (porterOperationalAccess ? false : currentLevel < required);
     element.hidden = hidden;
     element.setAttribute('aria-hidden', hidden ? 'true' : 'false');
   });

@@ -3,9 +3,6 @@ let currentUser = null;
 let selectedPlan = null;
 let selectedPrice = null;
 let plans = [];
-let mercadoPagoConfig = null;
-let mercadoPagoInstance = null;
-let walletBrickController = null;
 let checkoutFlowPending = false;
 let checkoutRecoveryTimeout = null;
 let checkoutPendingHardTimeout = null;
@@ -27,18 +24,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         return;
     }
 
-    try {
-        const billing = await fetchCondominiumBillingStatus(true);
-        if (billing?.can_use) {
-            persistApprovedPlan(billing);
-            if (!isUpgradeFlow) {
-                window.location.href = 'index.html';
-                return;
-            }
-        }
-    } catch (error) {
-        console.error('[Checkout] Erro ao consultar mensalidade do condomínio:', error);
-    }
+    // O botão é desenhado imediatamente pelo HTML/JS da própria Condomit.
+    // Ele não depende mais do carregamento tardio do SDK visual do Mercado Pago.
+    renderDirectMercadoPagoButton('Selecione o plano e continue para o ambiente seguro do Mercado Pago.');
 
     const logoutBtn = document.getElementById('btn-logout-checkout');
     if (logoutBtn) {
@@ -51,29 +39,43 @@ document.addEventListener('DOMContentLoaded', async function () {
     bindReturnListeners();
     bindAbandonedPaymentBackGuard();
 
-    try {
-        const loadedPlans = await fetchPlans();
-        plans = Array.isArray(loadedPlans) ? loadedPlans : [];
-        renderPlans();
-    } catch (error) {
-        console.error('[Checkout] Erro ao carregar planos:', error);
-        showPaymentFeedback('error', error.message || 'Não foi possível carregar os planos agora.');
+    // Plano e status de cobrança são consultados em paralelo. Isso reduz o tempo
+    // até o checkout ficar utilizável sem abrir mão do redirecionamento de quem
+    // já está com a mensalidade válida.
+    const [billingResult, plansResult] = await Promise.allSettled([
+        fetchCondominiumBillingStatus(true),
+        fetchPlans()
+    ]);
+
+    if (billingResult.status === 'fulfilled') {
+        const billing = billingResult.value;
+        if (billing?.can_use) {
+            persistApprovedPlan(billing);
+            if (!isUpgradeFlow) {
+                window.location.href = 'index.html';
+                return;
+            }
+        }
+    } else {
+        console.error('[Checkout] Erro ao consultar mensalidade do condomínio:', billingResult.reason);
+    }
+
+    if (plansResult.status !== 'fulfilled') {
+        console.error('[Checkout] Erro ao carregar planos:', plansResult.reason);
+        showPaymentFeedback('error', plansResult.reason?.message || 'Não foi possível carregar os planos agora.');
+        syncDirectMercadoPagoButtonState();
         return;
     }
 
-    try {
-        mercadoPagoConfig = await fetchMercadoPagoConfig();
-    } catch (error) {
-        console.warn('[Checkout] Configuração pública do Mercado Pago indisponível:', error);
-        mercadoPagoConfig = null;
-    }
+    plans = Array.isArray(plansResult.value) ? plansResult.value : [];
+    renderPlans();
 
     const previousPaymentState = await reconcileStoredMercadoPagoPayment();
     if (previousPaymentState === 'approved' || previousPaymentState === 'pending') {
         return;
     }
 
-    await initCheckoutButton();
+    syncDirectMercadoPagoButtonState();
 });
 
 async function fetchPlans() {
@@ -98,15 +100,6 @@ async function fetchCondominiumBillingStatus(force = false) {
     return null;
 }
 
-async function fetchMercadoPagoConfig() {
-    const response = await fetch('/api/mercadopago/config', { cache: 'no-store' });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !payload.publicKey) {
-throw new Error(payload.error || 'Mercado Pago nao configurado para este ambiente.');
-    }
-    return payload;
-}
-
 function renderPlans() {
     const container = document.getElementById('plans-list-container');
     if (!container) return;
@@ -121,31 +114,33 @@ function renderPlans() {
         planCard.className = `plan-card-option ${isDefault ? 'selected' : ''}`;
         planCard.dataset.planId = plan.id;
 
-        let icon = 'fa-leaf';
-        let features = [
-            'Início, Mural de Avisos e Sugestões',
-            'Notificações e Gestão de Moradores',
-            'IA - Dúvidas',
+        const essentialFeatures = [
+            'Início, Mural de Avisos, Sugestões e Notificações',
+            'Gestão de Moradores e IA - Dúvidas',
             'Dados pessoais, Minha unidade e Configurações'
         ];
+        const proFeatures = [
+            'Chats, Achados e Perdidos e Assembleias',
+            'Reserva de Locais e Manutenção Preventiva',
+            'Controle de Acesso, Encomendas e acesso de Porteiro'
+        ];
+        const premiumFeatures = [
+            'Ocorrências e Marketplace',
+            'Gestão Avançada e recursos vinculados',
+            'IA - Comunicados Automáticos'
+        ];
 
+        let icon = 'fa-leaf';
+        let features = [...essentialFeatures];
         const normalizedPlanName = planName.trim().toLowerCase();
         if (normalizedPlanName.includes('premium')) {
             icon = 'fa-crown';
-            features = [
-                'Tudo do Pro',
-                'Ocorrências e Marketplace',
-                'Gestão Avançada',
-                'IA - Comunicados Automáticos'
-            ];
+            // Premium herda integralmente Essencial + Pro.
+            features = [...essentialFeatures, ...proFeatures, ...premiumFeatures];
         } else if (normalizedPlanName.includes('pro')) {
             icon = 'fa-rocket';
-            features = [
-                'Tudo do Essencial',
-                'Chats, Achados e Perdidos e Assembleias',
-                'Reserva de Locais e Manutenção Preventiva',
-                'Controle de Acesso e Registrar Encomenda'
-            ];
+            // Pro herda integralmente o Essencial.
+            features = [...essentialFeatures, ...proFeatures];
         }
 
         planCard.innerHTML = `
@@ -182,13 +177,13 @@ function renderPlans() {
     updateSummary();
 }
 
-async function selectPlan(card, plan) {
+function selectPlan(card, plan) {
     document.querySelectorAll('.plan-card-option').forEach((option) => option.classList.remove('selected'));
     card.classList.add('selected');
     selectedPlan = plan;
     selectedPrice = plan.valor_minimo;
     updateSummary();
-    await initCheckoutButton();
+    syncDirectMercadoPagoButtonState();
 }
 
 function updateSummary() {
@@ -201,94 +196,6 @@ function updateSummary() {
     summaryTotalPrice.textContent = formatCurrency(selectedPrice);
     sessionStorage.setItem('selectedPlan', selectedPlan.nome);
     sessionStorage.setItem('selectedPlanId', selectedPlan.id);
-}
-
-async function initCheckoutButton() {
-    if (!selectedPlan || selectedPrice == null) {
-        renderPaymentPlaceholder('Selecione um plano para liberar o pagamento.');
-        return;
-    }
-
-    if (!mercadoPagoConfig?.publicKey || !window.MercadoPago) {
-        renderDirectMercadoPagoButton(
-            'O botão seguro alternativo está disponível para continuar o pagamento.'
-        );
-        return;
-    }
-
-    if (!mercadoPagoInstance) {
-        mercadoPagoInstance = new window.MercadoPago(mercadoPagoConfig.publicKey, {
-            locale: 'pt-BR'
-        });
-    }
-
-    if (walletBrickController?.unmount) {
-        try {
-            await walletBrickController.unmount();
-        } catch (error) {
-            console.warn('[Checkout] Falha ao desmontar Wallet Brick anterior:', error);
-        }
-    }
-
-    showPaymentFeedback('info', `Plano ${selectedPlan.nome} pronto para pagamento.`);
-
-    const container = document.getElementById('payment-brick_container');
-    if (!container) return;
-    container.innerHTML = '';
-
-    try {
-        // No modo "preferência no envio", a documentação do Wallet Brick
-        // orienta criar a preferência dentro de onSubmit. Não usamos o antigo
-        // redirectMode "modal" (valor inválido), que impedia a renderização.
-        walletBrickController = await mercadoPagoInstance.bricks().create('wallet', 'payment-brick_container', {
-            callbacks: {
-                onReady: () => {
-                    clearCheckoutPendingState();
-                    showPaymentFeedback('info', 'Clique no botão para abrir o checkout seguro do Mercado Pago. Não volte antes de concluir o pagamento.');
-                },
-                onSubmit: async () => {
-                    markCheckoutPendingState();
-                    markMercadoPagoFlowStarted();
-                    const traceId = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}`;
-showPaymentFeedback('info', 'Criando seu pagamento no Mercado Pago...');
-                    try {
-                        const pendingPayment = await createPendingPayment(selectedPlan, traceId);
-                        const preference = await createPaymentPreference(selectedPlan, pendingPayment, traceId);
-
-                        sessionStorage.setItem('lastPendingPaymentId', String(preference.paymentId || pendingPayment.id || ''));
-                        sessionStorage.setItem('lastMercadoPagoPreferenceId', String(preference.preferenceId || ''));
-                        sessionStorage.setItem('lastMercadoPagoExternalReference', String(preference.externalReference || ''));
-return preference.preferenceId;
-                    } catch (error) {
-clearCheckoutPendingState();
-                        showPaymentFeedback('error', error?.message || 'Nao foi possivel criar o pagamento.');
-                        throw error;
-                    }
-                },
-                onError: (error) => {
-                    resetCheckoutAfterPending('Nao foi possivel abrir o checkout agora. Tente novamente.');
-showPaymentFeedback('error', 'Não foi possível abrir o checkout do Mercado Pago. Tente novamente.');
-                }
-            }
-        });
-
-        // Proteção adicional: se o SDK carregar sem desenhar um botão utilizável,
-        // oferece o fluxo direto após alguns segundos em vez de deixar a área vazia.
-        window.setTimeout(async () => {
-            const paymentContainer = document.getElementById('payment-brick_container');
-            if (!paymentContainer) return;
-            const hasInteractiveCheckout = Boolean(
-                paymentContainer.querySelector('iframe, button, a, [role="button"]')
-            );
-            if (hasInteractiveCheckout) return;
-            try { await walletBrickController?.unmount?.(); } catch (_) {}
-            renderDirectMercadoPagoButton('Use o botão abaixo para continuar no ambiente seguro do Mercado Pago.');
-        }, 6500);
-    } catch (error) {
-        console.error('[Checkout] Falha ao renderizar Wallet Brick:', error);
-        showPaymentFeedback('error', 'O Wallet Brick não pôde ser carregado. Use o botão alternativo abaixo.');
-        renderDirectMercadoPagoButton('Continue pelo checkout seguro do Mercado Pago.');
-    }
 }
 
 async function createPendingPayment(plan, traceId) {
@@ -529,7 +436,7 @@ function renderPendingMercadoPagoAttempt(mercadoPagoPaymentId) {
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
         const state = await reconcileStoredMercadoPagoPayment();
         if (state === 'failure' || state === 'none') {
-            await initCheckoutButton();
+            renderDirectMercadoPagoButton('Selecione o plano e continue para o ambiente seguro do Mercado Pago.');
         }
         if (state === 'pending') {
             button.disabled = false;
@@ -569,6 +476,7 @@ function clearCheckoutPendingState() {
         window.clearTimeout(checkoutPendingHardTimeout);
         checkoutPendingHardTimeout = null;
     }
+    try { syncDirectMercadoPagoButtonState(); } catch (_) {}
 }
 
 function markCheckoutPendingState() {
@@ -592,16 +500,10 @@ function resetCheckoutAfterPending(message) {
     showPaymentFeedback('info', message || 'Pagamento não concluído ainda. Quando quiser, abra o checkout novamente.');
 
     if (wasPending) {
-        window.setTimeout(async () => {
-            try {
-                await initCheckoutButton();
-            } catch (err) {
-                console.warn('[Checkout] Não foi possível reinicializar o Wallet Brick:', err);
-                renderPaymentPlaceholder(
-                    'O botão de pagamento ficou temporariamente indisponível. Recarregue a página para tentar novamente.'
-                );
-            }
-        }, 300);
+        window.setTimeout(() => {
+            renderDirectMercadoPagoButton('Selecione o plano e continue para o ambiente seguro do Mercado Pago.');
+            syncDirectMercadoPagoButtonState();
+        }, 150);
     }
 }
 
@@ -692,49 +594,66 @@ function renderDirectMercadoPagoButton(message) {
 
     container.innerHTML = `
         <div class="payment-direct-fallback">
-            <button type="button" id="directMercadoPagoButton" class="mercado-pago-direct-button">
-                <i class="fas fa-wallet"></i>
-                Pagar com Mercado Pago
+            <button type="button" id="directMercadoPagoButton" class="mercado-pago-direct-button" disabled>
+                <i class="fas fa-hand-holding-dollar"></i>
+                <span>Pagar com Mercado Pago</span>
             </button>
             <p>${message || 'Você será direcionado ao ambiente seguro do Mercado Pago.'}</p>
         </div>
     `;
 
     const button = document.getElementById('directMercadoPagoButton');
-    button?.addEventListener('click', async () => {
-        if (!selectedPlan || button.disabled) return;
-        button.disabled = true;
-        const original = button.innerHTML;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Abrindo Mercado Pago...';
-        showPaymentFeedback('info', 'Preparando o checkout seguro do Mercado Pago...');
+    button?.addEventListener('click', startDirectMercadoPagoPayment);
+    syncDirectMercadoPagoButtonState();
+}
 
-        try {
-            markCheckoutPendingState();
-            markMercadoPagoFlowStarted();
-            const traceId = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}`;
-            const pendingPayment = await createPendingPayment(selectedPlan, traceId);
-            const preference = await createPaymentPreference(selectedPlan, pendingPayment, traceId);
-            sessionStorage.setItem('lastPendingPaymentId', String(preference.paymentId || pendingPayment.id || ''));
-            sessionStorage.setItem('lastMercadoPagoPreferenceId', String(preference.preferenceId || ''));
-            sessionStorage.setItem('lastMercadoPagoExternalReference', String(preference.externalReference || ''));
+function syncDirectMercadoPagoButtonState() {
+    const button = document.getElementById('directMercadoPagoButton');
+    if (!button) return;
+    const ready = Boolean(selectedPlan && selectedPrice != null && currentUser?.email);
+    button.disabled = !ready || checkoutFlowPending;
+    if (!checkoutFlowPending) {
+        button.innerHTML = ready
+            ? '<i class="fas fa-hand-holding-dollar"></i><span>Pagar com Mercado Pago</span>'
+            : '<i class="fas fa-spinner fa-spin"></i><span>Carregando planos...</span>';
+    }
+}
 
-            const isTestEnvironment = String(mercadoPagoConfig?.environment || '').toLowerCase() === 'test';
-            const checkoutUrl = isTestEnvironment
-                ? (preference.sandboxInitPoint || preference.initPoint)
-                : (preference.initPoint || preference.sandboxInitPoint);
-            if (!checkoutUrl) {
-                throw new Error('O Mercado Pago não retornou a URL do checkout.');
-            }
+async function startDirectMercadoPagoPayment() {
+    const button = document.getElementById('directMercadoPagoButton');
+    if (!button || !selectedPlan || button.disabled) return;
 
-            window.location.assign(checkoutUrl);
-        } catch (error) {
-            clearCheckoutPendingState();
-            clearMercadoPagoFlowStarted();
-            showPaymentFeedback('error', error?.message || 'Não foi possível iniciar o pagamento.');
-            button.disabled = false;
-            button.innerHTML = original;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Abrindo Mercado Pago...</span>';
+    showPaymentFeedback('info', 'Preparando o checkout seguro do Mercado Pago...');
+
+    try {
+        markCheckoutPendingState();
+        markMercadoPagoFlowStarted();
+        const traceId = window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}`;
+        const pendingPayment = await createPendingPayment(selectedPlan, traceId);
+        const preference = await createPaymentPreference(selectedPlan, pendingPayment, traceId);
+
+        sessionStorage.setItem('lastPendingPaymentId', String(preference.paymentId || pendingPayment.id || ''));
+        sessionStorage.setItem('lastMercadoPagoPreferenceId', String(preference.preferenceId || ''));
+        sessionStorage.setItem('lastMercadoPagoExternalReference', String(preference.externalReference || ''));
+
+        const isTestEnvironment = String(preference.environment || '').toLowerCase() === 'test';
+        const checkoutUrl = isTestEnvironment
+            ? (preference.sandboxInitPoint || preference.initPoint)
+            : (preference.initPoint || preference.sandboxInitPoint);
+
+        if (!checkoutUrl) {
+            throw new Error('O Mercado Pago não retornou a URL do checkout.');
         }
-    });
+
+        window.location.assign(checkoutUrl);
+    } catch (error) {
+        clearCheckoutPendingState();
+        clearMercadoPagoFlowStarted();
+        showPaymentFeedback('error', error?.message || 'Não foi possível iniciar o pagamento.');
+        syncDirectMercadoPagoButtonState();
+    }
 }
 
 function extractUserCep(user) {

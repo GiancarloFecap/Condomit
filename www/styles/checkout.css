@@ -199,13 +199,14 @@ body {
 
 .plan-mini-features {
     list-style: none;
-    display: flex;
-    gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 22px;
     padding-top: 16px;
     border-top: 1px solid var(--border);
 }
 
-.selected .plan-mini-features {
+.selected.plan-mini-features {
     border-top-color: rgba(30, 64, 175, 0.1);
 }
 
@@ -317,7 +318,8 @@ body {
 
 /* MP Bricks Overrides */
 #payment-brick_container {
-    min-height: 100px;
+    min-height: 72px;
+    width: 100%;
 }
 
 .payment-feedback {
@@ -463,7 +465,7 @@ body {
     color: #111827;
 }
 
-/* 0.39 - fallback seguro quando o Wallet Brick não puder ser renderizado */
+/* 0.41 - botão imediato: não depende da renderização tardia do SDK visual */
 .payment-direct-fallback { display: grid; gap: 10px; }
 .mercado-pago-direct-button { width: 100%; min-height: 52px; border: 0; border-radius: 12px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #009ee3; color: #fff; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 10px 24px rgba(0, 158, 227, .2); }
 .mercado-pago-direct-button:hover { filter: brightness(.96); }
@@ -621,7 +623,7 @@ body {
         font-size: 1.55rem;
     }
 
-    .plan-mini-features {
+   .plan-mini-features {
         display: grid;
         grid-template-columns: 1fr;
         gap: 9px;

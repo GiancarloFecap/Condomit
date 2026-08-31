@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="../styles/theme.css?v=0151">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=035">
-    <link rel="stylesheet" href="../styles/checkout.css?v=040">
+    <link rel="stylesheet" href="../styles/checkout.css?v=041">
     <link rel="manifest" href="../manifest.webmanifest">
 </head>
 <body>
@@ -63,9 +63,17 @@
                             <div class="payment-section">
                                 <p class="payment-hint">Ao continuar, você será direcionado ao ambiente seguro do Mercado Pago. Se voltar sem concluir o pagamento, sua sessão será encerrada por segurança.</p>
                                 <div id="payment-feedback" class="payment-feedback info" aria-live="polite">
-                                    Carregando checkout em português...
+                                    Carregando os planos disponíveis...
                                 </div>
-                                <div id="payment-brick_container"></div>
+                                <div id="payment-brick_container">
+                                    <div class="payment-direct-fallback">
+                                        <button type="button" class="mercado-pago-direct-button" disabled aria-busy="true">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <span>Carregando planos...</span>
+                                        </button>
+                                        <p>Pagamento processado no ambiente seguro do Mercado Pago.</p>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="security-badges">
@@ -81,9 +89,8 @@
     <script src="../scripts/platform-config.js?v=035"></script>
 
 
-    <script src="../scripts/supabase-client.js?v=039"></script>
-    <script src="https://sdk.mercadopago.com/js/v2"></script>
-    <script src="../scripts/checkout.js?v=040"></script>
+    <script src="../scripts/supabase-client.js?v=041"></script>
+    <script src="../scripts/checkout.js?v=041"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/advanced-global.js?v=035"></script>
 </body>
