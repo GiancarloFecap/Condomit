@@ -65,7 +65,7 @@
     Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://esm.sh https://sdk.mercadopago.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' https://*.mercadopago.com https://mercadopago.com; upgrade-insecure-requests"
 
 
-# Verifica periodicamente assembleias que passaram 15 minutos sem participantes ativos.
+# A função desperta a cada 5 minutos; a RPC controla individualmente o intervalo de 30 minutos por assembleia.
 [functions."auto-end-assemblies"]
   schedule = "*/5 * * * *"
 

@@ -108,6 +108,26 @@ function formatCep(value) {
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 }
 
+function getAssemblyScheduledStartMs(assembly) {
+  if (!assembly) {
+    return null;
+  }
+
+  const date = String(assembly.date || '').slice(0, 10);
+  const time = String(assembly.start_time || '00:00').slice(0, 5);
+
+  if (!date) {
+    return null;
+  }
+
+  const parsed = new Date(`${date}T${time}:00-03:00`);
+  const ms = parsed.getTime();
+
+  return Number.isNaN(ms)
+    ? null
+    : ms;
+}
+
 function normalizeText(value) {
   return String(value || '')
     .trim()
@@ -482,6 +502,24 @@ exports.handler = async (event) => {
       return httpError(
         409,
         'Status da assembleia não permite entrada.'
+      );
+    }
+
+    const scheduledStartMs =
+      getAssemblyScheduledStartMs(assembly);
+
+    if (
+      scheduledStartMs &&
+      Date.now() < scheduledStartMs
+    ) {
+      return httpError(
+        409,
+        'A entrada na assembleia só é liberada a partir do horário cadastrado.',
+        {
+          scheduled_start: new Date(scheduledStartMs).toISOString(),
+          date: assembly.date,
+          start_time: assembly.start_time,
+        }
       );
     }
 

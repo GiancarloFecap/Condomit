@@ -125,6 +125,21 @@
     return `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
   }
 
+  function getAssemblyStartDateTime(assembly) {
+    if (!assembly) return null;
+    if (assembly.scheduled_at) {
+      const direct = new Date(assembly.scheduled_at);
+      if (!Number.isNaN(direct.getTime())) return direct;
+    }
+
+    const date = String(assembly.date || assembly.assembly_date || assembly.start_date || '').slice(0, 10);
+    const time = String(assembly.start_time || assembly.time || assembly.assembly_time || '00:00').slice(0, 5);
+    if (!date) return null;
+
+    const local = new Date(`${date}T${time}:00`);
+    return Number.isNaN(local.getTime()) ? null : local;
+  }
+
   function isAssemblyClosed(assembly) {
     if (!assembly) return false;
     const s = (assembly.status || '').toString().toLowerCase();
@@ -982,6 +997,17 @@
     if (isAssemblyClosed(assembly)) {
       showError('Assembleia encerrada',
         `Esta assembleia está com status "${assembly.status || 'encerrada'}". Não é mais possível entrar.`);
+      return;
+    }
+
+    const scheduledStart = getAssemblyStartDateTime(assembly);
+    if (scheduledStart && Date.now() < scheduledStart.getTime()) {
+      const dateText = scheduledStart.toLocaleDateString('pt-BR');
+      const timeText = scheduledStart.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      showError(
+        'Assembleia ainda não iniciada',
+        `A preparação de entrada será liberada somente em ${dateText}, a partir das ${timeText}.`
+      );
       return;
     }
 

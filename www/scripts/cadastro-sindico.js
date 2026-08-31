@@ -530,7 +530,7 @@
                 const emailRedirectTo =
                     `${window.location.origin}/pages/entrar.html`;
 
-                const {
+                let {
                     data: authData,
                     error: authError
                 } = await supabaseClient.auth.signUp({

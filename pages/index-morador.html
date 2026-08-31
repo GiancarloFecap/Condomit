@@ -181,17 +181,17 @@
                 <div class="dashboard-section">
                     <h3 class="section-title">Comunicação e relacionamento</h3>
                     <div class="cards-container three-cols">
-                        <div class="card card-item">
+                        <div class="card card-item" data-min-plan="Pro">
                             <h4>Chats</h4>
                             <p>Converse com o síndico ou portaria.</p>
                             <button class="card-btn" onclick="navigateTo('chat-sindico')">Abrir chat</button>
                         </div>
-                        <div class="card card-item">
+                        <div class="card card-item" data-min-plan="Pro">
                             <h4>Achados e Perdidos</h4>
                             <p>Perdeu algo? Procure aqui.</p>
                             <button class="card-btn" onclick="navigateTo('achados-perdidos')">Acessar</button>
                         </div>
-                        <div class="card card-item">
+                        <div class="card card-item" data-min-plan="Premium">
                             <h4>MarketPlace</h4>
                             <p>Anuncie ou compre itens dos vizinhos.</p>
                             <button class="card-btn" onclick="navigateTo('marketplace')">Acessar MarketPlace</button>
@@ -202,7 +202,7 @@
                 <!-- ASSEMBLEIA E RESERVAS -->
                 <div class="dashboard-section">
                     <div class="cards-container mixed-layout">
-                        <div class="card card-item wide-card">
+                        <div class="card card-item wide-card" data-min-plan="Pro">
                             <h3 class="section-title-inline">Assembleia</h3>
                             <h4>Próxima Assembleia</h4>
                             <p>Assembleia Geral Ordinária - 20/06 às 19:00</p>
@@ -211,13 +211,13 @@
                                 <button class="card-btn" onclick="window.location.href='assembleia.html'">Entrar</button>
                             </div>
                         </div>
-                        <div class="card card-item wide-card">
+                        <div class="card card-item wide-card" data-min-plan="Pro">
                             <h3 class="section-title-inline">Reservas de locais</h3>
                             <h4>Reserva de locais</h4>
                             <p>Agende o salão de festas, churrasqueira ou outros espaços.</p>
                             <button class="card-btn" onclick="window.location.href='reservas.html'">Fazer reserva</button>
                         </div>
-                        <div class="card card-item">
+                        <div class="card card-item" data-min-plan="Pro">
                             <h3 class="section-title-inline">Manutenção</h3>
                             <h4>Solicitações de manutenção</h4>
                             <p>Sem solicitações pendentes.</p>
@@ -234,7 +234,7 @@
                             <p>Tire suas dúvidas sobre o regimento interno.</p>
                             <button class="card-btn" onclick="navigateTo('ia-duvidas')">Perguntar agora</button>
                         </div>
-                        <div class="card card-item">
+                        <div class="card card-item" data-min-plan="Premium">
                             <h4>Comunicados Automáticos</h4>
                             <p>Gerencie seus avisos automáticos por IA.</p>
                             <button class="card-btn" onclick="navigateTo('comunicados')">Gerenciar Preferências</button>
@@ -247,8 +247,8 @@
     <script src="../scripts/platform-config.js?v=035"></script>
 
 
-    <script src="../scripts/supabase-client.js?v=036"></script>
-    <script src="../scripts/sidebar-links.js?v=035"></script>
+    <script src="../scripts/supabase-client.js?v=037"></script>
+    <script src="../scripts/sidebar-links.js?v=037"></script>
     <script src="../scripts/index-morador.js?v=035"></script>
     <script src="../scripts/topbar-actions.js?v=035"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>

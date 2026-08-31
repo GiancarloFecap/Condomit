@@ -1730,12 +1730,16 @@ function parsePath(event) {
     }
     const apiProxyPrefix = '/.netlify/functions/api-proxy/';
     if (p.startsWith(apiProxyPrefix)) {
-      return '/' + p.slice(apiProxyPrefix.length);
+      let rest = '/' + p.slice(apiProxyPrefix.length);
+      if (rest.startsWith('/api/')) rest = '/' + rest.slice('/api/'.length);
+      return rest;
     }
     const apiProxyIndex = p.indexOf('/.netlify/functions/api-proxy');
     if (apiProxyIndex !== -1) {
-      const rest = p.slice(apiProxyIndex + '/.netlify/functions/api-proxy'.length);
-      return rest.startsWith('/') ? rest : '/' + rest;
+      let rest = p.slice(apiProxyIndex + '/.netlify/functions/api-proxy'.length);
+      rest = rest.startsWith('/') ? rest : '/' + rest;
+      if (rest.startsWith('/api/')) rest = '/' + rest.slice('/api/'.length);
+      return rest;
     }
     if (p.startsWith('/users') || p.startsWith('/register') || p.startsWith('/condominiums') || p.startsWith('/pagamento') || p.startsWith('/reserva') || p.startsWith('/plano') || p.startsWith('/forgot') || p.startsWith('/reset') || p.startsWith('/user_condominiums') || p.startsWith('/esqueceu-senha') || p.startsWith('/mercadopago')) {
       return p;

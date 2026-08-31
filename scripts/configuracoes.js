@@ -253,6 +253,21 @@ function logout() {
 }
 
 function openConfigSection(sectionKey) {
+    const proOnlySections = new Set([
+        'controle-acesso',
+        'reserva-areas',
+        'encomendas',
+        'minhas-reservas',
+        'lembretes-reserva',
+        'confirmacao-cancelamento',
+        'reserva-area-comum',
+        'prestadores-servicos'
+    ]);
+
+    if (proOnlySections.has(sectionKey) && typeof window.requireCondomitMinimumPlan === 'function') {
+        if (!window.requireCondomitMinimumPlan('Pro')) return;
+    }
+
     if (sectionKey === 'foto-de-perfil') {
         if (window.profilePhotoEditor && typeof window.profilePhotoEditor.open === 'function') {
             window.profilePhotoEditor.open();

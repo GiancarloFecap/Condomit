@@ -183,6 +183,10 @@
     }
 
     async function openPackageRegistrationModal() {
+        if (typeof window.requireCondomitMinimumPlan === 'function' && !window.requireCondomitMinimumPlan('Pro')) {
+            return;
+        }
+
         const user = currentUser();
         if (!user?.email) {
             window.showToast?.('Sua sessão expirou. Entre novamente.', 'error');

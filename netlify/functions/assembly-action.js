@@ -69,6 +69,18 @@ function normalizeCep(value) {
   return String(value || '').replace(/\D/g, '');
 }
 
+function getAssemblyScheduledStartMs(assembly) {
+  if (!assembly) return null;
+  const date = String(assembly.date || '').slice(0, 10);
+  const time = String(assembly.start_time || '00:00').slice(0, 5);
+  if (!date) return null;
+
+  // Os horários cadastrados pela Condomit são horários locais do condomínio no Brasil.
+  const parsed = new Date(`${date}T${time}:00-03:00`);
+  const ms = parsed.getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
 async function logEvent(assemblyId, cep, eventType, payload, createdBy) {
   try {
     await supabase.from('assembly_event_logs').insert({
@@ -172,6 +184,20 @@ async function handleStart(assembly, userEmail, userCEP) {
   }
   if (assembly.status !== ASSEMBLY_STATUS.SCHEDULED) {
     return httpError(409, `Status atual (${assembly.status}) não permite iniciar a assembleia.`);
+  }
+
+  const scheduledStartMs = getAssemblyScheduledStartMs(assembly);
+  if (scheduledStartMs && Date.now() < scheduledStartMs) {
+    const scheduledStart = new Date(scheduledStartMs);
+    return httpError(
+      409,
+      'A assembleia só pode ser iniciada a partir do horário cadastrado.',
+      {
+        scheduled_start: scheduledStart.toISOString(),
+        date: assembly.date,
+        start_time: assembly.start_time,
+      }
+    );
   }
 
   const now = new Date().toISOString();

@@ -157,6 +157,44 @@
                 }));
             } catch (_) {}
 
+            let billing = null;
+            if (cep && normalizeType(user) !== 'administradora' && typeof window.getCondomitBillingStatus === 'function') {
+                try {
+                    billing = await window.getCondomitBillingStatus(true);
+                } catch (error) {
+                    console.warn('[SESSION][Billing] Não foi possível validar a mensalidade ao restaurar a sessão:', error?.message || error);
+                }
+            }
+
+            if (billing?.plan_id) {
+                user.plan = billing.plan_id;
+                try { sessionStorage.setItem('condominiumUser', JSON.stringify(user)); } catch (_) {}
+            }
+
+            if (cep && billing && !billing.can_use) {
+                const type = normalizeType(user);
+                if (type === 'sindico') {
+                    if (options.redirect) {
+                        const destination = pageUrl('checkout.html');
+                        window.location.replace(destination);
+                        return { user, redirected: true, destination, billingBlocked: true };
+                    }
+                    return { user, redirected: false, billingBlocked: true };
+                }
+
+                if (type === 'morador' || type === 'porteiro') {
+                    try { await client.auth.signOut(); } catch (_) {}
+                    try {
+                        sessionStorage.removeItem('condominiumUser');
+                        sessionStorage.removeItem('sb-session');
+                        sessionStorage.removeItem('sb-access-token');
+                        localStorage.removeItem('condominiumPersistentUser');
+                        localStorage.removeItem('condominiumPersistentSession');
+                    } catch (_) {}
+                    return { user: null, redirected: false, billingBlocked: true };
+                }
+            }
+
             if (options.redirect) {
                 const destination = targetFor(user, Boolean(cep));
                 const currentName = String(window.location.pathname || '').split('/').pop() || '';

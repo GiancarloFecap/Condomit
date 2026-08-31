@@ -4248,6 +4248,261 @@ function normalizeBillingStatusPayload(payload) {
   };
 }
 
+const CONDOMIT_PLAN_LEVELS = Object.freeze({
+  essencial: 1,
+  pro: 2,
+  premium: 3
+});
+
+const CONDOMIT_PLAN_LABELS = Object.freeze({
+  1: 'Essencial',
+  2: 'Pro',
+  3: 'Premium'
+});
+
+const CONDOMIT_PAGE_MIN_PLAN = Object.freeze({
+  'chat-sindico.html': 2,
+  'chat-moradores.html': 2,
+  'chat-porteiro.html': 2,
+  'achados-perdidos.html': 2,
+  'assembleia.html': 2,
+  'assembleia-detalhes.html': 2,
+  'assembleia-preparacao.html': 2,
+  'assembleia-sala.html': 2,
+  'assembleia-resumo.html': 2,
+  'reservas.html': 2,
+  'manutencao-preventiva.html': 2,
+  'liberacao-visitantes.html': 2,
+  'registrar-visitantes.html': 2,
+  'registro-entrada-saida.html': 2,
+  'visitantes-liberados.html': 2,
+  'autorizacao-entregas.html': 2,
+  'controle-prestadores.html': 2,
+  'ocorrencias.html': 3,
+  'marketplace.html': 3,
+  'gestao-avancada.html': 3,
+  'ai-comunicados.html': 3
+});
+
+let condomitPlanCatalogCache = {
+  value: null,
+  expiresAt: 0
+};
+
+function normalizeCondomitPlanName(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw.includes('premium')) return 'Premium';
+  if (raw.includes('essencial')) return 'Essencial';
+  if (raw.includes('pro')) return 'Pro';
+  return '';
+}
+
+function getCondomitPlanLevelFromName(value) {
+  const normalized = normalizeCondomitPlanName(value).toLowerCase();
+  return CONDOMIT_PLAN_LEVELS[normalized] || 0;
+}
+
+function getCondomitRequiredPlanLevel(pageName) {
+  const page = String(
+    pageName || window.location.pathname.split('/').pop() || ''
+  ).trim().toLowerCase();
+  return CONDOMIT_PAGE_MIN_PLAN[page] || 1;
+}
+
+async function fetchCondomitPlanCatalog(force = false) {
+  const now = Date.now();
+  if (!force && condomitPlanCatalogCache.value && condomitPlanCatalogCache.expiresAt > now) {
+    return condomitPlanCatalogCache.value;
+  }
+
+  const response = await fetch('/api/plano', { headers: { Accept: 'application/json' } });
+  if (!response.ok) {
+    throw new Error('Não foi possível consultar os planos da Condomit.');
+  }
+
+  const payload = await response.json();
+  const plans = Array.isArray(payload) ? payload : [];
+  condomitPlanCatalogCache = {
+    value: plans,
+    expiresAt: now + 5 * 60 * 1000
+  };
+  return plans;
+}
+
+async function getCondomitPlanAccess(billing = null, force = false) {
+  const currentBilling = billing || await getCondomitBillingStatus(force);
+  const user = getStoredCondominiumUser();
+
+  let planName = normalizeCondomitPlanName(
+    currentBilling?.plan_name || user?.plan_name || user?.planName
+  );
+
+  if (!planName && currentBilling?.plan_id != null) {
+    try {
+      const catalog = await fetchCondomitPlanCatalog(force);
+      const matched = catalog.find((plan) => String(plan?.id) === String(currentBilling.plan_id));
+      planName = normalizeCondomitPlanName(matched?.nome || matched?.name);
+    } catch (error) {
+      console.warn('[Plan Access] Falha ao resolver o nome do plano:', error?.message || error);
+    }
+  }
+
+  const level = getCondomitPlanLevelFromName(planName);
+  const access = {
+    resolved: level > 0,
+    plan_id: currentBilling?.plan_id ?? null,
+    plan_name: planName || null,
+    level,
+    billing: currentBilling
+  };
+
+  if (user && access.resolved) {
+    user.plan = currentBilling?.plan_id ?? user.plan ?? null;
+    user.plan_name = planName;
+    user.plan_level = level;
+    try {
+      sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+    } catch (_) {}
+
+    try {
+      window.dispatchEvent(new CustomEvent('condomit:plan-access-ready', { detail: access }));
+    } catch (_) {}
+  }
+
+  return access;
+}
+
+function canCondomitUseRoute(routeKeyOrPage, access = null) {
+  const routeToPage = {
+    inicio: 'index.html',
+    mural: 'mural-avisos.html',
+    sugestoes: 'sugestoes.html',
+    notificacoes: 'notificacoes.html',
+    'gestao-moradores': 'gestao-moradores.html',
+    'ia-duvidas': 'ai-condomit.html',
+    configuracoes: 'configuracoes.html',
+    'chat-sindico': 'chat-sindico.html',
+    'chat-moradores': 'chat-moradores.html',
+    'chat-porteiro': 'chat-porteiro.html',
+    'chat-portaria': 'chat-porteiro.html',
+    'achados-perdidos': 'achados-perdidos.html',
+    assembleias: 'assembleia.html',
+    reservas: 'reservas.html',
+    manutencao: 'manutencao-preventiva.html',
+    'porteiro-liberacao': 'liberacao-visitantes.html',
+    'porteiro-registrar': 'registrar-visitantes.html',
+    'porteiro-registro': 'registro-entrada-saida.html',
+    'porteiro-visitantes': 'visitantes-liberados.html',
+    'porteiro-historico': 'registro-entrada-saida.html',
+    'porteiro-entregas': 'autorizacao-entregas.html',
+    'porteiro-prestadores': 'controle-prestadores.html',
+    ocorrencias: 'ocorrencias.html',
+    marketplace: 'marketplace.html',
+    'gestao-avancada': 'gestao-avancada.html',
+    comunicados: 'ai-comunicados.html'
+  };
+
+  const page = routeToPage[routeKeyOrPage] || String(routeKeyOrPage || '').split('?')[0].split('#')[0];
+  const required = getCondomitRequiredPlanLevel(page);
+  const available = Number(access?.level || getStoredCondominiumUser()?.plan_level || 0);
+  return available > 0 && available >= required;
+}
+
+function hasCondomitMinimumPlan(planName) {
+  const required = getCondomitPlanLevelFromName(planName);
+  const current = Number(getStoredCondominiumUser()?.plan_level || 0);
+  return required > 0 && current >= required;
+}
+
+function requireCondomitMinimumPlan(planName) {
+  const required = getCondomitPlanLevelFromName(planName);
+  if (!required || hasCondomitMinimumPlan(planName)) return true;
+
+  const user = getStoredCondominiumUser();
+  const currentLevel = Number(user?.plan_level || 0);
+  showCondomitPlanLock({
+    plan_name: user?.plan_name || null,
+    level: currentLevel
+  }, required);
+  return false;
+}
+
+function applyCondomitPlanVisibility(root = document) {
+  const user = getStoredCondominiumUser();
+  const currentLevel = Number(user?.plan_level || 0);
+  if (!currentLevel || !root?.querySelectorAll) return;
+
+  root.querySelectorAll('[data-min-plan]').forEach((element) => {
+    const required = getCondomitPlanLevelFromName(element.getAttribute('data-min-plan'));
+    if (!required) return;
+    element.hidden = currentLevel < required;
+    element.setAttribute('aria-hidden', currentLevel < required ? 'true' : 'false');
+  });
+}
+
+function getCondomitHomeForUser(user) {
+  const type = getNormalizedUserType(user || {});
+  if (type === 'morador') return 'index-morador.html';
+  if (type === 'porteiro') return 'index-porteiro.html';
+  if (type === 'administradora') return 'index-administradora.html';
+  return 'index.html';
+}
+
+function showCondomitPlanLock(access, requiredLevel) {
+  ensureCondomitBillingLockStyles();
+  removeCondomitBillingLock();
+
+  const user = getStoredCondominiumUser();
+  const userType = getNormalizedUserType(user || {});
+  const currentPlan = access?.plan_name || 'seu plano atual';
+  const requiredPlan = CONDOMIT_PLAN_LABELS[requiredLevel] || 'superior';
+  const overlay = document.createElement('div');
+  overlay.id = 'condomit-billing-lock';
+  overlay.className = 'condomit-billing-lock';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.innerHTML = `
+    <div class="condomit-billing-lock-card">
+      <div class="condomit-billing-lock-icon"><i class="fas fa-crown"></i></div>
+      <h2>Recurso do plano ${requiredPlan}</h2>
+      <p>Este recurso não faz parte do plano ${currentPlan}. O acesso é liberado somente para condomínios com o plano ${requiredPlan} ou superior.</p>
+      <div class="condomit-billing-lock-actions">
+        ${userType === 'sindico' ? '<button type="button" class="condomit-billing-pay"><i class="fas fa-arrow-up"></i> Ver planos</button>' : ''}
+        <button type="button" class="condomit-billing-refresh"><i class="fas fa-house"></i> Voltar ao início</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.body.classList.add('condomit-billing-locked');
+
+  overlay.querySelector('.condomit-billing-pay')?.addEventListener('click', () => {
+    window.location.href = 'checkout.html?upgrade=1';
+  });
+  overlay.querySelector('.condomit-billing-refresh')?.addEventListener('click', () => {
+    window.location.href = getCondomitHomeForUser(user);
+  });
+}
+
+async function enforceCondomitPlanAccess(options = {}) {
+  const requiredLevel = getCondomitRequiredPlanLevel(options.pageName);
+  if (requiredLevel <= 1) {
+    applyCondomitPlanVisibility();
+    return true;
+  }
+
+  const access = await getCondomitPlanAccess(options.billing || null, Boolean(options.force));
+  if (!access.resolved) {
+    // Falha ao identificar o plano não deve bloquear por engano.
+    return true;
+  }
+
+  applyCondomitPlanVisibility();
+  if (access.level >= requiredLevel) return true;
+
+  showCondomitPlanLock(access, requiredLevel);
+  return false;
+}
+
 function getStoredCondominiumUser() {
   try {
     const raw =
@@ -5102,6 +5357,22 @@ async function enforceCondomitBillingAccess(
         scheduleCondomitBillingExpiryCheck(
           billing
         );
+
+        const planAllowed =
+          await enforceCondomitPlanAccess({
+            billing,
+            force: Boolean(options.force)
+          });
+
+        if (!planAllowed) {
+          return false;
+        }
+
+        try {
+          const access = await getCondomitPlanAccess(billing, Boolean(options.force));
+          applyCondomitPlanVisibility();
+          window.dispatchEvent(new CustomEvent('condomit:plan-access-ready', { detail: access }));
+        } catch (_) {}
       }
 
       return true;
@@ -5481,6 +5752,28 @@ window.clearCondomitBillingCache =
 
 window.enforceCondomitBillingAccess =
   enforceCondomitBillingAccess;
+
+window.getCondomitPlanAccess =
+  getCondomitPlanAccess;
+
+window.getCondomitRequiredPlanLevel =
+  getCondomitRequiredPlanLevel;
+
+window.canCondomitUseRoute =
+  canCondomitUseRoute;
+
+window.enforceCondomitPlanAccess =
+  enforceCondomitPlanAccess;
+
+window.applyCondomitPlanVisibility =
+  applyCondomitPlanVisibility;
+window.hasCondomitMinimumPlan =
+  hasCondomitMinimumPlan;
+window.requireCondomitMinimumPlan =
+  requireCondomitMinimumPlan;
+
+window.showCondomitPlanLock =
+  showCondomitPlanLock;
 
 window.redirectToHome =
   redirectToHome;

@@ -13,6 +13,7 @@ let lastCheckoutInitiatedAt = 0;
 
 
 document.addEventListener('DOMContentLoaded', async function () {
+    const isUpgradeFlow = new URLSearchParams(window.location.search).get('upgrade') === '1';
     const loggedInUser = sessionStorage.getItem('condominiumUser');
     if (!loggedInUser) {
         window.location.href = 'entrar.html';
@@ -30,8 +31,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         const billing = await fetchCondominiumBillingStatus(true);
         if (billing?.can_use) {
             persistApprovedPlan(billing);
-            window.location.href = 'index.html';
-            return;
+            if (!isUpgradeFlow) {
+                window.location.href = 'index.html';
+                return;
+            }
         }
     } catch (error) {
         console.error('[Checkout] Erro ao consultar mensalidade do condomínio:', error);
@@ -112,14 +115,30 @@ function renderPlans() {
         planCard.dataset.planId = plan.id;
 
         let icon = 'fa-leaf';
-        let features = ['Mural de avisos', 'Reservas simples'];
+        let features = [
+            'Início, Mural de Avisos e Sugestões',
+            'Notificações e Gestão de Moradores',
+            'IA - Dúvidas',
+            'Dados pessoais, Minha unidade e Configurações'
+        ];
 
-        if (planName.includes('Pro')) {
-            icon = 'fa-rocket';
-            features = ['Tudo do Essencial', 'Modulo Financeiro', 'Controle de Acesso'];
-        } else if (planName.includes('Premium')) {
+        const normalizedPlanName = planName.trim().toLowerCase();
+        if (normalizedPlanName.includes('premium')) {
             icon = 'fa-crown';
-            features = ['Tudo do Pro', 'APIs e White-label', 'Suporte Prioritario'];
+            features = [
+                'Tudo do Pro',
+                'Ocorrências e Marketplace',
+                'Gestão Avançada',
+                'IA - Comunicados Automáticos'
+            ];
+        } else if (normalizedPlanName.includes('pro')) {
+            icon = 'fa-rocket';
+            features = [
+                'Tudo do Essencial',
+                'Chats, Achados e Perdidos e Assembleias',
+                'Reserva de Locais e Manutenção Preventiva',
+                'Controle de Acesso e Registrar Encomenda'
+            ];
         }
 
         planCard.innerHTML = `

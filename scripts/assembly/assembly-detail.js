@@ -1,5 +1,4 @@
 (function () {
-  var THIRTY_MINUTES_MS = 30 * 60 * 1000;
   var countdownInterval = null;
 
   var state = {
@@ -703,15 +702,6 @@
     var now = new Date().getTime();
     var diff = startDate ? (startDate.getTime() - now) : Infinity;
 
-    if (diff > 0 && diff <= THIRTY_MINUTES_MS) {
-      if (ctaMainText) ctaMainText.textContent = 'Entrar na sala de preparação';
-      if (ctaMainIcon) ctaMainIcon.className = 'fas fa-door-open';
-      if (btnCtaMain) { btnCtaMain.className = 'btn btn-primary btn-lg'; btnCtaMain.style.width = '100%'; btnCtaMain.style.marginBottom = '12px'; }
-      enable(btnCtaMain);
-      disable(btnEntrarAgora);
-      return;
-    }
-
     if (diff <= 0) {
       if (ctaMainText) ctaMainText.textContent = 'Entrar na assembleia';
       if (ctaMainIcon) ctaMainIcon.className = 'fas fa-video';
@@ -999,10 +989,6 @@
     var diff = startDate ? (startDate.getTime() - now) : Infinity;
 
     if (live || diff <= 0) {
-      window.location.href = 'assembleia-preparacao.html?id=' + encodeURIComponent(state.assemblyId);
-      return;
-    }
-    if (diff <= THIRTY_MINUTES_MS) {
       window.location.href = 'assembleia-preparacao.html?id=' + encodeURIComponent(state.assemblyId);
       return;
     }

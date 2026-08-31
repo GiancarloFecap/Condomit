@@ -229,7 +229,7 @@
                             <span>Autenticação de dois fatores</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
-                        <div class="form-group" onclick="openConfigSection('controle-acesso')">
+                        <div class="form-group" data-min-plan="Pro" onclick="openConfigSection('controle-acesso')">
                             <i class="fas fa-lock"></i>
                             <span>Controle de acesso</span>
                             <i class="fas fa-chevron-right"></i>
@@ -239,7 +239,7 @@
                             <span>Mudar de condomínio</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
-                        <div class="form-group" onclick="openPackageRegistrationModal()">
+                        <div class="form-group" data-min-plan="Pro" onclick="openPackageRegistrationModal()">
                             <i class="fas fa-box-open"></i>
                             <span>Registrar encomenda</span>
                             <i class="fas fa-chevron-right"></i>
@@ -259,12 +259,12 @@
                             <span>Avisos gerais do condomínio</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
-                        <div class="form-group" onclick="openConfigSection('reserva-areas')">
+                        <div class="form-group" data-min-plan="Pro" onclick="openConfigSection('reserva-areas')">
                             <i class="fas fa-calendar-check"></i>
                             <span>Reserva de áreas comuns</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
-                        <div class="form-group" onclick="openConfigSection('encomendas')">
+                        <div class="form-group" data-min-plan="Pro" onclick="openConfigSection('encomendas')">
                             <i class="fas fa-box"></i>
                             <span>Encomendas e correspondências</span>
                             <i class="fas fa-chevron-right"></i>
@@ -272,7 +272,7 @@
                     </div>
 
                     <!-- Reserva e áreas comuns -->
-                    <div class="config-card">
+                    <div class="config-card" data-min-plan="Pro">
                         <h3>Reserva e áreas comuns</h3>
                         <div class="form-group" onclick="openConfigSection('minhas-reservas')">
                             <i class="fas fa-calendar-alt"></i>
@@ -324,7 +324,7 @@
                             <span>Informações do condomínio</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
-                        <div class="form-group" id="condominiumAccessCodeRow" onclick="openCondominiumAccessCodeModal()" hidden>
+                        <div class="form-group" id="condominiumAccessCodeRow" data-min-plan="Pro" onclick="openCondominiumAccessCodeModal()" hidden>
                             <i class="fas fa-key"></i>
                             <span>Gerar código de acesso</span>
                             <i class="fas fa-chevron-right"></i>
@@ -334,7 +334,7 @@
                             <span>Contatos úteis</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
-                        <div class="form-group" onclick="openConfigSection('prestadores-servicos')">
+                        <div class="form-group" data-min-plan="Pro" onclick="openConfigSection('prestadores-servicos')">
                             <i class="fas fa-tools"></i>
                             <span>Prestadores de serviços</span>
                             <i class="fas fa-chevron-right"></i>
@@ -404,13 +404,13 @@
     <script src="../scripts/platform-config.js?v=035"></script>
 
 
-    <script src="../scripts/supabase-client.js?v=036"></script>
+    <script src="../scripts/supabase-client.js?v=037"></script>
     <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
-    <script src="../scripts/sidebar-links.js?v=035"></script>
+    <script src="../scripts/sidebar-links.js?v=037"></script>
     <script src="../scripts/visitor-registration.js"></script>
     <script src="../scripts/two-factor.js?v=016"></script>
-    <script src="../scripts/configuracoes.js?v=035"></script>
-    <script src="../scripts/config-access-012.js?v=035"></script>
+    <script src="../scripts/configuracoes.js?v=037"></script>
+    <script src="../scripts/config-access-012.js?v=037"></script>
     <script src="../scripts/profile-photo-editor.js?v=015"></script>
 
     <div class="reservas-modal-overlay" id="reservasModal">

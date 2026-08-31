@@ -58,6 +58,31 @@ document.addEventListener('DOMContentLoaded', async function() {
         return null;
     }
 
+    async function denyAccessForUnpaidMember() {
+        try {
+            if (window.supabase?.auth?.signOut) {
+                await window.supabase.auth.signOut();
+            }
+        } catch (_) {}
+
+        try {
+            sessionStorage.removeItem('condominiumUser');
+            sessionStorage.removeItem('sb-session');
+            sessionStorage.removeItem('sb-access-token');
+            localStorage.removeItem('condominiumPersistentUser');
+            localStorage.removeItem('condominiumPersistentSession');
+        } catch (_) {}
+
+        showModal({
+            title: 'Acesso suspenso',
+            message:
+                'A mensalidade do condomínio está pendente. Enquanto o síndico não regularizar o pagamento, ' +
+                'moradores e porteiros não poderão acessar suas contas.',
+            type: 'warning',
+            confirmText: 'Entendi'
+        });
+    }
+
     function getNormalizedUserType(user) {
         const raw = String(user.user_type || user.type || '').trim().toLowerCase();
         if (raw === 'síndico') return 'sindico';
@@ -144,18 +169,21 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return;
             }
 
-            // Condomínio já pago anteriormente, mas mensalidade vencida:
-            // entra no painel e o guard global mostra o popup bloqueante.
-            if (billing?.status === 'overdue') {
-                window.location.href = 'index.html';
-                return;
-            }
-
-            // Primeiro pagamento do condomínio.
+            // Sem pagamento ativo (primeiro pagamento ou renovação mensal vencida),
+            // o síndico segue apenas para o checkout para regularizar o condomínio.
             window.location.href = 'checkout.html';
             return;
         } else if (type === 'morador') {
             if (user.condominium) {
+                const billing = await fetchCondominiumBillingStatus(true);
+                if (!billing?.can_use) {
+                    await denyAccessForUnpaidMember();
+                    return;
+                }
+                if (billing?.plan_id) {
+                    user.plan = billing.plan_id;
+                    sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+                }
                 window.location.href = 'index-morador.html';
             } else {
                 window.location.href = 'entrar-condominio.html';
@@ -168,6 +196,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                 user.condominium = linkedCondominium;
                 sessionStorage.setItem('condominiumUser', JSON.stringify(user));
                 try { window.persistCondomitUser?.(user); } catch (_) {}
+
+                const billing = await fetchCondominiumBillingStatus(true);
+                if (!billing?.can_use) {
+                    await denyAccessForUnpaidMember();
+                    return;
+                }
+                if (billing?.plan_id) {
+                    user.plan = billing.plan_id;
+                    sessionStorage.setItem('condominiumUser', JSON.stringify(user));
+                }
                 window.location.href = 'index-porteiro.html';
             } else {
                 window.location.href = 'entrar-condominio-porteiro.html';

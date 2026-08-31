@@ -408,7 +408,7 @@
             const emailRedirectTo =
                 `${window.location.origin}/pages/entrar.html`;
 
-            const { data: authData, error: authError } =
+            let { data: authData, error: authError } =
                 await window.supabase.auth.signUp({
                     email,
                     password,

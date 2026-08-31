@@ -954,7 +954,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.navigateTo = function navigateTo(routeKey) {
         const target = getTargetForRoute(routeKey, sidebarRuntime.currentUserType);
-        if (target) window.location.href = target;
+        if (!target) return;
+
+        if (typeof window.canCondomitUseRoute === 'function' && !window.canCondomitUseRoute(routeKey)) {
+            const requiredLevel = getSidebarRouteMinPlanLevel(routeKey);
+            const access = {
+                plan_name: sidebarRuntime.currentUser?.plan_name || null,
+                level: Number(sidebarRuntime.currentUser?.plan_level || 0)
+            };
+            if (typeof window.showCondomitPlanLock === 'function') {
+                window.showCondomitPlanLock(access, requiredLevel);
+            }
+            return;
+        }
+
+        window.location.href = target;
     };
 
     window.applyGlobalAppLanguage = function applyGlobalAppLanguage(lang = getAppLanguage()) {
@@ -974,6 +988,14 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('storage', (event) => {
     if (event.key === 'app-language' && typeof window.applyGlobalAppLanguage === 'function') {
         window.applyGlobalAppLanguage(event.newValue || 'pt');
+    }
+});
+
+window.addEventListener('condomit:plan-access-ready', () => {
+    sidebarRuntime.currentUser = getSidebarCurrentUser();
+    sidebarRuntime.currentUserType = getSidebarUserType(sidebarRuntime.currentUser);
+    if (typeof window.applyGlobalAppLanguage === 'function') {
+        window.applyGlobalAppLanguage(getAppLanguage());
     }
 });
 
@@ -1054,6 +1076,32 @@ function getTargetForRoute(routeKey, userType) {
     return routeMap[routeKey] || '';
 }
 
+function getSidebarRouteMinPlanLevel(routeKey) {
+    const proRoutes = new Set([
+        'chat-sindico', 'chat-moradores', 'chat-porteiro', 'chat-portaria',
+        'achados-perdidos', 'assembleias', 'reservas', 'manutencao',
+        'porteiro-liberacao', 'porteiro-registrar', 'porteiro-registro',
+        'porteiro-visitantes', 'porteiro-historico', 'porteiro-entregas',
+        'porteiro-prestadores', 'porteiro-emergencia'
+    ]);
+    const premiumRoutes = new Set([
+        'ocorrencias', 'marketplace', 'gestao-avancada', 'comunicados'
+    ]);
+    if (premiumRoutes.has(routeKey)) return 3;
+    if (proRoutes.has(routeKey)) return 2;
+    return 1;
+}
+
+function getSidebarCurrentPlanLevel(user) {
+    const explicit = Number(user?.plan_level || 0);
+    if (explicit > 0) return explicit;
+    const name = String(user?.plan_name || '').trim().toLowerCase();
+    if (name.includes('premium')) return 3;
+    if (name === 'pro' || name.includes(' pro')) return 2;
+    // Enquanto o plano é resolvido pelo guard global, exibimos somente o Essencial.
+    return 1;
+}
+
 function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage()) {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
@@ -1081,7 +1129,13 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
 }
 
 function buildSidebarNav(userType, currentPage, lang = getAppLanguage()) {
-    const config = getSidebarConfig(userType);
+    const planLevel = getSidebarCurrentPlanLevel(sidebarRuntime.currentUser);
+    const config = getSidebarConfig(userType)
+        .map((section) => ({
+            ...section,
+            items: section.items.filter((item) => planLevel >= getSidebarRouteMinPlanLevel(item.route))
+        }))
+        .filter((section) => section.items.length > 0);
     const navId = userType === 'morador'
         ? 'sidebarMorador'
         : userType === 'porteiro'

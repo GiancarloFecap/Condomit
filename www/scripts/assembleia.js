@@ -1568,6 +1568,27 @@ async function loadScheduledAssemblies() {
     }
 }
 
+function getScheduledAssemblyStartDate(assembly) {
+    if (!assembly) return null;
+
+    if (assembly.scheduled_at) {
+        const direct = new Date(assembly.scheduled_at);
+        if (!Number.isNaN(direct.getTime())) return direct;
+    }
+
+    const date = String(assembly.date || assembly.assembly_date || '').slice(0, 10);
+    const time = String(assembly.start_time || assembly.time || '00:00').slice(0, 5);
+    if (!date) return null;
+
+    const local = new Date(`${date}T${time}:00`);
+    return Number.isNaN(local.getTime()) ? null : local;
+}
+
+function canPrepareScheduledAssembly(assembly) {
+    const start = getScheduledAssemblyStartDate(assembly);
+    return !start || Date.now() >= start.getTime();
+}
+
 function renderScheduledAssemblies() {
     const listContainer = $('scheduled-list');
     if (!listContainer) return;
@@ -1605,6 +1626,12 @@ function renderScheduledAssemblies() {
             `
             : '';
 
+        const canPrepare = canPrepareScheduledAssembly(assembly);
+        const prepareTitle = canPrepare
+            ? 'Preparar entrada'
+            : `Disponível a partir de ${escapeHtml(String(assembly.start_time || assembly.time || '--:--').slice(0, 5))}`;
+        const prepareDisabled = canPrepare ? '' : 'disabled aria-disabled="true"';
+
         listContainer.insertAdjacentHTML('beforeend', `
             <div class="assembly-item" data-assembly-id="${escapeHtml(String(assembly.id))}">
                 <div class="assembly-info">
@@ -1613,8 +1640,8 @@ function renderScheduledAssemblies() {
                     ${createdByHtml}
                 </div>
                 <div class="assembly-actions">
-                    <button class="btn btn-primary" onclick="joinAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')">
-                        <i class="fas fa-sliders"></i> Preparar entrada
+                    <button class="btn btn-primary" ${prepareDisabled} title="${prepareTitle}" onclick="joinAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')">
+                        <i class="fas fa-sliders"></i> ${canPrepare ? 'Preparar entrada' : 'Aguardando horário'}
                     </button>
                     ${deleteButton}
                 </div>
@@ -1755,6 +1782,16 @@ async function confirmDeleteAssembly(id) {
 function joinAssembly(assemblyId) {
     if (!assemblyId) {
         showToast('ID da assembleia não encontrado.', 'error');
+        return;
+    }
+
+    const assembly = scheduledAssemblies.find((item) => String(item.id) === String(assemblyId));
+    if (assembly && !canPrepareScheduledAssembly(assembly)) {
+        const start = getScheduledAssemblyStartDate(assembly);
+        const timeText = start
+            ? start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+            : String(assembly.start_time || assembly.time || '--:--').slice(0, 5);
+        showToast(`A preparação será liberada a partir das ${timeText}.`, 'warning');
         return;
     }
 
