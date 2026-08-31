@@ -345,42 +345,52 @@
                 };
             }
 
-            // Só revela o valor em cache quando os metadados batem com o código
-            // ativo no servidor. Assim, se outro síndico gerar um novo código em
-            // outro dispositivo, um valor antigo da sessão não é exibido como válido.
-            if (cached?.code) {
-                const cachedExpiry = cached.expiresAt ? new Date(cached.expiresAt).getTime() : null;
-                const serverExpiry = status?.expires_at ? new Date(status.expires_at).getTime() : null;
-                const sameExpiry = cachedExpiry === null && serverExpiry === null
-                    ? true
-                    : (Number.isFinite(cachedExpiry) && Number.isFinite(serverExpiry) && Math.abs(cachedExpiry - serverExpiry) < 2000);
-                if (sameExpiry) {
-                    const expiry = status?.expires_at ? new Date(status.expires_at) : null;
-                    const expiryText = expiry && !Number.isNaN(expiry.getTime())
-                        ? ` Ele é válido até ${expiry.toLocaleString('pt-BR')}.`
-                        : '';
-                    return {
-                        text: `O código de acesso gerado nesta sessão é ${cached.code}.${expiryText}`,
-                        actions: [{ label: 'Gerar novo código', command: 'generate-access-code', icon: 'fa-rotate' }]
-                    };
-                }
-                try { sessionStorage.removeItem(getAccessCodeCacheKey(cep)); } catch (_) {}
-            }
-
+            const serverCode = String(status?.code || '').trim();
             const expiry = status?.expires_at ? new Date(status.expires_at) : null;
             const expiryText = expiry && !Number.isNaN(expiry.getTime())
-                ? ` até ${expiry.toLocaleString('pt-BR')}`
+                ? ` válido até ${expiry.toLocaleString('pt-BR')}`
                 : '';
+            const remaining = Number.isFinite(Number(status?.remaining_uses))
+                ? Number(status.remaining_uses)
+                : Math.max(0, Number(status?.max_uses || 0) - Number(status?.uses || 0));
+            const usageText = Number(status?.max_uses || 0) > 0
+                ? ` e possui ${remaining} uso(s) restante(s)`
+                : '';
+
+            if (serverCode) {
+                try {
+                    sessionStorage.setItem(getAccessCodeCacheKey(cep), JSON.stringify({
+                        code: serverCode,
+                        cep: String(cep).replace(/\D/g, ''),
+                        expiresAt: status?.expires_at || null,
+                        maxUses: Number(status?.max_uses || 0),
+                        createdAt: status?.created_at || new Date().toISOString()
+                    }));
+                } catch (_) {}
+                return {
+                    text: `O código de acesso atual do condomínio é ${serverCode}.${expiryText}${usageText}.`,
+                    actions: [{ label: 'Gerar novo código', command: 'generate-access-code', icon: 'fa-rotate' }]
+                };
+            }
+
+            // Código criado antes da migration 031: o banco possui o hash, mas
+            // não o valor recuperável. Se ele ainda estiver nesta sessão, usamos
+            // o cache; caso contrário oferecemos a criação de um novo.
+            if (cached?.code) {
+                return {
+                    text: `O código ativo desta sessão é ${cached.code}.${expiryText}${usageText}.`,
+                    actions: [{ label: 'Gerar novo código', command: 'generate-access-code', icon: 'fa-rotate' }]
+                };
+            }
+
             return {
-                text: `Existe um código de acesso ativo${expiryText}. Por segurança, a Condomit armazena somente o hash do código e não consegue exibir novamente o valor original. Você pode gerar um novo código, que substituirá o atual.`,
+                text: `Existe um código de acesso ativo${expiryText}${usageText}, mas ele foi criado antes da atualização que permite recuperá-lo com segurança. Gere um novo código para que ele fique disponível ao síndico durante toda a validade.`,
                 actions: [{ label: 'Gerar novo código', command: 'generate-access-code', icon: 'fa-rotate' }]
             };
         } catch (error) {
-            // Se a consulta de status estiver temporariamente indisponível, ainda
-            // podemos mostrar somente um código que foi gerado nesta mesma sessão.
             if (cached?.code) {
                 return {
-                    text: `O último código gerado nesta sessão foi ${cached.code}. Não consegui confirmar o status dele no servidor agora.`,
+                    text: `O último código disponível nesta sessão é ${cached.code}. Não consegui confirmar o status dele no servidor agora.`,
                     actions: [{ label: 'Gerar novo código', command: 'generate-access-code', icon: 'fa-rotate' }]
                 };
             }

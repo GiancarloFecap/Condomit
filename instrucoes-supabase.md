@@ -98,3 +98,13 @@ where routine_schema = 'public'
     'condomit_get_condominium_access_code_status'
   );
 ```
+
+## Atualização v0.43.0
+
+Execute também a migration abaixo no SQL Editor do Supabase, após as anteriores:
+
+```text
+supabase/migrations/031_account_plan_access_code_persistence.sql
+```
+
+Ela corrige a exclusão de contas bloqueada por chaves estrangeiras legadas (incluindo `assembly_polls_created_by_fkey`) e passa a manter o valor do código de acesso disponível somente ao síndico enquanto a validade e a quantidade de usos ainda permitirem o acesso. Códigos criados antes desta migration continuam válidos conforme as regras antigas, mas o valor em texto não pode ser recuperado a partir do hash; gere um novo código após aplicar a migration para usar a recuperação pela IA/Configurações.

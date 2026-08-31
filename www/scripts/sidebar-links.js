@@ -985,6 +985,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.applyGlobalAppLanguage(getAppLanguage());
     installLanguageObserver();
+
+    // Revalida o plano diretamente no servidor mesmo em paginas Essencial.
+    // Antes, algumas telas dependiam de outro guard disparar o evento de plano,
+    // fazendo Pro/Premium permanecerem com a navegacao do Essencial.
+    Promise.resolve().then(async () => {
+        try {
+            if (typeof window.getCondomitPlanAccess !== 'function') return;
+            const access = await window.getCondomitPlanAccess(null, false);
+            if (!access?.resolved) return;
+            sidebarRuntime.currentUser = getSidebarCurrentUser();
+            sidebarRuntime.currentUserType = getSidebarUserType(sidebarRuntime.currentUser);
+            renderSidebar(sidebarRuntime.currentUser, sidebarRuntime.currentUserType, sidebarRuntime.currentPage, getAppLanguage());
+            refreshSidebarCondominiumLogo(sidebarRuntime.currentUser);
+        } catch (error) {
+            console.warn('[Sidebar] Não foi possível revalidar o plano agora:', error?.message || error);
+        }
+    });
 });
 
 window.addEventListener('storage', (event) => {
@@ -1096,11 +1113,33 @@ function getSidebarRouteMinPlanLevel(routeKey) {
 
 function getSidebarCurrentPlanLevel(user) {
     const explicit = Number(user?.plan_level || 0);
-    if (explicit > 0) return explicit;
-    const name = String(user?.plan_name || '').trim().toLowerCase();
+    if (explicit >= 1 && explicit <= 3) return explicit;
+
+    const name = String(user?.plan_name || user?.planName || '').trim().toLowerCase();
     if (name.includes('premium')) return 3;
     if (name === 'pro' || name.includes(' pro')) return 2;
-    // Enquanto o plano é resolvido pelo guard global, exibimos somente o Essencial.
+    if (name.includes('essencial')) return 1;
+
+    // Nas instalacoes atuais os IDs dos planos seguem 1=Essencial, 2=Pro e
+    // 3=Premium. O campo plan costuma estar disponivel no sessionStorage antes
+    // mesmo da consulta de cobranca terminar, evitando a sidebar "cair" para
+    // Essencial durante o carregamento.
+    const planId = Number(user?.plan || user?.plan_id || 0);
+    if (planId >= 1 && planId <= 3) return planId;
+
+    // Ultimo acesso resolvido para este CEP. Serve apenas para a primeira
+    // pintura da sidebar; a consulta ao servidor abaixo sempre revalida.
+    try {
+        const cep = getSidebarCondominiumCep(user).replace(/\D/g, '');
+        const raw = cep ? localStorage.getItem(`condomitPlanAccess:${cep}`) : null;
+        const cached = raw ? JSON.parse(raw) : null;
+        const age = Date.now() - Number(cached?.savedAt || 0);
+        const cachedLevel = Number(cached?.level || 0);
+        if (age >= 0 && age < 6 * 60 * 60 * 1000 && cachedLevel >= 1 && cachedLevel <= 3) {
+            return cachedLevel;
+        }
+    } catch (_) {}
+
     return 1;
 }
 

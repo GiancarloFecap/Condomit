@@ -22,17 +22,44 @@ document.addEventListener('DOMContentLoaded', async function() {
         const raw = sessionStorage.getItem('condominiumUser');
         if (raw) currentUser = JSON.parse(raw);
     } catch (_) {}
-    if (!currentUser) {
+
+    // Renderiza os dados que ja estao em cache imediatamente. Assim a tela nao
+    // abre com nome/e-mail/unidade em branco enquanto o Supabase e consultado.
+    if (currentUser) {
+        updateUIWithUserData(currentUser);
+    } else {
+        try {
+            const persistentRaw = localStorage.getItem('condominiumPersistentUser');
+            const persistent = persistentRaw ? JSON.parse(persistentRaw) : null;
+            if (persistent?.email) {
+                updateUIWithUserData({
+                    name: persistent.name || 'Usuário',
+                    email: persistent.email,
+                    type: persistent.type || 'morador',
+                    condominium: {}
+                });
+            }
+        } catch (_) {}
         currentUser = await restorePersistentLogin();
     }
+
     if (!currentUser) {
         window.location.href = 'entrar.html';
         return;
     }
 
     if (typeof refreshCurrentUserFromDb === 'function') {
-        currentUser = await refreshCurrentUserFromDb();
+        try {
+            const freshUser = await refreshCurrentUserFromDb();
+            if (freshUser) currentUser = freshUser;
+        } catch (error) {
+            console.warn('[Configurações] Não foi possível atualizar o perfil agora; usando dados locais.', error?.message || error);
+        }
     }
+
+    // Atualiza uma segunda vez com os dados mais recentes sem causar o atraso
+    // visual da primeira renderizacao.
+    updateUIWithUserData(currentUser);
 
     // A mensalidade é do condomínio (CEP), não da pessoa que ocupa o cargo.
     if (currentUser.type === 'sindico' && currentUser.condominium) {
@@ -71,13 +98,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (condominiumResponse && condominiumResponse.length > 0) {
                 currentUser.condominium.name = condominiumResponse[0].condominium_name;
                 sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
+                updateUIWithUserData(currentUser);
             }
         } catch (error) {
             console.error('Erro ao buscar nome do condomínio:', error);
         }
     }
 
-    updateUIWithUserData(currentUser);
     initPreferences();
     initEditProfileModal();
 
@@ -141,7 +168,9 @@ function clearLoginPersistent() {
 }
 
 function updateUIWithUserData(currentUser) {
-    const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    currentUser = currentUser || {};
+    const displayName = String(currentUser.name || 'Usuário').trim() || 'Usuário';
+    const initials = displayName.split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'US';
     const normalizedUserType = typeof getNormalizedUserType === 'function'
         ? getNormalizedUserType(currentUser)
         : String(currentUser.type || '').trim().toLowerCase();
@@ -178,7 +207,7 @@ function updateUIWithUserData(currentUser) {
     const topName = document.getElementById('user-name-top');
     const topType = document.getElementById('user-type-top');
 
-    if (topName) topName.textContent = currentUser.name;
+    if (topName) topName.textContent = displayName;
     if (topType) topType.textContent = userTypeLabel;
 
     // Profile preview card
@@ -187,7 +216,7 @@ function updateUIWithUserData(currentUser) {
     const cardEmail = document.getElementById('profile-email-card');
     const cardAvatar = document.getElementById('profile-avatar-card');
 
-    if (cardName) cardName.textContent = currentUser.name;
+    if (cardName) cardName.textContent = displayName;
     if (cardType) cardType.textContent = userTypeLabel;
     if (cardEmail) cardEmail.textContent = currentUser.email || 'Não informado';
 
@@ -209,7 +238,7 @@ function updateUIWithUserData(currentUser) {
     const emailEl = document.getElementById('detail-email');
     const phoneEl = document.getElementById('detail-phone');
 
-    if (fullNameEl) fullNameEl.textContent = currentUser.name;
+    if (fullNameEl) fullNameEl.textContent = displayName;
     if (typeEl) typeEl.textContent = userTypeLabel;
     if (emailEl) emailEl.textContent = currentUser.email || 'Não informado';
     if (phoneEl) phoneEl.textContent = currentUser.phone || 'Não informado';
@@ -227,14 +256,15 @@ function updateUIWithUserData(currentUser) {
     }
 
     // Sidebar condo name
-    if (currentUser.condominium) {
+    if (currentUser.condominium && typeof currentUser.condominium === 'object') {
+        const condoName = String(currentUser.condominium.name || currentUser.condominium.condominium_name || '').trim();
         const sidebarCondoNameEl = document.querySelector('.condo-name');
-        if (sidebarCondoNameEl) {
-            const words = currentUser.condominium.name.split(' ');
+        if (sidebarCondoNameEl && condoName) {
+            const words = condoName.split(/\s+/);
             if (words.length > 2) {
                 sidebarCondoNameEl.innerHTML = `${words.slice(0, 2).join(' ')}<br>${words.slice(2).join(' ')}`;
             } else {
-                sidebarCondoNameEl.textContent = currentUser.condominium.name;
+                sidebarCondoNameEl.textContent = condoName;
             }
         }
     }
@@ -2423,7 +2453,7 @@ function ensureCondominiumAccessCodeModal() {
                 <button type="button" id="condomitRevokeAccessCode" class="condomit-access-code-btn danger"><i class="fas fa-ban"></i> Revogar códigos</button>
             </div>
             <div id="condomitAccessCodeResult" class="condomit-access-code-result">
-                <small>Este código é mostrado em texto somente agora. Guarde ou compartilhe-o com quem precisa entrar no condomínio.</small>
+                <small>O código fica disponível ao síndico enquanto estiver dentro da validade e ainda possuir usos disponíveis.</small>
                 <div class="condomit-access-code-value">
                     <strong id="condomitAccessCodeValue">----</strong>
                     <button type="button" id="condomitCopyAccessCode" class="condomit-access-code-copy" aria-label="Copiar código"><i class="fas fa-copy"></i></button>
@@ -2472,6 +2502,51 @@ function setCondominiumAccessCodeFeedback(message = '', state = '') {
     el.className = `condomit-access-code-feedback${state ? ` ${state}` : ''}`;
 }
 
+function renderCondominiumAccessCodeStatus(status) {
+    const resultBox = document.getElementById('condomitAccessCodeResult');
+    const valueEl = document.getElementById('condomitAccessCodeValue');
+    const metaEl = document.getElementById('condomitAccessCodeMeta');
+    const copyButton = document.getElementById('condomitCopyAccessCode');
+    const code = String(status?.code || '').trim();
+
+    if (!status?.has_active_code) {
+        resultBox?.classList.remove('visible');
+        if (valueEl) valueEl.textContent = '----';
+        if (metaEl) metaEl.textContent = '';
+        if (copyButton) copyButton.disabled = true;
+        return;
+    }
+
+    resultBox?.classList.add('visible');
+    if (valueEl) valueEl.textContent = code || 'Código legado não recuperável';
+    if (copyButton) copyButton.disabled = !code;
+    if (metaEl) {
+        const expiry = status?.expires_at ? new Date(status.expires_at) : null;
+        const expiryText = expiry && !Number.isNaN(expiry.getTime())
+            ? expiry.toLocaleString('pt-BR')
+            : 'não informada';
+        const maxUses = Number(status?.max_uses || 0);
+        const uses = Number(status?.uses || 0);
+        const remaining = Number.isFinite(Number(status?.remaining_uses))
+            ? Number(status.remaining_uses)
+            : Math.max(0, maxUses - uses);
+        metaEl.textContent = `Validade: ${expiryText} • ${remaining} uso(s) restante(s) de ${maxUses}.`;
+    }
+}
+
+async function loadCondominiumAccessCodeStatus() {
+    if (typeof window.supabaseFetch !== 'function') return null;
+    const cep = await resolveCondominiumAccessCodeCep();
+    const payload = await window.supabaseFetch('/rpc/condomit_get_condominium_access_code_status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_cep: cep })
+    });
+    const status = Array.isArray(payload) ? payload[0] : payload;
+    renderCondominiumAccessCodeStatus(status || {});
+    return status || null;
+}
+
 async function openCondominiumAccessCodeModal() {
     const user = getCurrentUser();
     const role = typeof window.getNormalizedUserType === 'function'
@@ -2483,9 +2558,20 @@ async function openCondominiumAccessCodeModal() {
         return;
     }
     const modal = ensureCondominiumAccessCodeModal();
-    setCondominiumAccessCodeFeedback('Ao gerar um novo código, qualquer código anterior ativo será revogado automaticamente.');
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
+    setCondominiumAccessCodeFeedback('Consultando o código ativo...');
+    try {
+        const status = await loadCondominiumAccessCodeStatus();
+        if (status?.has_active_code) {
+            setCondominiumAccessCodeFeedback('Código ativo. Ele deixa de funcionar ao vencer a validade ou ao consumir o último uso disponível.', 'success');
+        } else {
+            setCondominiumAccessCodeFeedback('Não há código ativo. Ao gerar um novo código, qualquer código anterior será revogado.');
+        }
+    } catch (error) {
+        console.warn('[Código de acesso] Falha ao consultar status:', error?.message || error);
+        setCondominiumAccessCodeFeedback('Não foi possível consultar o código atual. Você ainda pode gerar um novo código.', 'error');
+    }
 }
 
 async function generateCondominiumAccessCode() {
@@ -2518,16 +2604,19 @@ async function generateCondominiumAccessCode() {
         if (!code) throw new Error('O servidor não retornou o código gerado.');
 
         if (valueEl) valueEl.textContent = code;
+        const copyButton = document.getElementById('condomitCopyAccessCode');
+        if (copyButton) copyButton.disabled = false;
         if (metaEl) {
             const expiry = data?.expires_at ? new Date(data.expires_at) : null;
             const expiryText = expiry && !Number.isNaN(expiry.getTime())
                 ? expiry.toLocaleString('pt-BR')
                 : 'sem data informada';
-            metaEl.textContent = `Validade: ${expiryText} • Máximo de ${Number(data?.max_uses || allowedUses)} usos.`;
+            metaEl.textContent = `Validade: ${expiryText} • ${Number(data?.remaining_uses ?? data?.max_uses ?? allowedUses)} uso(s) restante(s) de ${Number(data?.max_uses || allowedUses)}.`;
         }
         resultBox?.classList.add('visible');
-        // O banco guarda apenas o hash. Mantemos o código puro somente nesta sessão
-        // para que a IA Condomit consiga informá-lo ao próprio síndico sem reduzir a segurança.
+        // O banco persiste o valor em uma tabela sem leitura direta e a RPC segura só
+        // o devolve ao síndico do próprio condomínio enquanto ele estiver ativo.
+        // O cache de sessão permanece apenas como otimização visual.
         try {
             const normalizedCep = String(data?.cep || cep || '').replace(/\D/g, '');
             sessionStorage.setItem(`condomitAccessCode:${normalizedCep}`, JSON.stringify({

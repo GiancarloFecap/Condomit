@@ -4392,6 +4392,19 @@ async function getCondomitPlanAccess(billing = null, force = false) {
     } catch (_) {}
 
     try {
+      const condo = user?.condominium && typeof user.condominium === 'object' ? user.condominium : {};
+      const cep = String(condo.cep || condo.condominium_id || billing?.cep || '').replace(/\D/g, '');
+      if (cep) {
+        localStorage.setItem(`condomitPlanAccess:${cep}`, JSON.stringify({
+          level,
+          plan_name: planName,
+          plan_id: access.plan_id,
+          savedAt: Date.now()
+        }));
+      }
+    } catch (_) {}
+
+    try {
       window.dispatchEvent(new CustomEvent('condomit:plan-access-ready', { detail: access }));
     } catch (_) {}
   }
@@ -4832,15 +4845,13 @@ async function getCondomitBillingStatus(
   const user =
     getStoredCondominiumUser();
 
-  if (
-    billing.can_use &&
-    billing.plan_id &&
-    user &&
-    user.plan !==
-      billing.plan_id
-  ) {
-    user.plan =
-      billing.plan_id;
+  if (billing.can_use && user) {
+    if (billing.plan_id) user.plan = billing.plan_id;
+
+    const resolvedPlanName = normalizeCondomitPlanName(billing.plan_name || user.plan_name || user.planName);
+    const resolvedPlanLevel = getCondomitPlanLevelFromName(resolvedPlanName);
+    if (resolvedPlanName) user.plan_name = resolvedPlanName;
+    if (resolvedPlanLevel) user.plan_level = resolvedPlanLevel;
 
     try {
       sessionStorage.setItem(
@@ -4848,6 +4859,21 @@ async function getCondomitBillingStatus(
         JSON.stringify(user)
       );
     } catch (_) {}
+
+    if (resolvedPlanLevel) {
+      try {
+        const condo = user?.condominium && typeof user.condominium === 'object' ? user.condominium : {};
+        const cep = String(condo.cep || condo.condominium_id || billing?.cep || '').replace(/\D/g, '');
+        if (cep) {
+          localStorage.setItem(`condomitPlanAccess:${cep}`, JSON.stringify({
+            level: resolvedPlanLevel,
+            plan_name: resolvedPlanName,
+            plan_id: billing.plan_id || user.plan || null,
+            savedAt: Date.now()
+          }));
+        }
+      } catch (_) {}
+    }
   }
 
   return billing;
