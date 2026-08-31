@@ -1398,3 +1398,193 @@ html[data-theme="dark"] .chat-emoji-option:hover {
         grid-template-columns: repeat(6, minmax(0, 1fr));
     }
 }
+
+
+/* ============================================================
+   046 - Chat compacto, busca legível e paleta mais confortável
+============================================================ */
+.condomit-app-page .chat-page {
+    --chat-surface: #fbfcfe;
+    --chat-panel: #ffffff;
+    --chat-border: #e3e8ef;
+    --chat-muted: #738197;
+    --chat-primary: #4a6f98;
+    --chat-primary-hover: #3e628a;
+}
+
+.condomit-app-page .chat-panel {
+    border-color: var(--chat-border);
+    box-shadow: 0 10px 28px rgba(27, 44, 68, .07);
+}
+
+.condomit-app-page .messages-container {
+    background: #f7f9fc;
+}
+
+html[data-theme="dark"] .condomit-app-page .messages-container {
+    background: #0d1624;
+}
+
+.condomit-app-page .search-input-wrapper {
+    position: relative;
+    isolation: isolate;
+}
+
+.condomit-app-page .search-input-wrapper > i {
+    left: 14px !important;
+    top: 50%;
+    z-index: 3;
+    pointer-events: none;
+    color: #8190a5;
+}
+
+.condomit-app-page .search-input {
+    min-height: 40px !important;
+    height: 40px !important;
+    padding: 8px 14px 8px 40px !important;
+    border-radius: 12px !important;
+    border: 1px solid #dfe6ef !important;
+    background: #f7f9fc !important;
+    box-shadow: none !important;
+    line-height: 22px !important;
+}
+
+.condomit-app-page .search-input:focus {
+    background: #ffffff !important;
+    border-color: #8ea9c6 !important;
+    box-shadow: 0 0 0 3px rgba(74,111,152,.11) !important;
+}
+
+html[data-theme="dark"] .condomit-app-page .search-input {
+    background: #111c2c !important;
+    border-color: #2b3a4f !important;
+}
+
+html[data-theme="dark"] .condomit-app-page .search-input:focus {
+    background: #111c2c !important;
+    border-color: #6f91b7 !important;
+}
+
+.condomit-app-page .chat-input-area {
+    padding: 8px 14px 10px !important;
+    background: #ffffff;
+    border-top-color: #e8edf3;
+}
+
+html[data-theme="dark"] .condomit-app-page .chat-input-area {
+    background: #101826;
+    border-top-color: #29374a;
+}
+
+.condomit-app-page .chat-input-wrapper {
+    min-height: 42px !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 4px 6px !important;
+    border-radius: 10px !important;
+    border: 1px solid #dce3ec !important;
+    background: #f4f6f9 !important;
+    box-shadow: none !important;
+}
+
+.condomit-app-page .chat-input-wrapper:focus-within {
+    background: #f8fafc !important;
+    border-color: #9aaec4 !important;
+    box-shadow: 0 0 0 3px rgba(74,111,152,.09) !important;
+}
+
+html[data-theme="dark"] .condomit-app-page .chat-input-wrapper,
+html[data-theme="dark"] .condomit-app-page .chat-input-wrapper:focus-within {
+    background: #303640 !important;
+    border-color: #414a58 !important;
+}
+
+.condomit-app-page .chat-textarea {
+    min-height: 28px !important;
+    height: 28px;
+    max-height: 92px !important;
+    padding: 4px 8px !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
+    color: #27364a !important;
+    overflow-y: auto;
+}
+
+.condomit-app-page .chat-textarea:focus {
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+}
+
+.condomit-app-page .chat-textarea::placeholder {
+    color: #8995a6 !important;
+}
+
+html[data-theme="dark"] .condomit-app-page .chat-textarea {
+    color: #eef2f7 !important;
+}
+
+html[data-theme="dark"] .condomit-app-page .chat-textarea::placeholder {
+    color: #b2bac6 !important;
+}
+
+.condomit-app-page .chat-tool-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    flex: 0 0 32px;
+    border-radius: 8px !important;
+    color: #69778a;
+}
+
+.condomit-app-page .chat-tool-btn:hover {
+    background: #e9eef4;
+    color: #486b92;
+}
+
+.condomit-app-page .chat-emoji-btn {
+    order: 3;
+}
+
+.condomit-app-page .chat-send-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    flex: 0 0 32px;
+    border-radius: 8px !important;
+    background: #4a6f98 !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+}
+
+.condomit-app-page .chat-send-btn:hover {
+    background: #3e628a !important;
+    box-shadow: 0 4px 10px rgba(62,98,138,.18) !important;
+}
+
+.condomit-app-page .message.mine .message-bubble {
+    background: #557ba3 !important;
+    border-color: #557ba3 !important;
+}
+
+.condomit-app-page .message:not(.mine) .message-bubble {
+    border-color: #e2e8f0;
+    box-shadow: 0 2px 8px rgba(15,23,42,.04);
+}
+
+@media (max-width: 640px) {
+    .condomit-app-page .chat-input-area { padding: 7px 8px 9px !important; }
+    .condomit-app-page .chat-input-wrapper { min-height: 40px !important; }
+    .condomit-app-page .chat-tool-btn,
+    .condomit-app-page .chat-send-btn {
+        width: 31px !important;
+        height: 31px !important;
+        min-height: 31px !important;
+        flex-basis: 31px;
+    }
+}

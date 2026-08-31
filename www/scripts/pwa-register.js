@@ -31,7 +31,8 @@
     const button = event.target.closest?.('[data-install-condomit]');
     if (!button) return;
     if (!deferredPrompt) {
-      window.showToast?.('Use a opção “Instalar aplicativo” do navegador quando ela estiver disponível.', 'info');
+      const lang = (() => { try { return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt'; } catch (_) { return 'pt'; } })();
+      window.showToast?.(lang === 'en' ? 'Use your browser’s “Install app” option when it becomes available.' : 'Use a opção “Instalar aplicativo” do navegador quando ela estiver disponível.', 'info');
       return;
     }
     button.disabled = true;

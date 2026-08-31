@@ -1028,3 +1028,82 @@ body {
     }
     .header-nav .btn-login i { margin-right: 3px; }
 }
+
+
+/* ============================================================
+   046 - Idioma da página pública
+============================================================ */
+.landing-language-switcher {
+    height: 38px;
+    display: grid;
+    grid-template-columns: 28px minmax(74px, auto) 22px;
+    align-items: center;
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 10px;
+    background: rgba(15,23,42,.22);
+    backdrop-filter: blur(10px);
+    color: rgba(255,255,255,.92);
+    overflow: hidden;
+    transition: background .18s ease, border-color .18s ease;
+}
+
+.landing-language-switcher:hover,
+.landing-language-switcher:focus-within {
+    background: rgba(15,23,42,.34);
+    border-color: rgba(255,255,255,.46);
+}
+
+.landing-language-switcher > .fa-globe {
+    text-align: right;
+    font-size: 12px;
+    opacity: .88;
+}
+
+#landing-language-select {
+    height: 36px;
+    padding: 0 5px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #fff;
+    appearance: none;
+    -webkit-appearance: none;
+    font: 600 12px/1 inherit;
+    cursor: pointer;
+}
+
+#landing-language-select option {
+    background: #ffffff;
+    color: #1f2937;
+}
+
+.landing-language-arrow {
+    font-size: 9px;
+    pointer-events: none;
+    opacity: .78;
+}
+
+@media (max-width: 768px) {
+    .landing-language-switcher {
+        grid-template-columns: 24px minmax(60px, auto) 18px;
+        height: 40px;
+        border-radius: 8px;
+    }
+    #landing-language-select {
+        width: 66px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 620px) {
+    .header-nav .btn-signup { display: none !important; }
+    .landing-language-switcher {
+        grid-template-columns: 20px 45px 14px;
+    }
+    #landing-language-select {
+        width: 45px;
+        padding-inline: 2px;
+        font-size: 10.5px;
+    }
+    .landing-language-switcher > .fa-globe { font-size: 10px; }
+}

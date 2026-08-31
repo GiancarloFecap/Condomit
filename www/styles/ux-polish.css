@@ -827,3 +827,114 @@ body:not(.advanced-page) .payment-status-card {
         width: 100%;
     }
 }
+
+
+/* ============================================================
+   046 - Paleta interna mais suave e menos agressiva visualmente
+============================================================ */
+.condomit-app-page {
+    --ux-surface: #ffffff;
+    --ux-surface-soft: #f7f9fc;
+    --ux-surface-muted: #eef3f7;
+    --ux-border: #e1e7ee;
+    --ux-border-strong: #d2dbe5;
+    --ux-text: #24364a;
+    --ux-text-muted: #68788b;
+    --ux-primary: #547ba3;
+    --ux-primary-strong: #41698f;
+    --ux-primary-soft: rgba(84,123,163,.10);
+    --ux-accent: #4b8580;
+    --ux-shadow-lg: 0 18px 42px rgba(35, 51, 70, .09);
+    --ux-shadow-md: 0 9px 24px rgba(35, 51, 70, .065);
+    --ux-shadow-sm: 0 3px 12px rgba(35, 51, 70, .05);
+    color: var(--ux-text);
+}
+
+html[data-theme="dark"] .condomit-app-page {
+    --ux-surface: #111a27;
+    --ux-surface-soft: #152131;
+    --ux-surface-muted: #192637;
+    --ux-border: #2b394b;
+    --ux-border-strong: #3b4b60;
+    --ux-text: #eef3f8;
+    --ux-text-muted: #b9c5d2;
+    --ux-primary: #87a9ca;
+    --ux-primary-strong: #7297bc;
+    --ux-primary-soft: rgba(135,169,202,.13);
+    --ux-accent: #78aaa5;
+}
+
+.condomit-app-page .dashboard-sindico,
+.condomit-app-page .login-page,
+.condomit-app-page .register-page {
+    background: linear-gradient(180deg, #f7f9fb 0%, #eff3f7 100%) !important;
+}
+
+html[data-theme="dark"] .condomit-app-page .dashboard-sindico,
+html[data-theme="dark"] .condomit-app-page .login-page,
+html[data-theme="dark"] .condomit-app-page .register-page {
+    background: linear-gradient(180deg, #0b1320 0%, #101926 100%) !important;
+}
+
+.condomit-app-page .sidebar {
+    background: linear-gradient(180deg, #284964 0%, #203d58 55%, #1c344c 100%) !important;
+    box-shadow: 9px 0 24px rgba(24,43,61,.10) !important;
+}
+
+.condomit-app-page .sidebar .nav-item.active {
+    background: #4b837e !important;
+    box-shadow: 0 7px 16px rgba(32,82,79,.16) !important;
+}
+
+.condomit-app-page .sidebar .nav-item:hover {
+    background: rgba(255,255,255,.09) !important;
+}
+
+.condomit-app-page .top-bar {
+    background: rgba(255,255,255,.92) !important;
+    box-shadow: 0 3px 16px rgba(35,51,70,.045) !important;
+}
+
+html[data-theme="dark"] .condomit-app-page .top-bar {
+    background: rgba(16,25,38,.94) !important;
+}
+
+.condomit-app-page :where(.card,.info-card,.quick-card,.config-card,.welcome-card,.card-shell,.panel,.content-card) {
+    box-shadow: var(--ux-shadow-md) !important;
+}
+
+.condomit-app-page :where(.btn-primary,.btn-submit,.submit-btn,.save-btn,.primary-action) {
+    background: #4f769e !important;
+    box-shadow: none !important;
+}
+
+.condomit-app-page :where(.btn-primary,.btn-submit,.submit-btn,.save-btn,.primary-action):hover {
+    background: #41698f !important;
+    box-shadow: 0 8px 18px rgba(65,105,143,.16) !important;
+}
+
+.condomit-app-page :where(.quick-action-btn,.action-btn) {
+    box-shadow: none !important;
+}
+
+.condomit-app-page input,
+.condomit-app-page select,
+.condomit-app-page textarea {
+    border-color: var(--ux-border-strong);
+}
+
+.condomit-app-page input:focus,
+.condomit-app-page select:focus,
+.condomit-app-page textarea:focus {
+    border-color: #8fa9c2 !important;
+    box-shadow: 0 0 0 3px rgba(84,123,163,.10) !important;
+}
+
+.condomit-app-page .section-number {
+    background: #547ba3 !important;
+    box-shadow: none !important;
+}
+
+.condomit-app-page .file-upload:hover {
+    border-color: #7f9eba !important;
+}

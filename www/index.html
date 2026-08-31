@@ -6,11 +6,11 @@
     <title>Condomit</title>
     <link rel="icon" type="image/png" href="assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="styles/inicio.css?v=035">
+    <link rel="stylesheet" href="styles/inicio.css?v=046">
     <link rel="stylesheet" href="styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#2457c5">
-    <link rel="stylesheet" href="styles/ux-polish.css?v=045">
+    <link rel="stylesheet" href="styles/ux-polish.css?v=046">
 </head>
 <body>
     <!-- Hero and Header -->
@@ -31,6 +31,14 @@
                         <a href="#planos">Planos</a>
                         <a href="#duvidas">Dúvidas</a>
                         <a href="#contato">Contato</a>
+                        <div class="landing-language-switcher" title="Idioma">
+                            <i class="fas fa-globe" aria-hidden="true"></i>
+                            <select id="landing-language-select" aria-label="Idioma">
+                                <option value="pt">Português</option>
+                                <option value="en">English</option>
+                            </select>
+                            <i class="fas fa-chevron-down landing-language-arrow" aria-hidden="true"></i>
+                        </div>
                         <a href="pages/entrar.html" class="btn-login"> <i class="fas fa-user"></i>   Entrar</a>
                         <a href="pages/tipo-usuario.html" class="btn-signup">Cadastre-se</a>
                     </nav>
@@ -240,7 +248,7 @@
                                 <i class="fas fa-chevron-down"></i>
                             </div>
                             <div class="faq-answer">
-                                <p>Não! A Condomit é 100% web, você só precisa de um navegador e internet para usar todas as funcionalidades.</p>
+                                <p>No computador, abra a Condomit no Chrome ou Edge e clique em “Instalar Condomit” (ou no ícone de instalação da barra de endereço). No Android, use o Chrome e toque em “Instalar app”. No iPhone ou iPad, abra no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.</p>
                             </div>
                         </div>
                     </div>
@@ -313,8 +321,9 @@
     <script src="scripts/supabase-client.js?v=043"></script>
     <script type="module" src="scripts/supabase-auth.js?v=036"></script>
     <script src="scripts/session-resume.js?v=038"></script>
-    <script src="scripts/inicio.js?v=013"></script>
+    <script src="scripts/inicio-i18n.js?v=046"></script>
+    <script src="scripts/inicio.js?v=046"></script>
     <script src="scripts/condomit-alerts.js?v=014"></script>
-    <script src="scripts/pwa-register.js?v=031"></script>
+    <script src="scripts/pwa-register.js?v=046"></script>
 </body>
 </html>

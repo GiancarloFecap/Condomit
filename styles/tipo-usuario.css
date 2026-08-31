@@ -558,3 +558,128 @@ body {
         font-size: 0.92rem;
     }
 }
+
+
+/* ============================================================
+   046 - Página de escolha de perfil
+   Os três cards de Morador/Síndico/Porteiro foram preservados.
+============================================================ */
+body.condomit-app-page {
+    background: #eef3f7;
+}
+
+.condomit-app-page .page-bg {
+    background:
+        radial-gradient(circle at 12% 10%, rgba(86,122,158,.12), transparent 30%),
+        radial-gradient(circle at 88% 12%, rgba(75,139,135,.11), transparent 28%),
+        linear-gradient(180deg, #f7f9fc 0%, #edf3f7 100%);
+}
+
+.condomit-app-page .page-bg-image { display: none; }
+
+.condomit-app-page .page-bg-overlay {
+    background: linear-gradient(180deg, rgba(255,255,255,.44), rgba(232,239,246,.36));
+}
+
+.condomit-app-page .page-bg-glow {
+    width: 760px;
+    height: 500px;
+    background: radial-gradient(ellipse at center, rgba(255,255,255,.92) 0%, rgba(222,232,242,.42) 48%, transparent 72%);
+    filter: blur(28px);
+}
+
+.condomit-app-page .bg-corner {
+    opacity: .18;
+    background-image: radial-gradient(circle, rgba(70,96,123,.28) 1px, transparent 1.2px);
+}
+
+.condomit-app-page .type-selection-page {
+    max-width: 1180px;
+    padding-top: 22px;
+}
+
+.condomit-app-page .top-header {
+    min-height: 92px;
+    margin-bottom: 32px;
+    padding: 12px 18px;
+    border: 1px solid rgba(210,220,230,.9);
+    border-radius: 22px;
+    background: rgba(255,255,255,.78);
+    box-shadow: 0 12px 30px rgba(38,55,76,.07);
+    backdrop-filter: blur(18px);
+}
+
+.condomit-app-page .btn-back {
+    background: #f7f9fb;
+    color: #415d7c;
+    border: 1px solid #dbe3eb;
+    box-shadow: none;
+}
+
+.condomit-app-page .btn-back:hover {
+    background: #ffffff;
+    border-color: #c8d4e0;
+    box-shadow: 0 7px 16px rgba(50,72,96,.08);
+}
+
+.condomit-app-page .brand-logo-img {
+    max-height: 116px;
+    max-width: 420px;
+    filter: drop-shadow(0 8px 18px rgba(55,77,103,.10));
+}
+
+.condomit-app-page .page-title-area {
+    margin-bottom: 36px;
+}
+
+.condomit-app-page .page-title {
+    color: #20334a;
+    font-size: clamp(2.35rem, 5vw, 3.4rem);
+    text-shadow: none;
+}
+
+.condomit-app-page .gradient-text {
+    background: linear-gradient(90deg, #3f6690 0%, #4f7c9c 52%, #43837d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+.condomit-app-page .subtitle {
+    color: #68778a;
+    text-shadow: none;
+    font-size: 1.08rem;
+}
+
+.condomit-app-page .trust-banner {
+    background: rgba(255,255,255,.72);
+    border: 1px solid #d8e2eb;
+    box-shadow: 0 12px 28px rgba(39,58,79,.07);
+    backdrop-filter: blur(16px);
+}
+
+.condomit-app-page .trust-icon {
+    background: #e7eff7;
+}
+
+.condomit-app-page .trust-icon svg path:first-child {
+    stroke: #50769c;
+    fill: #e8f0f7;
+}
+
+.condomit-app-page .trust-icon svg path:last-child {
+    stroke: #50769c;
+}
+
+.condomit-app-page .trust-text h4 { color: #263b53; }
+.condomit-app-page .trust-text p { color: #647488; }
+
+@media (max-width: 600px) {
+    .condomit-app-page .top-header {
+        min-height: auto;
+        padding: 10px 12px;
+        border-radius: 18px;
+    }
+    .condomit-app-page .brand-header { margin-top: 10px; }
+    .condomit-app-page .brand-logo-img { max-height: 86px; }
+    .condomit-app-page .page-title-area { margin-top: 6px; margin-bottom: 30px; }
+}
