@@ -410,7 +410,7 @@
             }
 
             const emailRedirectTo =
-                `${window.location.origin}/pages/entrar.html`;
+                `${window.location.origin}/pages/email-confirmado.html`;
 
             let { data: authData, error: authError } =
                 await window.supabase.auth.signUp({
@@ -611,7 +611,7 @@
 
             if (looksLikeEmailConflict) {
                 const emailRedirectTo =
-                    `${window.location.origin}/pages/entrar.html`;
+                    `${window.location.origin}/pages/email-confirmado.html`;
                 const reactivateResult = await tryReactivateDeletedUser({
                     email,
                     password,

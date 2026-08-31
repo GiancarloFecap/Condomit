@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 throw new Error('Sistema de autenticação não carregado.');
             }
 
-            const emailRedirectTo = `${window.location.origin}/pages/entrar.html`;
+            const emailRedirectTo = `${window.location.origin}/pages/email-confirmado.html`;
 
             const { error } = await window.supabase.auth.resend({
                 type: 'signup',

@@ -115,3 +115,71 @@ html[data-theme="dark"] .post-assembly-vote-btn { background: #172554; border-co
 
 /* 027 - resumo executivo e tarefas automáticas */
 .summary-hero-actions{margin-top:16px}.minutes-decisions{margin:14px 0;padding:14px 16px;border-radius:14px;background:#eef6ff;border:1px solid #d7e8ff}.minutes-decisions ul{margin:8px 0 0;padding-left:20px}.minutes-decisions li+li{margin-top:6px}
+
+/* ============================================================
+   039 - Ata formal gerada a partir dos registros da assembleia
+============================================================ */
+.formal-minutes-document {
+    width: min(100%, 920px);
+    margin: 0 auto;
+    padding: clamp(28px, 5vw, 64px);
+    background: #fff;
+    border: 1px solid #d8dee8;
+    border-radius: 8px;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, .08);
+    color: #111827;
+    font-family: Georgia, 'Times New Roman', serif;
+}
+.formal-minutes-heading { text-align: center; margin-bottom: 34px; }
+.formal-condo-name { font-size: 1rem; font-weight: 700; letter-spacing: .055em; text-transform: uppercase; }
+.formal-condo-address { margin-top: 7px; font-size: .86rem; line-height: 1.45; color: #4b5563; }
+.formal-minutes-heading h3 { margin: 30px 0 8px; font-size: 1.38rem; line-height: 1.35; }
+.formal-minutes-subtitle { font-size: .98rem; font-weight: 700; line-height: 1.5; }
+.formal-minutes-body p {
+    margin: 0 0 15px;
+    font-size: 1rem;
+    line-height: 1.9;
+    text-align: justify;
+    text-indent: 2.5em;
+    hyphens: auto;
+}
+.formal-minutes-signatures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 52px;
+    margin-top: 70px;
+    padding-top: 10px;
+}
+.formal-signature { display: grid; justify-items: center; text-align: center; gap: 5px; }
+.signature-line { width: 100%; border-top: 1px solid #111827; margin-bottom: 4px; }
+.formal-signature strong { font-family: Arial, sans-serif; font-size: .88rem; }
+.formal-signature small { font-family: Arial, sans-serif; font-size: .76rem; color: #6b7280; }
+.formal-minutes-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 38px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+    font-family: Arial, sans-serif;
+    font-size: .75rem;
+    line-height: 1.5;
+    color: #6b7280;
+}
+html[data-theme="dark"] .formal-minutes-document {
+    background: #f8fafc;
+    color: #111827;
+    border-color: #cbd5e1;
+}
+html[data-theme="dark"] .formal-condo-address,
+html[data-theme="dark"] .formal-signature small,
+html[data-theme="dark"] .formal-minutes-note { color: #4b5563; }
+@media(max-width:720px) {
+    .formal-minutes-document { padding: 24px 18px; }
+    .formal-minutes-body p { text-indent: 1.5em; line-height: 1.75; }
+    .formal-minutes-signatures { grid-template-columns: 1fr; gap: 54px; }
+}
+@media print {
+    .formal-minutes-document { box-shadow: none; border: 0; border-radius: 0; max-width: none; width: 100%; padding: 0; }
+    .formal-minutes-note { break-inside: avoid; }
+}

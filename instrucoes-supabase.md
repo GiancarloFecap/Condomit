@@ -57,3 +57,21 @@ NOTIFY pgrst, 'reload schema';
 ## Segurança
 
 Nunca coloque `SUPABASE_SERVICE_ROLE_KEY` no frontend. No navegador, mantenha apenas a chave pública/publishable. A service role deve existir somente em Netlify Environment Variables.
+
+## Atualização 0.39 — logo e regulamento do condomínio
+
+Depois das migrations anteriores, execute:
+
+```text
+029_condominium_assets_and_documents.sql
+```
+
+Essa migration adiciona os campos de identidade visual e regulamento em `public.condominiums` e cria dois buckets no Storage. O bucket de regulamentos é privado e aceita apenas MIME de documentos Word `.doc` e `.docx`.
+
+Para que o botão **Confirmar meu e-mail** leve à tela de confirmação da Condomit e, em seguida, à página de entrada, adicione também em **Authentication > URL Configuration > Redirect URLs**:
+
+```text
+https://SEU-DOMINIO/pages/email-confirmado.html
+```
+
+No desenvolvimento, adicione a mesma rota com a origem local usada pelo projeto.

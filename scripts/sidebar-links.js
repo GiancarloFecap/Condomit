@@ -5,6 +5,7 @@ const sidebarRuntime = {
     currentUser: null,
     currentUserType: 'sindico'
 };
+const sidebarCondoLogoCache = new Map();
 
 const sidebarI18n = {
     pt: {
@@ -977,6 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarRuntime.currentUserType = getSidebarUserType(sidebarRuntime.currentUser);
         document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
         renderSidebar(sidebarRuntime.currentUser, sidebarRuntime.currentUserType, sidebarRuntime.currentPage, lang);
+        refreshSidebarCondominiumLogo(sidebarRuntime.currentUser);
         bindSupportButtons('mailto:contato.condomit@gmail.com?subject=Contato%20Condomit');
         translateDocument(lang);
     };
@@ -1111,7 +1113,7 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
     sidebar.classList.toggle('morador-sidebar', userType === 'morador');
     sidebar.innerHTML = `
         <div class="sidebar-header">
-            <img src="../assets/logo-lado.png" alt="Condomit Icon" class="sidebar-logo">
+            <img src="${escapeSidebarHtml(getImmediateSidebarLogo(currentUser))}" alt="Logo do condomínio" class="sidebar-logo" onerror="this.onerror=null;this.src='../assets/logo-lado.png';">
             <h2 class="condo-name" id="sidebarApartment">${formatSidebarCondoName(getSidebarCondoName(currentUser, lang), lang)}</h2>
         </div>
         ${buildSidebarNav(userType, currentPage, lang)}
@@ -1126,6 +1128,106 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
             </button>
         </div>
     `;
+}
+
+
+function getImmediateSidebarLogo(user) {
+    const condominium = user?.condominium && typeof user.condominium === 'object'
+        ? user.condominium
+        : {};
+    return condominium.logo_url || condominium.logoUrl || condominium.condominium_logo_url || '../assets/logo-lado.png';
+}
+
+function getSidebarCondominiumCep(user) {
+    const condominium = user?.condominium && typeof user.condominium === 'object'
+        ? user.condominium
+        : {};
+    return String(
+        condominium.cep ||
+        condominium.condominium_id ||
+        user?.condominium_cep ||
+        user?.cep ||
+        ''
+    ).trim();
+}
+
+async function refreshSidebarCondominiumLogo(user) {
+    const logoElements = Array.from(document.querySelectorAll('.sidebar-logo'));
+    if (!logoElements.length) return;
+
+    const fallback = '../assets/logo-lado.png';
+    const immediate = getImmediateSidebarLogo(user);
+    if (immediate && immediate !== fallback) {
+        logoElements.forEach((img) => {
+            img.onerror = () => {
+                img.onerror = null;
+                img.src = fallback;
+            };
+            img.src = immediate;
+        });
+        return;
+    }
+
+    const cep = getSidebarCondominiumCep(user);
+    if (!cep) {
+        logoElements.forEach((img) => { img.src = fallback; });
+        return;
+    }
+
+    if (sidebarCondoLogoCache.has(cep)) {
+        const cached = sidebarCondoLogoCache.get(cep) || fallback;
+        logoElements.forEach((img) => { img.src = cached; });
+        return;
+    }
+
+    try {
+        let rows = null;
+        if (typeof window.supabaseFetch === 'function') {
+            try {
+                rows = await window.supabaseFetch(
+                    `/condominiums?select=logo_url&cep=eq.${encodeURIComponent(cep)}&limit=1`
+                );
+            } catch (supabaseError) {
+                console.warn('[Sidebar] Consulta autenticada da logo falhou; usando fallback da API.', supabaseError?.message || supabaseError);
+            }
+        }
+        if (!rows) {
+            const response = await fetch(
+                `/api/condominiums?cep=eq.${encodeURIComponent(cep)}`,
+                { headers: { Accept: 'application/json' } }
+            );
+            if (response.ok) rows = await response.json();
+        }
+
+        const row = Array.isArray(rows) ? rows[0] : rows;
+        const resolved = String(row?.logo_url || '').trim() || fallback;
+        sidebarCondoLogoCache.set(cep, resolved);
+
+        logoElements.forEach((img) => {
+            img.onerror = () => {
+                img.onerror = null;
+                img.src = fallback;
+            };
+            img.src = resolved;
+        });
+
+        if (resolved !== fallback && user && typeof user === 'object') {
+            const updated = { ...user };
+            const condominium = updated.condominium && typeof updated.condominium === 'object'
+                ? { ...updated.condominium }
+                : {};
+            condominium.logo_url = resolved;
+            condominium.logoUrl = resolved;
+            updated.condominium = condominium;
+            try { sessionStorage.setItem('condominiumUser', JSON.stringify(updated)); } catch (_) {}
+            try { window.persistCondomitUser?.(updated); } catch (_) {}
+            sidebarRuntime.currentUser = updated;
+        }
+    } catch (error) {
+        console.warn('[Sidebar] Não foi possível carregar a logo do condomínio:', error?.message || error);
+        sidebarCondoLogoCache.set(cep, fallback);
+        logoElements.forEach((img) => { img.src = fallback; });
+    }
 }
 
 function buildSidebarNav(userType, currentPage, lang = getAppLanguage()) {

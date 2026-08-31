@@ -192,8 +192,8 @@
                             <div class="file-upload">
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <p>Clique para enviar ou arraste o arquivo</p>
-                                <p class="file-info">PDF até 10MB</p>
-                                <input type="file" id="regulamento" accept=".pdf">
+                                <p class="file-info">Word (.doc ou .docx) até 10MB</p>
+                                <input type="file" id="regulamento" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                             </div>
                         </div>
                         <div class="form-group">
@@ -221,8 +221,9 @@
     <script src="../scripts/platform-config.js?v=035"></script>
 
 
-    <script src="../scripts/supabase-client.js?v=038"></script>
-    <script src="../scripts/condominio_register.js"></script>
+    <script src="../scripts/supabase-client.js?v=039"></script>
+    <script type="module" src="../scripts/supabase-auth.js?v=039"></script>
+    <script src="../scripts/condominio_register.js?v=039"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/advanced-global.js?v=035"></script>
 </body>

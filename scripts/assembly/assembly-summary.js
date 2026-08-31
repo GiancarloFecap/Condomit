@@ -14,7 +14,8 @@
         hands: [],
         events: [],
         comments: [],
-        transcripts: []
+        transcripts: [],
+        condominium: null
     };
 
     document.addEventListener('DOMContentLoaded', init);
@@ -103,6 +104,12 @@
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
         Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts });
 
+        // Dados institucionais usados somente como texto na ata. A ata não inclui
+        // a logo do condomínio nem qualquer imagem do modelo de referência.
+        state.condominium = (await fetchRows(
+            `/condominiums?select=cep,condominium_name,address,address_number,complement,neighborhood,city,state&cep=eq.${encodeURIComponent(state.assembly.cep || '')}&limit=1`
+        ).catch(() => []))[0] || null;
+
         const pollIds = polls.map((poll) => poll.id).filter(Boolean);
         state.options = pollIds.length
             ? await fetchRows(`/assembly_poll_options?select=*&poll_id=in.(${pollIds.join(',')})&order=display_order.asc`)
@@ -160,83 +167,225 @@
         if (!container) return;
 
         const a = state.assembly;
-        const events = [];
-        const push = (time, title, text, priority = 0, kind = 'event') => events.push({ time, title, text, priority, kind });
+        const condo = state.condominium || {};
+        const participants = uniqueParticipants();
+        const chair = resolveAssemblyChair(participants);
+        const year = String(a.date || new Date().toISOString()).slice(0, 4);
+        const condoName = String(
+            condo.condominium_name ||
+            state.user?.condominium?.condominium_name ||
+            state.user?.condominium?.name ||
+            'Condomínio'
+        ).trim();
+        const address = formatCondominiumAddress(condo);
+        const assemblyType = formalAssemblyType(a.assembly_type);
+        const startTime = String(a.start_time || '').slice(0, 5) || '--:--';
+        const closingTime = resolveClosingTime();
+        const title = String(a.title || 'Assembleia').trim();
 
-        push(combineDateTime(a.date, a.start_time), 'Abertura prevista', `Assembleia “${a.title || 'Assembleia'}” programada para início às ${String(a.start_time || '--:--').slice(0, 5)}.`, -10);
+        const paragraphs = [];
+        const opening = `${formalDateWords(a.date)}, às ${formatClockFormal(startTime)}, nas dependências do ${condoName}${address ? `, situado em ${address}` : ''}, realizou-se a ${assemblyType} intitulada “${title}”${chair ? `, sob a presidência de ${chair.name}` : ''}${participants.length ? `, com a presença dos participantes ${participants.map((item) => `${item.name} (${roleLabel(item.role)})`).join(', ')}, conforme registro eletrônico de frequência mantido pelo Condomit.` : ', não havendo participantes identificados nos registros eletrônicos de frequência disponíveis.'}`;
+        paragraphs.push(opening);
 
+        if (a.description || a.rules) {
+            const institutional = [];
+            if (a.description) institutional.push(`A convocação teve por finalidade ${sentenceFragment(a.description)}`);
+            if (a.rules) institutional.push(`Foram observadas as seguintes orientações registradas para a reunião: ${sentenceFragment(a.rules)}`);
+            paragraphs.push(`${institutional.join('. ')}.`);
+        }
+
+        if (state.agenda.length) {
+            const agendaText = state.agenda.map((item, index) => {
+                const base = `${romanNumeral(index + 1)} – ${cleanFormalText(item.title || 'Item de pauta')}`;
+                return item.description ? `${base}: ${cleanFormalText(item.description)}` : base;
+            }).join('; ');
+            paragraphs.push(`Aberta a sessão, foi apresentada a Ordem do Dia, composta pelos seguintes assuntos: ${agendaText}. Na sequência, os itens foram submetidos à apreciação dos presentes, observando-se a ordem registrada no sistema.`);
+        } else if (a.agenda_summary) {
+            paragraphs.push(`Aberta a sessão, passou-se à apreciação da Ordem do Dia, registrada nos seguintes termos: ${sentenceFragment(a.agenda_summary)}.`);
+        } else {
+            paragraphs.push('Aberta a sessão, iniciou-se a apreciação dos assuntos constantes da convocação, não havendo pauta detalhada adicional registrada no sistema.');
+        }
+
+        paragraphs.push(...buildFormalDiscussionParagraphs());
+        const pollParagraphs = state.polls.map(buildFormalPollParagraph).filter(Boolean);
+        paragraphs.push(...(pollParagraphs.length ? pollParagraphs : ['Não foram identificadas votações eletrônicas vinculadas a esta assembleia nos registros disponíveis.']));
+
+        paragraphs.push(closingTime
+            ? `Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, a assembleia foi encerrada às ${formatClockFormal(closingTime)}.`
+            : 'Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, deu-se por encerrada a assembleia, sem horário final específico informado no cadastro.');
+        paragraphs.push('Para constar, lavrou-se a presente ata com base nos registros eletrônicos de presença, pautas, transcrições e votações armazenados pelo Condomit, a qual deverá ser submetida à conferência e, quando aplicável, à aprovação e assinatura dos responsáveis pelo condomínio.');
+
+        const chairSignature = chair?.name || 'Síndico / Presidente da Assembleia';
+        container.innerHTML = `
+            <article class="formal-minutes-document" aria-label="Ata formal da assembleia">
+                <header class="formal-minutes-heading">
+                    <div class="formal-condo-name">${esc(condoName)}</div>
+                    ${address ? `<div class="formal-condo-address">${esc(address)}</div>` : ''}
+                    <h3>ATA Nº ${esc(String(state.id))}/${esc(year)}</h3>
+                    <div class="formal-minutes-subtitle">${esc(title)} · ${esc(assemblyType)}</div>
+                </header>
+                <div class="formal-minutes-body">${paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}</div>
+                <footer class="formal-minutes-signatures">
+                    <div class="formal-signature"><span class="signature-line"></span><strong>${esc(chairSignature)}</strong><small>Presidência da Assembleia</small></div>
+                    <div class="formal-signature"><span class="signature-line"></span><strong>Responsável pela conferência da ata</strong><small>Assinatura</small></div>
+                </footer>
+                <div class="formal-minutes-note"><i class="fas fa-shield-halved"></i> Documento gerado a partir dos registros persistidos da assembleia. Nenhuma informação não registrada foi presumida pelo sistema.</div>
+            </article>`;
+    }
+    function uniqueParticipants() {
+        const seen = new Map();
         state.attendance.forEach((row) => {
-            push(row.joined_at, 'Entrada de participante', `${row.participant_name || row.user_email} (${roleLabel(row.participant_role)}) registrou presença.`);
-            if (row.left_at) push(row.left_at, 'Saída de participante', `${row.participant_name || row.user_email} encerrou sua presença.`);
+            const key = String(row.user_email || row.participant_name || row.id || '').trim().toLowerCase();
+            if (!key || seen.has(key)) return;
+            seen.set(key, {
+                email: String(row.user_email || '').trim().toLowerCase(),
+                name: cleanFormalText(row.participant_name || row.user_email || 'Participante'),
+                role: row.participant_role || 'morador'
+            });
         });
-
-        state.agenda.forEach((item) => {
-            push(item.created_at || combineDateTime(a.date, a.start_time), 'Pauta registrada', `${item.title || 'Pauta'}${item.description ? ` — ${item.description}` : ''}`);
-        });
-
-        state.transcripts.forEach((row) => {
-            push(
-                row.spoken_at || row.created_at,
-                `Fala — ${row.participant_name || row.participant_email || 'Participante'}`,
-                row.transcript || '',
-                -2,
-                'speech'
-            );
-        });
-
-        state.chat.forEach((message) => {
-            push(message.created_at, `Chat — ${message.participant_name || message.user_email || 'Participante'}`, message.message || '', 0, 'chat');
-        });
-
-        state.hands.forEach((request) => {
-            const status = String(request.status || '').toLowerCase();
-            const action = status === 'autorizado'
-                ? 'teve a fala autorizada'
-                : status === 'recusado'
-                    ? 'teve a solicitação recusada'
-                    : status === 'finalizado'
-                        ? 'finalizou a solicitação de fala'
-                        : 'solicitou a palavra';
-            push(request.requested_at || request.created_at, 'Solicitação de fala', `${request.participant_name || request.user_email || 'Participante'} ${action}.`);
-        });
-
-        state.polls.forEach((poll) => {
-            const options = state.options.filter((option) => String(option.poll_id) === String(poll.id));
-            const totals = options.map((option) => `${option.option_text || 'Opção'}: ${getVoteCount(poll.id, option.id)}`).join('; ');
-            push(poll.created_at, `Votação — ${poll.title || 'Votação'}`, `${poll.description || 'Sem descrição.'}${totals ? ` Resultado atual: ${totals}.` : ''}`, 1, 'poll');
-        });
-
-        state.events.forEach((event) => {
-            const type = String(event.event_type || 'evento').replaceAll('_', ' ');
-            if (!type.startsWith('presence ')) push(event.created_at, 'Evento da assembleia', type);
-        });
-
-        state.comments.forEach((comment) => {
-            push(comment.created_at, `Comentário — ${comment.participant_name || comment.user_email || 'Usuário'}`, comment.comment || '', 10, 'comment');
-        });
-
-        events.sort((left, right) => safeTime(left.time) - safeTime(right.time) || left.priority - right.priority);
-
-        const participants = [...new Set(state.attendance.map((row) => `${row.participant_name || row.user_email} (${roleLabel(row.participant_role)})`))];
-        const intro = `<div class="minutes-intro"><strong>Ata consolidada.</strong> ${a.description ? esc(a.description) : 'A assembleia foi registrada pelo Condomit.'}${participants.length ? `<br><strong>Participantes registrados:</strong> ${participants.map(esc).join(', ')}.` : ''}</div>`;
-        const transcriptionState = state.transcripts.length
-            ? `<div class="minutes-transcription-ok"><i class="fas fa-microphone-lines"></i><div><strong>Transcrição automática registrada</strong><span>${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} de fala salvo${state.transcripts.length === 1 ? '' : 's'} durante a reunião.</span></div></div>`
-            : `<div class="minutes-transcription-empty"><i class="fas fa-wave-square"></i><span>Nenhum trecho de fala transcrito foi registrado nesta assembleia.</span></div>`;
-
-        const decisionRows = state.polls.map((poll) => {
-            const opts = state.options.filter(option => String(option.poll_id) === String(poll.id));
-            if (!opts.length) return null;
-            const ranked = opts.map(option => ({ option, votes: getVoteCount(poll.id, option.id) })).sort((a,b) => b.votes - a.votes);
-            const winner = ranked[0];
-            return winner ? `<li><strong>${esc(poll.title || 'Votação')}:</strong> ${esc(winner.option.option_text || 'Opção')} (${winner.votes} voto${winner.votes === 1 ? '' : 's'})</li>` : null;
-        }).filter(Boolean);
-        const decisions = decisionRows.length ? `<div class="minutes-decisions"><strong>Decisões em destaque</strong><ul>${decisionRows.join('')}</ul></div>` : '';
-
-        container.innerHTML = intro + transcriptionState + decisions + (events.length
-            ? `<div class="minutes-timeline">${events.map((event) => `<article class="minute-event ${event.kind === 'speech' ? 'speech-event' : ''}"><time class="minute-time">${formatTime(event.time)}</time><div class="minute-card"><strong>${esc(event.title)}</strong><p>${esc(event.text)}</p></div></article>`).join('')}</div>`
-            : '<div class="summary-empty">Nenhum evento persistido foi encontrado.</div>');
+        return Array.from(seen.values());
     }
 
+    function resolveAssemblyChair(participants) {
+        const creator = String(state.assembly?.created_by || '').trim().toLowerCase();
+        if (creator) {
+            const exact = participants.find((participant) => participant.email === creator);
+            if (exact) return exact;
+        }
+        return participants.find((participant) => String(participant.role || '').toLowerCase().startsWith('sind')) || null;
+    }
+
+    function buildFormalDiscussionParagraphs() {
+        const paragraphs = [];
+        const agendaNotes = state.agenda.map((item) => ({
+            title: cleanFormalText(item.title || 'Item de pauta'),
+            notes: cleanFormalText(item.discussion_notes || '')
+        })).filter((item) => item.notes);
+
+        agendaNotes.forEach((item) => {
+            paragraphs.push(`Quanto ao item “${item.title}”, ficou registrado em ata o seguinte teor de discussão: ${sentenceFragment(item.notes)}.`);
+        });
+
+        const transcriptGroups = new Map();
+        state.transcripts.forEach((row) => {
+            const text = cleanFormalText(row.transcript || '');
+            if (!text) return;
+            const name = cleanFormalText(row.participant_name || row.participant_email || 'Participante');
+            const key = String(row.participant_email || name).trim().toLowerCase();
+            const current = transcriptGroups.get(key) || { name, texts: [] };
+            current.texts.push(text);
+            transcriptGroups.set(key, current);
+        });
+
+        if (transcriptGroups.size) {
+            transcriptGroups.forEach(({ name, texts }) => {
+                const joined = texts.join(' ');
+                paragraphs.push(`Durante os debates, registrou-se manifestação de ${name}, cujo teor transcrito foi: “${ensureTerminalPunctuation(joined)}”`);
+            });
+        } else if (!agendaNotes.length) {
+            paragraphs.push('Não foram localizadas transcrições de falas ou anotações formais de discussão vinculadas a esta assembleia.');
+        }
+        return paragraphs;
+    }
+
+    function buildFormalPollParagraph(poll) {
+        const title = cleanFormalText(poll.title || 'Votação');
+        const description = cleanFormalText(poll.description || '');
+        const options = state.options.filter((option) => String(option.poll_id) === String(poll.id));
+        if (!options.length) {
+            return `Em relação à matéria “${title}”, consta registro de votação, porém sem opções de voto armazenadas para consolidação do resultado.`;
+        }
+
+        const ranked = options.map((option) => ({
+            text: cleanFormalText(option.option_text || 'Opção'),
+            votes: getVoteCount(poll.id, option.id)
+        })).sort((left, right) => right.votes - left.votes);
+        const total = ranked.reduce((sum, item) => sum + item.votes, 0);
+        const distribution = ranked.map((item) => `${item.text}: ${item.votes} voto${item.votes === 1 ? '' : 's'}`).join('; ');
+
+        if (!total) {
+            return `A matéria “${title}”${description ? `, referente a ${sentenceFragment(description)}` : ''}, foi disponibilizada para votação, não havendo votos registrados no sistema.`;
+        }
+
+        const topVotes = ranked[0]?.votes || 0;
+        const leaders = ranked.filter((item) => item.votes === topVotes);
+        const resultText = leaders.length === 1
+            ? `A opção mais votada foi “${leaders[0].text}”, com ${leaders[0].votes} voto${leaders[0].votes === 1 ? '' : 's'}`
+            : `Houve empate entre ${leaders.map((item) => `“${item.text}”`).join(' e ')}, com ${topVotes} voto${topVotes === 1 ? '' : 's'} para cada opção`;
+        return `Submetida à votação a matéria “${title}”${description ? `, referente a ${sentenceFragment(description)}` : ''}, foram contabilizados ${total} voto${total === 1 ? '' : 's'}, assim distribuídos: ${distribution}. ${resultText}.`;
+    }
+    function formatCondominiumAddress(condo) {
+        const street = cleanFormalText(condo?.address || '');
+        const number = cleanFormalText(condo?.address_number || '');
+        const complement = cleanFormalText(condo?.complement || '');
+        const neighborhood = cleanFormalText(condo?.neighborhood || '');
+        const city = cleanFormalText(condo?.city || '');
+        const stateCode = cleanFormalText(condo?.state || '');
+        const cep = cleanFormalText(condo?.cep || state.assembly?.cep || '');
+        if (!street && !city && !cep) return '';
+        const first = [street, number].filter(Boolean).join(', ');
+        return [first, complement, neighborhood, [city, stateCode].filter(Boolean).join('/'), cep ? `CEP ${cep}` : ''].filter(Boolean).join(' – ');
+    }
+
+    function resolveClosingTime() {
+        const direct = String(state.assembly?.end_time || '').trim();
+        if (direct) return direct.slice(0, 5);
+        const candidates = [];
+        state.attendance.forEach((row) => { if (row.left_at) candidates.push(row.left_at); });
+        state.events.forEach((row) => { if (row.created_at) candidates.push(row.created_at); });
+        state.transcripts.forEach((row) => { if (row.spoken_at || row.created_at) candidates.push(row.spoken_at || row.created_at); });
+        if (!candidates.length) return '';
+        const latest = candidates.sort((left, right) => safeTime(right) - safeTime(left))[0];
+        return formatTime(latest);
+    }
+
+    function formalAssemblyType(type) {
+        const normalized = String(type || 'ordinaria').trim().toLowerCase();
+        if (normalized === 'extraordinaria') return 'Assembleia Geral Extraordinária';
+        if (normalized === 'especial') return 'Assembleia Especial';
+        return 'Assembleia Geral Ordinária';
+    }
+    function formalDateWords(value) {
+        if (!value) return 'data não informada';
+        const raw = String(value).slice(0, 10);
+        const [year, month, day] = raw.split('-').map(Number);
+        if (!year || !month || !day) return formatDate(value);
+        const dayNames = {1:'primeiro',2:'dois',3:'três',4:'quatro',5:'cinco',6:'seis',7:'sete',8:'oito',9:'nove',10:'dez',11:'onze',12:'doze',13:'treze',14:'quatorze',15:'quinze',16:'dezesseis',17:'dezessete',18:'dezoito',19:'dezenove',20:'vinte',21:'vinte e um',22:'vinte e dois',23:'vinte e três',24:'vinte e quatro',25:'vinte e cinco',26:'vinte e seis',27:'vinte e sete',28:'vinte e oito',29:'vinte e nove',30:'trinta',31:'trinta e um'};
+        const monthNames = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+        return `${day === 1 ? 'Ao primeiro dia' : `Aos ${dayNames[day] || day} dias`} do mês de ${monthNames[month] || month} de ${year}`;
+    }
+
+    function formatClockFormal(value) {
+        const raw = String(value || '').slice(0, 5);
+        const match = raw.match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return raw || 'horário não informado';
+        const hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        return `${String(hours).padStart(2, '0')}h${String(minutes).padStart(2, '0')}`;
+    }
+
+    function cleanFormalText(value) {
+        return String(value || '')
+            .replace(/\*\*/g, '')
+            .replace(/\bimage\b/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function sentenceFragment(value) {
+        return cleanFormalText(value).replace(/[.!?]+$/g, '');
+    }
+
+    function ensureTerminalPunctuation(value) {
+        const text = cleanFormalText(value);
+        if (!text) return '';
+        return /[.!?]$/.test(text) ? text : `${text}.`;
+    }
+
+    function romanNumeral(value) {
+        const numerals = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX'];
+        return numerals[value - 1] || String(value);
+    }
     function pollCurrentUserVoted(pollId) {
         return state.results.some((row) => String(row.poll_id) === String(pollId) && row.current_user_voted === true);
     }

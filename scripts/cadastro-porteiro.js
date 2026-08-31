@@ -455,7 +455,7 @@
 
         try {
             const emailRedirectTo =
-                `${window.location.origin}/pages/entrar.html`;
+                `${window.location.origin}/pages/email-confirmado.html`;
 
             let {
                 data: authData,
@@ -655,7 +655,7 @@
 
             if (looksLikeEmailConflict) {
                 const emailRedirectTo =
-                    `${window.location.origin}/pages/entrar.html`;
+                    `${window.location.origin}/pages/email-confirmado.html`;
                 const reactivateResult = await tryReactivateDeletedUser({
                     email,
                     password,

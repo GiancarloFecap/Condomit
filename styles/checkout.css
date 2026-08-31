@@ -462,3 +462,10 @@ body {
     background: #e5e7eb;
     color: #111827;
 }
+
+/* 0.39 - fallback seguro quando o Wallet Brick não puder ser renderizado */
+.payment-direct-fallback { display: grid; gap: 10px; }
+.mercado-pago-direct-button { width: 100%; min-height: 52px; border: 0; border-radius: 12px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #009ee3; color: #fff; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 10px 24px rgba(0, 158, 227, .2); }
+.mercado-pago-direct-button:hover { filter: brightness(.96); }
+.mercado-pago-direct-button:disabled { opacity: .7; cursor: wait; }
+.payment-direct-fallback p { margin: 0; color: #64748b; font-size: .86rem; line-height: 1.45; text-align: center; }

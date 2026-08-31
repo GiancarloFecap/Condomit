@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Condomit - Confirmação de E-mail</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/theme.css?v=0151">
+    <link rel="stylesheet" href="../styles/email-confirmado.css?v=039">
+    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
+    <link rel="manifest" href="../manifest.webmanifest">
+</head>
+<body>
+    <main class="email-confirm-page">
+        <section class="email-confirm-card" aria-live="polite">
+            <img src="../assets/logo-full.png" alt="Condomit" class="email-confirm-logo">
+            <div class="email-confirm-icon loading" id="emailConfirmIcon">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
+            <h1 id="emailConfirmTitle">Confirmando seu e-mail</h1>
+            <p id="emailConfirmMessage">Aguarde enquanto validamos a confirmação da sua conta Condomit.</p>
+            <div class="email-confirm-actions" id="emailConfirmActions" hidden>
+                <a class="email-confirm-button" href="entrar.html" id="emailConfirmLoginButton">
+                    <i class="fas fa-right-to-bracket"></i>
+                    Entrar no Condomit
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <script src="../scripts/platform-config.js?v=035"></script>
+    <script src="../scripts/supabase-client.js?v=039"></script>
+    <script type="module" src="../scripts/supabase-auth.js?v=039"></script>
+    <script src="../scripts/email-confirmado.js?v=039"></script>
+    <script src="../scripts/condomit-alerts.js?v=014"></script>
+</body>
+</html>

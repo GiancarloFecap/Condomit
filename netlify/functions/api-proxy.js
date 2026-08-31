@@ -1418,7 +1418,7 @@ async function handleAdminSignupUser(event, body) {
   const emailRedirectTo =
     body?.emailRedirectTo ||
     body?.email_redirect_to ||
-    `${APP_BASE_URL}/pages/entrar.html`;
+    `${APP_BASE_URL}/pages/email-confirmado.html`;
 
   if (!email) {
     return {
