@@ -21,9 +21,9 @@
 .ai-assistant-identity { display:flex; align-items:center; gap:12px; min-width:0; }
 .ai-assistant-identity strong { display:block; color:#0f172a; font-size:15px; }
 .ai-assistant-identity span { display:block; color:#64748b; font-size:12px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ai-assistant-logo { width:42px; height:42px; border-radius:14px; display:grid; place-items:center; background:linear-gradient(135deg,#1B449F,#0ea5a4); color:#fff; box-shadow:0 8px 18px rgba(30,64,175,.22); }
+.ai-assistant-logo { width:42px; height:42px; border-radius:14px; display:grid; place-items:center; background:linear-gradient(135deg,#294FD8,#0ea5a4); color:#fff; box-shadow:0 8px 18px rgba(30,64,175,.22); }
 .ai-new-chat { border:1px solid #cbd5e1; background:#fff; color:#334155; min-height:40px; padding:0 14px; border-radius:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
-.ai-new-chat:hover { border-color:#1B449F; color:#1B449F; background:#eff6ff; }
+.ai-new-chat:hover { border-color:#294FD8; color:#294FD8; background:#eff6ff; }
 .chat-content-wrapper { min-height:0; overflow:hidden; display:flex; flex-direction:column; }
 .welcome-card { margin:20px 30px 0; padding:26px; border:1px solid #e2e8f0; border-radius:22px; background:#fff; box-shadow:0 16px 38px rgba(15,23,42,.07); }
 .welcome-kicker { display:inline-flex; align-items:center; gap:8px; color:#0f766e; background:#ecfdf5; padding:7px 10px; border-radius:999px; font-size:12px; font-weight:800; margin-bottom:14px; }
@@ -32,7 +32,7 @@
 .ai-category-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
 .ai-category-card { border:1px solid #e2e8f0; background:#f8fafc; min-height:92px; border-radius:16px; padding:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:12px; transition:.2s ease; }
 .ai-category-card:hover { transform:translateY(-2px); border-color:#93c5fd; background:#eff6ff; box-shadow:0 10px 24px rgba(30,64,175,.09); }
-.ai-category-icon { width:42px; height:42px; border-radius:13px; display:grid; place-items:center; color:#1B449F; background:#dbeafe; flex:none; }
+.ai-category-icon { width:42px; height:42px; border-radius:13px; display:grid; place-items:center; color:#294FD8; background:#dbeafe; flex:none; }
 .ai-category-card strong { display:block; color:#1e293b; font-size:14px; }
 .ai-category-card small { display:block; color:#64748b; line-height:1.35; margin-top:3px; }
 .suggestions-container { display:flex; flex-wrap:wrap; gap:9px; margin-top:16px; }
@@ -42,16 +42,16 @@
 .message { display:flex; gap:10px; max-width:min(760px,88%); }
 .message.user { align-self:flex-end; flex-direction:row-reverse; }
 .message.ai { align-self:flex-start; }
-.message-avatar { width:38px; height:38px; border-radius:13px; display:grid; place-items:center; flex:none; font-size:12px; font-weight:800; color:#fff; background:linear-gradient(135deg,#1B449F,#0ea5a4); }
+.message-avatar { width:38px; height:38px; border-radius:13px; display:grid; place-items:center; flex:none; font-size:12px; font-weight:800; color:#fff; background:linear-gradient(135deg,#294FD8,#0ea5a4); }
 .message.user .message-avatar { background:linear-gradient(135deg,#334155,#64748b); }
 .message-content { min-width:0; }
 .message-bubble { padding:13px 16px; border-radius:16px; background:#fff; border:1px solid #e2e8f0; color:#1e293b; line-height:1.6; box-shadow:0 7px 20px rgba(15,23,42,.05); white-space:pre-wrap; }
-.message.user .message-bubble { background:#1B449F; color:#fff; border-color:#1B449F; border-bottom-right-radius:5px; }
+.message.user .message-bubble { background:#294FD8; color:#fff; border-color:#294FD8; border-bottom-right-radius:5px; }
 .message.ai .message-bubble { border-bottom-left-radius:5px; }
 .message-time { color:#94a3b8; font-size:11px; margin-top:5px; }
 .message.user .message-time { text-align:right; }
 .ai-message-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:9px; }
-.ai-action-link { text-decoration:none; border:1px solid #bfdbfe; color:#1B449F; background:#eff6ff; min-height:34px; padding:0 11px; border-radius:10px; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:750; }
+.ai-action-link { text-decoration:none; border:1px solid #bfdbfe; color:#294FD8; background:#eff6ff; min-height:34px; padding:0 11px; border-radius:10px; display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:750; }
 .ai-action-link:hover { background:#dbeafe; }
 .ai-action-button { font: inherit; cursor: pointer; }
 .ai-action-button:disabled { opacity: .65; cursor: wait; }
@@ -66,7 +66,7 @@
 #chatInput { flex:1; border:0; outline:0; resize:none; background:transparent; color:#1e293b; font:inherit; line-height:1.5; max-height:130px; }
 .input-actions { display:flex; align-items:center; gap:10px; }
 .char-count { color:#94a3b8; font-size:11px; white-space:nowrap; }
-.send-btn { width:42px; height:42px; border:0; border-radius:13px; display:grid; place-items:center; cursor:pointer; color:#fff; background:linear-gradient(135deg,#1B449F,#0ea5a4); box-shadow:0 8px 18px rgba(30,64,175,.18); }
+.send-btn { width:42px; height:42px; border:0; border-radius:13px; display:grid; place-items:center; cursor:pointer; color:#fff; background:linear-gradient(135deg,#294FD8,#0ea5a4); box-shadow:0 8px 18px rgba(30,64,175,.18); }
 .send-btn:hover { transform:translateY(-1px); }
 .disclaimer { margin:9px 4px 0; color:#94a3b8; font-size:11px; text-align:center; line-height:1.5; }
 @media (max-width:1100px) { .ai-category-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
@@ -109,15 +109,15 @@
 
 /* 047 - Identidade visual da IA Condomit */
 .ai-assistant-logo {
-    background: linear-gradient(145deg, #2252BD 0%, #1B449F 100%) !important;
+    background: linear-gradient(145deg, #3360F2 0%, #294FD8 100%) !important;
     color: #fff !important;
     box-shadow: 0 8px 18px rgba(34,82,189,.20) !important;
 }
 .ai-assistant-logo i { font-size: 18px; }
-.ai-category-icon { color: #2252BD !important; background: #EAF0FF !important; }
-.ai-new-chat:hover { border-color: #2252BD !important; color: #2252BD !important; background: #F1F5FF !important; }
-.message.user .message-bubble { background: #2252BD !important; border-color: #2252BD !important; }
-.ai-action-link { color: #2252BD !important; border-color: #C9D7F5 !important; background: #F1F5FF !important; }
+.ai-category-icon { color: #3360F2 !important; background: #EAF0FF !important; }
+.ai-new-chat:hover { border-color: #3360F2 !important; color: #3360F2 !important; background: #F1F5FF !important; }
+.message.user .message-bubble { background: #3360F2 !important; border-color: #3360F2 !important; }
+.ai-action-link { color: #3360F2 !important; border-color: #C9D7F5 !important; background: #F1F5FF !important; }
 
 
 /* ============================================================
@@ -172,12 +172,12 @@
     min-height: 32px !important;
     flex: 0 0 32px;
     border-radius: 8px !important;
-    background: #4A76D4 !important;
+    background: #3360F2 !important;
     box-shadow: none !important;
     font-size: 12px !important;
 }
 .condomit-app-page .send-btn:hover {
-    background: #365FBE !important;
+    background: #294FD8 !important;
     box-shadow: 0 4px 10px rgba(54,95,190,.16) !important;
 }
 .condomit-app-page .disclaimer {

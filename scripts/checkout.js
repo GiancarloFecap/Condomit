@@ -19,6 +19,11 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     currentUser = JSON.parse(loggedInUser);
 
+    // Recarrega o condomínio atual diretamente do banco. Isso é importante
+    // após a transferência de síndico, quando o objeto salvo na sessão pode
+    // ainda conter dados antigos/incompletos do período em que ele era morador.
+    await refreshCheckoutCondominiumContext();
+
     if (currentUser.type !== 'sindico') {
         window.location.href = 'assembleia.html';
         return;
@@ -77,6 +82,39 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     syncDirectMercadoPagoButtonState();
 });
+
+
+async function refreshCheckoutCondominiumContext() {
+    if (!currentUser || typeof window.supabaseFetch !== 'function') return currentUser?.condominium || null;
+    try {
+        let snapshot = await window.supabaseFetch('/rpc/condomit_current_condominium_snapshot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_cep: extractUserCep(currentUser) || null })
+        });
+        snapshot = Array.isArray(snapshot) ? snapshot[0] : snapshot;
+        if (!snapshot || typeof snapshot !== 'object') return currentUser?.condominium || null;
+
+        const totalApartments = Number(snapshot.totalApartments ?? snapshot.total_apartments ?? snapshot.total_apartamentos ?? 0);
+        const existing = currentUser.condominium && typeof currentUser.condominium === 'object' ? currentUser.condominium : {};
+        currentUser.condominium = {
+            ...existing,
+            ...snapshot,
+            cep: snapshot.cep || existing.cep,
+            condominium_id: snapshot.cep || snapshot.condominium_id || existing.condominium_id,
+            name: snapshot.name || snapshot.condominium_name || existing.name || 'Condomínio',
+            totalApartments: totalApartments || Number(existing.totalApartments || 0),
+            total_apartments: totalApartments || Number(existing.total_apartments || 0),
+            total_apartamentos: totalApartments || Number(existing.total_apartamentos || 0)
+        };
+        sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
+        try { window.persistCondomitUser?.(currentUser); } catch (_) {}
+        return currentUser.condominium;
+    } catch (error) {
+        console.warn('[Checkout] Não foi possível atualizar os dados do condomínio:', error?.message || error);
+        return currentUser?.condominium || null;
+    }
+}
 
 async function fetchPlans() {
     const response = await fetch('/api/plano');

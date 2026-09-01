@@ -28,7 +28,7 @@
     width: 42px;
     height: 42px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3D6DD4 0%, #1B449F 100%);
+    background: linear-gradient(135deg, #3D6DD4 0%, #294FD8 100%);
     color: white;
     display: flex;
     align-items: center;
@@ -241,7 +241,7 @@
 
 .sugestao-icon.icon-estacionamento {
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
 }
 
 .sugestao-icon.icon-manutencao {
@@ -342,7 +342,7 @@
 
 .badge-status.em-andamento {
     background: #dbeafe;
-    color: #1B449F;
+    color: #294FD8;
     border-color: #bfdbfe;
 }
 
@@ -783,7 +783,7 @@ html[data-theme="dark"] .modal-footer {
 
 .detalhes-icon.icon-estacionamento {
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
 }
 
 .detalhes-icon.icon-manutencao {

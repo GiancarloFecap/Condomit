@@ -4,14 +4,14 @@ body { margin: 0; min-height: 100vh; font-family: Inter, Arial, sans-serif; back
 .email-confirm-card { width: min(100%, 520px); background: #fff; border: 1px solid #e3ebf6; border-radius: 24px; padding: 42px 36px; text-align: center; box-shadow: 0 24px 70px rgba(30, 70, 120, .12); }
 .email-confirm-logo { width: min(230px, 78%); height: 82px; object-fit: contain; margin-bottom: 22px; }
 .email-confirm-icon { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 18px; display: grid; place-items: center; font-size: 30px; }
-.email-confirm-icon.loading { background: #eef5ff; color: #2252BD; }
+.email-confirm-icon.loading { background: #eef5ff; color: #3360F2; }
 .email-confirm-icon.success { background: #ecfdf3; color: #15803d; }
 .email-confirm-icon.error { background: #fff1f2; color: #be123c; }
 .email-confirm-card h1 { margin: 0 0 12px; font-size: clamp(1.55rem, 4vw, 2rem); }
 .email-confirm-card p { margin: 0 auto; max-width: 410px; color: #64748b; line-height: 1.65; }
 .email-confirm-actions { margin-top: 26px; }
-.email-confirm-button { min-height: 48px; padding: 0 22px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border-radius: 12px; background: #2252BD; color: #fff; text-decoration: none; font-weight: 800; }
-.email-confirm-button:hover { background: #1B449F; }
+.email-confirm-button { min-height: 48px; padding: 0 22px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border-radius: 12px; background: #3360F2; color: #fff; text-decoration: none; font-weight: 800; }
+.email-confirm-button:hover { background: #294FD8; }
 html[data-theme="dark"] body { background: #0b1220; color: #f8fafc; }
 html[data-theme="dark"] .email-confirm-card { background: #111827; border-color: #263244; }
 html[data-theme="dark"] .email-confirm-card p { color: #a8b4c6; }

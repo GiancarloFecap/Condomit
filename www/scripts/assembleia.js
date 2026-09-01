@@ -1626,6 +1626,14 @@ function renderScheduledAssemblies() {
             `
             : '';
 
+        const finalizeButton = isSindico
+            ? `
+                <button class="btn assembly-finalize-btn" onclick="confirmFinalizeAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')" title="Finalizar assembleia">
+                    <i class="fas fa-flag-checkered"></i> Finalizar assembleia
+                </button>
+            `
+            : '';
+
         const canPrepare = canPrepareScheduledAssembly(assembly);
         const prepareTitle = canPrepare
             ? 'Preparar entrada'
@@ -1643,6 +1651,7 @@ function renderScheduledAssemblies() {
                     <button class="btn btn-primary" ${prepareDisabled} title="${prepareTitle}" onclick="joinAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')">
                         <i class="fas fa-sliders"></i> ${canPrepare ? 'Preparar entrada' : 'Aguardando horário'}
                     </button>
+                    ${finalizeButton}
                     ${deleteButton}
                 </div>
             </div>
@@ -1759,6 +1768,48 @@ async function scheduleAssembly(event) {
             }
         }
         showToast(userMessage, 'error');
+    }
+}
+
+
+async function confirmFinalizeAssembly(id) {
+    if (!id || !assemblyState.currentUser || assemblyState.currentUser.type !== 'sindico') return;
+
+    const execute = async () => {
+        try {
+            const result = await window.supabaseFetch('/rpc/condomit_finalize_assembly', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_assembly_id: Number(id) })
+            });
+            const finalized = Array.isArray(result) ? result[0] : result;
+            const assembly = scheduledAssemblies.find((item) => String(item.id) === String(id));
+            if (assembly) {
+                assembly.status = 'encerrada';
+                if (finalized?.end_time) assembly.end_time = finalized.end_time;
+                scheduledAssemblies = scheduledAssemblies.filter((item) => String(item.id) !== String(id));
+                pastAssemblies.unshift(assembly);
+            }
+            renderScheduledAssemblies();
+            renderPastAssemblies();
+            showToast('Assembleia finalizada e movida para Assembleias Realizadas.', 'success');
+        } catch (error) {
+            console.error('Erro ao finalizar assembleia:', error);
+            showToast(error?.message || 'Não foi possível finalizar a assembleia.', 'error');
+        }
+    };
+
+    if (typeof window.showModal === 'function') {
+        window.showModal({
+            title: 'Finalizar assembleia',
+            message: 'A assembleia será encerrada imediatamente e passará para Assembleias Realizadas. Deseja continuar?',
+            type: 'warning',
+            confirmText: 'Finalizar assembleia',
+            cancelText: 'Cancelar',
+            onConfirm: execute
+        });
+    } else if (window.confirm('Finalizar esta assembleia agora?')) {
+        await execute();
     }
 }
 

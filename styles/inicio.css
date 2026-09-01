@@ -117,7 +117,7 @@ body {
 }
 
 .btn-signup {
-    background: #2252BD;
+    background: #3360F2;
     color: white;
     text-decoration: none;
     font-size: 13px;
@@ -128,7 +128,7 @@ body {
 }
 
 .btn-signup:hover {
-    background: #1B449F;
+    background: #294FD8;
 }
 
 /* Hero Content */
@@ -163,7 +163,7 @@ body {
 }
 
 .btn-primary {
-    background: #2252BD;
+    background: #3360F2;
     color: white;
     text-decoration: none;
     font-weight: 600;
@@ -174,7 +174,7 @@ body {
 }
 
 .btn-primary:hover {
-    background: #1B449F;
+    background: #294FD8;
     transform: translateY(-1px);
     box-shadow: 0 8px 22px rgba(37, 99, 235, 0.4);
 }
@@ -262,7 +262,7 @@ body {
 
 .feature-card i {
     font-size: 22px;
-    color: #2252BD;
+    color: #3360F2;
     margin-bottom: 7px;
 }
 
@@ -305,7 +305,7 @@ body {
 .stat-icon {
     width: 36px;
     height: 36px;
-    background: linear-gradient(135deg, #2252BD, #0ea5e9);
+    background: linear-gradient(135deg, #3360F2, #0ea5e9);
     border-radius: 9px;
     display: flex;
     align-items: center;
@@ -369,7 +369,7 @@ body {
 }
 
 .plano-card.featured {
-    border: 2px solid #2252BD;
+    border: 2px solid #3360F2;
     box-shadow: 0 8px 34px rgba(37, 99, 235, 0.13);
     transform: scale(1.02);
 }
@@ -392,7 +392,7 @@ body {
     top: -11px;
     left: 50%;
     transform: translateX(-50%);
-    background: #2252BD;
+    background: #3360F2;
     color: white;
     padding: 5px 16px;
     border-radius: 17px;
@@ -448,7 +448,7 @@ body {
 .plano-value-Pro {
     font-size: 38px;
     font-weight: 700;
-    color: #2252BD;
+    color: #3360F2;
 }
 .plano-value-Premium {
     font-size: 38px;
@@ -486,9 +486,9 @@ body {
     text-align: center;
     padding: 10px 0;
     background: white;
-    color: #2252BD;
+    color: #3360F2;
     text-decoration: none;
-    border: 2px solid #2252BD;
+    border: 2px solid #3360F2;
     border-radius: 8px;
     font-weight: 600;
     font-size: 12px;
@@ -496,17 +496,17 @@ body {
 }
 
 .btn-plano:hover {
-    background: #2252BD;
+    background: #3360F2;
     color: white;
 }
 
 .btn-plano.featured {
-    background: #2252BD;
+    background: #3360F2;
     color: white;
 }
 
 .btn-plano.featured:hover {
-    background: #1B449F;
+    background: #294FD8;
 }
 
 /* FAQ Section */
@@ -657,7 +657,7 @@ body {
 }
 
 .social-links a:hover {
-    background: #2252BD;
+    background: #3360F2;
 }
 
 .footer-col h4 {
@@ -1126,22 +1126,22 @@ body {
 .btn-plano { margin-top: auto; }
 
 .plano-card.featured {
-    border-color: #2252BD;
+    border-color: #3360F2;
     box-shadow: 0 12px 32px rgba(34, 82, 189, .13);
 }
-.plano-badge-Pro { background: #2252BD; }
-.plano-value-Pro { color: #2252BD; }
+.plano-badge-Pro { background: #3360F2; }
+.plano-value-Pro { color: #3360F2; }
 .btn-plano {
-    color: #2252BD;
-    border-color: #2252BD;
+    color: #3360F2;
+    border-color: #3360F2;
 }
 .btn-plano:hover,
 .btn-plano.featured {
-    background: #2252BD;
-    border-color: #2252BD;
+    background: #3360F2;
+    border-color: #3360F2;
     color: #fff;
 }
-.btn-plano.featured:hover { background: #1B449F; }
+.btn-plano.featured:hover { background: #294FD8; }
 
 /* Seletor único, sem caixa interna e com aparência de controle nativo premium */
 .landing-language-switcher {
@@ -1153,7 +1153,7 @@ body {
     border: 1px solid rgba(255,255,255,.62);
     border-radius: 999px;
     background: rgba(255,255,255,.94);
-    color: #2252BD;
+    color: #3360F2;
     box-shadow: 0 8px 22px rgba(7, 27, 74, .13);
     backdrop-filter: blur(14px);
     overflow: visible;
@@ -1168,7 +1168,7 @@ body {
 }
 .landing-language-switcher > .fa-globe {
     text-align: center;
-    color: #2252BD;
+    color: #3360F2;
     font-size: 12px;
     opacity: 1;
 }
@@ -1191,7 +1191,7 @@ body {
 #landing-language-select:focus { box-shadow: none !important; }
 #landing-language-select option { background: #fff; color: #1f2937; }
 .landing-language-arrow {
-    color: #2252BD;
+    color: #3360F2;
     font-size: 9px;
     opacity: .82;
     text-align: center;

@@ -10,7 +10,7 @@
 }
 
 body {
-    background: linear-gradient(135deg, #183B86 0%, #1B449F 100%);
+    background: linear-gradient(135deg, #183B86 0%, #294FD8 100%);
     color: #333;
     min-height: 100vh;
     display: flex;
@@ -350,7 +350,7 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #183B86 0%, #1B449F 100%);
+    background: linear-gradient(135deg, #183B86 0%, #294FD8 100%);
     color: white;
 }
 
@@ -399,7 +399,7 @@ body {
 }
 
 .condominio-footer a:hover {
-    color: #1B449F;
+    color: #294FD8;
     text-decoration: underline;
 }
 

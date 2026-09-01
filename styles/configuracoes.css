@@ -5,7 +5,7 @@
     --text-primary: #1f2937;
     --text-secondary: #6b7280;
     --border-color: #e5e7eb;
-    --sidebar-gradient: linear-gradient(180deg, #1B449F 0%, #183B86 100%);
+    --sidebar-gradient: linear-gradient(180deg, #294FD8 0%, #183B86 100%);
     --topbar-bg: white;
     --form-group-color: #374151;
 }
@@ -124,7 +124,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     width: 70px;
     height: 70px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3D6DD4 0%, #1B449F 100%);
+    background: linear-gradient(135deg, #3D6DD4 0%, #294FD8 100%);
     color: white;
     display: flex;
     align-items: center;
@@ -163,7 +163,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .detail-item i {
-    color: #1B449F;
+    color: #294FD8;
     width: 18px;
 }
 
@@ -200,7 +200,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .config-card .form-group i:first-of-type {
-    color: #1B449F;
+    color: #294FD8;
     font-size: 1rem;
     width: 20px;
 }
@@ -229,9 +229,9 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .btn-edit-profile:hover {
-    border-color: #1B449F;
+    border-color: #294FD8;
     background: #eff6ff;
-    color: #1B449F;
+    color: #294FD8;
 }
 
 .btn-logout {
@@ -535,9 +535,9 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .theme-btn.active, .font-btn.active {
-    background: #1B449F;
+    background: #294FD8;
     color: white;
-    border-color: #1B449F;
+    border-color: #294FD8;
 }
 
 [data-theme="dark"] .theme-btn.active, [data-theme="dark"] .font-btn.active {
@@ -583,7 +583,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .profile-avatar {
-    background: linear-gradient(135deg, #3D6DD4 0%, #1B449F 100%);
+    background: linear-gradient(135deg, #3D6DD4 0%, #294FD8 100%);
 }
 
 .theme-selector label, .font-size-selector label, .language-selector label {
@@ -617,7 +617,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .language-select:focus {
-    border-color: #1B449F;
+    border-color: #294FD8;
     box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
 }
 
@@ -639,7 +639,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 
 .language-select-wrap > .fa-globe {
     padding-left: 16px;
-    color: #1B449F;
+    color: #294FD8;
     font-size: 1rem;
 }
 
@@ -668,7 +668,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .language-select-wrap:focus-within {
-    border-color: #1B449F;
+    border-color: #294FD8;
     box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.12);
 }
 
@@ -820,9 +820,9 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 }
 
 .visitor-submit-btn {
-    background: #1B449F !important;
+    background: #294FD8 !important;
     color: #fff !important;
-    border-color: #1B449F !important;
+    border-color: #294FD8 !important;
 }
 
 .visitor-feedback {
@@ -835,7 +835,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 .visitor-feedback[data-state="info"] {
     display: block;
     background: #eff6ff;
-    color: #1B449F;
+    color: #294FD8;
 }
 
 .visitor-feedback[data-state="success"] {
@@ -1001,12 +1001,12 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     gap: 10px;
     transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-.access-kind-card:hover { transform: translateY(-2px); border-color: #2252BD; box-shadow: 0 12px 24px rgba(37, 99, 235, .10); }
-.access-kind-card i { font-size: 2rem; color: #2252BD; }
+.access-kind-card:hover { transform: translateY(-2px); border-color: #3360F2; box-shadow: 0 12px 24px rgba(37, 99, 235, .10); }
+.access-kind-card i { font-size: 2rem; color: #3360F2; }
 .access-kind-card strong { font-size: 1rem; }
 .access-kind-card span { color: var(--text-secondary); font-size: .88rem; line-height: 1.45; }
 .access-registration-form[hidden], .access-kind-selector[hidden] { display: none !important; }
-.access-back-btn { width: max-content; border: 0; background: transparent; color: #2252BD; font-weight: 700; cursor: pointer; padding: 0 0 6px; }
+.access-back-btn { width: max-content; border: 0; background: transparent; color: #3360F2; font-weight: 700; cursor: pointer; padding: 0 0 6px; }
 @media (max-width: 720px) { .access-kind-selector { grid-template-columns: 1fr; } .access-kind-card { min-height: 130px; } }
 
 /* ============================================================
@@ -1085,7 +1085,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 
 .settings-document-section a,
 .settings-contact-card {
-    color: #1B449F;
+    color: #294FD8;
 }
 
 .settings-company-hero {
@@ -1147,7 +1147,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     border-radius: 13px;
     display: grid;
     place-items: center;
-    color: #1B449F;
+    color: #294FD8;
     background: #eff6ff;
 }
 
@@ -1227,7 +1227,7 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     place-items: center;
     border-radius: 12px;
     background: #eff6ff;
-    color: #1B449F;
+    color: #294FD8;
 }
 
 .settings-provider-card > div:nth-child(2) {
@@ -1783,7 +1783,7 @@ html[data-theme="dark"] .condomit-app-page .language-select {
 .config-section-icon,
 .setting-icon,
 .profile-details i {
-    color: #2252BD !important;
+    color: #3360F2 !important;
 }
 .config-card .form-group:hover i:first-of-type { color: #183E92 !important; }
 html[data-theme="dark"] .config-card .form-group i:first-of-type,
@@ -1851,7 +1851,7 @@ html[data-theme="dark"] .profile-details i {
     align-items: center;
     justify-content: center;
     border: 1.5px solid #C9D6EA !important;
-    color: #365FBE !important;
+    color: #294FD8 !important;
     background: #F7F9FD !important;
 }
 .btn-edit-profile:hover {
@@ -1891,7 +1891,7 @@ html[data-theme="dark"] .profile-details i {
 }
 .config-card .form-group i:first-of-type,
 .detail-item i {
-    color: #4A76D4 !important;
+    color: #3360F2 !important;
 }
 html[data-theme="dark"] .btn-edit-profile {
     background: #18243A !important;

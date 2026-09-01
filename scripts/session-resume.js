@@ -76,12 +76,18 @@
         condominium.cep = cep;
         condominium.condominium_id = cep;
         try {
-            const rows = await window.supabaseFetch(`/condominiums?select=cep,condominium_name&cep=eq.${encodeURIComponent(cep)}&limit=1`);
+            const rows = await window.supabaseFetch(`/condominiums?select=cep,condominium_name,total_apartments&cep=eq.${encodeURIComponent(cep)}&limit=1`);
             const row = Array.isArray(rows) ? rows[0] : rows;
             if (row) {
                 condominium.cep = row.cep || cep;
                 condominium.condominium_id = row.cep || cep;
                 condominium.name = row.condominium_name || condominium.name || 'Condomínio';
+                const totalApartments = Number(row.total_apartments || condominium.totalApartments || condominium.total_apartments || 0);
+                if (totalApartments > 0) {
+                    condominium.totalApartments = totalApartments;
+                    condominium.total_apartments = totalApartments;
+                    condominium.total_apartamentos = totalApartments;
+                }
             }
         } catch (_) {}
         return condominium;

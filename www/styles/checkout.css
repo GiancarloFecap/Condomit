@@ -1,5 +1,5 @@
 :root {
-    --primary-blue: #1B449F;
+    --primary-blue: #294FD8;
     --secondary-blue: #183B86;
     --light-blue: #eff6ff;
     --text-main: #111827;
@@ -333,7 +333,7 @@ body {
 .payment-feedback.info {
     background: #eff6ff;
     border-color: #bfdbfe;
-    color: #1B449F;
+    color: #294FD8;
 }
 
 .payment-feedback.error {

@@ -195,8 +195,8 @@ html[data-theme="dark"] {
     --ux-border-strong: #cfdae8;
     --ux-text: #0f172a;
     --ux-text-muted: #64748b;
-    --ux-primary: #1B449F;
-    --ux-primary-strong: #1B449F;
+    --ux-primary: #294FD8;
+    --ux-primary-strong: #294FD8;
     --ux-primary-soft: rgba(37, 99, 235, .1);
     --ux-accent: #0ea5a4;
     --ux-success: #16a34a;
@@ -941,11 +941,11 @@ html[data-theme="dark"] .condomit-app-page .top-bar {
 
 
 /* ============================================================
-   047 - Paleta Condomit (#2252BD) para páginas internas
+   047 - Paleta Condomit (#3360F2) para páginas internas
 ============================================================ */
 .condomit-app-page {
-    --ux-primary: #2252BD;
-    --ux-primary-strong: #1B449F;
+    --ux-primary: #3360F2;
+    --ux-primary-strong: #294FD8;
     --ux-primary-soft: rgba(34,82,189,.10);
     --ux-accent: #12BFC1;
     --ux-surface-soft: #F7F9FD;
@@ -970,13 +970,13 @@ html[data-theme="dark"] .condomit-app-page {
     box-shadow: 0 8px 18px rgba(10,124,126,.18) !important;
 }
 .condomit-app-page :where(.btn-primary,.btn-submit,.submit-btn,.save-btn,.primary-action) {
-    background: #2252BD !important;
+    background: #3360F2 !important;
 }
 .condomit-app-page :where(.btn-primary,.btn-submit,.submit-btn,.save-btn,.primary-action):hover {
-    background: #1B449F !important;
+    background: #294FD8 !important;
     box-shadow: 0 8px 20px rgba(34,82,189,.17) !important;
 }
-.condomit-app-page .section-number { background: #2252BD !important; }
+.condomit-app-page .section-number { background: #3360F2 !important; }
 .condomit-app-page input:focus,
 .condomit-app-page select:focus,
 .condomit-app-page textarea:focus {
@@ -985,15 +985,15 @@ html[data-theme="dark"] .condomit-app-page {
 }
 .condomit-app-page .quick-action-btn i,
 .condomit-app-page .status-item i,
-.condomit-app-page .detail-item i { color: #2252BD; }
+.condomit-app-page .detail-item i { color: #3360F2; }
 
 
 /* ============================================================
    048 - Paleta Condomit mais clara + navegação com maior contraste
 ============================================================ */
 .condomit-app-page {
-    --ux-primary: #4A76D4;
-    --ux-primary-strong: #365FBE;
+    --ux-primary: #3360F2;
+    --ux-primary-strong: #294FD8;
     --ux-primary-soft: rgba(74,118,212,.11);
     --ux-accent: #0F7F7E;
     --ux-surface-soft: #F8FAFE;
@@ -1008,7 +1008,7 @@ html[data-theme="dark"] .condomit-app-page {
     --ux-accent: #46B9B6;
 }
 .condomit-app-page .sidebar {
-    background: linear-gradient(180deg, #416BC5 0%, #3159AA 55%, #294B91 100%) !important;
+    background: linear-gradient(180deg, #4A72F4 0%, #315AE4 55%, #274CC4 100%) !important;
     box-shadow: 9px 0 26px rgba(32,70,145,.12) !important;
 }
 .condomit-app-page .sidebar .nav-item.active {
@@ -1023,13 +1023,13 @@ html[data-theme="dark"] .condomit-app-page {
     color: #fff !important;
 }
 .condomit-app-page :where(.btn-primary,.btn-submit,.submit-btn,.save-btn,.primary-action) {
-    background: #4A76D4 !important;
+    background: #3360F2 !important;
 }
 .condomit-app-page :where(.btn-primary,.btn-submit,.submit-btn,.save-btn,.primary-action):hover {
-    background: #365FBE !important;
+    background: #294FD8 !important;
     box-shadow: 0 8px 20px rgba(54,95,190,.16) !important;
 }
-.condomit-app-page .section-number { background: #4A76D4 !important; }
+.condomit-app-page .section-number { background: #3360F2 !important; }
 .condomit-app-page input:focus,
 .condomit-app-page select:focus,
 .condomit-app-page textarea:focus {
@@ -1038,4 +1038,32 @@ html[data-theme="dark"] .condomit-app-page {
 }
 .condomit-app-page .quick-action-btn i,
 .condomit-app-page .status-item i,
-.condomit-app-page .detail-item i { color: #4A76D4 !important; }
+.condomit-app-page .detail-item i { color: #3360F2 !important; }
+
+
+/* ============================================================
+   049 - Identidade azul baseada no CTA de referência (#3360F2)
+============================================================ */
+.condomit-app-page {
+    --ux-primary: #3360F2;
+    --ux-primary-strong: #294FD8;
+    --ux-primary-soft: rgba(51,96,242,.11);
+}
+html[data-theme="dark"] .condomit-app-page {
+    --ux-primary: #7E9BFA;
+    --ux-primary-strong: #6385F8;
+    --ux-primary-soft: rgba(126,155,250,.16);
+}
+.condomit-app-page .sidebar {
+    background: linear-gradient(180deg, #4A72F4 0%, #315AE4 55%, #274CC4 100%) !important;
+}
+.condomit-app-page :where(.btn-primary,.btn-submit,.submit-btn,.save-btn,.primary-action) {
+    background: #3360F2 !important;
+}
+.condomit-app-page :where(.btn-primary,.btn-submit,.submit-btn,.save-btn,.primary-action):hover {
+    background: #294FD8 !important;
+}
+.condomit-app-page .section-number { background: #3360F2 !important; }
+.condomit-app-page .quick-action-btn i,
+.condomit-app-page .status-item i,
+.condomit-app-page .detail-item i { color: #3360F2 !important; }

@@ -1010,6 +1010,23 @@
     renderAll();
   }
 
+
+  async function logout() {
+    if (typeof window.performFullLogout === 'function') {
+      await window.performFullLogout();
+      return;
+    }
+    try { await window.supabase?.auth?.signOut?.(); } catch (_) {}
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem('condominiumPersistentUser');
+      localStorage.removeItem('condominiumPersistentSession');
+    } catch (_) {}
+    window.location.href = '../inicio.html';
+  }
+
+  window.logout = logout;
+
   function bindSupportButton() {
     var buttons = document.querySelectorAll('.btn-support');
     buttons.forEach(function (button) {

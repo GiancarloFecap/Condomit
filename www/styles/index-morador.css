@@ -72,7 +72,7 @@
 .card-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    border-color: #1B449F;
+    border-color: #294FD8;
 }
 
 .card-item h4 {
@@ -90,7 +90,7 @@
 
 .card-btn {
     align-self: flex-start;
-    background: #1B449F;
+    background: #294FD8;
     color: white;
     border: none;
     padding: 8px 16px;
@@ -107,8 +107,8 @@
 
 .btn-outline {
     background: transparent;
-    border: 1px solid #1B449F;
-    color: #1B449F;
+    border: 1px solid #294FD8;
+    color: #294FD8;
 }
 
 .btn-outline:hover {
@@ -150,7 +150,7 @@
 
 /* Ajustes Sidebar */
 .sidebar {
-    background: #1B449F !important; /* Azul escuro do esboço */
+    background: #294FD8 !important; /* Azul escuro do esboço */
 }
 
 .sidebar-logo {

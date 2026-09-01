@@ -135,6 +135,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadUpcomingAssembly(currentUser.condominium.cep);
         loadPendingNotices(currentUser.condominium.cep);
         loadDashboardMaintenance(currentUser.condominium.cep);
+        loadMonthlyFinancialSummary(currentUser);
+    }
+
+    const residentManagementButton = document.getElementById('btn-resident-management-dashboard');
+    if (residentManagementButton) {
+        residentManagementButton.addEventListener('click', () => {
+            window.location.href = 'gestao-moradores.html';
+        });
     }
 
     const userProfileSmall = document.querySelector('.user-profile-small');
@@ -323,6 +331,53 @@ async function loadPendingNotices(cep) {
     } catch (error) {
         console.error('Erro ao carregar avisos pendentes:', error);
         pendingNoticesEl.textContent = 'Avisos Pendentes: erro';
+    }
+}
+
+
+async function loadMonthlyFinancialSummary(currentUser) {
+    const expenseEl = document.getElementById('monthly-expenses');
+    const incomeEl = document.getElementById('monthly-income');
+    const expenseMetaEl = document.getElementById('monthly-expenses-meta');
+    const incomeMetaEl = document.getElementById('monthly-income-meta');
+    if (!expenseEl || !incomeEl) return;
+
+    const money = (value) => new Intl.NumberFormat('pt-BR', {
+        style: 'currency', currency: 'BRL'
+    }).format(Number(value || 0));
+
+    try {
+        if (typeof window.supabaseFetch !== 'function') throw new Error('Conexão com o banco indisponível.');
+        const data = await window.supabaseFetch('/rpc/condomit_monthly_financial_summary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                target_month: new Date().toISOString().slice(0, 10),
+                target_cep: currentUser?.condominium?.cep || currentUser?.condominium?.condominium_id || null
+            })
+        });
+        const summary = Array.isArray(data) ? data[0] : data;
+        if (!summary || typeof summary !== 'object') throw new Error('Resumo financeiro indisponível.');
+
+        expenseEl.textContent = money(summary.expenses_total);
+        incomeEl.textContent = money(summary.income_total);
+
+        const expenseCount = Number(summary.expense_entries_count || 0);
+        const incomeCount = Number(summary.income_entries_count || 0);
+        const subscription = Number(summary.subscription_expense || 0);
+        if (expenseMetaEl) {
+            const subscriptionText = subscription > 0 ? ` · assinatura Condomit: ${money(subscription)}` : '';
+            expenseMetaEl.textContent = `${expenseCount} lançamento${expenseCount === 1 ? '' : 's'}${subscriptionText}`;
+        }
+        if (incomeMetaEl) {
+            incomeMetaEl.textContent = `${incomeCount} lançamento${incomeCount === 1 ? '' : 's'} registrado${incomeCount === 1 ? '' : 's'}`;
+        }
+    } catch (error) {
+        console.warn('[Dashboard] Resumo financeiro:', error);
+        expenseEl.textContent = 'Indisponível';
+        incomeEl.textContent = 'Indisponível';
+        if (expenseMetaEl) expenseMetaEl.textContent = 'Execute a migration 032 para carregar os valores reais.';
+        if (incomeMetaEl) incomeMetaEl.textContent = 'Execute a migration 032 para carregar os valores reais.';
     }
 }
 

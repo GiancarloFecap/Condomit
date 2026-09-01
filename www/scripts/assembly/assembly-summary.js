@@ -15,7 +15,8 @@
         events: [],
         comments: [],
         transcripts: [],
-        condominium: null
+        condominium: null,
+        signature: null
     };
 
     document.addEventListener('DOMContentLoaded', init);
@@ -88,7 +89,7 @@
     async function loadAll() {
         if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase não inicializado.');
 
-        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts] = await Promise.all([
+        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, signatures] = await Promise.all([
             fetchRows(`/scheduled_assemblies?select=*&id=eq.${state.id}&limit=1`),
             fetchRows(`/assembly_attendance?select=*&assembly_id=eq.${state.id}&order=joined_at.asc`),
             fetchRows(`/assembly_chat_messages?select=*&assembly_id=eq.${state.id}&order=created_at.asc`),
@@ -97,12 +98,14 @@
             fetchRows(`/assembly_speaking_requests?select=*&assembly_id=eq.${state.id}&order=requested_at.asc`),
             fetchRows(`/assembly_event_logs?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
-            fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => [])
+            fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => []),
+            fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code&assembly_id=eq.${state.id}&limit=1`).catch(() => [])
         ]);
 
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
         Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts });
+        state.signature = signatures[0] || null;
 
         // Dados institucionais usados somente como texto na ata. A ata não inclui
         // a logo do condomínio nem qualquer imagem do modelo de referência.
@@ -158,8 +161,15 @@
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
                 <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} transcrito${state.transcripts.length === 1 ? '' : 's'}</span>
             </div>
-            ${currentUserRole() === 'sindico' ? '<div class="summary-hero-actions"><button type="button" id="generateAssemblyTasks027" class="summary-primary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button></div>' : ''}`;
+            <div class="summary-hero-actions">
+                ${currentUserRole() === 'sindico' ? '<button type="button" id="generateAssemblyTasks027" class="summary-secondary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button>' : ''}
+                ${currentUserRole() === 'sindico' && !state.signature ? '<button type="button" id="signAssemblyMinutes049" class="summary-primary"><i class="fas fa-signature"></i> Assinar ata</button>' : ''}
+                ${state.signature ? `<span class="summary-signed-chip"><i class="fas fa-circle-check"></i> Ata assinada por ${esc(state.signature.signer_name || state.signature.signer_email || 'Síndico')}</span>` : ''}
+                <button type="button" id="printAssemblyMinutes049" class="summary-secondary"><i class="fas fa-print"></i> Imprimir ata</button>
+            </div>`;
         hero.querySelector('#generateAssemblyTasks027')?.addEventListener('click', generateAssemblyDecisionTasks);
+        hero.querySelector('#signAssemblyMinutes049')?.addEventListener('click', signAssemblyMinutes);
+        hero.querySelector('#printAssemblyMinutes049')?.addEventListener('click', printAssemblyMinutes);
     }
 
     function renderMinutes() {
@@ -213,7 +223,7 @@
         paragraphs.push(closingTime
             ? `Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, a assembleia foi encerrada às ${formatClockFormal(closingTime)}.`
             : 'Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, deu-se por encerrada a assembleia, sem horário final específico informado no cadastro.');
-        paragraphs.push('Para constar, lavrou-se a presente ata com base nos registros eletrônicos de presença, pautas, transcrições e votações armazenados pelo Condomit, a qual deverá ser submetida à conferência e, quando aplicável, à aprovação e assinatura dos responsáveis pelo condomínio.');
+        paragraphs.push('Para constar, lavrou-se a presente ata com base nos registros eletrônicos de presença, pautas, transcrições e votações armazenados pelo Condomit, ficando o documento disponível para ciência dos participantes e assinatura eletrônica do síndico responsável pelo condomínio.');
 
         const chairSignature = chair?.name || 'Síndico / Presidente da Assembleia';
         container.innerHTML = `
@@ -226,8 +236,14 @@
                 </header>
                 <div class="formal-minutes-body">${paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}</div>
                 <footer class="formal-minutes-signatures">
-                    <div class="formal-signature"><span class="signature-line"></span><strong>${esc(chairSignature)}</strong><small>Presidência da Assembleia</small></div>
-                    <div class="formal-signature"><span class="signature-line"></span><strong>Responsável pela conferência da ata</strong><small>Assinatura</small></div>
+                    ${state.signature ? `
+                    <div class="formal-signature formal-signature-electronic">
+                        <i class="fas fa-circle-check signature-verified-icon"></i>
+                        <strong>${esc(state.signature.signer_name || chairSignature)}</strong>
+                        <small>Assinado eletronicamente pelo Síndico em ${esc(formatDateTime(state.signature.signed_at))}</small>
+                        <small class="signature-code">Código de verificação: ${esc(String(state.signature.signature_code || '').slice(0, 18))}</small>
+                    </div>` : `
+                    <div class="formal-signature"><span class="signature-line"></span><strong>${esc(chairSignature)}</strong><small>Assinatura do Síndico / Presidência da Assembleia</small></div>`}
                 </footer>
                 <div class="formal-minutes-note"><i class="fas fa-shield-halved"></i> Documento gerado a partir dos registros persistidos da assembleia. Nenhuma informação não registrada foi presumida pelo sistema.</div>
             </article>`;
@@ -346,13 +362,17 @@
         return 'Assembleia Geral Ordinária';
     }
     function formalDateWords(value) {
-        if (!value) return 'data não informada';
+        if (!value) return 'Data não informada';
         const raw = String(value).slice(0, 10);
         const [year, month, day] = raw.split('-').map(Number);
         if (!year || !month || !day) return formatDate(value);
-        const dayNames = {1:'primeiro',2:'dois',3:'três',4:'quatro',5:'cinco',6:'seis',7:'sete',8:'oito',9:'nove',10:'dez',11:'onze',12:'doze',13:'treze',14:'quatorze',15:'quinze',16:'dezesseis',17:'dezessete',18:'dezoito',19:'dezenove',20:'vinte',21:'vinte e um',22:'vinte e dois',23:'vinte e três',24:'vinte e quatro',25:'vinte e cinco',26:'vinte e seis',27:'vinte e sete',28:'vinte e oito',29:'vinte e nove',30:'trinta',31:'trinta e um'};
+        const ordinalDays = {
+            1:'primeiro',2:'segundo',3:'terceiro',4:'quarto',5:'quinto',6:'sexto',7:'sétimo',8:'oitavo',9:'nono',10:'décimo',
+            11:'décimo primeiro',12:'décimo segundo',13:'décimo terceiro',14:'décimo quarto',15:'décimo quinto',16:'décimo sexto',17:'décimo sétimo',18:'décimo oitavo',19:'décimo nono',20:'vigésimo',
+            21:'vigésimo primeiro',22:'vigésimo segundo',23:'vigésimo terceiro',24:'vigésimo quarto',25:'vigésimo quinto',26:'vigésimo sexto',27:'vigésimo sétimo',28:'vigésimo oitavo',29:'vigésimo nono',30:'trigésimo',31:'trigésimo primeiro'
+        };
         const monthNames = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-        return `${day === 1 ? 'Ao primeiro dia' : `Aos ${dayNames[day] || day} dias`} do mês de ${monthNames[month] || month} de ${year}`;
+        return `Ao ${ordinalDays[day] || day} dia do mês de ${monthNames[month] || month} de ${year}`;
     }
 
     function formatClockFormal(value) {
@@ -540,6 +560,49 @@
                 if (submit) submit.disabled = false;
             }
         });
+    }
+
+
+    async function signAssemblyMinutes() {
+        if (currentUserRole() !== 'sindico' || state.signature) return;
+        const execute = async () => {
+            const button = document.getElementById('signAssemblyMinutes049');
+            if (button) { button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assinando...'; }
+            try {
+                const result = await window.supabaseFetch('/rpc/condomit_sign_assembly_minutes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_assembly_id: state.id })
+                });
+                state.signature = Array.isArray(result) ? result[0] : result;
+                renderHero();
+                renderMinutes();
+                window.showToast?.('Ata assinada eletronicamente com sucesso.', 'success');
+            } catch (error) {
+                window.showToast?.(error?.message || 'Não foi possível assinar a ata.', 'error');
+                if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-signature"></i> Assinar ata'; }
+            }
+        };
+        if (typeof window.showModal === 'function') {
+            window.showModal({
+                title: 'Assinar Ata da Assembleia',
+                message: 'Ao confirmar, sua identidade de síndico, data e horário serão registrados como assinatura eletrônica desta ata. Deseja continuar?',
+                type: 'warning',
+                confirmText: 'Assinar ata',
+                cancelText: 'Cancelar',
+                onConfirm: execute
+            });
+        } else if (window.confirm('Confirmar assinatura eletrônica desta ata?')) {
+            await execute();
+        }
+    }
+
+    function printAssemblyMinutes() {
+        document.body.classList.add('printing-assembly-minutes');
+        const cleanup = () => document.body.classList.remove('printing-assembly-minutes');
+        window.addEventListener('afterprint', cleanup, { once: true });
+        window.print();
+        window.setTimeout(cleanup, 1200);
     }
 
     async function generateAssemblyDecisionTasks() {

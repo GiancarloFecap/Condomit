@@ -127,7 +127,7 @@
 
 .primary-action {
     border: none;
-    background: linear-gradient(135deg, #1B449F 0%, #0ea5a4 100%);
+    background: linear-gradient(135deg, #294FD8 0%, #0ea5a4 100%);
     color: #fff;
 }
 
@@ -196,7 +196,7 @@
 
 .notification-item[data-category="Reservas"] .notification-icon {
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
 }
 
 .notification-item[data-category="Assembleias"] .notification-icon {
@@ -249,7 +249,7 @@
 
 .tag.status {
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
 }
 
 .tag.status.read {
@@ -261,7 +261,7 @@
     width: 10px;
     height: 10px;
     border-radius: 999px;
-    background: #2252BD;
+    background: #3360F2;
     margin-top: 6px;
     border: none;
     flex-shrink: 0;
@@ -305,7 +305,7 @@
     width: 48px;
     height: 48px;
     border-radius: 16px;
-    background: linear-gradient(135deg, #22c1d6 0%, #1B449F 100%);
+    background: linear-gradient(135deg, #22c1d6 0%, #294FD8 100%);
     color: #fff;
     display: inline-flex;
     align-items: center;

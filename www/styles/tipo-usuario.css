@@ -111,7 +111,7 @@ body {
 .btn-back {
     padding: 11px 22px;
     background: white;
-    color: #1e3a8a;
+    color: #294FD8;
     border: none;
     border-radius: 999px;
     font-size: 0.95rem;
@@ -726,7 +726,7 @@ body.condomit-app-page {
     min-height: 42px;
     padding: 0 16px;
     background: #F7F9FD;
-    color: #2252BD;
+    color: #3360F2;
     border: 1px solid #D8E1F0;
     border-radius: 13px;
     box-shadow: none;
@@ -771,7 +771,7 @@ body.condomit-app-page {
     border: 1px solid #D7E2F5;
     border-radius: 999px;
     background: #EDF3FF;
-    color: #2252BD;
+    color: #3360F2;
     font-size: .78rem;
     font-weight: 800;
     letter-spacing: .02em;
@@ -810,8 +810,8 @@ body.condomit-app-page {
     height: 54px;
     background: #EAF0FF;
 }
-.condomit-app-page .trust-icon svg path:first-child { stroke: #2252BD; fill: #EAF0FF; }
-.condomit-app-page .trust-icon svg path:last-child { stroke: #2252BD; }
+.condomit-app-page .trust-icon svg path:first-child { stroke: #3360F2; fill: #EAF0FF; }
+.condomit-app-page .trust-icon svg path:last-child { stroke: #3360F2; }
 .condomit-app-page .trust-text h4 { color: #1E2E4B; }
 .condomit-app-page .trust-text p { color: #66758A; }
 @media (max-width: 600px) {
@@ -869,7 +869,7 @@ body.condomit-app-page {
     border-radius: 12px !important;
     border: 1px solid #D8E1EE !important;
     background: rgba(255,255,255,.88) !important;
-    color: #365FBE !important;
+    color: #294FD8 !important;
     box-shadow: 0 4px 12px rgba(31,55,99,.05) !important;
 }
 .condomit-app-page .btn-back:hover {
@@ -973,8 +973,8 @@ body.condomit-app-page {
     background: #EDF3FD !important;
 }
 .condomit-app-page .trust-icon svg { width: 28px; height: 28px; }
-.condomit-app-page .trust-icon svg path:first-child { stroke:#4A76D4 !important; fill:#EDF3FD !important; }
-.condomit-app-page .trust-icon svg path:last-child { stroke:#4A76D4 !important; }
+.condomit-app-page .trust-icon svg path:first-child { stroke:#3360F2 !important; fill:#EDF3FD !important; }
+.condomit-app-page .trust-icon svg path:last-child { stroke:#3360F2 !important; }
 .condomit-app-page .trust-text h4 {
     margin-bottom: 4px !important;
     color: #24354D !important;

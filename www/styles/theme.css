@@ -1,13 +1,13 @@
 :root {
     --bg: #f3f4f6;
     --text: #111827;
-    --sidebar: linear-gradient(180deg, #1B449F 0%, #183B86 100%);
-    --button-bg: #1B449F;
+    --sidebar: linear-gradient(180deg, #294FD8 0%, #183B86 100%);
+    --button-bg: #294FD8;
     --button-color: #ffffff;
     --topbar-bg: white;
     --topbar-text: #111827;
     --topbar-secondary: #6b7280;
-    --primary-color: #1B449F;
+    --primary-color: #294FD8;
     --primary-color-light: #dbeafe;
     --border-color: #e5e7eb;
     --text-primary: #1f2937;
@@ -35,12 +35,12 @@ html[data-theme="dark"] {
     --input-bg: #0F172A;
     --hover-bg: #1E293B;
     --selected-bg: #172554;
-    --button-bg: #2252BD;
-    --button-hover: #1B449F;
+    --button-bg: #3360F2;
+    --button-hover: #294FD8;
     --button-color: #FFFFFF;
     --primary-color: #7FA2F0;
-    --primary-fill: #2252BD;
-    --primary-hover: #1B449F;
+    --primary-fill: #3360F2;
+    --primary-hover: #294FD8;
     --primary-color-light: #172554;
     --accent-color: #2DD4BF;
     --accent-fill: #0F766E;
@@ -342,7 +342,7 @@ textarea {
     border-radius: 12px;
     padding: 16px 18px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
-    border-left: 5px solid #1B449F;
+    border-left: 5px solid #294FD8;
     display: flex;
     align-items: flex-start;
     gap: 12px;
@@ -365,7 +365,7 @@ textarea {
 }
 
 .toast.toast-info {
-    border-left-color: #1B449F;
+    border-left-color: #294FD8;
 }
 
 .toast-icon {
@@ -394,7 +394,7 @@ textarea {
 }
 
 .toast-info .toast-icon {
-    background: #1B449F;
+    background: #294FD8;
 }
 
 .toast-content {
@@ -552,7 +552,7 @@ html[data-theme="dark"] .toast-close:hover {
 .modal-icon.modal-icon-success { background: #16a34a; }
 .modal-icon.modal-icon-error { background: #dc2626; }
 .modal-icon.modal-icon-warning { background: #d97706; }
-.modal-icon.modal-icon-info { background: #1B449F; }
+.modal-icon.modal-icon-info { background: #294FD8; }
 
 .modal-title-wrap {
     flex: 1;
@@ -605,7 +605,7 @@ html[data-theme="dark"] .toast-close:hover {
 }
 
 .modal-btn-primary {
-    background: #1B449F;
+    background: #294FD8;
     color: white;
 }
 
@@ -660,12 +660,12 @@ html[data-theme="dark"] .modal-btn-secondary:hover {
 }
 
 html[data-theme="dark"] .modal-btn-primary {
-    background: #2252BD;
+    background: #3360F2;
     color: #FFFFFF;
 }
 
 html[data-theme="dark"] .modal-btn-primary:hover {
-    background: #1B449F;
+    background: #294FD8;
     box-shadow: 0 4px 12px rgba(29, 78, 216, 0.35);
 }
 

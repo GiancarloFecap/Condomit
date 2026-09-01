@@ -65,7 +65,7 @@
 
 .metric-card.pending .metric-icon {
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
 }
 
 .metric-card.success .metric-icon {
@@ -293,7 +293,7 @@
 
 .request-time strong {
     display: block;
-    color: #2252BD;
+    color: #3360F2;
     font-size: 1.3rem;
 }
 
@@ -351,7 +351,7 @@
 
 .pill.info {
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
 }
 
 .pill.success {
@@ -401,7 +401,7 @@
     height: 42px;
     border-radius: 14px;
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -544,7 +544,7 @@
     align-items: center;
     justify-content: center;
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
     flex-shrink: 0;
 }
 
@@ -622,7 +622,7 @@
 
 .delivery-type-chip.food {
     background: #dbeafe;
-    color: #1B449F;
+    color: #294FD8;
 }
 
 .delivery-type-chip.service {
@@ -689,7 +689,7 @@
     align-items: center;
     justify-content: center;
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
     flex-shrink: 0;
 }
 
@@ -848,7 +848,7 @@
 
 .category-icon.electrical {
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
 }
 
 .category-icon.cleaning {
@@ -898,7 +898,7 @@
 
 .provider-category-chip.electrical {
     background: #eff6ff;
-    color: #2252BD;
+    color: #3360F2;
 }
 
 .provider-category-chip.cleaning {

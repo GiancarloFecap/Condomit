@@ -1,6 +1,6 @@
 :root {
-    --occ-blue: #2252BD;
-    --occ-blue-dark: #1B449F;
+    --occ-blue: #3360F2;
+    --occ-blue-dark: #294FD8;
     --occ-blue-soft: #eff6ff;
     --occ-green: #16a34a;
     --occ-green-soft: #ecfdf3;
@@ -98,7 +98,7 @@
     place-items: center;
     color: #ffffff;
     font-size: 2.35rem;
-    background: linear-gradient(145deg, #2252BD, #1B449F);
+    background: linear-gradient(145deg, #3360F2, #294FD8);
     box-shadow: 0 20px 45px rgba(37, 99, 235, 0.28);
 }
 
@@ -345,7 +345,7 @@
     font-size: 0.74rem;
     font-weight: 800;
     background: #eff6ff;
-    color: #1B449F;
+    color: #294FD8;
 }
 
 .role-badge.role-porteiro { background: #f3e8ff; color: #7e22ce; }

@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         try {
             const rows = await window.supabaseFetch(
-                `/condominiums?select=cep,condominium_name&cep=eq.${encodeURIComponent(cep)}&limit=1`
+                `/condominiums?select=cep,condominium_name,total_apartments&cep=eq.${encodeURIComponent(cep)}&limit=1`
             );
             const condo = Array.isArray(rows) ? rows[0] : rows;
             if (condo) {
@@ -151,7 +151,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                     ...currentCondo,
                     cep: condo.cep || cep,
                     condominium_id: condo.cep || cep,
-                    name: condo.condominium_name || currentCondo.name || 'Condomínio'
+                    name: condo.condominium_name || currentCondo.name || 'Condomínio',
+                    totalApartments: Number(condo.total_apartments || currentCondo.totalApartments || 0),
+                    total_apartments: Number(condo.total_apartments || currentCondo.total_apartments || 0),
+                    total_apartamentos: Number(condo.total_apartments || currentCondo.total_apartamentos || 0)
                 };
             }
         } catch (_) {

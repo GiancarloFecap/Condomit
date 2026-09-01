@@ -90,7 +90,7 @@
     flex-shrink: 0;
 }
 
-.metric-icon.blue { background: #eaf2ff; color: #2252BD; }
+.metric-icon.blue { background: #eaf2ff; color: #3360F2; }
 .metric-icon.green { background: #eafaf1; color: #16a34a; }
 .metric-icon.amber { background: #fff7e7; color: #d97706; }
 .metric-icon.red { background: #feebee; color: #ef4444; }
@@ -127,7 +127,7 @@
 
 .primary-action {
     border: none;
-    background: linear-gradient(135deg, #1B449F 0%, #0ea5a4 100%);
+    background: linear-gradient(135deg, #294FD8 0%, #0ea5a4 100%);
     color: #fff;
     min-width: 200px;
 }
@@ -246,7 +246,7 @@
     flex-shrink: 0;
 }
 
-.task-icon.blue { background: #eef4ff; color: #2252BD; }
+.task-icon.blue { background: #eef4ff; color: #3360F2; }
 .task-icon.green { background: #ebfbf1; color: #16a34a; }
 .task-icon.orange { background: #fff3e6; color: #ea580c; }
 .task-icon.purple { background: #f5f0ff; color: #7c3aed; }
@@ -281,7 +281,7 @@
     font-weight: 700;
 }
 
-.category-pill.elevadores { background: #e8f0ff; color: #2252BD; }
+.category-pill.elevadores { background: #e8f0ff; color: #3360F2; }
 .category-pill.seguranca { background: #e9f9ef; color: #15803d; }
 .category-pill.hidraulica { background: #fff1e8; color: #ea580c; }
 .category-pill.eletrica { background: #f5edff; color: #7c3aed; }
@@ -445,7 +445,7 @@
 .upcoming-date strong {
     display: block;
     font-size: 1.05rem;
-    color: #2252BD;
+    color: #3360F2;
 }
 
 .upcoming-date small {
@@ -598,14 +598,14 @@
     gap: 3px;
 }
 .calendar-grid .calendar-filter-day:hover { background: #eff6ff; }
-.calendar-grid .calendar-filter-day.active { background: #1B449F; color: #fff; }
+.calendar-grid .calendar-filter-day.active { background: #294FD8; color: #fff; }
 .calendar-grid .calendar-filter-day.muted { opacity: .38; }
 .calendar-status-dots { min-height: 5px; display: flex; gap: 2px; }
 .calendar-status-dot { width: 4px; height: 4px; border-radius: 999px; display: inline-block; }
 .calendar-status-dot.amber { background: #f59e0b; }
 .calendar-status-dot.red { background: #ef4444; }
 .calendar-status-dot.green { background: #22c55e; }
-.calendar-clear-filter { margin: 8px 0 10px; border: 0; background: transparent; color: #2252BD; cursor: pointer; font-weight: 700; }
+.calendar-clear-filter { margin: 8px 0 10px; border: 0; background: transparent; color: #3360F2; cursor: pointer; font-weight: 700; }
 
 /* ============================================================
    022 - Métricas, nova manutenção e pesquisa responsivas
