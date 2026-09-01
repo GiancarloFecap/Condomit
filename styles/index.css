@@ -698,3 +698,68 @@ body {
 html[data-theme="dark"] .summary-card .summary-stats .stat { background: transparent !important; border: 0 !important; box-shadow: none !important; }
 html[data-theme="dark"] .summary-card .stat-value { color: #8EA9FF; }
 @media(max-width:560px){.summary-card .summary-stats{grid-template-columns:1fr;gap:14px}.summary-card .summary-stats .stat+.stat{padding-top:14px;border-top:1px solid var(--border-color,#e2e8f0)!important}}
+
+/* ============================================================
+   050 - Resumo mensal compacto e legível
+============================================================ */
+.summary-card {
+    min-width: 0;
+    overflow: hidden;
+}
+.summary-card > h3 {
+    margin-bottom: 18px;
+}
+.summary-card .summary-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    width: 100%;
+}
+.summary-card .summary-stats .stat {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+.summary-card .stat-label {
+    margin-bottom: 8px;
+    font-size: .82rem;
+    line-height: 1.25;
+}
+.summary-card .stat-value {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    color: #3360F2;
+    font-size: clamp(1.18rem, 1.8vw, 1.48rem);
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -.025em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.summary-card .stat-value[data-state="loading"],
+.summary-card .stat-value[data-state="error"] {
+    font-size: clamp(.98rem, 1.45vw, 1.18rem);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+}
+.summary-card .stat-meta {
+    margin-top: 8px;
+    max-width: 100%;
+    font-size: .74rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+html[data-theme="dark"] .summary-card .stat-value { color: #9CB3FF; }
+@media(max-width: 760px) {
+    .summary-card .summary-stats { gap: 14px; }
+    .summary-card .stat-value { font-size: 1.2rem; }
+}
+@media(max-width: 520px) {
+    .summary-card .summary-stats { grid-template-columns: 1fr; gap: 12px; }
+    .summary-card .summary-stats .stat + .stat {
+        padding-top: 14px;
+        border-top: 1px solid var(--border-color,#e2e8f0) !important;
+    }
+}

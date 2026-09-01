@@ -998,3 +998,298 @@ body.condomit-app-page {
     .condomit-app-page .subtitle { font-size: .94rem !important; }
     .condomit-app-page .trust-banner { flex-direction: row !important; text-align: left !important; gap: 12px !important; }
 }
+
+/* ============================================================
+   050 - Nova composição da página de escolha de perfil
+   Os três cards de Morador/Síndico/Porteiro mantêm a identidade atual.
+============================================================ */
+body.type-user-page {
+    min-height: 100dvh;
+    background: #F4F7FC !important;
+    color: #1D2B44;
+}
+body.type-user-page .page-bg {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: linear-gradient(180deg, #F9FBFF 0%, #F1F5FB 100%) !important;
+}
+body.type-user-page .type-bg-orb {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(4px);
+}
+body.type-user-page .type-bg-orb-a {
+    width: 520px;
+    height: 520px;
+    top: -270px;
+    left: -180px;
+    background: radial-gradient(circle, rgba(51,96,242,.12) 0%, rgba(51,96,242,0) 72%);
+}
+body.type-user-page .type-bg-orb-b {
+    width: 500px;
+    height: 500px;
+    right: -210px;
+    top: 110px;
+    background: radial-gradient(circle, rgba(18,191,193,.09) 0%, rgba(18,191,193,0) 70%);
+}
+body.type-user-page .type-bg-grid {
+    position: absolute;
+    inset: 0;
+    opacity: .24;
+    background-image:
+        linear-gradient(rgba(51,96,242,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(51,96,242,.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.8), transparent 78%);
+}
+body.type-user-page .type-selection-page {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 1200px !important;
+    margin: 0 auto;
+    padding: 20px 24px 46px !important;
+}
+body.type-user-page .top-header {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: center;
+    min-height: 72px !important;
+    margin: 0 0 24px !important;
+    padding: 8px 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+body.type-user-page .btn-back {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 42px;
+    padding: 0 15px !important;
+    border: 1px solid #DCE4F0 !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,.9) !important;
+    color: #3654A6 !important;
+    box-shadow: 0 5px 14px rgba(34,51,82,.045) !important;
+}
+body.type-user-page .btn-back:hover {
+    transform: translateX(-2px);
+    border-color: #C7D3E6 !important;
+    background: #fff !important;
+}
+body.type-user-page .brand-header {
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+body.type-user-page .brand-mark-shell {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #DFE7F2;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 8px 22px rgba(37,57,91,.07);
+}
+body.type-user-page .brand-logo-img {
+    display: block !important;
+    width: 42px !important;
+    height: 42px !important;
+    max-width: 42px !important;
+    max-height: 42px !important;
+    object-fit: contain;
+    filter: none !important;
+}
+body.type-user-page .brand-copy {
+    display: grid;
+    gap: 1px;
+    text-align: left;
+}
+body.type-user-page .brand-copy strong {
+    color: #1D315E;
+    font-size: 1.08rem;
+    font-weight: 850;
+    line-height: 1.05;
+    letter-spacing: -.025em;
+}
+body.type-user-page .brand-copy span {
+    color: #7B8799;
+    font-size: .7rem;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: .055em;
+}
+body.type-user-page .header-security {
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 36px;
+    padding: 0 11px;
+    border: 1px solid #DDE7F1;
+    border-radius: 999px;
+    background: rgba(255,255,255,.75);
+    color: #61718A;
+    font-size: .76rem;
+    font-weight: 750;
+}
+body.type-user-page .header-security i { color: #3360F2; }
+body.type-user-page .profile-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, .55fr);
+    gap: 24px;
+    align-items: center;
+    margin: 0 auto 30px;
+    padding: 28px 30px;
+    border: 1px solid #E1E8F2;
+    border-radius: 24px;
+    background: rgba(255,255,255,.82);
+    box-shadow: 0 12px 34px rgba(31,50,82,.055);
+    backdrop-filter: blur(14px);
+}
+body.type-user-page .profile-hero-copy {
+    min-width: 0;
+}
+body.type-user-page .page-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 30px;
+    margin: 0 0 12px;
+    padding: 0 11px;
+    border: 1px solid #D9E4F8 !important;
+    border-radius: 999px;
+    background: #F1F5FF !important;
+    color: #4164C9 !important;
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .02em;
+}
+body.type-user-page .page-title {
+    margin: 0 0 10px !important;
+    color: #172641 !important;
+    font-size: clamp(2rem, 4vw, 2.8rem) !important;
+    line-height: 1.08 !important;
+    letter-spacing: -.04em !important;
+    text-align: left;
+    text-shadow: none !important;
+}
+body.type-user-page .subtitle {
+    max-width: 700px;
+    margin: 0 !important;
+    color: #65748A !important;
+    font-size: 1rem !important;
+    line-height: 1.58 !important;
+    text-align: left;
+    text-shadow: none !important;
+}
+body.type-user-page .profile-hero-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 16px;
+    border: 1px solid #DCE5F2;
+    border-radius: 16px;
+    background: #F7F9FD;
+}
+body.type-user-page .profile-hero-note i {
+    margin-top: 2px;
+    color: #3360F2;
+    font-size: 1rem;
+}
+body.type-user-page .profile-hero-note p {
+    margin: 0;
+    color: #63738A;
+    font-size: .84rem;
+    line-height: 1.55;
+    font-weight: 560;
+}
+body.type-user-page .type-grid {
+    max-width: 1050px;
+    margin: 0 auto 28px !important;
+    gap: 30px;
+}
+/* Os cartões abaixo permanecem visualmente iguais ao desenho aprovado. */
+body.type-user-page .type-card {
+    isolation: isolate;
+}
+body.type-user-page .profile-footer-info {
+    max-width: 820px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    gap: 18px;
+    padding: 17px 20px;
+    border: 1px solid #E0E7F1;
+    border-radius: 18px;
+    background: rgba(255,255,255,.74);
+    box-shadow: 0 7px 22px rgba(31,50,82,.04);
+}
+body.type-user-page .profile-footer-item {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+body.type-user-page .profile-footer-icon {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #EEF3FF;
+    color: #3360F2;
+}
+body.type-user-page .profile-footer-item div {
+    display: grid;
+    gap: 3px;
+}
+body.type-user-page .profile-footer-item strong {
+    color: #273853;
+    font-size: .88rem;
+}
+body.type-user-page .profile-footer-item small {
+    color: #718096;
+    font-size: .76rem;
+    line-height: 1.42;
+}
+body.type-user-page .profile-footer-divider {
+    width: 1px;
+    background: #E2E8F1;
+}
+@media(max-width: 900px) {
+    body.type-user-page .top-header { grid-template-columns: auto 1fr auto !important; }
+    body.type-user-page .brand-copy { display: none; }
+    body.type-user-page .profile-hero {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 23px 22px;
+    }
+    body.type-user-page .page-title,
+    body.type-user-page .subtitle { text-align: center; }
+    body.type-user-page .profile-hero-copy { text-align: center; }
+}
+@media(max-width: 620px) {
+    body.type-user-page .type-selection-page { padding: 12px 12px 32px !important; }
+    body.type-user-page .top-header { margin-bottom: 16px !important; }
+    body.type-user-page .btn-back span,
+    body.type-user-page .header-security span { display: none; }
+    body.type-user-page .btn-back { width: 42px; padding: 0 !important; justify-content: center; }
+    body.type-user-page .header-security { width: 38px; min-height: 38px; padding: 0; justify-content: center; }
+    body.type-user-page .brand-mark-shell { width: 48px; height: 48px; border-radius: 15px; }
+    body.type-user-page .brand-logo-img { width: 39px !important; height: 39px !important; max-width: 39px !important; max-height: 39px !important; }
+    body.type-user-page .profile-hero { margin-bottom: 24px; padding: 20px 16px; border-radius: 20px; }
+    body.type-user-page .page-title { font-size: 1.88rem !important; }
+    body.type-user-page .subtitle { font-size: .92rem !important; }
+    body.type-user-page .profile-footer-info { grid-template-columns: 1fr; gap: 12px; padding: 15px; }
+    body.type-user-page .profile-footer-divider { width: 100%; height: 1px; }
+}

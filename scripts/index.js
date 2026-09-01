@@ -346,38 +346,114 @@ async function loadMonthlyFinancialSummary(currentUser) {
         style: 'currency', currency: 'BRL'
     }).format(Number(value || 0));
 
-    try {
+    const setLoading = () => {
+        expenseEl.dataset.state = 'loading';
+        incomeEl.dataset.state = 'loading';
+        expenseEl.textContent = 'Carregando...';
+        incomeEl.textContent = 'Carregando...';
+        if (expenseMetaEl) expenseMetaEl.textContent = 'Calculando lançamentos do mês';
+        if (incomeMetaEl) incomeMetaEl.textContent = 'Calculando lançamentos do mês';
+    };
+
+    const renderSummary = (summary) => {
+        expenseEl.dataset.state = 'ready';
+        incomeEl.dataset.state = 'ready';
+        expenseEl.textContent = money(summary?.expenses_total);
+        incomeEl.textContent = money(summary?.income_total);
+
+        const expenseCount = Number(summary?.expense_entries_count || 0);
+        const incomeCount = Number(summary?.income_entries_count || 0);
+        const subscription = Number(summary?.subscription_expense || 0);
+        if (expenseMetaEl) {
+            const subscriptionText = subscription > 0 ? ` · assinatura: ${money(subscription)}` : '';
+            expenseMetaEl.textContent = `${expenseCount} lançamento${expenseCount === 1 ? '' : 's'}${subscriptionText}`;
+        }
+        if (incomeMetaEl) {
+            incomeMetaEl.textContent = `${incomeCount} lançamento${incomeCount === 1 ? '' : 's'} registrado${incomeCount === 1 ? '' : 's'}`;
+        }
+    };
+
+    const resolveCurrentCep = async () => {
+        // O condomínio armazenado na sessão representa a seleção ativa do usuário.
+        // A RPC antiga usa LIMIT 1 e, para contas ligadas a mais de um condomínio,
+        // pode devolver outro vínculo; por isso ela é apenas fallback.
+        const cached = currentUser?.condominium?.cep || currentUser?.condominium?.condominium_id || null;
+        if (cached) return cached;
+        if (typeof window.supabaseFetch === 'function') {
+            try {
+                const value = await window.supabaseFetch('/rpc/condomit_current_user_cep', {
+                    method: 'POST',
+                    body: '{}'
+                });
+                if (typeof value === 'string' && value.trim()) return value.trim();
+            } catch (error) {
+                console.warn('[Dashboard] Não foi possível identificar o CEP atual:', error);
+            }
+        }
+        return null;
+    };
+
+    const fetchFromRpc = async (cep) => {
         if (typeof window.supabaseFetch !== 'function') throw new Error('Conexão com o banco indisponível.');
         const data = await window.supabaseFetch('/rpc/condomit_monthly_financial_summary', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 target_month: new Date().toISOString().slice(0, 10),
-                target_cep: currentUser?.condominium?.cep || currentUser?.condominium?.condominium_id || null
+                target_cep: cep || null
             })
         });
         const summary = Array.isArray(data) ? data[0] : data;
-        if (!summary || typeof summary !== 'object') throw new Error('Resumo financeiro indisponível.');
+        if (!summary || typeof summary !== 'object') throw new Error('Resumo financeiro vazio.');
+        return summary;
+    };
 
-        expenseEl.textContent = money(summary.expenses_total);
-        incomeEl.textContent = money(summary.income_total);
+    const fetchFromServerFallback = async (cep) => {
+        const token = typeof window.resolveSupabaseAccessToken === 'function'
+            ? await window.resolveSupabaseAccessToken()
+            : (typeof window.getSupabaseAccessToken === 'function' ? window.getSupabaseAccessToken() : null);
+        if (!token) throw new Error('Sessão autenticada indisponível.');
 
-        const expenseCount = Number(summary.expense_entries_count || 0);
-        const incomeCount = Number(summary.income_entries_count || 0);
-        const subscription = Number(summary.subscription_expense || 0);
-        if (expenseMetaEl) {
-            const subscriptionText = subscription > 0 ? ` · assinatura Condomit: ${money(subscription)}` : '';
-            expenseMetaEl.textContent = `${expenseCount} lançamento${expenseCount === 1 ? '' : 's'}${subscriptionText}`;
+        const month = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit'
+        }).format(new Date()).slice(0, 7);
+        const params = new URLSearchParams({ month });
+        if (cep) params.set('cep', cep);
+        const response = await fetch(`/api/dashboard/financial-summary?${params.toString()}`, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+            cache: 'no-store'
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok || !payload || typeof payload !== 'object') {
+            throw new Error(payload?.error || `Falha ao carregar resumo financeiro (${response.status}).`);
         }
-        if (incomeMetaEl) {
-            incomeMetaEl.textContent = `${incomeCount} lançamento${incomeCount === 1 ? '' : 's'} registrado${incomeCount === 1 ? '' : 's'}`;
+        return payload;
+    };
+
+    setLoading();
+    let rpcError = null;
+    try {
+        const cep = await resolveCurrentCep();
+        try {
+            const summary = await fetchFromRpc(cep);
+            renderSummary(summary);
+            return;
+        } catch (error) {
+            rpcError = error;
+            console.warn('[Dashboard] RPC financeiro indisponível; usando fallback seguro:', error);
         }
+
+        const fallbackSummary = await fetchFromServerFallback(cep);
+        renderSummary(fallbackSummary);
     } catch (error) {
-        console.warn('[Dashboard] Resumo financeiro:', error);
-        expenseEl.textContent = 'Indisponível';
-        incomeEl.textContent = 'Indisponível';
-        if (expenseMetaEl) expenseMetaEl.textContent = 'Execute a migration 032 para carregar os valores reais.';
-        if (incomeMetaEl) incomeMetaEl.textContent = 'Execute a migration 032 para carregar os valores reais.';
+        console.warn('[Dashboard] Resumo financeiro não pôde ser carregado:', { rpcError, fallbackError: error });
+        expenseEl.dataset.state = 'error';
+        incomeEl.dataset.state = 'error';
+        expenseEl.textContent = 'Não carregado';
+        incomeEl.textContent = 'Não carregado';
+        if (expenseMetaEl) expenseMetaEl.textContent = 'Não foi possível consultar as despesas agora. Tente atualizar.';
+        if (incomeMetaEl) incomeMetaEl.textContent = 'Não foi possível consultar as receitas agora. Tente atualizar.';
     }
 }
 

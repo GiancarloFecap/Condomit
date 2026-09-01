@@ -6,40 +6,56 @@
     <title>Condomit - Escolha seu Perfil</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/tipo-usuario.css?v=048">
+    <link rel="stylesheet" href="../styles/tipo-usuario.css?v=050">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="../styles/ux-polish.css?v=049">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=050">
 </head>
-<body class="condomit-app-page">
-    <div class="page-bg">
-        <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&auto=format&fit=crop&w=1800&q=80" alt="Condomínio" class="page-bg-image">
-        <div class="page-bg-overlay"></div>
-        <div class="page-bg-glow"></div>
-        <div class="bg-corner bg-corner-tr"></div>
-        <div class="bg-corner bg-corner-bl"></div>
+<body class="condomit-app-page type-user-page">
+    <div class="page-bg" aria-hidden="true">
+        <div class="type-bg-orb type-bg-orb-a"></div>
+        <div class="type-bg-orb type-bg-orb-b"></div>
+        <div class="type-bg-grid"></div>
     </div>
 
-    <div class="type-selection-page">
+    <main class="type-selection-page">
         <div class="container">
             <header class="top-header">
-                <button class="btn-back" onclick="window.location.href='../inicio.html'">
-                    <i class="fas fa-arrow-left"></i> Voltar
+                <button class="btn-back" type="button" onclick="window.location.href='../inicio.html'">
+                    <i class="fas fa-arrow-left" aria-hidden="true"></i>
+                    <span>Voltar</span>
                 </button>
+
                 <div class="brand-header" aria-label="Condomit">
-                    <div class="brand-mark-shell"><img src="../assets/logo-icon.png" alt="Logo Condomit" class="brand-logo-img"></div>
+                    <div class="brand-mark-shell">
+                        <img src="../assets/logo-icon.png" alt="Logo Condomit" class="brand-logo-img">
+                    </div>
+                    <div class="brand-copy">
+                        <strong>Condomit</strong>
+                        <span>O app do seu condomínio</span>
+                    </div>
                 </div>
-                <div class="header-spacer"></div>
+
+                <div class="header-security" aria-label="Ambiente seguro">
+                    <i class="fas fa-shield-halved" aria-hidden="true"></i>
+                    <span>Ambiente seguro</span>
+                </div>
             </header>
 
-            <div class="page-title-area">
-                <span class="page-kicker"><i class="fas fa-shield-check"></i> Acesso seguro</span>
-                <h1 class="page-title">Como você usa a Condomit?</h1>
-                <p class="subtitle">Escolha o seu perfil para entrar em uma experiência preparada para as suas necessidades no condomínio.</p>
-            </div>
+            <section class="profile-hero" aria-labelledby="profilePageTitle">
+                <div class="profile-hero-copy">
+                    <span class="page-kicker"><i class="fas fa-user-check"></i> Identificação de acesso</span>
+                    <h1 class="page-title" id="profilePageTitle">Qual é o seu perfil no condomínio?</h1>
+                    <p class="subtitle">Escolha uma opção para que a Condomit prepare o cadastro e as ferramentas adequadas para você.</p>
+                </div>
+                <div class="profile-hero-note">
+                    <i class="fas fa-circle-info" aria-hidden="true"></i>
+                    <p>Essa escolha define somente o tipo de acesso. Depois, você entra ou vincula sua conta ao condomínio correspondente.</p>
+                </div>
+            </section>
 
-            <div class="type-grid">
+            <section class="type-grid" aria-label="Tipos de usuário">
                 <div class="type-card morador-card" data-type="morador" onclick="selectType('morador')">
                     <div class="type-icon-circle morador-circle">
                         <i class="fa-solid fa-house-user" aria-hidden="true"></i>
@@ -48,7 +64,7 @@
                     <h3 class="type-title morador-title">Morador</h3>
                     <div class="type-divider morador-divider"></div>
                     <p class="type-desc">Acesse serviços, reservas, avisos e informações do seu condomínio.</p>
-                    <button class="type-btn morador-btn" onclick="event.stopPropagation(); selectType('morador')">
+                    <button class="type-btn morador-btn" type="button" aria-label="Escolher perfil Morador" onclick="event.stopPropagation(); selectType('morador')">
                         <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
@@ -61,7 +77,7 @@
                     <h3 class="type-title sindico-title">Síndico</h3>
                     <div class="type-divider sindico-divider"></div>
                     <p class="type-desc">Gerencie o condomínio com ferramentas administrativas e financeiras completas.</p>
-                    <button class="type-btn sindico-btn" onclick="event.stopPropagation(); selectType('sindico')">
+                    <button class="type-btn sindico-btn" type="button" aria-label="Escolher perfil Síndico" onclick="event.stopPropagation(); selectType('sindico')">
                         <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
@@ -74,32 +90,30 @@
                     <h3 class="type-title porteiro-title">Porteiro</h3>
                     <div class="type-divider porteiro-divider"></div>
                     <p class="type-desc">Controle operacional e segurança do edifício com praticidade e eficiência.</p>
-                    <button class="type-btn porteiro-btn" onclick="event.stopPropagation(); selectType('porteiro')">
+                    <button class="type-btn porteiro-btn" type="button" aria-label="Escolher perfil Porteiro" onclick="event.stopPropagation(); selectType('porteiro')">
                         <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
-            </div>
+            </section>
 
-            <div class="profile-help"><div class="profile-help-label"><i class="fas fa-circle-info"></i> Dica</div><div class="trust-banner">
-                <div class="trust-icon">
-                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18 3.5L31.5 9V18C31.5 25.732 25.732 32.5 18 32.5C10.268 32.5 4.5 25.732 4.5 18V9L18 3.5Z" stroke="#2563EB" stroke-width="2.5" fill="#DBEAFE"/>
-                        <path d="M12.5 18.5L16.5 22.5L24.5 14.5" stroke="#2563EB" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                    </svg>
+            <section class="profile-footer-info" aria-label="Informações de segurança">
+                <div class="profile-footer-item">
+                    <span class="profile-footer-icon"><i class="fas fa-lock"></i></span>
+                    <div><strong>Dados protegidos</strong><small>Seu acesso é validado antes de liberar as funções do condomínio.</small></div>
                 </div>
-                <div class="trust-text">
-                    <h4>Seguro, confiável e completo</h4>
-                    <p>O Condomit foi desenvolvido para facilitar a gestão e melhorar a vida em condomínio.</p>
+                <div class="profile-footer-divider"></div>
+                <div class="profile-footer-item">
+                    <span class="profile-footer-icon"><i class="fas fa-building-shield"></i></span>
+                    <div><strong>Acesso por condomínio</strong><small>Cada perfil enxerga somente as áreas e informações permitidas.</small></div>
                 </div>
-            </div></div>
+            </section>
         </div>
-    </div>
+    </main>
+
     <script src="../scripts/platform-config.js?v=035"></script>
-
-
     <script src="../scripts/supabase-client.js?v=043"></script>
-    <script src="../scripts/tipo-usuario.js"></script>
+    <script src="../scripts/tipo-usuario.js?v=050"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
-    <script src="../scripts/advanced-global.js?v=049"></script>
+    <script src="../scripts/advanced-global.js?v=050"></script>
 </body>
 </html>

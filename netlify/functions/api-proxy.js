@@ -1039,6 +1039,171 @@ function allowedCorsOrigin(event) {
   return 'https://condomit.netlify.app';
 }
 
+
+function normalizeRoleForAccess(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function monthKeyFromDateLike(value, timeZone = 'America/Sao_Paulo') {
+  if (!value) return '';
+  const raw = String(value).trim();
+  if (/^\d{4}-\d{2}(?:-\d{2})?$/.test(raw)) return raw.slice(0, 7);
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw.slice(0, 7);
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit'
+    }).formatToParts(date);
+    const year = parts.find((part) => part.type === 'year')?.value;
+    const month = parts.find((part) => part.type === 'month')?.value;
+    return year && month ? `${year}-${month}` : raw.slice(0, 7);
+  } catch (_) {
+    return raw.slice(0, 7);
+  }
+}
+
+async function resolveExactCondominiumCepForUser(profile, requestedCep) {
+  const email = String(profile?.email || '').trim().toLowerCase();
+  if (!email) return '';
+  const requestedDigits = normalizedCep(requestedCep);
+
+  try {
+    const membershipsResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_condominiums?select=condominium_id&user_email=eq.${encodeURIComponent(email)}`,
+      { headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` } }
+    );
+    if (membershipsResponse.ok) {
+      const memberships = await membershipsResponse.json().catch(() => []);
+      if (Array.isArray(memberships) && memberships.length) {
+        if (requestedDigits) {
+          const match = memberships.find((row) => normalizedCep(row?.condominium_id) === requestedDigits);
+          if (match?.condominium_id) return String(match.condominium_id);
+        }
+        if (!requestedDigits && memberships[0]?.condominium_id) return String(memberships[0].condominium_id);
+      }
+    }
+  } catch (_) {}
+
+  const condo = profile?.condominium && typeof profile.condominium === 'object' ? profile.condominium : {};
+  const candidates = [condo.cep, condo.condominium_id, condo.condominium_cep].filter(Boolean);
+  if (requestedDigits) {
+    const match = candidates.find((value) => normalizedCep(value) === requestedDigits);
+    if (match) return String(match);
+    return normalizeCepForDatabase(requestedCep) || String(requestedCep || '');
+  }
+  return candidates.length ? String(candidates[0]) : '';
+}
+
+async function handleDashboardFinancialSummary(event, query) {
+  if (!hasSupabaseAdminConfig()) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'Configuração administrativa do Supabase indisponível.' }) };
+  }
+
+  const authUser = await getAuthenticatedSupabaseUser(event);
+  if (!authUser?.email) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'Sessão não autenticada.' }) };
+  }
+
+  const profile = await getApplicationUserByEmail(authUser.email);
+  const role = normalizeRoleForAccess(profile?.user_type);
+  if (!['sindico', 'admin'].includes(role)) {
+    return { statusCode: 403, body: JSON.stringify({ error: 'Apenas o síndico pode consultar o resumo financeiro.' }) };
+  }
+
+  const requestedCep = String(query?.cep || '').trim();
+  if (requestedCep && !(await applicationUserBelongsToCep(profile, requestedCep))) {
+    return { statusCode: 403, body: JSON.stringify({ error: 'O condomínio informado não pertence ao usuário autenticado.' }) };
+  }
+
+  const exactCep = await resolveExactCondominiumCepForUser(profile, requestedCep);
+  if (!exactCep) {
+    return { statusCode: 404, body: JSON.stringify({ error: 'Não foi possível identificar o condomínio atual.' }) };
+  }
+
+  const requestedMonth = String(query?.month || '').trim();
+  const month = /^\d{4}-\d{2}$/.test(requestedMonth)
+    ? requestedMonth
+    : new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' })
+        .format(new Date())
+        .slice(0, 7);
+
+  const entriesResult = await proxySupabaseRequest(
+    null,
+    `/financial_entries?select=entry_type,amount,due_date,paid_date,created_at,status&cep=eq.${encodeURIComponent(exactCep)}`,
+    'GET'
+  );
+  if (entriesResult.status >= 400 && entriesResult.status !== 404) {
+    return { statusCode: entriesResult.status, body: JSON.stringify({ error: entriesResult.data?.message || entriesResult.data?.error || 'Falha ao consultar lançamentos financeiros.' }) };
+  }
+
+  const paymentsResult = await proxySupabaseRequest(
+    null,
+    `/pagamento?select=valor_pago,status_pagamento,data_pagamento,created_at,cep&cep=eq.${encodeURIComponent(exactCep)}`,
+    'GET'
+  );
+  if (paymentsResult.status >= 400 && paymentsResult.status !== 404) {
+    return { statusCode: paymentsResult.status, body: JSON.stringify({ error: paymentsResult.data?.message || paymentsResult.data?.error || 'Falha ao consultar pagamentos da assinatura.' }) };
+  }
+
+  let ledgerExpenses = 0;
+  let incomeTotal = 0;
+  let ledgerExpenseCount = 0;
+  let incomeCount = 0;
+
+  for (const entry of Array.isArray(entriesResult.data) ? entriesResult.data : []) {
+    if (String(entry?.status || '').trim().toLowerCase() === 'cancelado') continue;
+    const referenceDate = entry?.due_date || entry?.paid_date || entry?.created_at;
+    if (monthKeyFromDateLike(referenceDate) !== month) continue;
+    const amount = Number(entry?.amount || 0);
+    if (!Number.isFinite(amount)) continue;
+    if (String(entry?.entry_type || '').trim().toLowerCase() === 'despesa') {
+      ledgerExpenses += amount;
+      ledgerExpenseCount += 1;
+    } else if (String(entry?.entry_type || '').trim().toLowerCase() === 'receita') {
+      incomeTotal += amount;
+      incomeCount += 1;
+    }
+  }
+
+  let subscriptionExpense = 0;
+  let subscriptionCount = 0;
+  for (const payment of Array.isArray(paymentsResult.data) ? paymentsResult.data : []) {
+    if (String(payment?.status_pagamento || '').trim().toLowerCase() !== 'aprovado') continue;
+    const referenceDate = payment?.data_pagamento || payment?.created_at;
+    if (monthKeyFromDateLike(referenceDate) !== month) continue;
+    const amount = Number(payment?.valor_pago || 0);
+    if (!Number.isFinite(amount)) continue;
+    subscriptionExpense += amount;
+    subscriptionCount += 1;
+  }
+
+  const expensesTotal = ledgerExpenses + subscriptionExpense;
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      ok: true,
+      source: 'server-fallback',
+      cep: exactCep,
+      month,
+      expenses_total: Number(expensesTotal.toFixed(2)),
+      income_total: Number(incomeTotal.toFixed(2)),
+      balance: Number((incomeTotal - expensesTotal).toFixed(2)),
+      ledger_expenses: Number(ledgerExpenses.toFixed(2)),
+      subscription_expense: Number(subscriptionExpense.toFixed(2)),
+      expense_entries_count: ledgerExpenseCount + subscriptionCount,
+      ledger_expense_entries_count: ledgerExpenseCount,
+      subscription_payments_count: subscriptionCount,
+      income_entries_count: incomeCount
+    })
+  };
+}
+
 async function proxySupabaseRequest(body, pathSuffix, method) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1${pathSuffix}`, {
     method,
@@ -1902,6 +2067,10 @@ exports.handler = async (event, context) => {
 
   try {
     console.log('[api-proxy] method=', rawMethod, 'pathname=', pathname, 'query=', JSON.stringify(query));
+    if (pathname === '/dashboard/financial-summary' && rawMethod === 'GET') {
+      const result = await handleDashboardFinancialSummary(event, query);
+      return { ...result, headers: { ...headers, ...(result.headers || {}) } };
+    }
     if (pathname === '/esqueceu-senha' || pathname === '/forgot-password') {
 }
     if (pathname === '/register' && rawMethod === 'POST') {

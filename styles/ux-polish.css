@@ -1067,3 +1067,89 @@ html[data-theme="dark"] .condomit-app-page {
 .condomit-app-page .quick-action-btn i,
 .condomit-app-page .status-item i,
 .condomit-app-page .detail-item i { color: #3360F2 !important; }
+
+/* ============================================================
+   050 - Refinamento visual das páginas internas
+   A landing page /inicio.html não usa .condomit-app-page e fica intacta.
+============================================================ */
+body.condomit-app-page:not(.advanced-page):not(.type-user-page) {
+    background: #F5F7FB !important;
+    color: #22304A;
+}
+html[data-theme="dark"] body.condomit-app-page:not(.advanced-page):not(.type-user-page) {
+    background: #0B1220 !important;
+}
+.condomit-app-page:not(.advanced-page):not(.type-user-page) .main-content {
+    background:
+        radial-gradient(circle at 92% 0%, rgba(51,96,242,.045), transparent 27%),
+        linear-gradient(180deg, #F8FAFD 0%, #F4F7FB 100%);
+}
+html[data-theme="dark"] .condomit-app-page:not(.advanced-page):not(.type-user-page) .main-content {
+    background: linear-gradient(180deg, #0B1220 0%, #0D1625 100%);
+}
+.condomit-app-page:not(.advanced-page):not(.type-user-page) .top-bar {
+    min-height: 78px;
+    padding: 18px 28px !important;
+    background: rgba(255,255,255,.96) !important;
+    border-bottom: 1px solid #E8EDF5 !important;
+    box-shadow: 0 5px 18px rgba(28,44,72,.045) !important;
+}
+html[data-theme="dark"] .condomit-app-page:not(.advanced-page):not(.type-user-page) .top-bar {
+    background: rgba(15,23,38,.97) !important;
+    border-bottom-color: #253248 !important;
+}
+.condomit-app-page:not(.advanced-page):not(.type-user-page) .top-bar-left h1 {
+    font-size: clamp(1.35rem, 2vw, 1.75rem) !important;
+    font-weight: 800;
+    color: #1C2940;
+}
+html[data-theme="dark"] .condomit-app-page:not(.advanced-page):not(.type-user-page) .top-bar-left h1 { color: #F5F8FD; }
+.condomit-app-page:not(.advanced-page):not(.type-user-page) .top-bar-left p {
+    margin-top: 4px;
+    font-size: .9rem !important;
+    color: #728096 !important;
+}
+.condomit-app-page:not(.advanced-page):not(.type-user-page) :where(.card,.info-card,.quick-card,.config-card,.welcome-card,.card-shell,.panel,.content-card,.section) {
+    border-color: #E3E9F2 !important;
+    border-radius: 18px !important;
+    box-shadow: 0 8px 24px rgba(30,47,78,.055) !important;
+}
+html[data-theme="dark"] .condomit-app-page:not(.advanced-page):not(.type-user-page) :where(.card,.info-card,.quick-card,.config-card,.welcome-card,.card-shell,.panel,.content-card,.section) {
+    border-color: #26364D !important;
+    box-shadow: 0 10px 28px rgba(0,0,0,.18) !important;
+}
+.condomit-app-page:not(.advanced-page):not(.type-user-page) :where(.card,.config-card,.panel,.content-card) > h3 {
+    font-size: 1.02rem;
+    font-weight: 800;
+    letter-spacing: -.012em;
+}
+.condomit-app-page:not(.advanced-page):not(.type-user-page) input,
+.condomit-app-page:not(.advanced-page):not(.type-user-page) select,
+.condomit-app-page:not(.advanced-page):not(.type-user-page) textarea {
+    border-radius: 12px;
+    border-color: #D7E0EC;
+    box-shadow: none;
+}
+.condomit-app-page:not(.advanced-page):not(.type-user-page) :where(.btn,.btn-primary,.btn-secondary,.btn-submit,.btn-add,.btn-cancel,.primary-action,.ghost-btn,.action-btn,.save-btn,.submit-btn) {
+    border-radius: 12px;
+}
+.condomit-app-page:not(.advanced-page):not(.type-user-page) table th {
+    font-size: .78rem;
+    letter-spacing: .02em;
+    color: #55647B;
+}
+.condomit-app-page:not(.advanced-page):not(.type-user-page) table td {
+    font-size: .9rem;
+}
+.condomit-app-page:not(.advanced-page):not(.type-user-page) .empty-state,
+.condomit-app-page:not(.advanced-page):not(.type-user-page) .no-data,
+.condomit-app-page:not(.advanced-page):not(.type-user-page) .no-results {
+    border-style: dashed !important;
+    box-shadow: none !important;
+}
+@media(max-width: 700px) {
+    .condomit-app-page:not(.advanced-page):not(.type-user-page) .top-bar {
+        min-height: 68px;
+        padding: 14px 14px !important;
+    }
+}

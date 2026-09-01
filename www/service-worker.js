@@ -1,4 +1,4 @@
-const CACHE='condomit-shell-v049';
+const CACHE='condomit-shell-v050';
 const CORE=['/inicio.html','/pages/entrar.html','/pages/tipo-usuario.html','/styles/theme.css','/styles/responsive-mobile.css','/styles/ux-polish.css','/assets/favicon.png','/assets/icon-192.png','/assets/icon-512.png','/manifest.webmanifest','/privacidade.html','/suporte.html','/excluir-conta.html'];
 
 self.addEventListener('install',event=>{
