@@ -15,6 +15,7 @@
         events: [],
         comments: [],
         transcripts: [],
+        speechActivities: [],
         condominium: null,
         signature: null,
         commentProfiles: new Map(),
@@ -96,7 +97,7 @@
     async function loadAll() {
         if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase não inicializado.');
 
-        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, signatures, commentVotes] = await Promise.all([
+        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, speechActivities, signatures, commentVotes] = await Promise.all([
             fetchRows(`/scheduled_assemblies?select=*&id=eq.${state.id}&limit=1`),
             fetchRows(`/assembly_attendance?select=*&assembly_id=eq.${state.id}&order=joined_at.asc`),
             fetchRows(`/assembly_chat_messages?select=*&assembly_id=eq.${state.id}&order=created_at.asc`),
@@ -106,13 +107,14 @@
             fetchRows(`/assembly_event_logs?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => []),
+            fetchRows(`/assembly_speech_activity?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
             fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code,signature_data&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
             fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => [])
         ]);
 
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
-        Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, commentVotes });
+        Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, speechActivities, commentVotes });
         state.signature = signatures[0] || null;
 
         // Dados institucionais usados somente como texto na ata. A ata não inclui
@@ -184,7 +186,7 @@
                 <span><i class="far fa-clock"></i> ${esc(String(a.start_time || '--:--').slice(0, 5))}${a.end_time ? ` – ${esc(String(a.end_time).slice(0, 5))}` : ''}</span>
                 <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
-                <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} transcrito${state.transcripts.length === 1 ? '' : 's'}</span>
+                <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.length ? `${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} transcrito${state.transcripts.length === 1 ? '' : 's'}` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
             </div>
             <div class="summary-hero-actions">
                 ${currentUserRole() === 'sindico' ? '<button type="button" id="generateAssemblyTasks027" class="summary-secondary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button>' : ''}
@@ -323,10 +325,62 @@
                 const joined = texts.join(' ');
                 paragraphs.push(`Durante os debates, registrou-se manifestação de ${name}, cujo teor transcrito foi: “${ensureTerminalPunctuation(joined)}”`);
             });
+
+            const transcribedKeys = new Set(Array.from(transcriptGroups.keys()));
+            const untranscribedSpeakers = uniqueSpeechParticipants().filter((speaker) => {
+                const key = String(speaker.email || speaker.name || '').trim().toLowerCase();
+                return key && !transcribedKeys.has(key);
+            });
+            if (untranscribedSpeakers.length) {
+                paragraphs.push(`Também foram detectadas manifestações orais de ${formatHumanList(untranscribedSpeakers.map((speaker) => speaker.name))}, sem transcrição textual automática disponível. O conteúdo dessas falas não foi presumido pelo sistema.`);
+            }
         } else if (!agendaNotes.length) {
-            paragraphs.push('Não foram localizadas transcrições de falas ou anotações formais de discussão vinculadas a esta assembleia.');
+            const speakers = uniqueSpeechParticipants();
+            if (speakers.length) {
+                const names = speakers.map((speaker) => speaker.name).filter(Boolean);
+                const totalSeconds = Math.round(state.speechActivities.reduce((sum, row) => sum + Number(row.duration_seconds || 0), 0));
+                const participation = names.length
+                    ? `Foram detectadas manifestações orais de ${formatHumanList(names)}`
+                    : 'Foram detectadas manifestações orais durante a assembleia';
+                const durationText = totalSeconds > 0 ? `, totalizando aproximadamente ${formatDurationFormal(totalSeconds)} de fala registrada` : '';
+                paragraphs.push(`${participation}${durationText}. O navegador ou dispositivo utilizado não forneceu transcrição textual automática dessas falas; por essa razão, o sistema registra a existência da participação oral sem presumir ou inventar o conteúdo discutido.`);
+            } else {
+                paragraphs.push('Não foram localizadas transcrições textuais, anotações formais de discussão ou registros técnicos de atividade de fala vinculados a esta assembleia.');
+            }
         }
         return paragraphs;
+    }
+
+    function uniqueSpeechParticipants() {
+        const map = new Map();
+        state.speechActivities.forEach((row) => {
+            const key = String(row.participant_email || row.participant_identity || row.participant_name || '').trim().toLowerCase();
+            if (!key) return;
+            if (!map.has(key)) {
+                map.set(key, {
+                    name: cleanFormalText(row.participant_name || row.participant_email || 'Participante'),
+                    email: String(row.participant_email || '').trim().toLowerCase()
+                });
+            }
+        });
+        return Array.from(map.values());
+    }
+
+    function formatHumanList(items) {
+        const list = items.filter(Boolean);
+        if (!list.length) return 'participantes da reunião';
+        if (list.length === 1) return list[0];
+        if (list.length === 2) return `${list[0]} e ${list[1]}`;
+        return `${list.slice(0, -1).join(', ')} e ${list[list.length - 1]}`;
+    }
+
+    function formatDurationFormal(totalSeconds) {
+        const seconds = Math.max(0, Math.round(Number(totalSeconds || 0)));
+        const minutes = Math.floor(seconds / 60);
+        const remainder = seconds % 60;
+        if (minutes && remainder) return `${minutes} minuto${minutes === 1 ? '' : 's'} e ${remainder} segundo${remainder === 1 ? '' : 's'}`;
+        if (minutes) return `${minutes} minuto${minutes === 1 ? '' : 's'}`;
+        return `${remainder} segundo${remainder === 1 ? '' : 's'}`;
     }
 
     function buildFormalPollParagraph(poll) {
@@ -375,6 +429,7 @@
         state.attendance.forEach((row) => { if (row.left_at) candidates.push(row.left_at); });
         state.events.forEach((row) => { if (row.created_at) candidates.push(row.created_at); });
         state.transcripts.forEach((row) => { if (row.spoken_at || row.created_at) candidates.push(row.spoken_at || row.created_at); });
+        state.speechActivities.forEach((row) => { if (row.ended_at || row.started_at) candidates.push(row.ended_at || row.started_at); });
         if (!candidates.length) return '';
         const latest = candidates.sort((left, right) => safeTime(right) - safeTime(left))[0];
         return formatTime(latest);

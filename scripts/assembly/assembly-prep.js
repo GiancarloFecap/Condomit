@@ -461,9 +461,75 @@
     });
   }
 
+
+  function getSelectedCameraFacing(deviceId) {
+    const select = $('camera-select');
+    const option = select ? Array.from(select.options || []).find((item) => item.value === deviceId) : null;
+    const label = String(option?.textContent || '').toLowerCase();
+    if (/traseir|back|rear|environment/.test(label)) return 'environment';
+    if (/frontal|front|user|facetime/.test(label)) return 'user';
+    return null;
+  }
+
+  async function requestVideoOnlyWithFallback(deviceId) {
+    const facing = getSelectedCameraFacing(deviceId);
+    const attempts = [];
+    if (deviceId) attempts.push({ video: true, audio: false, videoDeviceId: deviceId });
+    if (isMobileMediaDevice() && facing) {
+      attempts.push({
+        rawVideoConstraints: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: { ideal: facing }
+        }
+      });
+    }
+    if (!isMobileMediaDevice() || !facing) {
+      attempts.push({ video: true, audio: false });
+    }
+
+    let lastError = null;
+    for (const attempt of attempts) {
+      try {
+        if (attempt.rawVideoConstraints) {
+          return await navigator.mediaDevices.getUserMedia({ video: attempt.rawVideoConstraints, audio: false });
+        }
+        return await requestMediaStream(attempt);
+      } catch (error) {
+        lastError = error;
+        console.warn('Tentativa de abrir câmera falhou:', error);
+      }
+    }
+    throw lastError || new Error('Não foi possível iniciar a câmera.');
+  }
+
+  function replaceVideoTrackInCurrentStream(videoStream) {
+    const newTrack = videoStream?.getVideoTracks?.()[0] || null;
+    if (!newTrack) throw new Error('A câmera não retornou uma faixa de vídeo.');
+
+    if (!state.stream) {
+      state.stream = new MediaStream([newTrack]);
+      attachStream(state.stream);
+      return;
+    }
+
+    state.stream.getVideoTracks().forEach((track) => {
+      try { state.stream.removeTrack(track); } catch (_) {}
+      try { track.stop(); } catch (_) {}
+    });
+    state.stream.addTrack(newTrack);
+    videoStream.getTracks().forEach((track) => {
+      if (track !== newTrack) {
+        try { track.stop(); } catch (_) {}
+      }
+    });
+    attachStream(state.stream);
+  }
+
   function attachStream(stream) {
     const video = $('localVideo');
-    video.classList.add('mirrored');
+    const facing = stream?.getVideoTracks?.()[0]?.getSettings?.().facingMode || '';
+    video.classList.toggle('mirrored', facing !== 'environment');
     try {
       video.srcObject = stream;
     } catch (_) {
@@ -663,11 +729,7 @@
 
     if (checked && (!state.stream || state.stream.getVideoTracks().length === 0)) {
       try {
-        const camStream = await requestMediaStream({
-          video: true,
-          audio: false,
-          videoDeviceId: state.cameraDeviceId || undefined
-        });
+        const camStream = await requestVideoOnlyWithFallback(state.cameraDeviceId || '');
         if (state.stream) {
           state.stream.getVideoTracks().forEach(t => { try { t.stop(); } catch (_) {} });
           camStream.getVideoTracks().forEach(tr => state.stream.addTrack(tr));
@@ -733,25 +795,61 @@
 
   async function handleCameraChange(newDeviceId) {
     if (!newDeviceId) return;
-    if (newDeviceId === state.cameraDeviceId) return;
+    if (newDeviceId === state.cameraDeviceId && state.stream?.getVideoTracks?.().length) return;
+
+    const previousDeviceId = state.cameraDeviceId;
+    const previousFacing = state.stream?.getVideoTracks?.()[0]?.getSettings?.().facingMode || getSelectedCameraFacing(previousDeviceId) || 'user';
     state.cameraDeviceId = newDeviceId;
+
+    // Libera a câmera atual ANTES de abrir a outra. Em vários Androids,
+    // tentar manter frontal e traseira abertas ao mesmo tempo causa
+    // "Could not start video source".
+    const oldVideoTracks = state.stream ? state.stream.getVideoTracks() : [];
+    oldVideoTracks.forEach((track) => {
+      try { track.stop(); } catch (_) {}
+      try { state.stream?.removeTrack(track); } catch (_) {}
+    });
+    await new Promise((resolve) => setTimeout(resolve, isMobileMediaDevice() ? 280 : 80));
+
     try {
-      const ns = await requestMediaStream({
-        video: true,
-        audio: state.stream && state.stream.getAudioTracks().length > 0 ? true : false,
-        videoDeviceId: newDeviceId,
-        audioDeviceId: state.micDeviceId || undefined
-      });
-      cleanupAudio();
-      cleanupStreamOnly();
-      state.stream = ns;
-      attachStream(ns);
+      const videoOnly = await requestVideoOnlyWithFallback(newDeviceId);
+      replaceVideoTrackInCurrentStream(videoOnly);
+      state.cameraOn = true;
+      $('camera-toggle').checked = true;
       applyTrackState();
-      setupAudioAnalyser();
+      updateStatusCard('camera', 'ok', 'Câmera', 'Conectada e funcionando');
       toast('Câmera alterada com sucesso', 'success');
     } catch (e) {
       console.warn('Troca de câmera falhou:', e);
-      toast('Não foi possível trocar de câmera: ' + (e.message || 'Erro desconhecido'), 'error');
+      state.cameraDeviceId = previousDeviceId || '';
+
+      // Tenta restaurar a câmera anterior para não deixar o preview preto.
+      try {
+        let restore = null;
+        if (previousDeviceId) {
+          restore = await requestVideoOnlyWithFallback(previousDeviceId);
+        } else if (isMobileMediaDevice()) {
+          restore = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: previousFacing } },
+            audio: false
+          });
+        } else {
+          restore = await requestMediaStream({ video: true, audio: false });
+        }
+        replaceVideoTrackInCurrentStream(restore);
+        state.cameraOn = true;
+        $('camera-toggle').checked = true;
+        applyTrackState();
+      } catch (_) {
+        state.cameraOn = false;
+        $('camera-toggle').checked = false;
+        updateVideoPlaceholder();
+      }
+
+      const msg = e?.name === 'NotAllowedError'
+        ? 'Permissão de câmera negada.'
+        : 'Não foi possível iniciar a câmera selecionada. Feche outros aplicativos que estejam usando a câmera e tente novamente.';
+      toast(msg, 'error');
     }
   }
 

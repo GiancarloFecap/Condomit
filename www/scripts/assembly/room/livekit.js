@@ -6,7 +6,7 @@ import {
 
 import {
   state
-} from './state.js?v=027';
+} from './state.js?v=057';
 
 import {
   renderGrid,
@@ -18,7 +18,7 @@ import {
   setConnectionConnecting,
   setConnectionDisconnected,
   setConnectionReconnecting
-} from './ui.js?v=027';
+} from './ui.js?v=057';
 
 let intentionalDisconnect =
   false;
@@ -845,6 +845,12 @@ function updateActiveSpeakerClasses(
     }
   );
 
+  try {
+    window.dispatchEvent(new CustomEvent('condomit:assembly-active-speakers', {
+      detail: { identities: Array.from(state.activeSpeakers) }
+    }));
+  } catch (_) {}
+
   document
     .querySelectorAll(
       '.call-tile'
@@ -909,10 +915,13 @@ function findActiveMedia(
               .isCameraEnabled !==
               false
           ) {
-            cameras.set(
-              participant.identity,
-              publication.track
-            );
+            const cameraTrack = publication.videoTrack || publication.track;
+            if (cameraTrack) {
+              cameras.set(
+                participant.identity,
+                cameraTrack
+              );
+            }
           }
 
           /*
@@ -1071,6 +1080,93 @@ function syncMediaFromRoom(
   );
 }
 
+
+async function listVideoDevices() {
+  try {
+    const devices = await Room.getLocalDevices('videoinput', true);
+    return Array.isArray(devices) ? devices.filter((device) => device?.deviceId) : [];
+  } catch (error) {
+    warnLiveKit('Não foi possível listar as câmeras disponíveis.', error);
+    return [];
+  }
+}
+
+function getLocalCameraPublication(room) {
+  return room?.localParticipant?.getTrackPublication?.(Track.Source.Camera) || null;
+}
+
+function getLocalCameraTrack(room) {
+  const publication = getLocalCameraPublication(room);
+  return publication?.videoTrack || publication?.track || null;
+}
+
+function isLocalCameraActuallyRunning(room) {
+  const publication = getLocalCameraPublication(room);
+  const track = publication?.videoTrack || publication?.track;
+  const mediaTrack = track?.mediaStreamTrack;
+  return Boolean(
+    publication &&
+    track &&
+    publication.isMuted !== true &&
+    mediaTrack &&
+    mediaTrack.readyState === 'live'
+  );
+}
+
+async function waitForLocalCamera(room, timeoutMs = 1800) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (isLocalCameraActuallyRunning(room)) return true;
+    await new Promise((resolve) => setTimeout(resolve, 90));
+  }
+  return isLocalCameraActuallyRunning(room);
+}
+
+async function enableCameraAttempt(room, options) {
+  const participant = room?.localParticipant;
+  if (!participant) return false;
+  const publication = await participant.setCameraEnabled(true, options);
+  if (!publication && !participant.isCameraEnabled) return false;
+  return waitForLocalCamera(room);
+}
+
+async function enableCameraWithFallback(room, preferredDeviceId = '') {
+  const participant = room?.localParticipant;
+  if (!participant) return false;
+
+  const devices = await listVideoDevices();
+  const preferredExists = preferredDeviceId && devices.some((device) => device.deviceId === preferredDeviceId);
+  const attempts = [];
+
+  if (preferredExists) attempts.push({ deviceId: preferredDeviceId });
+  if (isMobileCameraDevice()) attempts.push({ facingMode: 'user' });
+  attempts.push(undefined);
+
+  let lastError = null;
+  for (const options of attempts) {
+    try {
+      if (participant.isCameraEnabled) {
+        await participant.setCameraEnabled(false).catch(() => {});
+        await new Promise((resolve) => setTimeout(resolve, 140));
+      }
+      if (await enableCameraAttempt(room, options)) {
+        const track = getLocalCameraTrack(room);
+        const actualDeviceId = track?.mediaStreamTrack?.getSettings?.().deviceId || '';
+        if (actualDeviceId) {
+          try { sessionStorage.setItem('prep_camera_dev', actualDeviceId); } catch (_) {}
+        }
+        return true;
+      }
+    } catch (error) {
+      lastError = error;
+      warnLiveKit('Tentativa de ativar câmera falhou; usando fallback.', { options, error });
+    }
+  }
+
+  if (lastError) throw lastError;
+  return false;
+}
+
 function getInitialDevicePrefs() {
   const preferences = {
     cameraOn:
@@ -1171,45 +1267,33 @@ async function enableInitialCamera(
   room,
   preferences
 ) {
+  if (!preferences.cameraOn) {
+    try { await room.localParticipant.setCameraEnabled(false); } catch (_) {}
+    setControlActive('btn-camera', false);
+    return;
+  }
+
   try {
-    const options = preferences.cameraDeviceId
-      ? { deviceId: preferences.cameraDeviceId }
-      : isMobileCameraDevice()
-        ? { facingMode: 'user' }
-        : undefined;
+    const ok = await enableCameraWithFallback(room, preferences.cameraDeviceId || '');
+    if (!ok) throw new Error('A câmera foi autorizada, mas nenhuma faixa de vídeo foi iniciada.');
 
-    await room
-      .localParticipant
-      .setCameraEnabled(
-        preferences.cameraOn,
-        options
-      );
-
-    // Confirma qual sensor ficou realmente ativo. Em alguns Androids o
-    // deviceId escolhido na preparação é a câmera traseira, mas o estado
-    // local ainda começava como "user" (frontal), fazendo o primeiro toque
-    // em "Virar câmera" tentar selecionar a traseira novamente.
-    if (preferences.cameraOn && isMobileCameraDevice()) {
-      await new Promise((resolve) => setTimeout(resolve, 180));
+    if (isMobileCameraDevice()) {
+      await new Promise((resolve) => setTimeout(resolve, 120));
       state.mobileCameraFacing = getFacingModeFromPublication(room);
     }
+
+    setControlActive('btn-camera', true);
+    syncMediaFromRoom(room);
   } catch (error) {
-    warnLiveKit(
-      'Não foi possível ativar a câmera inicial.',
-      error
+    warnLiveKit('Não foi possível ativar a câmera inicial.', error);
+    try { sessionStorage.removeItem('prep_camera_dev'); } catch (_) {}
+    setControlActive('btn-camera', false);
+    window.AssemblyUtils?.showToast?.(
+      error?.name === 'NotAllowedError'
+        ? 'A câmera está bloqueada pelo navegador. Libere a permissão e tente novamente.'
+        : 'Não foi possível iniciar a câmera. Feche outros aplicativos que possam estar usando-a e tente novamente.',
+      'warning'
     );
-
-    setControlActive(
-      'btn-camera',
-      false
-    );
-
-    window
-      .AssemblyUtils
-      ?.showToast?.(
-        'Não foi possível acessar a câmera.',
-        'warning'
-      );
   }
 }
 
@@ -1427,6 +1511,26 @@ export async function connectToRoom(
         updateActiveSpeakerClasses(
           speakers
         );
+      }
+    )
+
+    .on(
+      RoomEvent.TranscriptionReceived,
+      (segments, participant) => {
+        try {
+          window.dispatchEvent(new CustomEvent('condomit:assembly-livekit-transcription', {
+            detail: {
+              segments: Array.isArray(segments) ? segments.map((segment) => ({
+                id: segment?.id || '',
+                text: segment?.text || '',
+                final: segment?.final === true,
+                language: segment?.language || ''
+              })) : [],
+              participantIdentity: participant?.identity || '',
+              participantName: participant?.name || ''
+            }
+          }));
+        } catch (_) {}
       }
     )
 
@@ -1933,53 +2037,37 @@ export async function switchMobileCamera() {
   if (!room || !state.connected || !isMobileCameraDevice()) return false;
 
   const participant = room.localParticipant;
-  const cameraEnabled = participant.isCameraEnabled ?? false;
-
-  if (!cameraEnabled) {
-    try {
-      await participant.setCameraEnabled(true, { facingMode: 'user' });
-      state.mobileCameraFacing = 'user';
-      setControlActive('btn-camera', true);
-      syncMediaFromRoom(room);
-      return true;
-    } catch (error) {
-      console.error('[LiveKit] Não foi possível reativar a câmera:', error);
-      return false;
-    }
+  if (!(participant.isCameraEnabled ?? false)) {
+    const reactivated = await enableCameraWithFallback(room, '');
+    if (!reactivated) return false;
+    state.mobileCameraFacing = getFacingModeFromPublication(room);
+    setControlActive('btn-camera', true);
+    syncMediaFromRoom(room);
+    return true;
   }
 
   const currentFacing = getFacingModeFromPublication(room);
   const nextFacing = currentFacing === 'environment' ? 'user' : 'environment';
-
   const publication = participant.getTrackPublication?.(Track.Source.Camera);
-  let localTrack = publication?.track;
-  let devices = [];
-  try {
-    devices = await Room.getLocalDevices('videoinput', true);
-  } catch (_) {}
-
-  const currentDeviceId =
-    localTrack?.mediaStreamTrack?.getSettings?.().deviceId ||
-    room.getActiveDevice?.('videoinput') ||
-    '';
-
+  const localTrack = publication?.videoTrack || publication?.track;
+  const devices = await listVideoDevices();
+  const currentDeviceId = localTrack?.mediaStreamTrack?.getSettings?.().deviceId || room.getActiveDevice?.('videoinput') || '';
   const targetDevice = findCameraForFacing(devices, nextFacing, currentDeviceId);
 
-  const verifyCamera = async (expectedFacing, expectedDeviceId = '') => {
-    // Em alguns Androids os settings só mudam alguns frames depois.
-    await new Promise(resolve => setTimeout(resolve, 220));
-    const pub = participant.getTrackPublication?.(Track.Source.Camera);
-    const track = pub?.track?.mediaStreamTrack;
-    const settings = track?.getSettings?.() || {};
-    const actualDeviceId = String(settings.deviceId || room.getActiveDevice?.('videoinput') || '');
+  const verifyCamera = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    const track = getLocalCameraTrack(room);
+    const media = track?.mediaStreamTrack;
+    if (!media || media.readyState !== 'live') return false;
+    const settings = media.getSettings?.() || {};
     const actualFacing = String(settings.facingMode || '');
-    const label = String(track?.label || '').toLowerCase();
-
-    if (expectedDeviceId && actualDeviceId && actualDeviceId === String(expectedDeviceId)) return true;
-    if (actualFacing === expectedFacing) return true;
-    if (expectedFacing === 'environment' && /back|rear|environment|traseir|facing\s*back|camera\s*0/i.test(label)) return true;
-    if (expectedFacing === 'user' && /front|user|facetime|frontal|frente|facing\s*front|camera\s*1/i.test(label)) return true;
-    return false;
+    const actualDeviceId = String(settings.deviceId || '');
+    const label = String(media.label || '').toLowerCase();
+    if (actualFacing === nextFacing) return true;
+    if (targetDevice?.deviceId && actualDeviceId === targetDevice.deviceId) return true;
+    if (nextFacing === 'environment' && /back|rear|environment|traseir/.test(label)) return true;
+    if (nextFacing === 'user' && /front|user|facetime|frontal|frente/.test(label)) return true;
+    return devices.length <= 1;
   };
 
   const finish = () => {
@@ -1990,78 +2078,59 @@ export async function switchMobileCamera() {
     return true;
   };
 
-  try {
-    // 1) Em celulares com duas câmeras enumeráveis, prefira o deviceId exato.
-    // Isso evita aparelhos que aceitam facingMode mas continuam no mesmo sensor.
-    if (targetDevice?.deviceId && localTrack && typeof localTrack.restartTrack === 'function') {
-      try {
-        await localTrack.restartTrack({ deviceId: targetDevice.deviceId });
-        if (await verifyCamera(nextFacing, targetDevice.deviceId)) return finish();
-      } catch (error) {
-        warnLiveKit('Troca de câmera por deviceId falhou; tentando facingMode.', error);
-      }
-    }
+  let lastError = null;
 
-    // 2) Caminho recomendado pelo LiveKit para alternar frontal/traseira.
-    if (localTrack && typeof localTrack.restartTrack === 'function') {
-      try {
-        await localTrack.restartTrack({ facingMode: nextFacing });
-        if (await verifyCamera(nextFacing)) return finish();
-      } catch (error) {
-        warnLiveKit('Troca de câmera por facingMode falhou; tentando dispositivo ativo.', error);
-      }
-    }
-
-    // 3) Tenta trocar o dispositivo ativo da sala.
-    if (targetDevice?.deviceId && typeof room.switchActiveDevice === 'function') {
-      try {
-        const switched = await room.switchActiveDevice('videoinput', targetDevice.deviceId, true);
-        if (switched !== false && await verifyCamera(nextFacing, targetDevice.deviceId)) return finish();
-      } catch (error) {
-        warnLiveKit('switchActiveDevice não conseguiu selecionar a câmera desejada.', error);
-      }
-    }
-
-    // 4) Recria a publicação. Primeiro pelo deviceId; depois pelo facingMode.
-    await participant.setCameraEnabled(false);
-    await new Promise(resolve => setTimeout(resolve, 180));
-
-    const captureOptions = targetDevice?.deviceId
-      ? { deviceId: targetDevice.deviceId }
-      : { facingMode: nextFacing };
-
-    await participant.setCameraEnabled(true, captureOptions);
-    if (await verifyCamera(nextFacing, targetDevice?.deviceId || '')) return finish();
-
-    // Alguns Samsung/Chrome Android ignoram a primeira constraint. Força uma
-    // nova captura por facingMode como tentativa final.
-    await participant.setCameraEnabled(false);
-    await new Promise(resolve => setTimeout(resolve, 180));
-    await participant.setCameraEnabled(true, { facingMode: nextFacing });
-
-    if (await verifyCamera(nextFacing)) return finish();
-
-    throw new Error(`O navegador manteve a câmera ${currentFacing === 'user' ? 'frontal' : 'traseira'} ativa.`);
-  } catch (error) {
-    console.error('[LiveKit] Erro ao alternar câmera frontal/traseira:', error);
-
-    // Evita deixar o usuário sem vídeo se alguma tentativa desativou a câmera.
+  // Caminho recomendado pelo LiveKit: reiniciar a faixa mudando o facingMode.
+  if (localTrack && typeof localTrack.restartTrack === 'function') {
     try {
-      if (!(participant.isCameraEnabled ?? false)) {
-        const fallback = targetDevice?.deviceId
-          ? { deviceId: targetDevice.deviceId }
-          : { facingMode: nextFacing };
-        await participant.setCameraEnabled(true, fallback);
-      }
-    } catch (_) {}
-
-    syncMediaFromRoom(room);
-    window.AssemblyUtils?.showToast?.(
-      'Não foi possível ativar a outra câmera. Verifique a permissão de câmera do navegador e tente novamente.',
-      'error'
-    );
-    return false;
+      await localTrack.restartTrack({ facingMode: nextFacing });
+      if (await verifyCamera()) return finish();
+    } catch (error) {
+      lastError = error;
+      warnLiveKit('restartTrack por facingMode falhou.', error);
+    }
   }
+
+  // Alguns Androids só liberam a segunda câmera após encerrar completamente a primeira.
+  try {
+    await participant.setCameraEnabled(false);
+    await new Promise((resolve) => setTimeout(resolve, 320));
+    await participant.setCameraEnabled(true, { facingMode: nextFacing });
+    if (await verifyCamera()) return finish();
+  } catch (error) {
+    lastError = error;
+    warnLiveKit('Reabertura da câmera por facingMode falhou.', error);
+  }
+
+  // Fallback por deviceId, somente depois que a câmera anterior já foi liberada.
+  if (targetDevice?.deviceId) {
+    try {
+      await participant.setCameraEnabled(false).catch(() => {});
+      await new Promise((resolve) => setTimeout(resolve, 320));
+      await participant.setCameraEnabled(true, { deviceId: targetDevice.deviceId });
+      if (await verifyCamera()) return finish();
+    } catch (error) {
+      lastError = error;
+      warnLiveKit('Reabertura da câmera por deviceId falhou.', error);
+    }
+  }
+
+  // Restaura a câmera anterior para não deixar a chamada sem vídeo.
+  try {
+    await participant.setCameraEnabled(false).catch(() => {});
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    await participant.setCameraEnabled(true, { facingMode: currentFacing });
+    state.mobileCameraFacing = currentFacing;
+    setControlActive('btn-camera', true);
+    syncMediaFromRoom(room);
+  } catch (_) {}
+
+  console.error('[LiveKit] Erro ao alternar câmera frontal/traseira:', lastError);
+  window.AssemblyUtils?.showToast?.(
+    'Não foi possível iniciar a outra câmera. Verifique se outro aplicativo está usando a câmera e tente novamente.',
+    'error'
+  );
+  return false;
 }
 
 export async function toggleCamera() {
@@ -2084,18 +2153,17 @@ export async function toggleCamera() {
     );
 
   try {
-    await room
-      .localParticipant
-      .setCameraEnabled(
-        enabled
-      );
+    if (enabled) {
+      const preferred = (() => { try { return sessionStorage.getItem('prep_camera_dev') || ''; } catch (_) { return ''; } })();
+      const ok = await enableCameraWithFallback(room, preferred);
+      if (!ok) throw new Error('Não foi possível iniciar uma faixa de vídeo válida.');
+    } else {
+      await room.localParticipant.setCameraEnabled(false);
+    }
 
     setControlActive(
       'btn-camera',
-      room
-        .localParticipant
-        .isCameraEnabled ??
-      enabled
+      isLocalCameraActuallyRunning(room)
     );
 
     /*
