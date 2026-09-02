@@ -1,119 +1,221 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Condomit - Escolha seu Perfil</title>
-    <link rel="icon" type="image/png" href="../assets/favicon.png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/tipo-usuario.css?v=050">
-    <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
-    <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="../styles/ux-polish.css?v=053">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0A2A6B" />
+  <title>Condomit • Escolha seu perfil</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png" />
+  <link rel="stylesheet" href="../styles/tipo-usuario.css?v=054" />
+  <link rel="manifest" href="../manifest.webmanifest" />
 </head>
-<body class="condomit-app-page type-user-page">
-    <div class="page-bg" aria-hidden="true">
-        <div class="type-bg-orb type-bg-orb-a"></div>
-        <div class="type-bg-orb type-bg-orb-b"></div>
-        <div class="type-bg-grid"></div>
-    </div>
+<body>
+<div class="orb one"></div>
+  <div class="orb two"></div>
 
-    <main class="type-selection-page">
-        <div class="container">
-            <header class="top-header">
-                <button class="btn-back" type="button" onclick="window.location.href='../inicio.html'">
-                    <i class="fas fa-arrow-left" aria-hidden="true"></i>
-                    <span>Voltar</span>
-                </button>
+  <div class="shell">
+    <header class="topbar">
+      <a href="../inicio.html" class="logo-link" aria-label="Condomit - Página inicial">
+        <img
+          class="logo"
+          alt="Condomit - O app do seu condomínio"
+          src="../assets/logo-lado.png"
+        />
+      </a>
 
-                <div class="brand-header" aria-label="Condomit">
-                    <div class="brand-mark-shell">
-                        <img src="../assets/logo-icon.png" alt="Logo Condomit" class="brand-logo-img">
-                    </div>
-                    <div class="brand-copy">
-                        <strong>Condomit</strong>
-                        <span>O app do seu condomínio</span>
-                    </div>
-                </div>
+      <div class="top-actions">
+        <span class="step-mini"><b>Etapa 1</b> de 3</span>
+        <a class="login-link" href="entrar.html">
+          Já tenho conta
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+    </header>
 
-                <div class="header-security" aria-label="Ambiente seguro">
-                    <i class="fas fa-shield-halved" aria-hidden="true"></i>
-                    <span>Ambiente seguro</span>
-                </div>
-            </header>
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <span class="kicker"><span class="kicker-dot"></span> Criar minha conta</span>
+        <h1 id="page-title">Qual é o seu perfil no condomínio?</h1>
+        <p>
+          Escolha a opção que melhor representa você. A Condomit personaliza o cadastro
+          e as funcionalidades disponíveis de acordo com o seu perfil.
+        </p>
 
-            <section class="profile-hero" aria-labelledby="profilePageTitle">
-                <div class="profile-hero-copy">
-                    <span class="page-kicker"><i class="fas fa-user-check"></i> Identificação de acesso</span>
-                    <h1 class="page-title" id="profilePageTitle">Qual é o seu perfil no condomínio?</h1>
-                    <p class="subtitle">Escolha uma opção para que a Condomit prepare o cadastro e as ferramentas adequadas para você.</p>
-                </div>
-                <div class="profile-hero-note">
-                    <i class="fas fa-circle-info" aria-hidden="true"></i>
-                    <p>Essa escolha define somente o tipo de acesso. Depois, você entra ou vincula sua conta ao condomínio correspondente.</p>
-                </div>
-            </section>
-
-            <section class="type-grid" aria-label="Tipos de usuário">
-                <div class="type-card morador-card" data-type="morador" onclick="selectType('morador')">
-                    <div class="type-icon-circle morador-circle">
-                        <i class="fa-solid fa-house-user" aria-hidden="true"></i>
-                        <span class="sr-only">Ícone de morador</span>
-                    </div>
-                    <h3 class="type-title morador-title">Morador</h3>
-                    <div class="type-divider morador-divider"></div>
-                    <p class="type-desc">Acesse serviços, reservas, avisos e informações do seu condomínio.</p>
-                    <button class="type-btn morador-btn" type="button" aria-label="Escolher perfil Morador" onclick="event.stopPropagation(); selectType('morador')">
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-                </div>
-
-                <div class="type-card sindico-card" data-type="sindico" onclick="selectType('sindico')">
-                    <div class="type-icon-circle sindico-circle">
-                        <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
-                        <span class="sr-only">Ícone de síndico</span>
-                    </div>
-                    <h3 class="type-title sindico-title">Síndico</h3>
-                    <div class="type-divider sindico-divider"></div>
-                    <p class="type-desc">Gerencie o condomínio com ferramentas administrativas e financeiras completas.</p>
-                    <button class="type-btn sindico-btn" type="button" aria-label="Escolher perfil Síndico" onclick="event.stopPropagation(); selectType('sindico')">
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-                </div>
-
-                <div class="type-card porteiro-card" data-type="porteiro" onclick="selectType('porteiro')">
-                    <div class="type-icon-circle porteiro-circle">
-                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-                        <span class="sr-only">Ícone de porteiro</span>
-                    </div>
-                    <h3 class="type-title porteiro-title">Porteiro</h3>
-                    <div class="type-divider porteiro-divider"></div>
-                    <p class="type-desc">Controle operacional e segurança do edifício com praticidade e eficiência.</p>
-                    <button class="type-btn porteiro-btn" type="button" aria-label="Escolher perfil Porteiro" onclick="event.stopPropagation(); selectType('porteiro')">
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-                </div>
-            </section>
-
-            <section class="profile-footer-info" aria-label="Informações de segurança">
-                <div class="profile-footer-item">
-                    <span class="profile-footer-icon"><i class="fas fa-lock"></i></span>
-                    <div><strong>Dados protegidos</strong><small>Seu acesso é validado antes de liberar as funções do condomínio.</small></div>
-                </div>
-                <div class="profile-footer-divider"></div>
-                <div class="profile-footer-item">
-                    <span class="profile-footer-icon"><i class="fas fa-building-shield"></i></span>
-                    <div><strong>Acesso por condomínio</strong><small>Cada perfil enxerga somente as áreas e informações permitidas.</small></div>
-                </div>
-            </section>
+        <div class="progress" aria-label="Progresso do cadastro">
+          <div class="progress-track"><span></span></div>
+          <span class="progress-label">1 de 3</span>
         </div>
-    </main>
+      </section>
 
-    <script src="../scripts/platform-config.js?v=035"></script>
-    <script src="../scripts/supabase-client.js?v=043"></script>
-    <script src="../scripts/tipo-usuario.js?v=050"></script>
-    <script src="../scripts/condomit-alerts.js?v=014"></script>
-    <script src="../scripts/advanced-global.js?v=053"></script>
+      <section class="cards" role="radiogroup" aria-label="Escolha o tipo de usuário">
+
+        <article
+          class="profile"
+          data-profile="morador"
+          role="radio"
+          aria-checked="false"
+          tabindex="0"
+        >
+          <span class="select-check" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <path d="m6 12 4 4 8-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+
+          <div class="icon-box" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <path d="M8 22.5 24 9l16 13.5" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12.5 20.5V39h23V20.5" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+              <circle cx="24" cy="25" r="4" fill="currentColor"/>
+              <path d="M17.5 36c1.2-5 3.9-7.5 6.5-7.5S29.3 31 30.5 36" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+          <span class="role-tag">Uso cotidiano</span>
+          <h2>Morador</h2>
+          <p class="description">
+            Para quem deseja acompanhar o condomínio, receber informações e resolver tarefas do dia a dia.
+          </p>
+
+          <ul class="feature-list">
+            <li>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="m6 12 4 4 8-9" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>
+              Avisos, notificações e comunicados
+            </li>
+            <li>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="m6 12 4 4 8-9" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>
+              Reservas e serviços do condomínio
+            </li>
+          </ul>
+
+          <div class="choose">
+            <span>Selecionar Morador</span>
+            <span class="choose-bubble" aria-hidden="true">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>
+        </article>
+
+        <article
+          class="profile"
+          data-profile="sindico"
+          role="radio"
+          aria-checked="false"
+          tabindex="0"
+        >
+          <span class="select-check" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <path d="m6 12 4 4 8-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+
+          <div class="icon-box" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <circle cx="24" cy="14" r="7" stroke="currentColor" stroke-width="4"/>
+              <path d="M11 39c1-9 6.2-14 13-14s12 5 13 14" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+              <path d="m20.5 26 3.5 6 3.5-6M24 32v7" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <span class="role-tag">Administração</span>
+          <h2>Síndico</h2>
+          <p class="description">
+            Para quem administra o condomínio e precisa centralizar gestão, moradores e processos.
+          </p>
+
+          <ul class="feature-list">
+            <li>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="m6 12 4 4 8-9" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>
+              Gestão de moradores e unidades
+            </li>
+            <li>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="m6 12 4 4 8-9" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>
+              Assembleias e ferramentas administrativas
+            </li>
+          </ul>
+
+          <div class="choose">
+            <span>Selecionar Síndico</span>
+            <span class="choose-bubble" aria-hidden="true">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>
+        </article>
+
+        <article
+          class="profile"
+          data-profile="porteiro"
+          role="radio"
+          aria-checked="false"
+          tabindex="0"
+        >
+          <span class="select-check" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <path d="m6 12 4 4 8-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+
+          <div class="icon-box" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <path d="M24 7 38 12v11.5c0 9.4-5 16-14 20.5-9-4.5-14-11.1-14-20.5V12L24 7Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+              <path d="m18 25 4 4 8-9" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <span class="role-tag">Operação e segurança</span>
+          <h2>Porteiro</h2>
+          <p class="description">
+            Para a equipe responsável pela portaria, controle de acessos e rotina operacional do condomínio.
+          </p>
+
+          <ul class="feature-list">
+            <li>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="m6 12 4 4 8-9" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>
+              Visitantes e controle de acesso
+            </li>
+            <li>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="m6 12 4 4 8-9" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>
+              Encomendas e rotinas da portaria
+            </li>
+          </ul>
+
+          <div class="choose">
+            <span>Selecionar Porteiro</span>
+            <span class="choose-bubble" aria-hidden="true">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>
+        </article>
+      </section>
+
+      <div class="bottom">
+        <div class="hint">
+          <span class="hint-icon" aria-hidden="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+              <path d="M12 10.5V16M12 7.5h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span>Você poderá revisar seus dados antes de concluir o cadastro.</span>
+        </div>
+
+        <button id="continueButton" class="continue" type="button" disabled>
+          Continuar
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 12h13m-5-5 5 5-5 5" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </main>
+  </div>
+  <script src="../scripts/tipo-usuario.js?v=054"></script>
 </body>
 </html>
