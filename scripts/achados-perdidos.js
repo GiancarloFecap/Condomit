@@ -4,7 +4,8 @@ const lostFoundState = {
     type: 'encontrado',
     status: 'todos',
     draftImage: '',
-    matches: []
+    matches: [],
+    sort: 'recentes'
 };
 
 const LOST_FOUND_IMAGES = {
@@ -106,6 +107,13 @@ function setupLostFoundActions() {
             renderLostFoundPage();
         });
     });
+
+    document.getElementById('lostFoundSort')?.addEventListener('change', (event) => {
+        lostFoundState.sort = event.target.value || 'recentes';
+        renderLostFoundPage();
+    });
+
+    document.getElementById('clearLostFoundFilters')?.addEventListener('click', clearLostFoundFilters);
 
     document.getElementById('createLostFoundBtn')?.addEventListener('click', openLostFoundModal);
     document.getElementById('closeLostFoundModal')?.addEventListener('click', closeLostFoundModal);
@@ -318,7 +326,12 @@ async function renderLostFoundPage() {
         const cep = getLostFoundUserCep();
         lostFoundState.matches = await window.supabaseFetch(`/lost_found_matches?select=*&cep=eq.${encodeURIComponent(cep)}&status=eq.sugerido&order=confidence.desc`).catch(()=>[]);
     } catch (_) { lostFoundState.matches = []; }
-    const items = (await getLostFoundItems()).filter((item) => {
+
+    const allItems = await getLostFoundItems();
+    renderLostFoundHighlights(allItems);
+    renderLostFoundMatchesPanel(allItems);
+
+    const items = allItems.filter((item) => {
         const matchesType = lostFoundState.type === 'todos' || item.type === lostFoundState.type;
         const matchesStatus = lostFoundState.status === 'todos' || item.status === lostFoundState.status;
         const haystack = `${item.title} ${item.location} ${item.description} ${item.date}`.toLowerCase();
@@ -326,10 +339,16 @@ async function renderLostFoundPage() {
         return matchesType && matchesStatus && matchesSearch;
     });
 
+    sortLostFoundItems(items);
+
     const title = document.getElementById('lostFoundSectionTitle');
     const count = document.getElementById('lostFoundCount');
     if (title) {
-        title.textContent = lostFoundState.type === 'perdido' ? 'Itens perdidos' : 'Itens encontrados';
+        title.textContent = lostFoundState.type === 'perdido'
+            ? 'Itens perdidos'
+            : lostFoundState.type === 'todos'
+                ? 'Todos os itens'
+                : 'Itens encontrados';
     }
     if (count) {
         count.textContent = `${items.length} ${items.length === 1 ? 'resultado' : 'resultados'}`;
@@ -368,6 +387,7 @@ function renderLostFoundGrid(items) {
                     <span><i class="fas fa-location-dot"></i>${escapeHtml(item.location)}</span>
                     <span><i class="fas fa-calendar-day"></i>${formatDate(item.date)}</span>
                 </div>
+                <div class="res-item-author"><i class="fas fa-user"></i><span>Registrado por ${escapeHtml(item.author || 'Condomínio')}</span></div>
             </div>
         </article>
     `).join('');
@@ -493,6 +513,95 @@ function escapeHtml(text) {
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;');
+}
+
+
+
+function sortLostFoundItems(items) {
+    if (!Array.isArray(items)) return [];
+    if (lostFoundState.sort === 'antigos') {
+        items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return items;
+    }
+    if (lostFoundState.sort === 'az') {
+        items.sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR'));
+        return items;
+    }
+    items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return items;
+}
+
+function clearLostFoundFilters() {
+    lostFoundState.search = '';
+    lostFoundState.type = 'todos';
+    lostFoundState.status = 'todos';
+    lostFoundState.sort = 'recentes';
+    const search = document.getElementById('lostFoundSearch');
+    const typeFilter = document.getElementById('lostFoundTypeFilter');
+    const statusFilter = document.getElementById('lostFoundStatusFilter');
+    const sort = document.getElementById('lostFoundSort');
+    if (search) search.value = '';
+    if (typeFilter) typeFilter.value = 'todos';
+    if (statusFilter) statusFilter.value = 'todos';
+    if (sort) sort.value = 'recentes';
+    syncTypeCards();
+    renderLostFoundPage();
+}
+
+function renderLostFoundHighlights(allItems) {
+    const container = document.getElementById('lostFoundHighlights');
+    if (!container) return;
+    const found = allItems.filter((item) => item.type === 'encontrado').length;
+    const lost = allItems.filter((item) => item.type === 'perdido').length;
+    const returned = allItems.filter((item) => item.status === 'devolvido').length;
+    const matches = Array.isArray(lostFoundState.matches) ? lostFoundState.matches.length : 0;
+    container.innerHTML = `
+        <article class="highlight-card">
+            <span>Total de registros</span>
+            <strong>${allItems.length}</strong>
+            <small>Itens cadastrados neste condomínio</small>
+        </article>
+        <article class="highlight-card">
+            <span>Encontrados</span>
+            <strong>${found}</strong>
+            <small>Itens aguardando identificação</small>
+        </article>
+        <article class="highlight-card">
+            <span>Perdidos</span>
+            <strong>${lost}</strong>
+            <small>Objetos que ainda precisam ser localizados</small>
+        </article>
+        <article class="highlight-card">
+            <span>Correspondências</span>
+            <strong>${matches}</strong>
+            <small>${returned} item(ns) já marcado(s) como devolvido(s)</small>
+        </article>
+    `;
+}
+
+function renderLostFoundMatchesPanel(allItems) {
+    const panel = document.getElementById('lostFoundMatchesPanel');
+    const list = document.getElementById('lostFoundMatchesList');
+    if (!panel || !list) return;
+    const matches = (Array.isArray(lostFoundState.matches) ? lostFoundState.matches : []).slice(0, 4);
+    if (!matches.length) {
+        panel.hidden = true;
+        list.innerHTML = '';
+        return;
+    }
+    const itemById = new Map(allItems.map((item) => [Number(item.dbId || String(item.id || '').replace('db-lf-', '')), item]));
+    list.innerHTML = matches.map((match) => {
+        const lostItem = itemById.get(Number(match.lost_item_id));
+        const foundItem = itemById.get(Number(match.found_item_id));
+        return `
+            <article class="match-item">
+                <strong>${escapeHtml(foundItem?.title || 'Item encontrado')} × ${escapeHtml(lostItem?.title || 'Item perdido')}</strong>
+                <span>Confiança da IA: ${Number(match.confidence || 0)}%</span>
+                <p>${escapeHtml(foundItem?.location || 'Local não informado')} · ${escapeHtml(lostItem?.location || 'Local não informado')}</p>
+            </article>
+        `;
+    }).join('');
+    panel.hidden = false;
 }
 
 function logout() {

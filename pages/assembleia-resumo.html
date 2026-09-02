@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=011">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/assembleia-resumo.css?v=051">
+    <link rel="stylesheet" href="../styles/assembleia-resumo.css?v=052">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=050">
@@ -50,7 +50,7 @@
 
             <section class="summary-panel" data-summary-panel="comentarios">
                 <div class="card-shell summary-section">
-                    <div class="section-title"><div><h2>Comentários após a reunião</h2><p>Comentários ficam identificados por autor e horário.</p></div></div>
+                    <div class="section-title"><div><h2>Comentários após a reunião</h2><p>Comentários, curtidas, descurtidas e respostas ficam identificados por autor e horário.</p></div></div>
                     <form id="postAssemblyCommentForm" class="post-comment-form"><textarea id="postAssemblyComment" maxlength="1000" rows="3" placeholder="Escreva um comentário sobre a assembleia..." required></textarea><button type="submit" class="summary-primary"><i class="fas fa-paper-plane"></i> Comentar</button></form>
                     <div id="assemblyPostComments" class="comments-list"></div>
                 </div>
@@ -58,12 +58,47 @@
         </section>
     </main>
 </div>
+
+<div class="modal-backdrop signature-modal-backdrop" id="assemblySignatureModal" aria-hidden="true">
+    <div class="modal-card signature-modal-card">
+        <div class="modal-header">
+            <div>
+                <h3>Assinar ata</h3>
+                <p>Desenhe sua assinatura abaixo, como no livro de ocorrências.</p>
+            </div>
+            <button class="modal-close" id="closeAssemblySignatureModal" type="button" aria-label="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="signature-section assembly-signature-section">
+            <div class="signature-heading">
+                <div>
+                    <span>Assinatura do síndico</span>
+                    <small>Use o mouse ou toque para assinar.</small>
+                </div>
+                <button class="signature-clear" id="clearAssemblySignatureBtn" type="button">
+                    <i class="fas fa-eraser"></i>
+                    Limpar assinatura
+                </button>
+            </div>
+            <div class="signature-canvas-wrap" id="assemblySignatureCanvasWrap">
+                <canvas id="assemblySignatureCanvas" aria-label="Área para desenhar a assinatura da ata"></canvas>
+                <span class="signature-placeholder" id="assemblySignaturePlaceholder">Assine aqui</span>
+            </div>
+            <p class="signature-error" id="assemblySignatureError" hidden>Faça sua assinatura antes de concluir.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="ghost-btn" id="cancelAssemblySignatureBtn" type="button">Cancelar</button>
+            <button class="summary-primary" id="confirmAssemblySignatureBtn" type="button"><i class="fas fa-signature"></i> Assinar ata</button>
+        </div>
+    </div>
+</div>
     <script src="../scripts/platform-config.js?v=035"></script>
 
 <script src="../scripts/supabase-client.js?v=043"></script>
 <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
 <script src="../scripts/sidebar-links.js?v=043"></script>
-<script src="../scripts/assembly/assembly-summary.js?v=051"></script>
+<script src="../scripts/assembly/assembly-summary.js?v=052"></script>
 <script src="../scripts/topbar-actions.js?v=035"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>

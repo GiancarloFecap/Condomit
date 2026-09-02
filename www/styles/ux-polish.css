@@ -1153,3 +1153,53 @@ html[data-theme="dark"] .condomit-app-page:not(.advanced-page):not(.type-user-pa
         padding: 14px 14px !important;
     }
 }
+
+
+/* ============================================================
+   Condomit 052 - Azul mais escuro nas páginas internas
+   Escopo: somente páginas internas com a classe .condomit-app-page
+============================================================ */
+body.condomit-app-page {
+    --condomit-brand-500: #2252BD;
+    --condomit-brand-600: #183B86;
+}
+body.condomit-app-page .sidebar {
+    background: linear-gradient(180deg, var(--condomit-brand-500) 0%, var(--condomit-brand-600) 100%) !important;
+}
+body.condomit-app-page :where(.btn-primary,.primary-action,.summary-primary,.save-btn,.submit-btn,.action-btn.primary) {
+    background: var(--condomit-brand-500) !important;
+    border-color: var(--condomit-brand-500) !important;
+}
+body.condomit-app-page :where(.btn-primary,.primary-action,.summary-primary,.save-btn,.submit-btn,.action-btn.primary):hover {
+    background: var(--condomit-brand-600) !important;
+    border-color: var(--condomit-brand-600) !important;
+}
+body.condomit-app-page .summary-tab.active,
+body.condomit-app-page .summary-back,
+body.condomit-app-page .summary-chip,
+body.condomit-app-page .poll-user-status.pending,
+body.condomit-app-page .post-assembly-vote-btn,
+body.condomit-app-page .type-icon,
+body.condomit-app-page .comment-action-btn.textual,
+body.condomit-app-page .comment-replies-toggle {
+    color: var(--condomit-brand-500) !important;
+}
+body.condomit-app-page .summary-tab.active,
+body.condomit-app-page .poll-result-fill,
+body.condomit-app-page .user-profile-small .avatar,
+body.condomit-app-page .help-icon,
+body.condomit-app-page .progress-fill,
+body.condomit-app-page .match-chip {
+    background: linear-gradient(135deg, var(--condomit-brand-500) 0%, var(--condomit-brand-600) 100%) !important;
+    color: #fff !important;
+}
+body.condomit-app-page .summary-secondary:hover,
+body.condomit-app-page .ghost-btn:hover,
+body.condomit-app-page .post-assembly-vote-btn:hover {
+    border-color: var(--condomit-brand-500) !important;
+    color: var(--condomit-brand-500) !important;
+}
+html[data-theme="dark"] body.condomit-app-page {
+    --condomit-brand-500: #1E40AF;
+    --condomit-brand-600: #1E3A8A;
+}

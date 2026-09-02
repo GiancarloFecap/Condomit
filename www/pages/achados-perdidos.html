@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=011">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/achados-perdidos.css?v=036">
+    <link rel="stylesheet" href="../styles/achados-perdidos.css?v=052">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=050">
@@ -52,6 +52,7 @@
                         Registrar achado
                     </button>
                 </div>
+                <div class="lost-found-highlights" id="lostFoundHighlights"></div>
                 <div class="lost-found-layout">
                     <section class="lost-found-main">
                         <div class="toolbar card-shell">
@@ -71,6 +72,15 @@
                                     <option value="devolvido">Devolvido</option>
                                     <option value="em-analise">Em análise</option>
                                 </select>
+                                <select id="lostFoundSort">
+                                    <option value="recentes">Mais recentes</option>
+                                    <option value="antigos">Mais antigos</option>
+                                    <option value="az">A-Z</option>
+                                </select>
+                                <button class="ghost-btn compact-btn" id="clearLostFoundFilters" type="button">
+                                    <i class="fas fa-filter-circle-xmark"></i>
+                                    Limpar filtros
+                                </button>
                             </div>
                         </div>
 
@@ -125,6 +135,11 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="card-shell match-card" id="lostFoundMatchesPanel" hidden>
+                            <h3>Possíveis correspondências</h3>
+                            <div class="match-list" id="lostFoundMatchesList"></div>
                         </div>
 
                         <div class="card-shell tips-card">
@@ -212,7 +227,7 @@
 ></script>
     <script src="../scripts/community-hub.js?v=035"></script>
     <script src="../scripts/sidebar-links.js?v=043"></script>
-    <script src="../scripts/achados-perdidos.js?v=036"></script>
+    <script src="../scripts/achados-perdidos.js?v=052"></script>
     <script src="../scripts/topbar-actions.js?v=035"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>

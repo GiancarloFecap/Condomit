@@ -58,3 +58,7 @@
         flex-direction: column;
     }
 }
+
+
+/* 052 - ícone de notificações arredondado no mural */
+.wall-info-card .help-icon{border-radius:50%;width:54px;height:54px;flex:0 0 54px;box-shadow:0 10px 18px rgba(41,79,216,.18)}

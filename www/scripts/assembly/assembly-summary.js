@@ -17,7 +17,11 @@
         transcripts: [],
         condominium: null,
         signature: null,
-        commentProfiles: new Map()
+        commentProfiles: new Map(),
+        commentVotes: [],
+        replyComposerFor: null,
+        expandedReplyIds: new Set(),
+        signaturePad: { drawing: false, lastX: 0, lastY: 0, hasInk: false }
     };
 
     document.addEventListener('DOMContentLoaded', init);
@@ -38,6 +42,8 @@
         syncUserHeader();
         bindTabs();
         bindCommentForm();
+        bindCommentActions();
+        setupSignatureModal();
 
         try {
             await waitForAuthSession();
@@ -90,7 +96,7 @@
     async function loadAll() {
         if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase não inicializado.');
 
-        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, signatures] = await Promise.all([
+        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, signatures, commentVotes] = await Promise.all([
             fetchRows(`/scheduled_assemblies?select=*&id=eq.${state.id}&limit=1`),
             fetchRows(`/assembly_attendance?select=*&assembly_id=eq.${state.id}&order=joined_at.asc`),
             fetchRows(`/assembly_chat_messages?select=*&assembly_id=eq.${state.id}&order=created_at.asc`),
@@ -100,12 +106,13 @@
             fetchRows(`/assembly_event_logs?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => []),
-            fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code&assembly_id=eq.${state.id}&limit=1`).catch(() => [])
+            fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code,signature_data&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
+            fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => [])
         ]);
 
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
-        Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts });
+        Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, commentVotes });
         state.signature = signatures[0] || null;
 
         // Dados institucionais usados somente como texto na ata. A ata não inclui
@@ -256,7 +263,7 @@
                 <footer class="formal-minutes-signatures">
                     ${state.signature ? `
                     <div class="formal-signature formal-signature-electronic">
-                        <i class="fas fa-circle-check signature-verified-icon"></i>
+                        ${isSafeSignatureData(state.signature.signature_data) ? `<img class="assembly-signature-image" src="${esc(state.signature.signature_data)}" alt="Assinatura de ${esc(state.signature.signer_name || chairSignature)}">` : `<i class="fas fa-circle-check signature-verified-icon"></i>`}
                         <strong>${esc(state.signature.signer_name || chairSignature)}</strong>
                         <small>Assinado eletronicamente pelo Síndico em ${esc(formatDateTime(state.signature.signed_at))}</small>
                         <small class="signature-code">Código de verificação: ${esc(String(state.signature.signature_code || '').slice(0, 18))}</small>
@@ -531,18 +538,90 @@
     function renderComments() {
         const container = document.getElementById('assemblyPostComments');
         if (!container) return;
-        container.innerHTML = state.comments.length
-            ? state.comments.map((comment) => {
-                const email = String(comment.user_email || '').trim().toLowerCase();
-                const profile = state.commentProfiles.get(email) || {};
-                const author = profile.name || comment.participant_name || comment.user_email || 'Usuário';
-                const photo = String(profile.profile_photo || '').trim();
-                const avatar = photo
-                    ? `<img src="${esc(photo)}" alt="Foto de ${esc(author)}" loading="lazy">`
-                    : `<span>${esc(initials(author))}</span>`;
-                return `<article class="comment-card"><div class="comment-head"><div class="comment-author"><div class="comment-avatar">${avatar}</div><strong>${esc(author)}</strong></div><time>${formatDateTime(comment.created_at)}</time></div><p>${esc(comment.comment || '')}</p></article>`;
-            }).join('')
+        const roots = state.comments
+            .filter((comment) => !comment?.parent_comment_id)
+            .sort((left, right) => safeTime(left.created_at) - safeTime(right.created_at));
+        container.innerHTML = roots.length
+            ? roots.map((comment) => renderCommentCard(comment, 0)).join('')
             : '<div class="summary-empty">Nenhum comentário publicado.</div>';
+    }
+
+    function getCommentChildren(parentId) {
+        return state.comments
+            .filter((comment) => String(comment?.parent_comment_id || '') === String(parentId))
+            .sort((left, right) => safeTime(left.created_at) - safeTime(right.created_at));
+    }
+
+    function getCommentProfile(comment) {
+        const email = String(comment?.user_email || '').trim().toLowerCase();
+        return state.commentProfiles.get(email) || {};
+    }
+
+    function getCommentAuthor(comment) {
+        const profile = getCommentProfile(comment);
+        return profile.name || comment?.participant_name || comment?.user_email || 'Usuário';
+    }
+
+    function getCommentPhoto(comment) {
+        const profile = getCommentProfile(comment);
+        return String(profile.profile_photo || '').trim();
+    }
+
+    function getCommentVotes(commentId) {
+        const rows = (Array.isArray(state.commentVotes) ? state.commentVotes : []).filter((vote) => String(vote.comment_id) === String(commentId));
+        const currentEmail = String(state.user?.email || '').trim().toLowerCase();
+        return {
+            likes: rows.filter((vote) => vote.vote_type === 'like').length,
+            dislikes: rows.filter((vote) => vote.vote_type === 'dislike').length,
+            currentVote: (rows.find((vote) => String(vote.user_email || '').trim().toLowerCase() === currentEmail) || {}).vote_type || ''
+        };
+    }
+
+    function renderCommentCard(comment, depth) {
+        const commentId = String(comment?.id || '');
+        const author = getCommentAuthor(comment);
+        const photo = getCommentPhoto(comment);
+        const avatar = photo
+            ? `<img src="${esc(photo)}" alt="Foto de ${esc(author)}" loading="lazy">`
+            : `<span>${esc(initials(author))}</span>`;
+        const children = getCommentChildren(comment.id);
+        const expanded = state.expandedReplyIds.has(commentId);
+        const votes = getCommentVotes(comment.id);
+        const replyForm = state.replyComposerFor === commentId
+            ? `<div class="comment-reply-form" data-parent-id="${esc(commentId)}">
+                    <textarea maxlength="1000" rows="3" placeholder="Escreva uma resposta..."></textarea>
+                    <div class="comment-reply-actions">
+                        <button type="button" class="ghost-btn compact-btn" data-comment-action="cancel-reply" data-comment-id="${esc(commentId)}">Cancelar</button>
+                        <button type="button" class="summary-primary compact-btn" data-comment-action="submit-reply" data-comment-id="${esc(commentId)}"><i class="fas fa-paper-plane"></i> Responder</button>
+                    </div>
+                </div>`
+            : '';
+        const toggleReplies = children.length
+            ? `<button type="button" class="comment-action-btn comment-replies-toggle" data-comment-action="toggle-replies" data-comment-id="${esc(commentId)}">${expanded ? 'Ocultar respostas' : `View all ${children.length} replies`}</button>`
+            : '';
+        const repliesHtml = children.length && expanded
+            ? `<div class="comment-replies">${children.map((child) => renderCommentCard(child, depth + 1)).join('')}</div>`
+            : '';
+        return `<article class="comment-card${depth ? ' is-reply' : ''}" data-comment-id="${esc(commentId)}">
+            <div class="comment-head">
+                <div class="comment-author">
+                    <div class="comment-avatar">${avatar}</div>
+                    <div class="comment-author-meta">
+                        <strong>${esc(author)}</strong>
+                        <span class="comment-date">${formatDateTime(comment.created_at)}</span>
+                    </div>
+                </div>
+            </div>
+            <p class="comment-text">${esc(comment.comment || '')}</p>
+            <div class="comment-actions">
+                <button type="button" class="comment-action-btn${votes.currentVote === 'like' ? ' active' : ''}" data-comment-action="like" data-comment-id="${esc(commentId)}" aria-label="Curtir comentário"><i class="far fa-thumbs-up"></i><span>${votes.likes}</span></button>
+                <button type="button" class="comment-action-btn${votes.currentVote === 'dislike' ? ' active dislike' : ''}" data-comment-action="dislike" data-comment-id="${esc(commentId)}" aria-label="Não curtir comentário"><i class="far fa-thumbs-down"></i><span>${votes.dislikes}</span></button>
+                <button type="button" class="comment-action-btn textual" data-comment-action="reply" data-comment-id="${esc(commentId)}"><i class="fas fa-reply"></i>Responder</button>
+                ${toggleReplies}
+            </div>
+            ${replyForm}
+            ${repliesHtml}
+        </article>`;
     }
 
     function bindTabs() {
@@ -562,28 +641,7 @@
             const submit = event.currentTarget.querySelector('button[type="submit"]');
             if (submit) submit.disabled = true;
             try {
-                const email = String(state.user?.email || '').trim().toLowerCase();
-                const rows = await window.supabaseFetch('/assembly_post_comments', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
-                    body: JSON.stringify({
-                        assembly_id: state.id,
-                        cep: state.assembly.cep,
-                        user_email: email,
-                        participant_name: state.user?.name || email,
-                        comment
-                    })
-                });
-                const saved = Array.isArray(rows) ? rows[0] : rows;
-                if (!saved) throw new Error('O comentário não foi confirmado pelo banco.');
-                state.comments.push(saved);
-                if (email) {
-                    state.commentProfiles.set(email, {
-                        email,
-                        name: state.user?.name || email,
-                        profile_photo: state.user?.profilePhoto || state.user?.profile_photo || null
-                    });
-                }
+                await createAssemblyComment(comment);
                 if (textarea) textarea.value = '';
                 renderComments();
                 renderMinutes();
@@ -596,39 +654,242 @@
         });
     }
 
+    function bindCommentActions() {
+        document.getElementById('assemblyPostComments')?.addEventListener('click', async (event) => {
+            const button = event.target.closest('[data-comment-action]');
+            if (!button) return;
+            const action = button.dataset.commentAction;
+            const commentId = button.dataset.commentId;
+            if (!action || !commentId) return;
+            if (action === 'reply') {
+                state.replyComposerFor = state.replyComposerFor === commentId ? null : commentId;
+                state.expandedReplyIds.add(commentId);
+                renderComments();
+                return;
+            }
+            if (action === 'cancel-reply') {
+                state.replyComposerFor = null;
+                renderComments();
+                return;
+            }
+            if (action === 'toggle-replies') {
+                if (state.expandedReplyIds.has(commentId)) state.expandedReplyIds.delete(commentId);
+                else state.expandedReplyIds.add(commentId);
+                renderComments();
+                return;
+            }
+            if (action === 'submit-reply') {
+                const form = document.querySelector(`.comment-reply-form[data-parent-id="${CSS.escape(commentId)}"]`);
+                const textarea = form?.querySelector('textarea');
+                const replyText = String(textarea?.value || '').trim();
+                if (!replyText) return;
+                button.disabled = true;
+                try {
+                    await createAssemblyComment(replyText, commentId);
+                    state.replyComposerFor = null;
+                    state.expandedReplyIds.add(commentId);
+                    renderComments();
+                    window.showToast?.('Resposta publicada.', 'success');
+                } catch (error) {
+                    window.showToast?.(error?.message || 'Erro ao responder comentário.', 'error');
+                } finally {
+                    button.disabled = false;
+                }
+                return;
+            }
+            if (action === 'like' || action === 'dislike') {
+                button.disabled = true;
+                try {
+                    await voteAssemblyComment(commentId, action);
+                    renderComments();
+                } catch (error) {
+                    window.showToast?.(error?.message || 'Erro ao registrar sua reação.', 'error');
+                } finally {
+                    button.disabled = false;
+                }
+            }
+        });
+    }
+
+    async function createAssemblyComment(comment, parentCommentId = null) {
+        const email = String(state.user?.email || '').trim().toLowerCase();
+        const rows = await window.supabaseFetch('/assembly_post_comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+            body: JSON.stringify({
+                assembly_id: state.id,
+                cep: state.assembly.cep,
+                user_email: email,
+                participant_name: state.user?.name || email,
+                comment,
+                parent_comment_id: parentCommentId ? Number(parentCommentId) : null
+            })
+        });
+        const saved = Array.isArray(rows) ? rows[0] : rows;
+        if (!saved) throw new Error('O comentário não foi confirmado pelo banco.');
+        state.comments.push(saved);
+        if (email) {
+            state.commentProfiles.set(email, {
+                email,
+                name: state.user?.name || email,
+                profile_photo: state.user?.profilePhoto || state.user?.profile_photo || null
+            });
+        }
+        return saved;
+    }
+
+    async function voteAssemblyComment(commentId, voteType) {
+        await window.supabaseFetch('/rpc/condomit_vote_assembly_post_comment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_comment_id: Number(commentId), target_vote: voteType })
+        });
+        state.commentVotes = await fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => []);
+    }
+
+    function setupSignatureModal() {
+        document.getElementById('closeAssemblySignatureModal')?.addEventListener('click', closeAssemblySignatureModal);
+        document.getElementById('cancelAssemblySignatureBtn')?.addEventListener('click', closeAssemblySignatureModal);
+        document.getElementById('clearAssemblySignatureBtn')?.addEventListener('click', clearAssemblySignature);
+        document.getElementById('confirmAssemblySignatureBtn')?.addEventListener('click', submitAssemblySignature);
+        document.getElementById('assemblySignatureModal')?.addEventListener('click', (event) => {
+            if (event.target?.id === 'assemblySignatureModal') closeAssemblySignatureModal();
+        });
+        setupSignatureCanvasEvents();
+        window.addEventListener('resize', debounce(resizeAssemblySignatureCanvas, 120));
+    }
+
+    function setupSignatureCanvasEvents() {
+        const canvas = document.getElementById('assemblySignatureCanvas');
+        if (!canvas) return;
+        const start = (event) => {
+            const point = getCanvasPoint(canvas, event);
+            state.signaturePad.drawing = true;
+            state.signaturePad.lastX = point.x;
+            state.signaturePad.lastY = point.y;
+            event.preventDefault();
+        };
+        const move = (event) => {
+            if (!state.signaturePad.drawing) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            const point = getCanvasPoint(canvas, event);
+            ctx.beginPath();
+            ctx.moveTo(state.signaturePad.lastX, state.signaturePad.lastY);
+            ctx.lineTo(point.x, point.y);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 2.6;
+            ctx.strokeStyle = '#111827';
+            ctx.stroke();
+            state.signaturePad.lastX = point.x;
+            state.signaturePad.lastY = point.y;
+            state.signaturePad.hasInk = true;
+            document.getElementById('assemblySignatureCanvasWrap')?.classList.add('has-signature');
+            const errorEl = document.getElementById('assemblySignatureError');
+            if (errorEl) errorEl.hidden = true;
+            event.preventDefault();
+        };
+        const stop = () => { state.signaturePad.drawing = false; };
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', stop);
+        canvas.addEventListener('mouseleave', stop);
+        canvas.addEventListener('touchstart', start, { passive: false });
+        canvas.addEventListener('touchmove', move, { passive: false });
+        window.addEventListener('touchend', stop);
+        window.addEventListener('touchcancel', stop);
+    }
+
+    function openAssemblySignatureModal() {
+        document.getElementById('assemblySignatureModal')?.classList.add('open');
+        clearAssemblySignature();
+        window.setTimeout(resizeAssemblySignatureCanvas, 40);
+    }
+
+    function closeAssemblySignatureModal() {
+        document.getElementById('assemblySignatureModal')?.classList.remove('open');
+    }
+
+    function resizeAssemblySignatureCanvas() {
+        const canvas = document.getElementById('assemblySignatureCanvas');
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const snapshot = state.signaturePad.hasInk ? canvas.toDataURL('image/png') : null;
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = Math.floor(rect.width * ratio);
+        canvas.height = Math.floor(rect.height * ratio);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        if (snapshot) {
+            const image = new Image();
+            image.onload = () => {
+                ctx.drawImage(image, 0, 0, rect.width, rect.height);
+            };
+            image.src = snapshot;
+        }
+    }
+
+    function clearAssemblySignature() {
+        const canvas = document.getElementById('assemblySignatureCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const rect = canvas.getBoundingClientRect();
+        ctx.clearRect(0, 0, rect.width || canvas.width, rect.height || canvas.height);
+        state.signaturePad.drawing = false;
+        state.signaturePad.hasInk = false;
+        document.getElementById('assemblySignatureCanvasWrap')?.classList.remove('has-signature');
+        const errorEl = document.getElementById('assemblySignatureError');
+        if (errorEl) errorEl.hidden = true;
+    }
+
+    function getCanvasPoint(canvas, event) {
+        const touch = event.touches?.[0] || event.changedTouches?.[0] || event;
+        const rect = canvas.getBoundingClientRect();
+        return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    }
+
+    async function submitAssemblySignature() {
+        if (!state.signaturePad.hasInk) {
+            const errorEl = document.getElementById('assemblySignatureError');
+            if (errorEl) errorEl.hidden = false;
+            window.showToast?.('Faça sua assinatura antes de concluir.', 'warning');
+            return;
+        }
+        const button = document.getElementById('confirmAssemblySignatureBtn');
+        const canvas = document.getElementById('assemblySignatureCanvas');
+        if (!button || !canvas) return;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assinando...';
+        try {
+            const result = await window.supabaseFetch('/rpc/condomit_sign_assembly_minutes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    target_assembly_id: state.id,
+                    target_signature_data: canvas.toDataURL('image/png')
+                })
+            });
+            state.signature = Array.isArray(result) ? result[0] : result;
+            closeAssemblySignatureModal();
+            renderHero();
+            renderMinutes();
+            window.showToast?.('Ata assinada eletronicamente com sucesso.', 'success');
+        } catch (error) {
+            window.showToast?.(error?.message || 'Não foi possível assinar a ata.', 'error');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-signature"></i> Assinar ata';
+        }
+    }
 
     async function signAssemblyMinutes() {
         if (currentUserRole() !== 'sindico' || state.signature) return;
-        const execute = async () => {
-            const button = document.getElementById('signAssemblyMinutes049');
-            if (button) { button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assinando...'; }
-            try {
-                const result = await window.supabaseFetch('/rpc/condomit_sign_assembly_minutes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ target_assembly_id: state.id })
-                });
-                state.signature = Array.isArray(result) ? result[0] : result;
-                renderHero();
-                renderMinutes();
-                window.showToast?.('Ata assinada eletronicamente com sucesso.', 'success');
-            } catch (error) {
-                window.showToast?.(error?.message || 'Não foi possível assinar a ata.', 'error');
-                if (button) { button.disabled = false; button.innerHTML = '<i class="fas fa-signature"></i> Assinar ata'; }
-            }
-        };
-        if (typeof window.showModal === 'function') {
-            window.showModal({
-                title: 'Assinar Ata da Assembleia',
-                message: 'Ao confirmar, sua identidade de síndico, data e horário serão registrados como assinatura eletrônica desta ata. Deseja continuar?',
-                type: 'warning',
-                confirmText: 'Assinar ata',
-                cancelText: 'Cancelar',
-                onConfirm: execute
-            });
-        } else if (window.confirm('Confirmar assinatura eletrônica desta ata?')) {
-            await execute();
-        }
+        openAssemblySignatureModal();
     }
 
     function printAssemblyMinutes() {
@@ -685,6 +946,20 @@
     function getVoteCount(pollId, optionId) {
         const row = state.results.find((result) => String(result.poll_id) === String(pollId) && String(result.option_id) === String(optionId));
         return Number(row?.vote_count || 0);
+    }
+
+
+
+    function debounce(fn, wait) {
+        let timer = null;
+        return function debounced(...args) {
+            clearTimeout(timer);
+            timer = window.setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
+    function isSafeSignatureData(value) {
+        return /^data:image\/(png|jpeg|jpg|webp);base64,[a-z0-9+/=\s]+$/i.test(String(value || '').trim());
     }
 
     function renderFatal(message) {

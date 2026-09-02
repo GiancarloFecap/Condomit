@@ -206,4 +206,56 @@ html[data-theme="dark"] .summary-secondary:hover{color:#8EA9FF;border-color:#638
     body.printing-assembly-minutes .formal-minutes-document { width:100%; max-width:none; margin:0; padding:0; border:0; border-radius:0; box-shadow:none; }
     body.printing-assembly-minutes .formal-minutes-note { margin-top:24px; }
 }
-\n\n/* 051 - avatar nos comentários da ata */\n.comment-head{align-items:center}\n.comment-author{display:flex;align-items:center;gap:10px;min-width:0}\n.comment-avatar{width:36px;height:36px;flex:0 0 36px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#e8eefc;color:#294FD8;font-size:.78rem;font-weight:800;border:1px solid #d8e2f6}\n.comment-avatar img{width:100%;height:100%;object-fit:cover;display:block}\n.comment-author strong{min-width:0;overflow-wrap:anywhere}\nhtml[data-theme="dark"] .comment-avatar{background:#1e2b48;color:#aebfff;border-color:#33446d}\n@media(max-width:560px){.comment-head{align-items:flex-start}.comment-head time{white-space:nowrap;padding-top:8px}.comment-avatar{width:34px;height:34px;flex-basis:34px}}\n
+
+
+/* 052 - comentários estilo thread e assinatura desenhada da ata */
+.comment-head{align-items:flex-start}
+.comment-author{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.comment-avatar{width:40px;height:40px;flex:0 0 40px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#e8eefc;color:#2252BD;font-size:.78rem;font-weight:800;border:1px solid #d8e2f6}
+.comment-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.comment-author-meta{display:grid;gap:2px;min-width:0}
+.comment-author-meta strong{min-width:0;overflow-wrap:anywhere}
+.comment-date{font-size:.82rem;color:#64748b}
+.comment-text{margin:0;white-space:pre-wrap;line-height:1.6;color:var(--text-secondary,#475569)}
+.comment-actions{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:14px}
+.comment-action-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #dbe2f0;border-radius:999px;background:#fff;color:#475569;font-weight:700;cursor:pointer}
+.comment-action-btn:hover{background:#f8fafc;border-color:#cbd5e1}
+.comment-action-btn.active{background:#eef4ff;border-color:#bfd2ff;color:#2252BD}
+.comment-action-btn.active.dislike{background:#fff1f2;border-color:#fecdd3;color:#be123c}
+.comment-action-btn.textual,.comment-replies-toggle{background:transparent;border:none;padding:8px 0;color:#2252BD}
+.comment-replies-toggle{font-weight:800}
+.comment-replies{display:grid;gap:12px;margin-top:14px;padding-left:24px;border-left:2px solid #e5e7eb}
+.comment-card.is-reply{background:#fbfdff}
+.comment-reply-form{display:grid;gap:10px;margin-top:14px;padding:14px;border:1px solid #dbe2f0;border-radius:14px;background:#f8fbff}
+.comment-reply-form textarea{width:100%;border:1px solid #dbe2f0;border-radius:12px;padding:12px 14px;resize:vertical;font:inherit;background:#fff;color:#0f172a}
+.comment-reply-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.compact-btn{padding:10px 14px!important;min-height:auto!important}
+.assembly-signature-image{max-width:220px;max-height:92px;object-fit:contain;display:block;margin-bottom:4px}
+.signature-modal-card{width:min(100%,760px)}
+.assembly-signature-section{display:grid;gap:12px;margin:12px 0 8px}
+.signature-heading{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.signature-heading span{display:block;font-weight:800;color:#0f172a}
+.signature-heading small{color:#64748b}
+.signature-clear{display:inline-flex;align-items:center;gap:8px;border:1px solid #dbe2f0;border-radius:12px;padding:10px 14px;background:#fff;color:#475569;font-weight:700;cursor:pointer}
+.signature-canvas-wrap{position:relative;border:1px dashed #bfd2ff;border-radius:18px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);min-height:240px;overflow:hidden}
+.signature-canvas-wrap.has-signature .signature-placeholder{display:none}
+#assemblySignatureCanvas{display:block;width:100%;height:240px;touch-action:none;cursor:crosshair}
+.signature-placeholder{position:absolute;inset:0;display:grid;place-items:center;color:#94a3b8;font-weight:700;pointer-events:none}
+.signature-error{margin:0;color:#dc2626;font-size:.88rem;font-weight:700}
+html[data-theme="dark"] .comment-avatar{background:#1e2b48;color:#c7d2fe;border-color:#33446d}
+html[data-theme="dark"] .comment-action-btn{background:#101826;border-color:#334155;color:#e2e8f0}
+html[data-theme="dark"] .comment-action-btn:hover{background:#162235}
+html[data-theme="dark"] .comment-action-btn.active{background:#172554;border-color:#3b82f6;color:#bfdbfe}
+html[data-theme="dark"] .comment-action-btn.active.dislike{background:#3f0f1b;border-color:#7f1d1d;color:#fecdd3}
+html[data-theme="dark"] .comment-action-btn.textual,
+html[data-theme="dark"] .comment-replies-toggle{background:transparent;color:#8fb0ff}
+html[data-theme="dark"] .comment-card.is-reply{background:#101826}
+html[data-theme="dark"] .comment-reply-form{background:#101826;border-color:#334155}
+html[data-theme="dark"] .comment-reply-form textarea{background:#0f172a;border-color:#334155;color:#f8fafc}
+html[data-theme="dark"] .assembly-signature-image{filter:none}
+html[data-theme="dark"] .signature-heading span{color:#f8fafc}
+html[data-theme="dark"] .signature-heading small{color:#cbd5e1}
+html[data-theme="dark"] .signature-clear{background:#162235;border-color:#334155;color:#e2e8f0}
+html[data-theme="dark"] .signature-canvas-wrap{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)}
+@media(max-width:720px){.post-comment-form{grid-template-columns:1fr}.comment-replies{padding-left:16px}.signature-heading{flex-direction:column;align-items:stretch}.signature-clear,.compact-btn,.summary-primary{width:100%;justify-content:center}.comment-reply-actions{justify-content:stretch}.comment-reply-actions>*{flex:1}}
+@media(max-width:560px){.comment-avatar{width:36px;height:36px;flex-basis:36px}}
