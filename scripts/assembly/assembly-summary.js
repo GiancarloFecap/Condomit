@@ -748,6 +748,7 @@
     }
 
     function setupSignatureModal() {
+        closeAssemblySignatureModal();
         document.getElementById('closeAssemblySignatureModal')?.addEventListener('click', closeAssemblySignatureModal);
         document.getElementById('cancelAssemblySignatureBtn')?.addEventListener('click', closeAssemblySignatureModal);
         document.getElementById('clearAssemblySignatureBtn')?.addEventListener('click', clearAssemblySignature);
@@ -761,12 +762,17 @@
 
     function setupSignatureCanvasEvents() {
         const canvas = document.getElementById('assemblySignatureCanvas');
-        if (!canvas) return;
+        if (!canvas || canvas.dataset.signatureBound === '1') return;
+        canvas.dataset.signatureBound = '1';
+        canvas.tabIndex = 0;
+
         const start = (event) => {
+            if (event.button != null && event.button !== 0) return;
             const point = getCanvasPoint(canvas, event);
             state.signaturePad.drawing = true;
             state.signaturePad.lastX = point.x;
             state.signaturePad.lastY = point.y;
+            try { canvas.setPointerCapture?.(event.pointerId); } catch (_) {}
             event.preventDefault();
         };
         const move = (event) => {
@@ -779,7 +785,7 @@
             ctx.lineTo(point.x, point.y);
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            ctx.lineWidth = 2.6;
+            ctx.lineWidth = 2.4;
             ctx.strokeStyle = '#111827';
             ctx.stroke();
             state.signaturePad.lastX = point.x;
@@ -790,25 +796,53 @@
             if (errorEl) errorEl.hidden = true;
             event.preventDefault();
         };
-        const stop = () => { state.signaturePad.drawing = false; };
-        canvas.addEventListener('mousedown', start);
-        canvas.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', stop);
-        canvas.addEventListener('mouseleave', stop);
-        canvas.addEventListener('touchstart', start, { passive: false });
-        canvas.addEventListener('touchmove', move, { passive: false });
-        window.addEventListener('touchend', stop);
-        window.addEventListener('touchcancel', stop);
+        const stop = (event) => {
+            state.signaturePad.drawing = false;
+            try { canvas.releasePointerCapture?.(event?.pointerId); } catch (_) {}
+        };
+
+        if ('PointerEvent' in window) {
+            canvas.addEventListener('pointerdown', start);
+            canvas.addEventListener('pointermove', move);
+            canvas.addEventListener('pointerup', stop);
+            canvas.addEventListener('pointercancel', stop);
+            canvas.addEventListener('pointerleave', (event) => {
+                if (!canvas.hasPointerCapture?.(event.pointerId)) stop(event);
+            });
+        } else {
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', stop);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', move, { passive: false });
+            window.addEventListener('touchend', stop);
+        }
     }
 
     function openAssemblySignatureModal() {
-        document.getElementById('assemblySignatureModal')?.classList.add('open');
-        clearAssemblySignature();
-        window.setTimeout(resizeAssemblySignatureCanvas, 40);
+        const modal = document.getElementById('assemblySignatureModal');
+        if (!modal) return;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('signature-modal-open');
+        state.signaturePad.drawing = false;
+        state.signaturePad.hasInk = false;
+        window.requestAnimationFrame(() => {
+            resizeAssemblySignatureCanvas();
+            clearAssemblySignature();
+            document.getElementById('assemblySignatureCanvas')?.focus?.();
+        });
     }
 
     function closeAssemblySignatureModal() {
-        document.getElementById('assemblySignatureModal')?.classList.remove('open');
+        const modal = document.getElementById('assemblySignatureModal');
+        if (modal) {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        document.body.classList.remove('signature-modal-open');
+        state.signaturePad.drawing = false;
+        clearAssemblySignature();
     }
 
     function resizeAssemblySignatureCanvas() {
@@ -818,8 +852,10 @@
         if (!rect.width || !rect.height) return;
         const snapshot = state.signaturePad.hasInk ? canvas.toDataURL('image/png') : null;
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        canvas.width = Math.floor(rect.width * ratio);
-        canvas.height = Math.floor(rect.height * ratio);
+        canvas.width = Math.max(1, Math.round(rect.width * ratio));
+        canvas.height = Math.max(1, Math.round(rect.height * ratio));
+        canvas.dataset.cssWidth = String(rect.width);
+        canvas.dataset.cssHeight = String(rect.height);
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -827,6 +863,7 @@
         if (snapshot) {
             const image = new Image();
             image.onload = () => {
+                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
                 ctx.drawImage(image, 0, 0, rect.width, rect.height);
             };
             image.src = snapshot;
@@ -838,8 +875,10 @@
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        const rect = canvas.getBoundingClientRect();
-        ctx.clearRect(0, 0, rect.width || canvas.width, rect.height || canvas.height);
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
         state.signaturePad.drawing = false;
         state.signaturePad.hasInk = false;
         document.getElementById('assemblySignatureCanvasWrap')?.classList.remove('has-signature');
@@ -848,9 +887,14 @@
     }
 
     function getCanvasPoint(canvas, event) {
-        const touch = event.touches?.[0] || event.changedTouches?.[0] || event;
+        const source = event.touches?.[0] || event.changedTouches?.[0] || event;
         const rect = canvas.getBoundingClientRect();
-        return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+        const cssWidth = Number(canvas.dataset.cssWidth || rect.width || 1);
+        const cssHeight = Number(canvas.dataset.cssHeight || rect.height || 1);
+        return {
+            x: ((Number(source.clientX) - rect.left) / Math.max(rect.width, 1)) * cssWidth,
+            y: ((Number(source.clientY) - rect.top) / Math.max(rect.height, 1)) * cssHeight
+        };
     }
 
     async function submitAssemblySignature() {

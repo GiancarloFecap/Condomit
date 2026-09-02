@@ -154,11 +154,21 @@
   `;document.head.appendChild(s); }
   function escapeHtml(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');}
 
+  function loadDeviceNotificationsScript(){
+    if(document.querySelector('script[data-condomit-device-notifications]'))return;
+    const script=document.createElement('script');
+    script.dataset.condomitDeviceNotifications='1';
+    script.src=inPages()?'../scripts/device-notifications.js?v=053':'scripts/device-notifications.js?v=053';
+    script.defer=true;
+    document.head.appendChild(script);
+  }
+
   async function boot(){
-    ensureManifest();injectStyle();injectAdvancedNavigation();setTimeout(injectAdvancedNavigation,0);
+    ensureManifest();injectStyle();injectAdvancedNavigation();setTimeout(injectAdvancedNavigation,0);loadDeviceNotificationsScript();
     if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){navigator.serviceWorker.register(inPages()?'../service-worker.js':'service-worker.js',{scope:'../'}).catch(()=>{});}
     await Promise.allSettled([showEmergencyBanner(),registerSession()]);
-    window.setInterval(()=>{if(!document.hidden)registerSession();},300000);
+    window.setInterval(()=>{if(!document.hidden)registerSession();},60000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)registerSession();});
     window.addEventListener('condomit:language-changed',injectAdvancedNavigation);
     window.addEventListener('storage',e=>{if(e.key==='app-language')setTimeout(injectAdvancedNavigation,0);});
   }

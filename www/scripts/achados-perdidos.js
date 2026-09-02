@@ -86,23 +86,18 @@ function setupLostFoundActions() {
         renderLostFoundPage();
     });
 
-    document.getElementById('lostFoundTypeFilter')?.addEventListener('change', (event) => {
-        const value = event.target.value;
-        lostFoundState.type = value === 'todos' ? 'todos' : value;
-        syncTypeCards();
-        renderLostFoundPage();
-    });
 
-    document.getElementById('lostFoundStatusFilter')?.addEventListener('change', (event) => {
-        lostFoundState.status = event.target.value;
-        renderLostFoundPage();
+    document.querySelectorAll('[data-lost-status]').forEach((button) => {
+        button.addEventListener('click', () => {
+            lostFoundState.status = button.dataset.lostStatus || 'todos';
+            syncStatusFilters();
+            renderLostFoundPage();
+        });
     });
 
     document.querySelectorAll('[data-type]').forEach((button) => {
         button.addEventListener('click', () => {
             lostFoundState.type = button.dataset.type;
-            const typeFilter = document.getElementById('lostFoundTypeFilter');
-            if (typeFilter) typeFilter.value = button.dataset.type;
             syncTypeCards();
             renderLostFoundPage();
         });
@@ -139,6 +134,14 @@ function getLostFoundStorageKey(user = lostFoundState.currentUser) {
 
 function getDefaultLostFoundItems() {
     return [];
+}
+
+function normalizeLostFoundStatus(value) {
+    const status = String(value || '').trim().toLowerCase().replaceAll('_','-');
+    if (['devolvido','returned','entregue'].includes(status)) return 'devolvido';
+    if (['em-analise','em análise','analise','analysis'].includes(status)) return 'em-analise';
+    if (['arquivado','archived'].includes(status)) return 'arquivado';
+    return 'disponivel';
 }
 
 function typeToDbItemType(type) {
@@ -197,7 +200,7 @@ async function fetchLostFoundFromSupabase() {
             description: row.item_name || '',
             location: row.location || '',
             date: row.item_date || new Date().toISOString().slice(0, 10),
-            status: row.item_status === 'arquivado' ? 'arquivado' : 'disponivel',
+            status: normalizeLostFoundStatus(row.item_status),
             type: dbItemTypeToType(row.item_type),
             author: row.created_by || 'Condomínio',
             image: row.image_url || LOST_FOUND_IMAGES.default
@@ -405,6 +408,13 @@ function syncTypeCards() {
     });
 }
 
+function syncStatusFilters() {
+    document.querySelectorAll('[data-lost-status]').forEach((button) => {
+        button.classList.toggle('active', (button.dataset.lostStatus || 'todos') === lostFoundState.status);
+        button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
+    });
+}
+
 function openLostFoundModal() {
     document.getElementById('lostFoundModal')?.classList.add('open');
 }
@@ -486,8 +496,6 @@ async function saveLostFoundItem() {
     setLostFoundItems(items);
 
     lostFoundState.type = type;
-    const typeFilter = document.getElementById('lostFoundTypeFilter');
-    if (typeFilter) typeFilter.value = type;
     syncTypeCards();
     closeLostFoundModal();
     await renderLostFoundPage();
@@ -533,18 +541,13 @@ function sortLostFoundItems(items) {
 
 function clearLostFoundFilters() {
     lostFoundState.search = '';
-    lostFoundState.type = 'todos';
     lostFoundState.status = 'todos';
     lostFoundState.sort = 'recentes';
     const search = document.getElementById('lostFoundSearch');
-    const typeFilter = document.getElementById('lostFoundTypeFilter');
-    const statusFilter = document.getElementById('lostFoundStatusFilter');
     const sort = document.getElementById('lostFoundSort');
     if (search) search.value = '';
-    if (typeFilter) typeFilter.value = 'todos';
-    if (statusFilter) statusFilter.value = 'todos';
     if (sort) sort.value = 'recentes';
-    syncTypeCards();
+    syncStatusFilters();
     renderLostFoundPage();
 }
 

@@ -1203,3 +1203,19 @@ html[data-theme="dark"] body.condomit-app-page {
     --condomit-brand-500: #1E40AF;
     --condomit-brand-600: #1E3A8A;
 }
+
+/* ============================================================
+   Condomit 053 - botão Sair da sidebar volta ao vermelho
+============================================================ */
+body.condomit-app-page .sidebar .btn-logout-sidebar{
+    background:rgba(220,38,38,.14) !important;
+    border:1px solid rgba(254,202,202,.24) !important;
+    color:#fff !important;
+}
+body.condomit-app-page .sidebar .btn-logout-sidebar i{color:#fecaca !important}
+body.condomit-app-page .sidebar .btn-logout-sidebar:hover{
+    background:#b91c1c !important;
+    border-color:#ef4444 !important;
+    color:#fff !important;
+}
+body.condomit-app-page .sidebar .btn-logout-sidebar:hover i{color:#fff !important}

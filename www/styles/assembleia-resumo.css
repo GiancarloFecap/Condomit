@@ -259,3 +259,66 @@ html[data-theme="dark"] .signature-clear{background:#162235;border-color:#334155
 html[data-theme="dark"] .signature-canvas-wrap{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)}
 @media(max-width:720px){.post-comment-form{grid-template-columns:1fr}.comment-replies{padding-left:16px}.signature-heading{flex-direction:column;align-items:stretch}.signature-clear,.compact-btn,.summary-primary{width:100%;justify-content:center}.comment-reply-actions{justify-content:stretch}.comment-reply-actions>*{flex:1}}
 @media(max-width:560px){.comment-avatar{width:36px;height:36px;flex-basis:36px}}
+
+
+/* 053 - correções do modal de assinatura */
+.signature-modal-backdrop{
+    display:none !important;
+    position:fixed;
+    inset:0;
+    z-index:100000;
+    align-items:center;
+    justify-content:center;
+    padding:clamp(14px,3vw,28px);
+    background:rgba(15,23,42,.62);
+    backdrop-filter:blur(8px);
+}
+.signature-modal-backdrop.open{display:flex !important}
+body.signature-modal-open{overflow:hidden}
+.signature-modal-card{
+    width:min(100%,760px);
+    max-height:calc(100dvh - 34px);
+    overflow:auto;
+    padding:0;
+    border:1px solid #dbe4f0;
+    border-radius:22px;
+    background:#fff;
+    box-shadow:0 30px 90px rgba(15,23,42,.28);
+    color:#0f172a;
+}
+.signature-modal-card .modal-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:18px;
+    padding:22px 24px 18px;
+    border-bottom:1px solid #e5e7eb;
+}
+.signature-modal-card .modal-header h3{margin:0 0 6px;color:#0f172a;font-size:1.28rem;line-height:1.2}
+.signature-modal-card .modal-header p{margin:0;color:#64748b;line-height:1.55;font-size:.95rem}
+.signature-modal-card .modal-close{width:38px;height:38px;min-height:38px;flex:0 0 38px;border:1px solid #dbe2ea;border-radius:11px;background:#fff;color:#475569;display:grid;place-items:center;cursor:pointer}
+.signature-modal-card .modal-close:hover{background:#f8fafc;color:#0f172a}
+.signature-modal-card .assembly-signature-section{padding:20px 24px 12px;margin:0}
+.signature-modal-card .signature-heading span{font-size:1rem;color:#0f172a}
+.signature-modal-card .signature-heading small{display:block;margin-top:5px;color:#64748b;font-size:.88rem}
+.signature-modal-card .signature-clear{background:#f8fafc;color:#475569;border-color:#dbe2ea}
+.signature-modal-card .signature-canvas-wrap{min-height:230px;border:2px dashed #cbd5e1;background:#fff;border-radius:16px}
+.signature-modal-card #assemblySignatureCanvas{width:100%;height:230px;display:block;touch-action:none;cursor:crosshair}
+.signature-modal-card .modal-actions{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px 22px;border-top:1px solid #e5e7eb}
+.signature-modal-card .ghost-btn,.signature-modal-card .summary-primary{min-width:126px;justify-content:center}
+html[data-theme="dark"] .signature-modal-card{background:#111827;border-color:#334155;color:#f8fafc}
+html[data-theme="dark"] .signature-modal-card .modal-header{border-color:#334155}
+html[data-theme="dark"] .signature-modal-card .modal-header h3,
+html[data-theme="dark"] .signature-modal-card .signature-heading span{color:#f8fafc}
+html[data-theme="dark"] .signature-modal-card .modal-header p,
+html[data-theme="dark"] .signature-modal-card .signature-heading small{color:#cbd5e1}
+html[data-theme="dark"] .signature-modal-card .modal-close,
+html[data-theme="dark"] .signature-modal-card .signature-clear{background:#162235;border-color:#334155;color:#e2e8f0}
+html[data-theme="dark"] .signature-modal-card .modal-actions{border-color:#334155}
+@media(max-width:620px){
+  .signature-modal-card .modal-header,.signature-modal-card .assembly-signature-section,.signature-modal-card .modal-actions{padding-left:16px;padding-right:16px}
+  .signature-modal-card .signature-heading{gap:10px}
+  .signature-modal-card .signature-clear{width:100%;justify-content:center}
+  .signature-modal-card .modal-actions{flex-direction:column-reverse}
+  .signature-modal-card .ghost-btn,.signature-modal-card .summary-primary{width:100%}
+}

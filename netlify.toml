@@ -5,11 +5,18 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["@getbrevo/brevo"]
+  external_node_modules = ["@getbrevo/brevo", "web-push"]
 
 [[redirects]]
   from = "/esqueceu-senha"
   to = "/.netlify/functions/api-proxy/esqueceu-senha"
+  status = 200
+  force = true
+
+
+[[redirects]]
+  from = "/api/push/public-key"
+  to = "/.netlify/functions/push-config"
   status = 200
   force = true
 
@@ -93,3 +100,6 @@
   for = "/pages/pagamento-*.html"
   [headers.values]
     Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
+
+[functions."push-dispatch"]
+  schedule = "* * * * *"

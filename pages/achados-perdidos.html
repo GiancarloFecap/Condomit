@@ -6,12 +6,12 @@
     <title>Condomit - Achados e Perdidos</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/index.css?v=011">
+    <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/achados-perdidos.css?v=052">
+    <link rel="stylesheet" href="../styles/achados-perdidos.css?v=053">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="../styles/ux-polish.css?v=050">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=053">
 </head>
 <body class="condomit-app-page">
     <div class="dashboard-sindico">
@@ -60,26 +60,24 @@
                                 <i class="fas fa-search"></i>
                                 <input id="lostFoundSearch" type="search" placeholder="Buscar por item, local ou data...">
                             </div>
-                            <div class="toolbar-actions">
-                                <select id="lostFoundTypeFilter">
-                                    <option value="todos">Todos os tipos</option>
-                                    <option value="encontrado">Itens encontrados</option>
-                                    <option value="perdido">Itens perdidos</option>
-                                </select>
-                                <select id="lostFoundStatusFilter">
-                                    <option value="todos">Todos os status</option>
-                                    <option value="disponivel">Disponível</option>
-                                    <option value="devolvido">Devolvido</option>
-                                    <option value="em-analise">Em análise</option>
-                                </select>
-                                <select id="lostFoundSort">
-                                    <option value="recentes">Mais recentes</option>
-                                    <option value="antigos">Mais antigos</option>
-                                    <option value="az">A-Z</option>
-                                </select>
+                            <div class="toolbar-actions lost-found-filter-actions">
+                                <div class="status-filter-group" id="lostFoundStatusFilters" aria-label="Filtrar por status">
+                                    <button type="button" class="status-filter-btn active" data-lost-status="todos">Todos</button>
+                                    <button type="button" class="status-filter-btn" data-lost-status="disponivel">Disponíveis</button>
+                                    <button type="button" class="status-filter-btn" data-lost-status="devolvido">Devolvidos</button>
+                                    <button type="button" class="status-filter-btn" data-lost-status="em-analise">Em análise</button>
+                                </div>
+                                <div class="sort-filter-wrap">
+                                    <i class="fas fa-arrow-down-wide-short"></i>
+                                    <select id="lostFoundSort" aria-label="Ordenar itens">
+                                        <option value="recentes">Mais recentes</option>
+                                        <option value="antigos">Mais antigos</option>
+                                        <option value="az">A-Z</option>
+                                    </select>
+                                </div>
                                 <button class="ghost-btn compact-btn" id="clearLostFoundFilters" type="button">
-                                    <i class="fas fa-filter-circle-xmark"></i>
-                                    Limpar filtros
+                                    <i class="fas fa-rotate-left"></i>
+                                    Limpar
                                 </button>
                             </div>
                         </div>
@@ -225,12 +223,12 @@
   type="module"
   src="../scripts/supabase-auth.js?v=036"
 ></script>
-    <script src="../scripts/community-hub.js?v=035"></script>
+    <script src="../scripts/community-hub.js?v=053"></script>
     <script src="../scripts/sidebar-links.js?v=043"></script>
-    <script src="../scripts/achados-perdidos.js?v=052"></script>
+    <script src="../scripts/achados-perdidos.js?v=053"></script>
     <script src="../scripts/topbar-actions.js?v=035"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>
-    <script src="../scripts/advanced-global.js?v=050"></script>
+    <script src="../scripts/advanced-global.js?v=053"></script>
 </body>
 </html>

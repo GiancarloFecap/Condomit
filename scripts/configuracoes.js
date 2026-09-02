@@ -107,6 +107,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     initPreferences();
     initEditProfileModal();
+    setNotificationRoleCopy(currentUser);
+    initNotificationPreferences(currentUser);
+    bindLogoutAllDevices();
 
     const params = new URLSearchParams(window.location.search || '');
     const openTarget = params.get('open') || '';
@@ -238,6 +241,8 @@ function updateUIWithUserData(currentUser) {
         accessCodeRow.setAttribute('aria-hidden', canManageAccessCode ? 'false' : 'true');
         accessCodeRow.style.display = canManageAccessCode ? '' : 'none';
     }
+
+    setNotificationRoleCopy(currentUser);
 
     // Top bar avatar
     const topAvatar = document.getElementById('user-avatar-top');
@@ -1535,6 +1540,154 @@ function updateControlButtons(type, value) {
         const activeBtn = document.getElementById(`font-${value}`);
         if (activeBtn) activeBtn.classList.add('active');
     }
+}
+
+
+function setNotificationRoleCopy(user = getCurrentUser()) {
+    const role = typeof getNormalizedUserType === 'function'
+        ? getNormalizedUserType(user || {})
+        : String(user?.type || user?.user_type || '').trim().toLowerCase();
+    const isSindico = role === 'sindico' || role === 'síndico';
+    const label = document.getElementById('counterpartNotificationLabel');
+    const hint = document.getElementById('counterpartNotificationHint');
+    if (label) label.textContent = isSindico ? 'Comunicados dos moradores' : 'Comunicados do síndico';
+    if (hint) hint.textContent = isSindico
+        ? 'Mensagens e comunicados relacionados aos moradores do seu condomínio.'
+        : 'Mensagens e comunicados relacionados ao síndico do seu condomínio.';
+}
+
+const notificationPreferenceInputs = {
+    counterpart_messages: 'prefCounterpartMessages',
+    general_notices: 'prefGeneralNotices',
+    reservations: 'prefReservations',
+    packages: 'prefPackages'
+};
+
+let notificationPreferencesBound = false;
+
+async function initNotificationPreferences(user = getCurrentUser()) {
+    setNotificationRoleCopy(user);
+    const status = document.getElementById('deviceNotificationStatus');
+    if (!notificationPreferencesBound) {
+        Object.entries(notificationPreferenceInputs).forEach(([preference, id]) => {
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.addEventListener('change', async () => {
+                const requested = input.checked;
+                input.disabled = true;
+                try {
+                    if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase indisponível.');
+                    await window.supabaseFetch('/rpc/condomit_set_notification_preference', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ target_preference: preference, target_enabled: requested })
+                    });
+                    if (requested) {
+                        try { await window.condomitEnableDeviceNotifications?.(); } catch (_) {}
+                    }
+                    if (status) {
+                        status.className = 'device-notification-status success';
+                        status.innerHTML = '<i class="fas fa-circle-check"></i><span>Preferência salva na sua conta.</span>';
+                    }
+                } catch (error) {
+                    input.checked = !requested;
+                    if (status) {
+                        status.className = 'device-notification-status error';
+                        status.innerHTML = '<i class="fas fa-circle-exclamation"></i><span>Não foi possível salvar esta preferência.</span>';
+                    }
+                    window.showToast?.(error?.message || 'Não foi possível salvar a preferência.', 'error');
+                } finally {
+                    input.disabled = false;
+                }
+            });
+        });
+        window.addEventListener('condomit:notification-permission-changed', updateDeviceNotificationStatus);
+        notificationPreferencesBound = true;
+    }
+
+    try {
+        if (typeof window.supabaseFetch !== 'function') return;
+        const response = await window.supabaseFetch('/rpc/condomit_get_notification_preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
+        });
+        const prefs = Array.isArray(response) ? response[0] : response;
+        Object.entries(notificationPreferenceInputs).forEach(([key, id]) => {
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.checked = prefs && typeof prefs[key] === 'boolean' ? prefs[key] : true;
+        });
+        updateDeviceNotificationStatus();
+    } catch (error) {
+        console.warn('[Configurações] Preferências de notificação indisponíveis:', error?.message || error);
+        Object.values(notificationPreferenceInputs).forEach((id) => {
+            const input = document.getElementById(id);
+            if (input && typeof input.checked !== 'boolean') input.checked = true;
+        });
+    }
+}
+
+function updateDeviceNotificationStatus() {
+    const status = document.getElementById('deviceNotificationStatus');
+    if (!status) return;
+    if (!('Notification' in window)) {
+        status.className = 'device-notification-status warning';
+        status.innerHTML = '<i class="fas fa-circle-info"></i><span>Este navegador não oferece notificações do sistema.</span>';
+        return;
+    }
+    if (Notification.permission === 'granted') {
+        status.className = 'device-notification-status success';
+        status.innerHTML = '<i class="fas fa-bell"></i><span>Notificações do dispositivo ativadas.</span>';
+    } else if (Notification.permission === 'denied') {
+        status.className = 'device-notification-status warning';
+        status.innerHTML = '<i class="fas fa-bell-slash"></i><span>Notificações do dispositivo bloqueadas pelo navegador. As atualizações continuam na Central de Notificações.</span>';
+    } else {
+        status.className = 'device-notification-status';
+        status.innerHTML = '<i class="fas fa-bell"></i><span>Ao ativar uma categoria, o navegador poderá pedir permissão para mostrar notificações no dispositivo.</span>';
+    }
+}
+
+function bindLogoutAllDevices() {
+    const button = document.getElementById('logoutAllDevicesBtn');
+    if (!button || button.dataset.bound === '1') return;
+    button.dataset.bound = '1';
+    button.addEventListener('click', () => {
+        const execute = async () => {
+            button.disabled = true;
+            try {
+                if (typeof window.supabaseFetch === 'function') {
+                    await window.supabaseFetch('/rpc/condomit_revoke_all_user_sessions', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+                    });
+                }
+                try { await window.supabase?.auth?.signOut?.({ scope: 'global' }); } catch (_) {}
+                try { window.clearPersistedCondomitUser?.(); } catch (_) {}
+                try {
+                    sessionStorage.clear();
+                    localStorage.removeItem('condominiumPersistentUser');
+                    localStorage.removeItem('condominiumPersistentSession');
+                    localStorage.setItem('authExplicitLogoutAt', String(Date.now()));
+                } catch (_) {}
+                window.location.href = '../inicio.html';
+            } catch (error) {
+                button.disabled = false;
+                window.showToast?.(error?.message || 'Não foi possível encerrar as sessões.', 'error');
+            }
+        };
+        if (typeof window.showModal === 'function') {
+            window.showModal({
+                title: 'Sair de todos os dispositivos',
+                message: 'Todas as sessões da sua conta serão encerradas, inclusive neste dispositivo. Deseja continuar?',
+                type: 'warning',
+                confirmText: 'Sair de todos',
+                cancelText: 'Cancelar',
+                onConfirm: execute
+            });
+        } else if (window.confirm('Encerrar sua conta em todos os dispositivos?')) {
+            execute();
+        }
+    });
 }
 
 function initPreferences() {

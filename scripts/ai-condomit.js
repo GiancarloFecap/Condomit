@@ -285,7 +285,7 @@
 
         return {
             text: `Posso orientar você sobre as áreas disponíveis na Condomit para ${condo}: reservas, visitantes, assembleias, notificações, chats, encomendas, perfil, marketplace e prestadores. Escreva o que você deseja fazer e eu indico o caminho dentro do sistema.`,
-            actions: [{ label: 'Ir para o início', href: role === 'sindico' ? 'index.html' : role === 'porteiro' ? 'index-porteiro.html' : 'index-morador.html', icon: 'fa-house' }]
+            actions: []
         };
     }
 
@@ -529,7 +529,7 @@
         const item = document.createElement('article');
         item.className = `message ${type}`;
         item.innerHTML = `
-            <div class="message-avatar">${type === 'ai' ? '<i class="fas fa-sparkles"></i>' : escapeHtml(initials(state.user?.name || 'US'))}</div>
+            <div class="message-avatar">${type === 'ai' ? '<i class="fas fa-robot"></i>' : escapeHtml(initials(state.user?.name || 'US'))}</div>
             <div class="message-content">
                 <div class="message-bubble">${escapeHtml(text)}</div>
                 ${actions.length ? `<div class="ai-message-actions">${actions.map((action) => action.command
@@ -554,7 +554,7 @@
         const item = document.createElement('article');
         item.className = 'message ai';
         item.id = 'typingIndicator';
-        item.innerHTML = '<div class="message-avatar"><i class="fas fa-sparkles"></i></div><div class="message-content"><div class="message-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div></div>';
+        item.innerHTML = '<div class="message-avatar"><i class="fas fa-robot"></i></div><div class="message-content"><div class="message-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div></div>';
         messages.appendChild(item);
         messages.scrollTop = messages.scrollHeight;
     }

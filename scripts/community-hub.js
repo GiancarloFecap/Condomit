@@ -575,6 +575,8 @@
                 createdByType: 'sindico',
                 eventType: row.event_type || null,
                 relatedNoticeId: row.related_notice_id || null,
+                actorRole: String(row.actor_role || '').trim().toLowerCase(),
+                read: Boolean(row.is_read),
                 metadata: null
             }));
         } catch (error) {
@@ -615,6 +617,29 @@
             await fetchNotificationsFromSupabase(
                 user
             );
+
+        const localReadIds = new Set(getReadNotifications(user).map(String));
+        const serverReadIds = remoteItems.filter((item) => item.read).map((item) => String(item.id));
+        if (serverReadIds.length) {
+            const mergedRead = new Set(localReadIds);
+            serverReadIds.forEach((id) => mergedRead.add(id));
+            setStorageJson(getReadNotificationsKey(user), Array.from(mergedRead));
+        }
+        // Migra o histórico local das versões anteriores para o banco. Assim,
+        // uma notificação já lida não volta a aparecer como não lida em outro dispositivo.
+        if (typeof window.supabaseFetch === 'function') {
+            remoteItems.forEach((item) => {
+                if (item.read || !localReadIds.has(String(item.id))) return;
+                const dbId = Number(item.dbId || String(item.id || '').replace('db-notif-', ''));
+                if (!Number.isInteger(dbId) || dbId <= 0) return;
+                item.read = true;
+                window.supabaseFetch('/rpc/condomit_mark_notification_read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_notification_id: dbId })
+                }).catch(() => {});
+            });
+        }
 
         const seen =
             new Set();
@@ -865,68 +890,46 @@
         id,
         user = getCurrentUser()
     ) {
-        const read =
-            new Set(
-                getReadNotifications(
-                    user
-                ).map(String)
-            );
+        const read = new Set(getReadNotifications(user).map(String));
+        read.add(String(id));
+        setStorageJson(getReadNotificationsKey(user), Array.from(read));
 
-        read.add(
-            String(id)
-        );
+        const cached = notificationCache.find((item) => String(item.id) === String(id));
+        if (cached) cached.read = true;
 
-        setStorageJson(
-            getReadNotificationsKey(
-                user
-            ),
-            Array.from(
-                read
-            )
-        );
+        const dbId = Number(cached?.dbId || String(id || '').replace('db-notif-', ''));
+        if (Number.isInteger(dbId) && dbId > 0 && typeof window.supabaseFetch === 'function') {
+            window.supabaseFetch('/rpc/condomit_mark_notification_read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_notification_id: dbId })
+            }).catch((error) => console.warn('[Notificações] Falha ao persistir leitura:', error?.message || error));
+        }
     }
 
     function markAllNotificationsAsRead(
         user = getCurrentUser()
     ) {
-        /*
-         * No código antigo havia:
-         *
-         * getNotifications(user).map(...)
-         *
-         * mas getNotifications é async.
-         *
-         * Agora usamos o cache carregado.
-         */
-        const ids =
-            notificationCache.map(
-                (notification) =>
-                    String(
-                        notification.id
-                    )
-            );
+        const ids = notificationCache.map((notification) => String(notification.id));
+        setStorageJson(getReadNotificationsKey(user), ids);
+        notificationCache.forEach((notification) => { notification.read = true; });
 
-        setStorageJson(
-            getReadNotificationsKey(
-                user
-            ),
-            ids
-        );
+        if (typeof window.supabaseFetch === 'function') {
+            window.supabaseFetch('/rpc/condomit_mark_all_notifications_read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}'
+            }).catch((error) => console.warn('[Notificações] Falha ao persistir leitura em lote:', error?.message || error));
+        }
     }
 
     function isNotificationRead(
         id,
         user = getCurrentUser()
     ) {
-        return (
-            getReadNotifications(
-                user
-            )
-                .map(String)
-                .includes(
-                    String(id)
-                )
-        );
+        const cached = notificationCache.find((item) => String(item.id) === String(id));
+        if (cached?.read) return true;
+        return getReadNotifications(user).map(String).includes(String(id));
     }
 
     function getNotificationById(

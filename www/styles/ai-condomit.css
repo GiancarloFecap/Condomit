@@ -194,3 +194,62 @@ html[data-theme="dark"] .condomit-app-page #chatInput::placeholder { color:#B2BA
     .condomit-app-page #chatInput { min-height:28px !important; height:28px; padding:4px 7px !important; }
     .condomit-app-page .send-btn { width:31px !important; height:31px !important; min-height:31px !important; flex-basis:31px; }
 }
+
+
+/* ============================================================
+   053 - IA Condomit: dark mode completo e mensagens sem balões
+============================================================ */
+.condomit-app-page .message-bubble{
+    padding:3px 0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    color:#243044 !important;
+}
+.condomit-app-page .message.user .message-bubble{
+    background:transparent !important;
+    border:0 !important;
+    color:#243044 !important;
+    text-align:right;
+}
+.condomit-app-page .message-content{max-width:100%}
+.condomit-app-page .message-avatar{
+    width:40px;height:40px;border-radius:12px;
+    background:linear-gradient(145deg,#2252BD,#0ea5a4) !important;
+    color:#fff;
+    box-shadow:0 7px 16px rgba(34,82,189,.17);
+    font-size:16px;
+}
+.condomit-app-page .message.user .message-avatar{
+    background:#334155 !important;
+    box-shadow:none;
+    font-size:12px;
+}
+.condomit-app-page .ai-message-actions{margin-top:5px}
+html[data-theme="dark"] .condomit-app-page .ai-chat-container{
+    background:#0b1120 !important;
+    color:#f8fafc;
+}
+html[data-theme="dark"] .condomit-app-page .main-content{background:#0b1120 !important}
+html[data-theme="dark"] .condomit-app-page .ai-assistant-toolbar{
+    background:#111827 !important;border-color:#2d3b50 !important;box-shadow:0 10px 26px rgba(0,0,0,.24) !important;
+}
+html[data-theme="dark"] .condomit-app-page .ai-assistant-identity strong{color:#f8fafc !important}
+html[data-theme="dark"] .condomit-app-page .ai-assistant-identity span{color:#94a3b8 !important}
+html[data-theme="dark"] .condomit-app-page .ai-new-chat{background:#162235 !important;border-color:#334155 !important;color:#e2e8f0 !important}
+html[data-theme="dark"] .condomit-app-page .welcome-card{
+    background:#101826 !important;border-color:#2d3b50 !important;box-shadow:none !important;
+}
+html[data-theme="dark"] .condomit-app-page .welcome-title{color:#f8fafc !important}
+html[data-theme="dark"] .condomit-app-page .welcome-description{color:#cbd5e1 !important}
+html[data-theme="dark"] .condomit-app-page .ai-category-card{background:#162235 !important;border-color:#334155 !important}
+html[data-theme="dark"] .condomit-app-page .ai-category-card strong{color:#f8fafc !important}
+html[data-theme="dark"] .condomit-app-page .ai-category-card small{color:#cbd5e1 !important}
+html[data-theme="dark"] .condomit-app-page .suggestion-btn{background:#162235 !important;border-color:#334155 !important;color:#e2e8f0 !important}
+html[data-theme="dark"] .condomit-app-page .chat-messages{background:#0b1120 !important}
+html[data-theme="dark"] .condomit-app-page .message-bubble,
+html[data-theme="dark"] .condomit-app-page .message.user .message-bubble{color:#e5e7eb !important}
+html[data-theme="dark"] .condomit-app-page .message-time{color:#7f8ca3 !important}
+html[data-theme="dark"] .condomit-app-page .ai-action-link{background:transparent !important;color:#9db8ff !important;border-color:#334155 !important}
+html[data-theme="dark"] .condomit-app-page .disclaimer{color:#94a3b8 !important}

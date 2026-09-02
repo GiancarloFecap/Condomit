@@ -6,13 +6,13 @@
     <title>Condomit - Configurações</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/index.css?v=011">
-    <link rel="stylesheet" href="../styles/configuracoes.css?v=046">
+    <link rel="stylesheet" href="../styles/index.css?v=053">
+    <link rel="stylesheet" href="../styles/configuracoes.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
     <link rel="stylesheet" href="../styles/profile-photo-editor.css?v=015">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="../styles/ux-polish.css?v=050">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=053">
 </head>
 <body class="condomit-app-page">
     <div class="dashboard-sindico">
@@ -247,27 +247,55 @@
                     </div>
 
                     <!-- Notificações -->
-                    <div class="config-card">
+                    <div class="config-card notification-settings-card">
                         <h3>Notificações</h3>
-                        <div class="form-group" onclick="openConfigSection('comunicados-sindico')">
+                        <p class="notification-settings-hint">Escolha quais atualizações podem gerar notificações no seu dispositivo. Todas continuam disponíveis na Central de Notificações.</p>
+                        <div class="notification-preference-row" data-notification-preference="counterpart_messages">
+                            <div class="notification-preference-copy">
+                                <i class="fas fa-comments"></i>
+                                <div>
+                                    <strong id="counterpartNotificationLabel">Comunicados do síndico</strong>
+                                    <small id="counterpartNotificationHint">Mensagens e comunicados relacionados ao síndico do seu condomínio.</small>
+                                </div>
+                            </div>
+                            <label class="notification-switch" aria-label="Ativar ou desativar comunicados">
+                                <input type="checkbox" id="prefCounterpartMessages" checked>
+                                <span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
+                            </label>
+                        </div>
+                        <div class="notification-preference-row" data-notification-preference="general_notices">
+                            <div class="notification-preference-copy">
+                                <i class="fas fa-bullhorn"></i>
+                                <div><strong>Avisos gerais do condomínio</strong><small>Avisos, mural e atualizações gerais.</small></div>
+                            </div>
+                            <label class="notification-switch" aria-label="Ativar ou desativar avisos gerais">
+                                <input type="checkbox" id="prefGeneralNotices" checked>
+                                <span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
+                            </label>
+                        </div>
+                        <div class="notification-preference-row" data-min-plan="Pro" data-notification-preference="reservations">
+                            <div class="notification-preference-copy">
+                                <i class="fas fa-calendar-check"></i>
+                                <div><strong>Reserva de áreas comuns</strong><small>Confirmações, alterações e lembretes de reservas.</small></div>
+                            </div>
+                            <label class="notification-switch" aria-label="Ativar ou desativar notificações de reservas">
+                                <input type="checkbox" id="prefReservations" checked>
+                                <span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
+                            </label>
+                        </div>
+                        <div class="notification-preference-row" data-min-plan="Pro" data-notification-preference="packages">
+                            <div class="notification-preference-copy">
+                                <i class="fas fa-box"></i>
+                                <div><strong>Encomendas e correspondências</strong><small>Chegada, retirada e atualizações de encomendas.</small></div>
+                            </div>
+                            <label class="notification-switch" aria-label="Ativar ou desativar notificações de encomendas">
+                                <input type="checkbox" id="prefPackages" checked>
+                                <span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
+                            </label>
+                        </div>
+                        <div class="device-notification-status" id="deviceNotificationStatus">
                             <i class="fas fa-bell"></i>
-                            <span>Comunicados do síndico</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('avisos-gerais')">
-                            <i class="fas fa-bullhorn"></i>
-                            <span>Avisos gerais do condomínio</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" data-min-plan="Pro" onclick="openConfigSection('reserva-areas')">
-                            <i class="fas fa-calendar-check"></i>
-                            <span>Reserva de áreas comuns</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" data-min-plan="Pro" onclick="openConfigSection('encomendas')">
-                            <i class="fas fa-box"></i>
-                            <span>Encomendas e correspondências</span>
-                            <i class="fas fa-chevron-right"></i>
+                            <span>As preferências estão salvas na sua conta.</span>
                         </div>
                     </div>
 
@@ -314,6 +342,11 @@
                             <span>Gerenciar consentimentos</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
+                        <button class="privacy-session-action" id="logoutAllDevicesBtn" type="button">
+                            <span class="privacy-session-action-icon"><i class="fas fa-right-from-bracket"></i></span>
+                            <span class="privacy-session-action-copy"><strong>Sair de todos os dispositivos</strong><small>Encerra as sessões da Condomit abertas em outros dispositivos e também neste aparelho.</small></span>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
                     </div>
 
                     <!-- Condomínio -->
@@ -409,7 +442,7 @@
     <script src="../scripts/sidebar-links.js?v=043"></script>
     <script src="../scripts/visitor-registration.js"></script>
     <script src="../scripts/two-factor.js?v=016"></script>
-    <script src="../scripts/configuracoes.js?v=044"></script>
+    <script src="../scripts/configuracoes.js?v=053"></script>
     <script src="../scripts/config-access-012.js?v=038"></script>
     <script src="../scripts/profile-photo-editor.js?v=015"></script>
 
@@ -546,6 +579,6 @@
     <script src="../scripts/topbar-actions.js?v=035"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>
-    <script src="../scripts/advanced-global.js?v=050"></script>
+    <script src="../scripts/advanced-global.js?v=053"></script>
 </body>
 </html>
