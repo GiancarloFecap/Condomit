@@ -1,3 +1,4 @@
+/api/assembly/transcribe              /.netlify/functions/assembly-transcribe 200!
 /api/* /.netlify/functions/api-proxy/api/:splat 200!
 /pages/redefinir-senha.html         /pages/redefinir-senha.html     200
 /pages/*                            /pages/:splat                   200

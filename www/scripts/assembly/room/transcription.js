@@ -1,4 +1,4 @@
-import { state } from './state.js?v=060';
+import { state } from './state.js?v=061';
 
 let recognition = null;
 let shouldRun = false;
@@ -16,6 +16,10 @@ let lastInterimText = '';
 let speechStartedAt = 0;
 let speechSavePromise = Promise.resolve();
 let localSpeaking = false;
+let lastBrowserResultAt = 0;
+let localSpeechStartedAt = 0;
+let noTextFallbackTimer = null;
+let serverFailureCount = 0;
 
 let serverFallbackActive = false;
 let serverFallbackUnavailable = false;
@@ -205,7 +209,7 @@ async function sendAudioForServerTranscription(blob, mimeType) {
     if (!token) throw new Error('Sessão de autenticação indisponível.');
 
     const audioBase64 = await blobToBase64(blob);
-    const response = await fetch('/api/assembly/transcribe', {
+    const response = await fetch('/.netlify/functions/assembly-transcribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -230,20 +234,35 @@ async function sendAudioForServerTranscription(blob, mimeType) {
         setStatus(
           'unsupported',
           'Falas registradas sem transcrição textual',
-          'O navegador não forneceu reconhecimento de voz e a transcrição de servidor ainda não foi configurada.'
+          'Configure OPENAI_API_KEY na Netlify e publique novamente o site.'
         );
         return;
       }
-      throw new Error(payload?.error || `Falha na transcrição (${response.status}).`);
+      if (response.status === 404) {
+        throw new Error('A função de transcrição não foi encontrada no deploy atual. Publique novamente a Condomit.');
+      }
+      throw new Error(payload?.error || payload?.provider_error || `Falha na transcrição (${response.status}).`);
     }
 
+    serverFailureCount = 0;
     const text = String(payload?.text || '').replace(/\s+/g, ' ').trim();
-    if (text) await saveFinalTranscript(text, 'server');
-    else if (serverFallbackActive) setStatus('active', 'Transcrição automática ativa', 'Aguardando a próxima fala.');
+    if (text) {
+      if (payload?.saved === true) {
+        lastSavedText = text;
+        lastSavedAt = Date.now();
+        setStatus('active', 'Transcrição automática ativa', 'Fala transcrita e registrada na ata.');
+      } else {
+        await saveFinalTranscript(text, 'server');
+      }
+    } else if (serverFallbackActive) {
+      setStatus('active', 'Transcrição automática ativa', 'Aguardando a próxima fala.');
+    }
   } catch (error) {
+    serverFailureCount += 1;
     console.warn('[ASSEMBLY TRANSCRIPTION] Fallback de servidor:', error);
     if (serverFallbackActive && !serverFallbackUnavailable) {
-      setStatus('waiting', 'Transcrição automática aguardando', error?.message || 'Falha temporária ao processar áudio.');
+      const label = serverFailureCount >= 2 ? 'Falha na transcrição automática' : 'Transcrição automática aguardando';
+      setStatus(serverFailureCount >= 2 ? 'error' : 'waiting', label, error?.message || 'Falha temporária ao processar áudio.');
     }
   }
 }
@@ -366,6 +385,27 @@ function activateServerFallback(reason = 'reconhecimento do navegador indisponí
   return true;
 }
 
+function clearNoTextFallbackTimer() {
+  if (noTextFallbackTimer) {
+    window.clearTimeout(noTextFallbackTimer);
+    noTextFallbackTimer = null;
+  }
+}
+
+function scheduleNoTextFallback() {
+  clearNoTextFallbackTimer();
+  if (!shouldRun || serverFallbackActive || !microphoneEnabled() || !localSpeaking) return;
+  const speechStart = localSpeechStartedAt || Date.now();
+  noTextFallbackTimer = window.setTimeout(() => {
+    noTextFallbackTimer = null;
+    if (!shouldRun || serverFallbackActive || !microphoneEnabled() || !localSpeaking) return;
+    const resultAfterSpeechStarted = lastBrowserResultAt >= speechStart;
+    if (!resultAfterSpeechStarted) {
+      activateServerFallback('o navegador detectou o microfone, mas não produziu texto durante a fala');
+    }
+  }, 7000);
+}
+
 function syncSpeechActivityFromIdentities(identities) {
   const ownIdentity = localIdentity();
   if (!ownIdentity) return;
@@ -383,9 +423,14 @@ function syncSpeechActivityFromIdentities(identities) {
 
   if (speaking !== localSpeaking) {
     localSpeaking = speaking;
-    if (serverFallbackActive) {
-      if (speaking) startServerAudioSegment();
-      else stopServerAudioSegment();
+    if (speaking) {
+      localSpeechStartedAt = Date.now();
+      if (serverFallbackActive) startServerAudioSegment();
+      else scheduleNoTextFallback();
+    } else {
+      localSpeechStartedAt = 0;
+      clearNoTextFallbackTimer();
+      if (serverFallbackActive) stopServerAudioSegment();
     }
   }
 }
@@ -464,6 +509,8 @@ function createRecognition() {
       const result = event.results[index];
       const text = String(result?.[0]?.transcript || '').trim();
       if (!text) continue;
+      lastBrowserResultAt = Date.now();
+      clearNoTextFallbackTimer();
       if (result.isFinal) {
         lastInterimText = '';
         saveFinalTranscript(text, 'web_speech');
@@ -599,6 +646,11 @@ function ensureWatchdog() {
       return;
     }
 
+    if (localSpeaking && localSpeechStartedAt && Date.now() - localSpeechStartedAt >= 7000 && lastBrowserResultAt < localSpeechStartedAt) {
+      activateServerFallback('fala detectada sem retorno textual do navegador');
+      return;
+    }
+
     if (!recognitionRunning && !recognitionStarting && !restartTimer) {
       attemptRecognitionStart('verificação automática');
     }
@@ -626,6 +678,7 @@ export function startAssemblyTranscription() {
 export async function stopAssemblyTranscription() {
   shouldRun = false;
   clearRestartTimer();
+  clearNoTextFallbackTimer();
   recognitionStarting = false;
   recognitionRunning = false;
   try { recognition?.abort?.(); } catch (_) {}

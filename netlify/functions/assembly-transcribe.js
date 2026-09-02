@@ -163,6 +163,7 @@ exports.handler = async (event) => {
   const assemblyId = Number(payload?.assembly_id);
   const audioBase64 = String(payload?.audio_base64 || '').trim();
   const mimeType = String(payload?.mime_type || 'audio/webm').trim();
+  const participantIdentity = String(payload?.participant_identity || '').trim() || null;
 
   if (!Number.isFinite(assemblyId) || assemblyId <= 0) {
     return response(400, { ok: false, error: 'assembly_id inválido.' });
@@ -222,14 +223,58 @@ exports.handler = async (event) => {
       return response(502, {
         ok: false,
         code: 'TRANSCRIPTION_PROVIDER_ERROR',
-        error: 'Não foi possível transcrever este trecho de áudio.'
+        error: 'Não foi possível transcrever este trecho de áudio.',
+        provider_status: openaiResponse.status,
+        provider_error: String(result?.error?.message || '').slice(0, 500) || null
       });
     }
 
     const text = String(result?.text || '').replace(/\s+/g, ' ').trim();
+    let saved = false;
+    let saveError = null;
+
+    if (text) {
+      try {
+        const { data: profile } = await admin
+          .from('users')
+          .select('name,user_type')
+          .eq('email', email)
+          .maybeSingle();
+
+        const participantName = String(profile?.name || authUser.user_metadata?.name || email).trim() || email;
+        const participantRole = String(profile?.user_type || authUser.user_metadata?.user_type || 'morador').trim().toLowerCase() || 'morador';
+
+        const { error: insertError } = await admin
+          .from('assembly_transcripts')
+          .insert({
+            assembly_id: assembly.id,
+            cep: assembly.cep,
+            participant_email: email,
+            participant_name: participantName,
+            participant_role: participantRole,
+            participant_identity: participantIdentity,
+            transcript: text.slice(0, 4000),
+            source: 'server_transcribe',
+            spoken_at: new Date().toISOString()
+          });
+
+        if (insertError) {
+          saveError = insertError.message || 'Falha ao salvar transcrição.';
+          console.error('[assembly-transcribe] Supabase insert:', insertError);
+        } else {
+          saved = true;
+        }
+      } catch (error) {
+        saveError = error?.message || 'Falha ao salvar transcrição.';
+        console.error('[assembly-transcribe] Persistência:', error);
+      }
+    }
+
     return response(200, {
       ok: true,
       text,
+      saved,
+      save_error: saveError,
       model: TRANSCRIPTION_MODEL
     });
   } catch (error) {
