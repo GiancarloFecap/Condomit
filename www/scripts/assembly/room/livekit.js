@@ -6,7 +6,7 @@ import {
 
 import {
   state
-} from './state.js?v=058';
+} from './state.js?v=059';
 
 import {
   renderGrid,
@@ -18,10 +18,21 @@ import {
   setConnectionConnecting,
   setConnectionDisconnected,
   setConnectionReconnecting
-} from './ui.js?v=058';
+} from './ui.js?v=059';
 
 let intentionalDisconnect =
   false;
+
+
+function emitMicrophoneState(room) {
+  try {
+    window.dispatchEvent(new CustomEvent('condomit:assembly-microphone-state', {
+      detail: {
+        enabled: Boolean(room?.localParticipant?.isMicrophoneEnabled)
+      }
+    }));
+  } catch (_) {}
+}
 
 function isMobileCameraDevice() {
   const ua = String(navigator.userAgent || '');
@@ -1741,6 +1752,9 @@ export async function connectToRoom(
           publication,
           participant
         );
+        if (participant === room.localParticipant && publication?.source === Track.Source.Microphone) {
+          emitMicrophoneState(room);
+        }
       }
     )
 
@@ -1755,6 +1769,9 @@ export async function connectToRoom(
           publication,
           participant
         );
+        if (participant === room.localParticipant && publication?.source === Track.Source.Microphone) {
+          emitMicrophoneState(room);
+        }
       }
     )
 
@@ -1904,6 +1921,8 @@ export async function connectToRoom(
       preferences
     );
 
+    emitMicrophoneState(room);
+
     await enableInitialCamera(
       room,
       preferences
@@ -2001,6 +2020,8 @@ export async function toggleMicrophone() {
         .isMicrophoneEnabled ??
       enabled
     );
+
+    emitMicrophoneState(room);
 
     renderParticipantsList(
       room
