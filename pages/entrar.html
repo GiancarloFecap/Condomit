@@ -3,61 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Portal de Assembleias - Login</title>
+    <meta name="theme-color" content="#2252BD">
+    <title>Entrar no Condomit</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/entrar.css">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="../styles/ux-polish.css?v=053">
+    <link rel="stylesheet" href="../styles/entrar.css?v=055-login">
 </head>
-<body class="condomit-app-page">
-    <div class="login-page">
-        <div class="login-container">
-            <button type="button" class="btn-back" onclick="window.location.href='../inicio.html'">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </button>
-            <div class="login-header">
-                <img src="../assets/logo-full.png" alt="Condomit Logo" class="login-logo">
-                <h1>Entrar no Condomit</h1>
-                <p>Bem-vindo de volta!</p>
+<body class="login-modern-page">
+    <a class="login-back" href="../inicio.html" aria-label="Voltar para a página inicial">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M19 12H5M11 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Voltar
+    </a>
+
+    <div class="login-buildings" aria-hidden="true">
+        <div class="login-building login-building-1"></div>
+        <div class="login-building login-building-2"></div>
+        <div class="login-building login-building-3"></div>
+    </div>
+
+    <div class="login-wave login-wave-left" aria-hidden="true"></div>
+    <div class="login-wave login-wave-right" aria-hidden="true"></div>
+
+    <div class="login-dots login-dots-top" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="login-dots login-dots-bottom" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+    </div>
+
+    <main class="login-modern-shell">
+        <section class="login-modern-card" aria-labelledby="loginTitle">
+            <div class="login-modern-logo-wrap">
+                <img class="login-modern-logo" src="../assets/logo-lado.png" alt="Condomit - O app do seu condomínio">
             </div>
-            <form id="loginForm" class="login-form">
-                <div class="form-group">
+
+            <h1 id="loginTitle">Entrar no Condomit</h1>
+            <p class="login-modern-subtitle">Bem-vindo de volta!</p>
+
+            <form id="loginForm" class="login-modern-form" novalidate>
+                <div class="login-field">
                     <label for="email">E-mail</label>
-                    <input type="email" id="email" placeholder="Digite seu e-mail" required>
+                    <input id="email" name="email" type="email" placeholder="Digite seu e-mail" autocomplete="email" required>
                 </div>
-                <div class="form-group">
+
+                <div class="login-field">
                     <label for="password">Senha</label>
-                    <div class="password-input">
-                        <input type="password" id="password" placeholder="Digite sua senha" required>
-                        <button type="button" id="togglePassword" class="toggle-password">
-                            <i class="fas fa-eye"></i>
+                    <div class="login-input-wrap">
+                        <input id="password" class="login-password-input" name="password" type="password" placeholder="Digite sua senha" autocomplete="current-password" required>
+                        <button id="togglePassword" class="login-password-toggle" type="button" aria-label="Mostrar senha">
+                            <i class="fas fa-eye" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
-                <a href="esqueci-senha.html" class="forgot-password">Esqueceu sua senha?</a>
-                <button type="submit" class="btn btn-primary btn-large">
-                    Entrar
-                </button>
+
+                <a class="login-forgot" href="esqueci-senha.html">Esqueceu sua senha?</a>
+
+                <button class="login-submit" type="submit">Entrar</button>
             </form>
-            <div class="signup-link">
-                Não tem uma conta? <a href="tipo-usuario.html">Cadastre-se aqui</a>
-            </div>
-            <div class="terms-link">
-                <a href="#">Termos de uso</a>
-            </div>
-        </div>
-    </div>
+
+            <div class="login-divider" aria-hidden="true"></div>
+
+            <p class="login-signup">
+                Não tem uma conta?
+                <a href="tipo-usuario.html">Cadastre-se aqui</a>
+            </p>
+
+            <a class="login-terms" href="#">Termos de uso</a>
+        </section>
+    </main>
+
     <script src="../scripts/platform-config.js?v=035"></script>
-
-
     <script src="../scripts/supabase-client.js?v=044"></script>
     <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
     <script src="../scripts/session-resume.js?v=038"></script>
     <script src="../scripts/two-factor.js?v=016"></script>
-    <script src="../scripts/entrar.js?v=049"></script>
+    <script src="../scripts/entrar.js?v=055-login"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/advanced-global.js?v=053"></script>
 </body>

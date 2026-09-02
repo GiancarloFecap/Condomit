@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0A2A6B" />
   <title>Condomit • Escolha seu perfil</title>
   <link rel="icon" type="image/png" href="../assets/favicon.png" />
-  <link rel="stylesheet" href="../styles/tipo-usuario.css?v=054" />
+  <link rel="stylesheet" href="../styles/tipo-usuario.css?v=055" />
   <link rel="manifest" href="../manifest.webmanifest" />
 </head>
 <body>
@@ -24,7 +24,12 @@
       </a>
 
       <div class="top-actions">
-        <span class="step-mini"><b>Etapa 1</b> de 3</span>
+        <a class="back-link" href="../inicio.html">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M19 12H6m5-5-5 5 5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Voltar
+        </a>
         <a class="login-link" href="entrar.html">
           Já tenho conta
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -36,17 +41,11 @@
 
     <main>
       <section class="hero" aria-labelledby="page-title">
-        <span class="kicker"><span class="kicker-dot"></span> Criar minha conta</span>
         <h1 id="page-title">Qual é o seu perfil no condomínio?</h1>
         <p>
           Escolha a opção que melhor representa você. A Condomit personaliza o cadastro
           e as funcionalidades disponíveis de acordo com o seu perfil.
         </p>
-
-        <div class="progress" aria-label="Progresso do cadastro">
-          <div class="progress-track"><span></span></div>
-          <span class="progress-label">1 de 3</span>
-        </div>
       </section>
 
       <section class="cards" role="radiogroup" aria-label="Escolha o tipo de usuário">
@@ -216,6 +215,6 @@
       </div>
     </main>
   </div>
-  <script src="../scripts/tipo-usuario.js?v=054"></script>
+  <script src="../scripts/tipo-usuario.js?v=055"></script>
 </body>
 </html>

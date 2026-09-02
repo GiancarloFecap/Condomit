@@ -538,3 +538,70 @@
 .logo { width: 172px; max-height: 72px; object-fit: contain; }
 .logo-link { min-height: 56px; }
 @media (max-width:620px) { .logo { width: 145px; max-height: 62px; } }
+
+
+/* ============================================================
+   Condomit 055 - seleção de perfil sem etapa/progresso e sem scroll
+============================================================ */
+.logo { width: 235px; max-height:none; }
+.back-link {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  color:var(--brand-800);
+  font-weight:750;
+  text-decoration:none;
+  padding:10px 14px;
+  border-radius:14px;
+  border:1px solid rgba(18,74,157,.10);
+  background:rgba(255,255,255,.62);
+  backdrop-filter:blur(12px);
+  transition:.2s ease;
+}
+.back-link:hover {
+  transform:translateY(-1px);
+  background:#fff;
+  border-color:rgba(18,74,157,.18);
+  box-shadow:0 8px 24px rgba(20,66,135,.10);
+}
+.step-mini,.kicker,.progress { display:none !important; }
+.shell { padding:14px 0 16px; min-height:100dvh; }
+main { padding:12px 0 0; justify-content:flex-start; }
+.hero { margin:0 auto 15px; max-width:760px; }
+h1 { margin:0 0 7px; font-size:clamp(1.75rem,3vw,2.5rem); }
+.hero p { font-size:.92rem; line-height:1.5; max-width:720px; }
+.cards { gap:17px; }
+.profile { min-height:315px; padding:19px 20px; border-radius:24px; }
+.icon-box { width:62px; height:62px; border-radius:19px; margin:1px 0 13px; }
+.icon-box svg { width:31px; height:31px; }
+.role-tag { margin-bottom:5px; font-size:.68rem; }
+.profile h2 { margin-bottom:6px; font-size:1.38rem; }
+.profile .description { min-height:58px; line-height:1.45; font-size:.84rem; }
+.feature-list { margin-top:12px; gap:7px; }
+.feature-list li { font-size:.78rem; }
+.choose { padding-top:13px; font-size:.8rem; }
+.choose-bubble { width:35px; height:35px; border-radius:12px; }
+.bottom { margin-top:14px; padding:11px 14px; border-radius:18px; }
+.hint { font-size:.79rem; }
+.hint-icon { width:31px; height:31px; border-radius:10px; }
+.continue { min-width:150px; padding:11px 17px; border-radius:14px; }
+
+@media (min-width:941px) and (min-height:620px) {
+  html, body { height:100%; overflow:hidden; }
+  .shell { height:100dvh; }
+}
+@media (max-width:940px) {
+  html, body { overflow-y:auto; }
+  .shell { min-height:100dvh; height:auto; padding:14px 0 24px; }
+  main { padding-top:14px; }
+  .cards { max-width:650px; }
+  .profile { min-height:300px; }
+}
+@media (max-width:620px) {
+  .logo { width:175px; max-height:none; }
+  .top-actions { gap:8px; }
+  .back-link,.login-link { padding:8px 10px; font-size:.78rem; }
+  .back-link svg,.login-link svg { width:15px; height:15px; }
+  h1 { font-size:1.75rem; }
+  .hero p { font-size:.86rem; }
+}

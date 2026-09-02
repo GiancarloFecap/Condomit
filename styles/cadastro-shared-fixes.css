@@ -1,0 +1,43 @@
+/* Condomit 055 - correções compartilhadas dos cadastros */
+.input-icon-wrapper { position:relative !important; display:flex !important; align-items:center !important; }
+.input-icon-wrapper > i:first-child {
+    position:absolute !important;
+    left:14px !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+    width:16px !important;
+    text-align:center !important;
+    z-index:2 !important;
+    pointer-events:none !important;
+    color:#94a3b8 !important;
+    line-height:1 !important;
+}
+.input-icon-wrapper > input {
+    padding-left:42px !important;
+    padding-right:14px !important;
+}
+.password-input > input { padding-right:48px !important; }
+.password-input .toggle-password {
+    position:absolute !important;
+    right:12px !important;
+    left:auto !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+    z-index:3 !important;
+    min-width:34px !important;
+    width:34px !important;
+    height:34px !important;
+    padding:0 !important;
+    display:grid !important;
+    place-items:center !important;
+    box-shadow:none !important;
+}
+.password-input .toggle-password i {
+    position:static !important;
+    transform:none !important;
+    width:auto !important;
+    color:inherit !important;
+}
+.password-strength { display:none; margin-top:10px; }
+.password-strength.is-visible { display:block; }
+html[data-theme="dark"] .input-icon-wrapper > i:first-child { color:#94a3b8 !important; }
