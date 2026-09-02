@@ -1,5 +1,5 @@
-import { state } from './state.js?v=026';
-import { renderChatMessage, renderSimpleList } from './ui.js?v=026';
+import { state } from './state.js?v=058';
+import { renderChatMessage, renderSimpleList } from './ui.js?v=058';
 
 function normalizeCepForDatabase(value) {
   const digits = String(value || '').replace(/\D/g, '');

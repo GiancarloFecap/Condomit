@@ -175,6 +175,7 @@ body.login-modern-page::before {
 }
 
 .login-modern-logo {
+    background: transparent;
     width: 150px;
     height: auto;
     display: block;
@@ -325,14 +326,16 @@ body.login-modern-page::before {
     .login-modern-card { padding: 28px 20px 24px; border-radius: 22px; }
     .login-buildings { opacity: .06; transform: scale(.74); transform-origin: bottom left; }
     .login-dots-top { right: 3%; }
-    .login-modern-logo { width: 142px; }
+    .login-modern-logo {
+    background: transparent; width: 142px; }
 }
 
 @media (max-height: 720px) and (min-width: 701px) {
     .login-modern-shell { padding-top: 68px; padding-bottom: 22px; }
     .login-modern-card { padding-top: 24px; padding-bottom: 22px; }
     .login-modern-logo-wrap { margin-bottom: 10px; }
-    .login-modern-logo { width: 130px; }
+    .login-modern-logo {
+    background: transparent; width: 130px; }
     .login-modern-subtitle { margin-bottom: 18px; }
     .login-field { margin-bottom: 14px; }
     .login-submit { margin-top: 18px; }
