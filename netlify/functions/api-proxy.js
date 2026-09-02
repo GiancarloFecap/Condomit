@@ -1173,14 +1173,28 @@ async function handleDashboardFinancialSummary(event, query) {
 
   let subscriptionExpense = 0;
   let subscriptionCount = 0;
-  for (const payment of Array.isArray(paymentsResult.data) ? paymentsResult.data : []) {
-    if (String(payment?.status_pagamento || '').trim().toLowerCase() !== 'aprovado') continue;
-    const referenceDate = payment?.data_pagamento || payment?.created_at;
-    if (monthKeyFromDateLike(referenceDate) !== month) continue;
-    const amount = Number(payment?.valor_pago || 0);
-    if (!Number.isFinite(amount)) continue;
-    subscriptionExpense += amount;
-    subscriptionCount += 1;
+  const [monthYear, monthNumber] = month.split('-').map(Number);
+  const monthStart = new Date(Date.UTC(monthYear, monthNumber - 1, 1, 3, 0, 0));
+  const nextMonthStart = new Date(Date.UTC(monthYear, monthNumber, 1, 3, 0, 0));
+  const applicablePayments = (Array.isArray(paymentsResult.data) ? paymentsResult.data : [])
+    .filter((payment) => String(payment?.status_pagamento || '').trim().toLowerCase() === 'aprovado')
+    .map((payment) => {
+      const referenceDate = payment?.data_pagamento || payment?.created_at;
+      const paidAt = referenceDate ? new Date(referenceDate) : null;
+      if (!paidAt || Number.isNaN(paidAt.getTime())) return null;
+      const validUntil = new Date(paidAt.getTime());
+      validUntil.setUTCMonth(validUntil.getUTCMonth() + 1);
+      const amount = Number(payment?.valor_pago || 0);
+      if (!Number.isFinite(amount) || amount <= 0) return null;
+      return { payment, paidAt, validUntil, amount };
+    })
+    .filter(Boolean)
+    .filter((item) => item.paidAt < nextMonthStart && item.validUntil > monthStart)
+    .sort((a, b) => b.paidAt.getTime() - a.paidAt.getTime());
+
+  if (applicablePayments.length) {
+    subscriptionExpense = applicablePayments[0].amount;
+    subscriptionCount = 1;
   }
 
   const expensesTotal = ledgerExpenses + subscriptionExpense;

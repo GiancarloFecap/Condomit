@@ -16,7 +16,8 @@
         comments: [],
         transcripts: [],
         condominium: null,
-        signature: null
+        signature: null,
+        commentProfiles: new Map()
     };
 
     document.addEventListener('DOMContentLoaded', init);
@@ -117,7 +118,24 @@
         state.options = pollIds.length
             ? await fetchRows(`/assembly_poll_options?select=*&poll_id=in.(${pollIds.join(',')})&order=display_order.asc`)
             : [];
-        await loadPollResults();
+        await Promise.all([loadPollResults(), loadCommentProfiles()]);
+    }
+
+    async function loadCommentProfiles() {
+        state.commentProfiles = new Map();
+        try {
+            const rows = await window.supabaseFetch('/rpc/condomit_assembly_comment_profiles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_assembly_id: state.id })
+            });
+            (Array.isArray(rows) ? rows : []).forEach((profile) => {
+                const email = String(profile?.email || '').trim().toLowerCase();
+                if (email) state.commentProfiles.set(email, profile);
+            });
+        } catch (error) {
+            console.warn('Fotos dos autores dos comentários indisponíveis:', error);
+        }
     }
 
     async function loadPollResults() {
@@ -514,7 +532,16 @@
         const container = document.getElementById('assemblyPostComments');
         if (!container) return;
         container.innerHTML = state.comments.length
-            ? state.comments.map((comment) => `<article class="comment-card"><div class="comment-head"><strong>${esc(comment.participant_name || comment.user_email || 'Usuário')}</strong><time>${formatDateTime(comment.created_at)}</time></div><p>${esc(comment.comment || '')}</p></article>`).join('')
+            ? state.comments.map((comment) => {
+                const email = String(comment.user_email || '').trim().toLowerCase();
+                const profile = state.commentProfiles.get(email) || {};
+                const author = profile.name || comment.participant_name || comment.user_email || 'Usuário';
+                const photo = String(profile.profile_photo || '').trim();
+                const avatar = photo
+                    ? `<img src="${esc(photo)}" alt="Foto de ${esc(author)}" loading="lazy">`
+                    : `<span>${esc(initials(author))}</span>`;
+                return `<article class="comment-card"><div class="comment-head"><div class="comment-author"><div class="comment-avatar">${avatar}</div><strong>${esc(author)}</strong></div><time>${formatDateTime(comment.created_at)}</time></div><p>${esc(comment.comment || '')}</p></article>`;
+            }).join('')
             : '<div class="summary-empty">Nenhum comentário publicado.</div>';
     }
 
@@ -550,6 +577,13 @@
                 const saved = Array.isArray(rows) ? rows[0] : rows;
                 if (!saved) throw new Error('O comentário não foi confirmado pelo banco.');
                 state.comments.push(saved);
+                if (email) {
+                    state.commentProfiles.set(email, {
+                        email,
+                        name: state.user?.name || email,
+                        profile_photo: state.user?.profilePhoto || state.user?.profile_photo || null
+                    });
+                }
                 if (textarea) textarea.value = '';
                 renderComments();
                 renderMinutes();
@@ -604,6 +638,22 @@
         window.print();
         window.setTimeout(cleanup, 1200);
     }
+
+    async function logout() {
+        if (typeof window.performFullLogout === 'function') {
+            await window.performFullLogout();
+            return;
+        }
+        try { await window.supabase?.auth?.signOut?.(); } catch (_) {}
+        try {
+            sessionStorage.clear();
+            localStorage.removeItem('condominiumPersistentUser');
+            localStorage.removeItem('condominiumPersistentSession');
+        } catch (_) {}
+        window.location.href = '../inicio.html';
+    }
+
+    window.logout = logout;
 
     async function generateAssemblyDecisionTasks() {
         if (currentUserRole() !== 'sindico') return;
