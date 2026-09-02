@@ -406,9 +406,11 @@ function openConfigSection(sectionKey) {
         case 'encomendas':
         case 'lembretes-reserva':
         case 'confirmacao-cancelamento':
-        case 'reserva-area-comum':
         case 'politica-privacidade':
             openPrivacyPolicyModal();
+            break;
+        case 'reserva-area-comum':
+            openReservationManagementModal();
             break;
         case 'termos-uso':
             openTermsOfUseModal();
@@ -423,9 +425,11 @@ function openConfigSection(sectionKey) {
             openAboutCompanyModal();
             break;
         case 'consentimentos':
+            window.showToast(`Funcionalidade ainda não implementada: ${sectionKey.replace(/-/g, ' ')}`, 'info');
+            break;
         case 'versao-app':
         case 'novas-atualizacoes':
-            window.showToast(`Funcionalidade ainda não implementada: ${sectionKey.replace(/-/g, ' ')}`, 'info');
+            openAppVersionModal();
             break;
         case 'minhas-reservas':
             openReservationsModal();
@@ -878,7 +882,6 @@ function ensureCondominiumModal() {
     if (!modal || modal.dataset.bound === 'true') return modal;
 
     document.getElementById('condominioModalClose')?.addEventListener('click', closeCondominiumInfoModal);
-    document.getElementById('condominioModalAction')?.addEventListener('click', closeCondominiumInfoModal);
     modal.addEventListener('click', (event) => {
         if (event.target === modal) closeCondominiumInfoModal();
     });
@@ -1137,6 +1140,15 @@ async function fetchCurrentCondominiumInfo() {
 
     if (typeof window.supabaseFetch === 'function') {
         try {
+            const result036 = await window.supabaseFetch('/rpc/condomit_get_condominium_settings_036', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+            });
+            const info036 = Array.isArray(result036) ? result036[0] : result036;
+            if (info036 && typeof info036 === 'object') return { ...localCondo, ...info036 };
+        } catch (error) {
+            console.warn('RPC 036 de condomínio indisponível, usando compatibilidade:', error?.message || error);
+        }
+        try {
             const result = await window.supabaseFetch('/rpc/condomit_current_condominium_info', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1226,22 +1238,38 @@ function mergeCondominiumManagerInfo(condominium, manager) {
 function renderCondominiumInfoModal(condominium) {
     const body = document.getElementById('condominioModalBody');
     if (!body) return;
+    window.__condomitCurrentCondominiumInfo = condominium || {};
 
     const managerName = condominium?.manager_name || condominium?.syndic_name || cfgT('not_informed');
-    const managerContact = condominium?.contact_phone || condominium?.phone || cfgT('not_informed');
+    const managerContact = condominium?.contact_phone || condominium?.phone || condominium?.condominium_phone || cfgT('not_informed');
+    const logo = String(condominium?.logo_url || condominium?.logoUrl || '').trim();
+    const fullAddress = [condominium?.address || condominium?.logradouro, condominium?.address_number]
+        .filter(Boolean).join(', ') || cfgT('not_informed');
 
     const items = [
         [cfgT('condo_name'), condominium?.condominium_name || condominium?.name || cfgT('not_informed')],
         [cfgT('condo_identifier'), condominium?.cep || condominium?.condominium_id || condominium?.condominiumId || cfgT('not_informed')],
-        [cfgT('condo_address'), condominium?.address || condominium?.logradouro || cfgT('not_informed')],
+        [cfgT('condo_address'), fullAddress],
+        ['Bairro', condominium?.neighborhood || cfgT('not_informed')],
         [cfgT('condo_city_state'), buildCityStateLabel(condominium)],
-        [cfgT('condo_block'), condominium?.block || cfgT('not_informed')],
-        [cfgT('condo_apartment'), condominium?.apartment || cfgT('not_informed')],
-        [cfgT('condo_manager'), managerName],
-        [cfgT('condo_contact'), managerContact]
+        ['Total de apartamentos', condominium?.total_apartments ?? condominium?.totalApartments ?? cfgT('not_informed')],
+        ['Total de blocos', condominium?.total_blocks ?? condominium?.totalBlocks ?? cfgT('not_informed')],
+        ['E-mail do condomínio', condominium?.condominium_email || cfgT('not_informed')],
+        ['Telefone do condomínio', condominium?.condominium_phone || managerContact],
+        [cfgT('condo_manager'), managerName]
     ];
 
     body.innerHTML = `
+        <div class="condominio-profile-head">
+            <div class="condominio-logo-preview ${logo ? 'has-logo' : ''}">
+                <img src="${logo ? escapeReservationHtml(logo) : '../assets/logo-lado.png'}" alt="Logo do condomínio" onerror="this.onerror=null;this.src='../assets/logo-lado.png'">
+            </div>
+            <div>
+                <span>Identidade do condomínio</span>
+                <h4>${escapeReservationHtml(condominium?.condominium_name || condominium?.name || 'Condomínio')}</h4>
+                <p>${escapeReservationHtml(condominium?.cep || '')}</p>
+            </div>
+        </div>
         <div class="condominio-info-grid">
             ${items.map(([label, value]) => `
                 <article class="condominio-info-item">
@@ -1251,6 +1279,17 @@ function renderCondominiumInfoModal(condominium) {
             `).join('')}
         </div>
     `;
+
+    const action = document.getElementById('condominioModalAction');
+    const user = getCurrentUser();
+    const isSindico = String(user?.type || user?.user_type || '').toLowerCase().startsWith('sind');
+    if (action) {
+        action.hidden = !isSindico;
+        action.textContent = 'Editar informações';
+    }
+    const secondary = document.getElementById('condominioModalSecondary');
+    if (secondary) { secondary.textContent = 'Fechar'; secondary.onclick = closeCondominiumInfoModal; }
+    if (action) action.onclick = openCondominiumEditMode;
 }
 
 function buildCityStateLabel(condominium) {
@@ -1259,6 +1298,320 @@ function buildCityStateLabel(condominium) {
     const label = [city, state].filter(Boolean).join(' / ');
     return label || cfgT('not_informed');
 }
+
+
+
+// ============================================================
+// 0.56.0 - Gestão de reservas/espaços, edição do condomínio e versão
+// ============================================================
+const CONDOMIT_APP_VERSION = '0.56.0';
+let reservationManagementState = { reservations: [], spaces: [], selected: new Set(), isSindico: false };
+
+async function condomitRpc056(name, payload = {}) {
+    if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase indisponível.');
+    return window.supabaseFetch(`/rpc/${name}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+}
+
+function ensureReservationManagementModal() {
+    let modal = document.getElementById('reservationManagementModal056');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'reservationManagementModal056';
+    modal.className = 'reservas-modal-overlay config-management-overlay';
+    modal.innerHTML = `
+        <section class="reservas-modal-card reservation-management-card" role="dialog" aria-modal="true" aria-labelledby="reservationManagementTitle056">
+            <header class="reservas-modal-header">
+                <div><h3 id="reservationManagementTitle056">Reservas e áreas comuns</h3><p>Consulte a agenda do condomínio e os espaços disponíveis.</p></div>
+                <button class="reservas-modal-close" id="reservationManagementClose056" type="button" aria-label="Fechar"><i class="fas fa-times"></i></button>
+            </header>
+            <div class="reservation-management-tabs">
+                <button type="button" class="management-tab active" data-management-tab="reservations"><i class="far fa-calendar-check"></i> Reservas</button>
+                <button type="button" class="management-tab" data-management-tab="spaces"><i class="fas fa-door-open"></i> Espaços</button>
+            </div>
+            <div class="reservas-modal-body reservation-management-body" id="reservationManagementBody056"></div>
+            <footer class="reservas-modal-footer reservation-management-footer" id="reservationManagementFooter056"></footer>
+        </section>`;
+    document.body.appendChild(modal);
+    modal.querySelector('#reservationManagementClose056')?.addEventListener('click', closeReservationManagementModal);
+    modal.addEventListener('click', (event) => { if (event.target === modal) closeReservationManagementModal(); });
+    modal.querySelectorAll('[data-management-tab]').forEach((button) => button.addEventListener('click', () => {
+        modal.querySelectorAll('[data-management-tab]').forEach((item) => item.classList.toggle('active', item === button));
+        renderReservationManagementTab(button.dataset.managementTab);
+    }));
+    return modal;
+}
+
+async function openReservationManagementModal() {
+    const modal = ensureReservationManagementModal();
+    const body = modal.querySelector('#reservationManagementBody056');
+    const user = getCurrentUser();
+    reservationManagementState.isSindico = String(user?.type || user?.user_type || '').toLowerCase().startsWith('sind');
+    reservationManagementState.selected = new Set();
+    body.innerHTML = '<div class="reservas-empty-state"><i class="fas fa-spinner fa-spin"></i><p>Carregando reservas e espaços...</p></div>';
+    modal.classList.add('open');
+    try {
+        const [reservationsResult, condoResult] = await Promise.all([
+            condomitRpc056('condomit_list_condominium_reservations_036'),
+            condomitRpc056('condomit_get_condominium_settings_036')
+        ]);
+        reservationManagementState.reservations = Array.isArray(reservationsResult) ? reservationsResult : [];
+        const condo = Array.isArray(condoResult) ? condoResult[0] : condoResult;
+        reservationManagementState.spaces = Array.isArray(condo?.condominium_spaces) ? condo.condominium_spaces : [];
+        renderReservationManagementTab('reservations');
+    } catch (error) {
+        body.innerHTML = `<div class="reservas-empty-state"><i class="fas fa-circle-exclamation"></i><p>${escapeReservationHtml(error?.message || 'Não foi possível carregar as informações.')}</p></div>`;
+    }
+}
+
+function closeReservationManagementModal() {
+    document.getElementById('reservationManagementModal056')?.classList.remove('open');
+}
+
+function renderReservationManagementTab(tab) {
+    const modal = ensureReservationManagementModal();
+    const body = modal.querySelector('#reservationManagementBody056');
+    const footer = modal.querySelector('#reservationManagementFooter056');
+    if (!body || !footer) return;
+    modal.querySelectorAll('[data-management-tab]').forEach((item) => item.classList.toggle('active', item.dataset.managementTab === tab));
+    if (tab === 'spaces') {
+        renderManagedSpaces056(body, footer);
+        return;
+    }
+    renderCondominiumReservations056(body, footer);
+}
+
+function renderCondominiumReservations056(body, footer) {
+    const rows = reservationManagementState.reservations;
+    footer.innerHTML = '<button type="button" class="btn-edit-profile btn-secondary-config" onclick="closeReservationManagementModal()">Fechar</button>';
+    if (!rows.length) {
+        body.innerHTML = '<div class="reservas-empty-state"><i class="far fa-calendar-xmark"></i><h4>Nenhuma reserva registrada</h4><p>As próximas reservas do condomínio aparecerão aqui.</p></div>';
+        return;
+    }
+    body.innerHTML = `<div class="config-reservation-list">${rows.map((row) => `
+        <article class="config-reservation-card">
+            <div class="config-reservation-icon"><i class="far fa-calendar-check"></i></div>
+            <div class="config-reservation-main">
+                <strong>${escapeReservationHtml(row.nome_local || 'Área comum')}</strong>
+                <span>${escapeReservationHtml(formatReservationDate(row.data_reserva))} · ${escapeReservationHtml(formatReservationTime(row.horario_inicio))}–${escapeReservationHtml(formatReservationTime(row.horario_fim))}</span>
+                <small>Reservado por ${escapeReservationHtml(row.resident_name || 'Morador')}</small>
+            </div>
+            <span class="config-reservation-status">${escapeReservationHtml(getReservationStatusLabel(row.status))}</span>
+        </article>`).join('')}</div>`;
+}
+
+function renderManagedSpaces056(body, footer) {
+    const spaces = reservationManagementState.spaces;
+    if (!spaces.length) {
+        body.innerHTML = '<div class="reservas-empty-state"><i class="fas fa-door-open"></i><h4>Nenhum espaço cadastrado</h4><p>O síndico pode cadastrar salão, churrasqueira, quadra e outras áreas comuns.</p></div>';
+    } else {
+        body.innerHTML = `<div class="managed-space-grid">${spaces.map((space, index) => {
+            const selected = reservationManagementState.selected.has(index);
+            return `<button type="button" class="managed-space-card ${selected ? 'selected' : ''}" data-managed-space-index="${index}" ${reservationManagementState.isSindico ? '' : 'disabled'}>
+                ${reservationManagementState.isSindico ? `<span class="managed-space-check"><i class="fas fa-check"></i></span>` : ''}
+                <span class="managed-space-icon"><i class="fas fa-building-circle-check"></i></span>
+                <strong>${escapeReservationHtml(space?.name || 'Espaço')}</strong>
+                <small>${space?.capacity ? `Capacidade: ${Number(space.capacity)} pessoas` : 'Capacidade não informada'}</small>
+                <p>${escapeReservationHtml(space?.description || 'Sem descrição adicional.')}</p>
+            </button>`;
+        }).join('')}</div>`;
+        body.querySelectorAll('[data-managed-space-index]').forEach((card) => card.addEventListener('click', () => {
+            if (!reservationManagementState.isSindico) return;
+            const index = Number(card.dataset.managedSpaceIndex);
+            if (reservationManagementState.selected.has(index)) reservationManagementState.selected.delete(index);
+            else reservationManagementState.selected.add(index);
+            renderManagedSpaces056(body, footer);
+        }));
+    }
+    renderManagedSpacesFooter056(footer);
+}
+
+function renderManagedSpacesFooter056(footer) {
+    const count = reservationManagementState.selected.size;
+    if (!reservationManagementState.isSindico) {
+        footer.innerHTML = '<button type="button" class="btn-edit-profile btn-secondary-config" onclick="closeReservationManagementModal()">Fechar</button>';
+        return;
+    }
+    if (count === 1) {
+        footer.innerHTML = `
+            <button type="button" class="btn-edit-profile btn-secondary-config" onclick="openSpaceEditor056()"><i class="fas fa-pen"></i> Editar</button>
+            <button type="button" class="btn-config-danger" onclick="removeSelectedSpaces056()"><i class="fas fa-trash"></i> Remover</button>`;
+    } else if (count > 1) {
+        footer.innerHTML = `<button type="button" class="btn-config-danger" onclick="removeSelectedSpaces056()"><i class="fas fa-trash"></i> Excluir ${count} espaços</button>`;
+    } else {
+        footer.innerHTML = `
+            <button type="button" class="btn-edit-profile btn-secondary-config" onclick="closeReservationManagementModal()">Fechar</button>
+            <button type="button" class="btn-edit-profile" onclick="openSpaceEditor056(null)"><i class="fas fa-plus"></i> Adicionar espaço</button>`;
+    }
+}
+
+function openSpaceEditor056(index = undefined) {
+    if (index === undefined && reservationManagementState.selected.size === 1) index = [...reservationManagementState.selected][0];
+    const current = Number.isInteger(index) ? reservationManagementState.spaces[index] : null;
+    const body = document.getElementById('reservationManagementBody056');
+    const footer = document.getElementById('reservationManagementFooter056');
+    if (!body || !footer) return;
+    body.innerHTML = `<form class="space-editor-form" id="spaceEditorForm056">
+        <label><span>Nome do espaço</span><input id="spaceName056" maxlength="120" required value="${escapeReservationHtml(current?.name || '')}" placeholder="Ex.: Salão de festas"></label>
+        <label><span>Capacidade de pessoas</span><input id="spaceCapacity056" type="number" min="1" value="${current?.capacity ? Number(current.capacity) : ''}" placeholder="Ex.: 50"></label>
+        <label class="full"><span>Descrição</span><textarea id="spaceDescription056" maxlength="500" rows="4" placeholder="Regras ou detalhes do espaço">${escapeReservationHtml(current?.description || '')}</textarea></label>
+    </form>`;
+    footer.innerHTML = `
+        <button type="button" class="btn-edit-profile btn-secondary-config" onclick="renderReservationManagementTab('spaces')">Cancelar</button>
+        <button type="button" class="btn-edit-profile" onclick="saveSpaceEditor056(${Number.isInteger(index) ? index : 'null'})"><i class="fas fa-check"></i> Salvar espaço</button>`;
+}
+
+async function saveSpaceEditor056(index) {
+    const name = String(document.getElementById('spaceName056')?.value || '').trim();
+    const capacityRaw = String(document.getElementById('spaceCapacity056')?.value || '').trim();
+    const description = String(document.getElementById('spaceDescription056')?.value || '').trim();
+    if (!name) return window.showToast?.('Informe o nome do espaço.', 'warning');
+    const next = reservationManagementState.spaces.map((item) => ({ ...item }));
+    const record = { name, capacity: capacityRaw ? Number(capacityRaw) : null, description };
+    if (Number.isInteger(index)) next[index] = record; else next.push(record);
+    try {
+        const saved = await condomitRpc056('condomit_set_condominium_spaces_036', { target_spaces: next });
+        reservationManagementState.spaces = Array.isArray(saved) ? saved : next;
+        reservationManagementState.selected = new Set();
+        renderReservationManagementTab('spaces');
+        window.showToast?.(Number.isInteger(index) ? 'Espaço atualizado.' : 'Espaço adicionado.', 'success');
+    } catch (error) { window.showToast?.(error?.message || 'Não foi possível salvar o espaço.', 'error'); }
+}
+
+function removeSelectedSpaces056() {
+    const selected = [...reservationManagementState.selected];
+    if (!selected.length) return;
+    const execute = async () => {
+        const next = reservationManagementState.spaces.filter((_, index) => !reservationManagementState.selected.has(index));
+        try {
+            const saved = await condomitRpc056('condomit_set_condominium_spaces_036', { target_spaces: next });
+            reservationManagementState.spaces = Array.isArray(saved) ? saved : next;
+            reservationManagementState.selected = new Set();
+            renderReservationManagementTab('spaces');
+            window.showToast?.('Espaço(s) removido(s) com sucesso.', 'success');
+        } catch (error) { window.showToast?.(error?.message || 'Não foi possível remover os espaços.', 'error'); }
+    };
+    if (typeof window.showModal === 'function') window.showModal({ title: 'Excluir espaço(s)', message: `Deseja excluir ${selected.length} espaço(s) selecionado(s)? As reservas já registradas serão preservadas no histórico.`, type: 'warning', confirmText: 'Excluir', cancelText: 'Cancelar', onConfirm: execute });
+    else if (window.confirm('Excluir os espaços selecionados?')) execute();
+}
+
+function openCondominiumEditMode() {
+    const condominium = window.__condomitCurrentCondominiumInfo || {};
+    const body = document.getElementById('condominioModalBody');
+    if (!body) return;
+    const action = document.getElementById('condominioModalAction');
+    const secondary = document.getElementById('condominioModalSecondary');
+    const logo = String(condominium.logo_url || condominium.logoUrl || '').trim();
+    body.innerHTML = `<form class="condominium-edit-form" id="condominiumEditForm056">
+        <div class="condo-logo-editor full">
+            <div class="condominio-logo-preview"><img id="condoEditLogoPreview056" src="${logo ? escapeReservationHtml(logo) : '../assets/logo-lado.png'}" alt="Logo do condomínio"></div>
+            <label class="condo-logo-upload"><i class="fas fa-image"></i><span>Alterar foto do condomínio</span><input id="condoEditLogo056" type="file" accept="image/png,image/jpeg" hidden></label>
+        </div>
+        <label><span>Nome do condomínio</span><input id="condoEditName056" value="${escapeReservationHtml(condominium.condominium_name || condominium.name || '')}" required></label>
+        <label><span>CEP</span><input value="${escapeReservationHtml(condominium.cep || '')}" disabled></label>
+        <label><span>Endereço</span><input id="condoEditAddress056" value="${escapeReservationHtml(condominium.address || '')}"></label>
+        <label><span>Número</span><input id="condoEditNumber056" value="${escapeReservationHtml(condominium.address_number || '')}"></label>
+        <label><span>Complemento</span><input id="condoEditComplement056" value="${escapeReservationHtml(condominium.complement || '')}"></label>
+        <label><span>Bairro</span><input id="condoEditNeighborhood056" value="${escapeReservationHtml(condominium.neighborhood || '')}"></label>
+        <label><span>Cidade</span><input id="condoEditCity056" value="${escapeReservationHtml(condominium.city || '')}"></label>
+        <label><span>Estado</span><input id="condoEditState056" maxlength="2" value="${escapeReservationHtml(condominium.state || '')}"></label>
+        <label><span>Total de apartamentos</span><input id="condoEditApartments056" type="number" min="1" value="${Number(condominium.total_apartments || condominium.totalApartments || 1)}"></label>
+        <label><span>Total de blocos</span><input id="condoEditBlocks056" type="number" min="0" value="${Number(condominium.total_blocks || condominium.totalBlocks || 0)}"></label>
+        <label><span>CNPJ</span><input id="condoEditCnpj056" value="${escapeReservationHtml(condominium.cnpj || '')}"></label>
+        <label><span>Inscrição municipal</span><input id="condoEditRegistration056" value="${escapeReservationHtml(condominium.municipal_registration || '')}"></label>
+        <label><span>E-mail</span><input id="condoEditEmail056" type="email" value="${escapeReservationHtml(condominium.condominium_email || '')}"></label>
+        <label><span>Telefone</span><input id="condoEditPhone056" value="${escapeReservationHtml(condominium.condominium_phone || '')}"></label>
+    </form>`;
+    body.querySelector('#condoEditLogo056')?.addEventListener('change', (event) => {
+        const file = event.target.files?.[0]; if (!file) return;
+        if (!['image/png','image/jpeg'].includes(file.type) || file.size > 2*1024*1024) { event.target.value=''; return window.showToast?.('Use PNG ou JPG com até 2 MB.', 'warning'); }
+        const reader = new FileReader(); reader.onload = () => { const img = document.getElementById('condoEditLogoPreview056'); if (img) img.src = reader.result; }; reader.readAsDataURL(file);
+    });
+    if (secondary) { secondary.textContent = 'Cancelar'; secondary.onclick = () => renderCondominiumInfoModal(condominium); }
+    if (action) { action.hidden = false; action.textContent = 'Salvar alterações'; action.onclick = saveCondominiumEdit056; }
+}
+
+async function uploadCondominiumLogo056(file) {
+    if (!file) return { url: window.__condomitCurrentCondominiumInfo?.logo_url || '', path: window.__condomitCurrentCondominiumInfo?.logo_storage_path || '' };
+    const client = window.supabase; if (!client?.auth || !client?.storage) throw new Error('Supabase não inicializado.');
+    const { data, error } = await client.auth.getUser(); if (error || !data?.user?.id) throw new Error('Sua sessão expirou.');
+    const ext = file.type === 'image/png' ? 'png' : 'jpg';
+    const path = `${data.user.id}/condominio-logo-${Date.now()}.${ext}`;
+    const { error: uploadError } = await client.storage.from('condomit-condominium-logos').upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+    if (uploadError) throw new Error(uploadError.message);
+    const { data: publicData } = client.storage.from('condomit-condominium-logos').getPublicUrl(path);
+    return { url: publicData?.publicUrl || '', path };
+}
+
+async function saveCondominiumEdit056() {
+    const action = document.getElementById('condominioModalAction');
+    const logoFile = document.getElementById('condoEditLogo056')?.files?.[0] || null;
+    if (action) action.disabled = true;
+    try {
+        const logo = await uploadCondominiumLogo056(logoFile);
+        const result = await condomitRpc056('condomit_update_current_condominium_036', {
+            target_name: document.getElementById('condoEditName056')?.value || '',
+            target_address: document.getElementById('condoEditAddress056')?.value || '',
+            target_address_number: document.getElementById('condoEditNumber056')?.value || '',
+            target_complement: document.getElementById('condoEditComplement056')?.value || '',
+            target_neighborhood: document.getElementById('condoEditNeighborhood056')?.value || '',
+            target_city: document.getElementById('condoEditCity056')?.value || '',
+            target_state: document.getElementById('condoEditState056')?.value || '',
+            target_total_apartments: Number(document.getElementById('condoEditApartments056')?.value || 0),
+            target_total_blocks: Number(document.getElementById('condoEditBlocks056')?.value || 0),
+            target_cnpj: document.getElementById('condoEditCnpj056')?.value || '',
+            target_municipal_registration: document.getElementById('condoEditRegistration056')?.value || '',
+            target_email: document.getElementById('condoEditEmail056')?.value || '',
+            target_phone: document.getElementById('condoEditPhone056')?.value || '',
+            target_logo_url: logo.url,
+            target_logo_storage_path: logo.path
+        });
+        const updated = Array.isArray(result) ? result[0] : result;
+        window.__condomitCurrentCondominiumInfo = updated || {};
+        const user = getCurrentUser();
+        if (user) {
+            user.condominium = { ...(user.condominium || {}), ...(updated || {}), name: updated?.condominium_name || user.condominium?.name, logoUrl: updated?.logo_url || '', totalApartments: updated?.total_apartments ?? user.condominium?.totalApartments, totalBlocks: updated?.total_blocks ?? user.condominium?.totalBlocks };
+            setCurrentUser(user);
+        }
+        document.querySelectorAll('.sidebar-logo').forEach((img) => { img.src = updated?.logo_url || '../assets/logo-lado.png'; });
+        renderCondominiumInfoModal(updated || {});
+        window.showToast?.('Informações do condomínio atualizadas.', 'success');
+    } catch (error) { window.showToast?.(error?.message || 'Não foi possível atualizar o condomínio.', 'error'); }
+    finally { if (action) action.disabled = false; }
+}
+
+function ensureAppVersionModal() {
+    let modal = document.getElementById('appVersionModal056');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'appVersionModal056';
+    modal.className = 'reservas-modal-overlay';
+    modal.innerHTML = `<section class="reservas-modal-card app-version-card" role="dialog" aria-modal="true">
+        <header class="reservas-modal-header"><div><h3>Novidades da Condomit</h3><p>Versão atual e principais mudanças recentes.</p></div><button class="reservas-modal-close" type="button" aria-label="Fechar"><i class="fas fa-times"></i></button></header>
+        <div class="reservas-modal-body">
+            <div class="current-version-banner"><span>Versão instalada</span><strong>v${CONDOMIT_APP_VERSION}</strong><small>Você está usando a versão mais recente incluída neste projeto.</small></div>
+            <div class="release-history">
+                ${[
+                    ['0.56.0','Configurações mais completas','Gestão de reservas e espaços, edição das informações e foto do condomínio e histórico de versões.'],
+                    ['0.55.0','Cadastro e acesso mais confortáveis','Nova seleção de perfil, nova tela de entrar e melhorias nos campos de cadastro e senha.'],
+                    ['0.53.0','Notificações e segurança','Preferências de notificações, notificações do dispositivo, sessões e melhorias na assinatura das atas.'],
+                    ['0.52.0','Assembleias mais interativas','Comentários com respostas, curtidas e descurtidas, além da assinatura desenhada da ata.'],
+                    ['0.51.0','Ata e financeiro','Correções de assembleias, fotos nos comentários e inclusão da assinatura do plano nas despesas.']
+                ].map(([version,title,copy]) => `<article class="release-item"><span>v${version}</span><div><strong>${title}</strong><p>${copy}</p></div></article>`).join('')}
+            </div>
+        </div>
+        <footer class="reservas-modal-footer"><button type="button" class="btn-edit-profile">Fechar</button></footer>
+    </section>`;
+    document.body.appendChild(modal);
+    const close = () => modal.classList.remove('open');
+    modal.querySelector('.reservas-modal-close')?.addEventListener('click', close);
+    modal.querySelector('.reservas-modal-footer button')?.addEventListener('click', close);
+    modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
+    return modal;
+}
+
+function openAppVersionModal() { ensureAppVersionModal().classList.add('open'); }
 
 const translations = {
     pt: {
@@ -1305,7 +1658,7 @@ const translations = {
         language_label: 'Idioma',
         about: 'Sobre',
         about_company: 'Sobre a empresa',
-        app_version: 'Versão do app: 1.0.0',
+        app_version: 'Versão do app: 0.56.0',
         updates: 'Verifique novas atualizações',
         footer_condo: '© 2026 Condomit.',
         footer_rights: 'Todos os direitos reservados',
@@ -1395,7 +1748,7 @@ const translations = {
         language_label: 'Language',
         about: 'About',
         about_company: 'About the Company',
-        app_version: 'App version: 1.0.0',
+        app_version: 'App version: 0.56.0',
         updates: 'Check for updates',
         footer_condo: '© 2026 Condomit.',
         footer_rights: 'All rights reserved',
@@ -1638,7 +1991,7 @@ function updateDeviceNotificationStatus() {
     }
     if (Notification.permission === 'granted') {
         status.className = 'device-notification-status success';
-        status.hidden = true; status.innerHTML = '';
+        status.innerHTML = '<i class="fas fa-bell"></i><span>Notificações do dispositivo ativadas.</span>';
     } else if (Notification.permission === 'denied') {
         status.className = 'device-notification-status warning';
         status.innerHTML = '<i class="fas fa-bell-slash"></i><span>Notificações do dispositivo bloqueadas pelo navegador. As atualizações continuam na Central de Notificações.</span>';

@@ -560,3 +560,9 @@ html[data-theme="dark"] .sort-filter-wrap{background:#111827;border-color:#33415
 html[data-theme="dark"] .sort-filter-wrap select{color:#e2e8f0!important}
 @media(max-width:900px){.lost-found-filter-actions{justify-content:stretch}.status-filter-group{width:100%;overflow-x:auto;justify-content:flex-start}.sort-filter-wrap{flex:1}.sort-filter-wrap select{width:100%;min-width:0!important}}
 @media(max-width:620px){.sort-filter-wrap,.lost-found-filter-actions>.compact-btn{width:100%}.lost-found-filter-actions>.compact-btn{justify-content:center}}
+
+/* 0.56.0 - filtros compactos sem barra de pesquisa */
+.lost-found-main>.toolbar{display:flex;justify-content:flex-end;align-items:center;grid-template-columns:none;padding:12px 14px}
+.lost-found-main>.toolbar .lost-found-filter-actions{width:100%;justify-content:space-between}
+.status-filter-group{flex:1;max-width:max-content}
+@media(max-width:900px){.lost-found-main>.toolbar .lost-found-filter-actions{justify-content:flex-start}}

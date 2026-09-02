@@ -1947,3 +1947,92 @@ html[data-theme="dark"] .device-notification-status.success{background:#052e2b;c
 html[data-theme="dark"] .device-notification-status.warning{background:#422006;color:#fbbf24}
 html[data-theme="dark"] .device-notification-status.error{background:#450a0a;color:#fca5a5}
 @media(max-width:560px){.notification-preference-row{align-items:flex-start}.notification-switch{margin-top:4px}.notification-preference-copy small{font-size:.78rem}}
+
+/* ============================================================
+   0.56.0 - Configurações: contraste, condomínio e reservas
+============================================================ */
+html[data-theme="dark"] .privacy-session-action-icon{
+    background:#5b1018;
+    color:#fecaca;
+    border:1px solid #991b1b;
+    box-shadow:0 0 0 1px rgba(248,113,113,.08),0 5px 14px rgba(0,0,0,.2);
+}
+html[data-theme="dark"] .privacy-session-action-icon i{color:#fecaca!important}
+html[data-theme="dark"] .privacy-session-action>i{color:#cbd5e1}
+
+.condominio-modal-actions{justify-content:flex-end;gap:10px}
+.btn-secondary-config{background:var(--card-bg,#fff)!important;color:var(--text-primary,#1f2937)!important;border:1px solid var(--border-color,#dbe2f0)!important}
+.btn-config-danger{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 15px;border-radius:12px;border:1px solid #fecaca;background:#fff1f2;color:#b91c1c;font-weight:800;cursor:pointer}
+.btn-config-danger:hover{background:#ffe4e6;border-color:#fda4af}
+
+.condominio-profile-head{display:flex;align-items:center;gap:16px;padding:4px 0 18px;margin-bottom:18px;border-bottom:1px solid var(--border-color,#e5e7eb)}
+.condominio-profile-head>div:last-child{min-width:0}
+.condominio-profile-head span{display:block;color:var(--text-secondary,#64748b);font-size:.78rem;font-weight:750;text-transform:uppercase;letter-spacing:.05em}
+.condominio-profile-head h4{margin:4px 0 2px;color:var(--text-primary,#1f2937);font-size:1.15rem;overflow-wrap:anywhere}
+.condominio-profile-head p{margin:0;color:var(--text-secondary,#64748b);font-size:.88rem}
+.condominio-logo-preview{width:82px;height:82px;flex:0 0 82px;border-radius:18px;display:grid;place-items:center;overflow:hidden;background:#f8fafc;border:1px solid var(--border-color,#dbe2f0)}
+.condominio-logo-preview img{width:100%;height:100%;object-fit:contain;padding:9px;background:#fff}
+
+.condominium-edit-form,.space-editor-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.condominium-edit-form label,.space-editor-form label{display:grid;gap:7px;color:var(--text-primary,#1f2937);font-size:.84rem;font-weight:750}
+.condominium-edit-form label.full,.space-editor-form label.full,.condo-logo-editor.full{grid-column:1/-1}
+.condominium-edit-form input,.space-editor-form input,.space-editor-form textarea{width:100%;border:1px solid var(--border-color,#dbe2f0);border-radius:12px;background:var(--card-bg,#fff);color:var(--text-primary,#1f2937);padding:11px 12px;font:inherit;min-height:44px}
+.condominium-edit-form input:focus,.space-editor-form input:focus,.space-editor-form textarea:focus{outline:0;border-color:#2252BD;box-shadow:0 0 0 3px rgba(34,82,189,.1)}
+.condo-logo-editor{display:flex;align-items:center;gap:16px;padding:14px;border:1px solid var(--border-color,#dbe2f0);border-radius:16px;background:var(--surface-soft,#f8fafc)}
+.condo-logo-upload{display:inline-flex!important;align-items:center;justify-content:center;gap:9px;padding:11px 14px;border-radius:12px;border:1px solid #c9d8f4;background:#eef4ff;color:#2252BD!important;cursor:pointer;font-weight:800!important}
+
+.reservation-management-card{width:min(960px,calc(100vw - 32px));max-height:min(88vh,820px)}
+.reservation-management-tabs{display:flex;gap:8px;padding:12px 22px;border-bottom:1px solid var(--border-color,#e5e7eb);background:var(--surface-soft,#f8fafc)}
+.management-tab{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border:1px solid transparent;border-radius:11px;background:transparent;color:var(--text-secondary,#64748b);font-weight:800;cursor:pointer}
+.management-tab.active{background:#fff;border-color:#dbe2f0;color:#2252BD;box-shadow:0 4px 12px rgba(15,23,42,.06)}
+.reservation-management-body{overflow:auto}
+.config-reservation-list{display:grid;gap:10px}
+.config-reservation-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:14px;border:1px solid var(--border-color,#e5e7eb);border-radius:15px;background:var(--card-bg,#fff)}
+.config-reservation-icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#eef4ff;color:#2252BD}
+.config-reservation-main{display:grid;gap:3px;min-width:0}
+.config-reservation-main strong{color:var(--text-primary,#1f2937)}
+.config-reservation-main span,.config-reservation-main small{color:var(--text-secondary,#64748b)}
+.config-reservation-status{padding:6px 9px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:.76rem;font-weight:800}
+.managed-space-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.managed-space-card{position:relative;display:grid;text-align:left;gap:6px;padding:16px;border:1px solid var(--border-color,#dbe2f0);border-radius:16px;background:var(--card-bg,#fff);color:var(--text-primary,#1f2937);cursor:pointer}
+.managed-space-card:disabled{cursor:default;opacity:1}
+.managed-space-card.selected{border-color:#2252BD;box-shadow:0 0 0 3px rgba(34,82,189,.09)}
+.managed-space-icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#eef4ff;color:#2252BD;margin-bottom:3px}
+.managed-space-card small,.managed-space-card p{margin:0;color:var(--text-secondary,#64748b);font-size:.83rem;line-height:1.4}
+.managed-space-check{position:absolute;top:12px;right:12px;width:24px;height:24px;border:1px solid #cbd5e1;border-radius:8px;display:grid;place-items:center;color:transparent;background:#fff}
+.managed-space-card.selected .managed-space-check{background:#2252BD;border-color:#2252BD;color:#fff}
+.reservation-management-footer{min-height:68px;gap:10px;justify-content:flex-end}
+
+.current-version-banner{padding:18px;border-radius:16px;background:linear-gradient(135deg,#eef4ff,#f8fbff);border:1px solid #d7e3f8;display:grid;gap:4px;margin-bottom:16px}
+.current-version-banner span{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;font-weight:800}
+.current-version-banner strong{font-size:1.7rem;color:#2252BD}
+.current-version-banner small{color:#64748b}
+.release-history{display:grid;gap:10px}
+.release-item{display:grid;grid-template-columns:72px 1fr;gap:12px;padding:13px 0;border-bottom:1px solid var(--border-color,#e5e7eb)}
+.release-item:last-child{border-bottom:0}
+.release-item>span{display:inline-flex;height:30px;align-items:center;justify-content:center;border-radius:9px;background:#eef4ff;color:#2252BD;font-size:.8rem;font-weight:850}
+.release-item strong{display:block;color:var(--text-primary,#1f2937);margin-bottom:3px}
+.release-item p{margin:0;color:var(--text-secondary,#64748b);line-height:1.45;font-size:.86rem}
+
+html[data-theme="dark"] .btn-secondary-config{background:#162235!important;border-color:#334155!important;color:#f8fafc!important}
+html[data-theme="dark"] .btn-config-danger{background:#450a0a;border-color:#7f1d1d;color:#fecaca}
+html[data-theme="dark"] .condominio-logo-preview{background:#162235;border-color:#334155}
+html[data-theme="dark"] .condominium-edit-form input,html[data-theme="dark"] .space-editor-form input,html[data-theme="dark"] .space-editor-form textarea{background:#0f172a;border-color:#334155;color:#f8fafc}
+html[data-theme="dark"] .condo-logo-editor{background:#101826;border-color:#334155}
+html[data-theme="dark"] .condo-logo-upload{background:#172554;border-color:#1e40af;color:#bfdbfe!important}
+html[data-theme="dark"] .reservation-management-tabs{background:#101826;border-color:#334155}
+html[data-theme="dark"] .management-tab.active{background:#162235;border-color:#334155;color:#bfdbfe}
+html[data-theme="dark"] .config-reservation-card,html[data-theme="dark"] .managed-space-card{background:#101826;border-color:#334155}
+html[data-theme="dark"] .config-reservation-icon,html[data-theme="dark"] .managed-space-icon{background:#172554;color:#bfdbfe}
+html[data-theme="dark"] .managed-space-check{background:#0f172a;border-color:#475569}
+html[data-theme="dark"] .current-version-banner{background:linear-gradient(135deg,#172554,#101826);border-color:#1e40af}
+html[data-theme="dark"] .current-version-banner strong,html[data-theme="dark"] .release-item>span{color:#bfdbfe}
+html[data-theme="dark"] .release-item>span{background:#172554}
+
+@media(max-width:720px){
+ .condominium-edit-form,.space-editor-form,.managed-space-grid{grid-template-columns:1fr}
+ .config-reservation-card{grid-template-columns:auto 1fr}.config-reservation-status{grid-column:2;justify-self:start}
+ .condo-logo-editor{align-items:flex-start;flex-direction:column}
+ .reservation-management-tabs{overflow-x:auto}
+ .reservation-management-footer>*{flex:1 1 100%}
+}

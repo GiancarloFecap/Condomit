@@ -3,18 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <script src="../scripts/theme-manager.js?v=056"></script>
     <title>Condomit - Configurações</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
-    <link rel="stylesheet" href="../styles/configuracoes.css?v=053">
+    <link rel="stylesheet" href="../styles/configuracoes.css?v=056">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
     <link rel="stylesheet" href="../styles/profile-photo-editor.css?v=015">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=053">
-    <link rel="stylesheet" href="../styles/dark-mode-global.css?v=056">
 </head>
 <body class="condomit-app-page">
     <div class="dashboard-sindico">
@@ -251,8 +249,7 @@
                     <!-- Notificações -->
                     <div class="config-card notification-settings-card">
                         <h3>Notificações</h3>
-                        <p class="notification-settings-hint">Escolha quais atualizações podem gerar notificações no seu dispositivo. Todas continuam disponíveis na Central de Notificações.</p>
-                        <div class="notification-preference-row" data-notification-preference="counterpart_messages">
+                                                <div class="notification-preference-row" data-notification-preference="counterpart_messages">
                             <div class="notification-preference-copy">
                                 <i class="fas fa-comments"></i>
                                 <div>
@@ -317,7 +314,7 @@
                         </div>
                         <div class="form-group" onclick="openConfigSection('reserva-area-comum')">
                             <i class="fas fa-door-closed"></i>
-                            <span>Reserva da área comum</span>
+                            <span>Reservas e espaços das áreas comuns</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -413,7 +410,7 @@
                         </div>
                         <div class="form-group" onclick="openConfigSection('versao-app')">
                             <i class="fas fa-info-circle"></i>
-                            <span>Versão do app: 1.0.0</span>
+                            <span>Versão do app: 0.56.0</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
                         <div class="form-group" onclick="openConfigSection('novas-atualizacoes')">
@@ -440,7 +437,7 @@
     <script src="../scripts/sidebar-links.js?v=043"></script>
     <script src="../scripts/visitor-registration.js"></script>
     <script src="../scripts/two-factor.js?v=016"></script>
-    <script src="../scripts/configuracoes.js?v=053"></script>
+    <script src="../scripts/configuracoes.js?v=056"></script>
     <script src="../scripts/config-access-012.js?v=038"></script>
     <script src="../scripts/profile-photo-editor.js?v=015"></script>
 
@@ -484,8 +481,9 @@
                     <p>Carregando informações do condomínio...</p>
                 </div>
             </div>
-            <div class="reservas-modal-footer">
-                <button type="button" class="btn-edit-profile" id="condominioModalAction">Fechar</button>
+            <div class="reservas-modal-footer condominio-modal-actions">
+                <button type="button" class="btn-edit-profile btn-secondary-config" id="condominioModalSecondary">Fechar</button>
+                <button type="button" class="btn-edit-profile" id="condominioModalAction" hidden>Editar informações</button>
             </div>
         </div>
     </div>
