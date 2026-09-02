@@ -20,6 +20,13 @@
   status = 200
   force = true
 
+
+[[redirects]]
+  from = "/api/assembly/transcribe"
+  to = "/.netlify/functions/assembly-transcribe"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api-proxy/api/:splat"

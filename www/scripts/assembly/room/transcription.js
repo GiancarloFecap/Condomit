@@ -1,4 +1,4 @@
-import { state } from './state.js?v=059';
+import { state } from './state.js?v=060';
 
 let recognition = null;
 let shouldRun = false;
@@ -7,12 +7,23 @@ let recognitionStarting = false;
 let restartTimer = null;
 let watchdogTimer = null;
 let restartAttempts = 0;
+let browserFailureCount = 0;
+let browserEmptyEndCount = 0;
+let browserHadResultThisSession = false;
 let lastSavedText = '';
 let lastSavedAt = 0;
 let lastInterimText = '';
 let speechStartedAt = 0;
 let speechSavePromise = Promise.resolve();
-let permanentFailure = '';
+let localSpeaking = false;
+
+let serverFallbackActive = false;
+let serverFallbackUnavailable = false;
+let serverRecorder = null;
+let serverRecorderTrack = null;
+let serverRecorderTimer = null;
+let serverChunks = [];
+let serverUploadQueue = Promise.resolve();
 
 function isMobileSpeechDevice() {
   const ua = String(navigator.userAgent || '');
@@ -52,12 +63,37 @@ function localIdentity() {
   ).trim();
 }
 
+async function resolveAccessToken() {
+  try {
+    if (typeof window.resolveSupabaseAccessToken === 'function') {
+      const token = await window.resolveSupabaseAccessToken();
+      if (token) return token;
+    }
+  } catch (_) {}
+
+  try {
+    const { data } = await window.supabase?.auth?.getSession?.();
+    if (data?.session?.access_token) return data.session.access_token;
+  } catch (_) {}
+
+  try {
+    const direct = sessionStorage.getItem('sb-access-token') || localStorage.getItem('sb-access-token');
+    if (direct) return direct;
+    const raw = sessionStorage.getItem('sb-session') || localStorage.getItem('sb-session');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return parsed?.access_token || parsed?.session?.access_token || null;
+    }
+  } catch (_) {}
+  return null;
+}
+
 async function saveFinalTranscript(text, source = 'web_speech') {
   const normalized = String(text || '').replace(/\s+/g, ' ').trim();
   if (!normalized) return;
 
   const now = Date.now();
-  if (normalized === lastSavedText && now - lastSavedAt < 7000) return;
+  if (normalized === lastSavedText && now - lastSavedAt < 10000) return;
   lastSavedText = normalized;
   lastSavedAt = now;
 
@@ -73,7 +109,14 @@ async function saveFinalTranscript(text, source = 'web_speech') {
         participant_identity_value: localIdentity() || null
       })
     });
-    setStatus('active', source === 'livekit' ? 'Transcrição recebida' : 'Transcrição ativa');
+
+    if (source === 'server') {
+      setStatus('active', 'Transcrição automática ativa', 'A fala foi transcrita pelo serviço de fallback da Condomit.');
+    } else if (source === 'livekit') {
+      setStatus('active', 'Transcrição recebida');
+    } else {
+      setStatus('active', 'Transcrição ativa');
+    }
   } catch (error) {
     console.warn('[ASSEMBLY TRANSCRIPTION] Não foi possível salvar a fala:', error);
     setStatus('error', 'Falha ao salvar transcrição', error?.message || '');
@@ -106,6 +149,223 @@ function queueSpeechActivity(startedAt, endedAt) {
     });
 }
 
+function getLocalMicrophoneTrack() {
+  const participant = state.room?.localParticipant;
+  if (!participant) return null;
+
+  try {
+    const direct = participant.getTrackPublication?.('microphone');
+    const track = direct?.track?.mediaStreamTrack;
+    if (track?.readyState === 'live') return track;
+  } catch (_) {}
+
+  try {
+    const publications = participant.audioTrackPublications;
+    const values = publications?.values ? Array.from(publications.values()) : [];
+    const publication = values.find((item) => String(item?.source || '').toLowerCase().includes('microphone')) || values[0];
+    const track = publication?.track?.mediaStreamTrack;
+    if (track?.readyState === 'live') return track;
+  } catch (_) {}
+
+  return null;
+}
+
+function chooseRecorderMimeType() {
+  if (!window.MediaRecorder) return '';
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4'
+  ];
+  return candidates.find((type) => {
+    try { return MediaRecorder.isTypeSupported?.(type); } catch (_) { return false; }
+  }) || '';
+}
+
+function blobToBase64(blob) {
+  return blob.arrayBuffer().then((buffer) => {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, Math.min(index + chunkSize, bytes.length)));
+    }
+    return btoa(binary);
+  });
+}
+
+async function sendAudioForServerTranscription(blob, mimeType) {
+  if (!blob?.size || blob.size < 700 || serverFallbackUnavailable) return;
+
+  setStatus('starting', 'Transcrevendo fala...', 'Processando o trecho de áudio da assembleia.');
+
+  try {
+    const token = await resolveAccessToken();
+    if (!token) throw new Error('Sessão de autenticação indisponível.');
+
+    const audioBase64 = await blobToBase64(blob);
+    const response = await fetch('/api/assembly/transcribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        assembly_id: Number(state.assemblyId),
+        participant_identity: localIdentity() || null,
+        mime_type: mimeType || blob.type || 'audio/webm',
+        audio_base64: audioBase64
+      })
+    });
+
+    const raw = await response.text();
+    let payload = null;
+    try { payload = raw ? JSON.parse(raw) : null; } catch (_) { payload = { error: raw }; }
+
+    if (!response.ok) {
+      if (payload?.code === 'TRANSCRIPTION_NOT_CONFIGURED') {
+        serverFallbackUnavailable = true;
+        serverFallbackActive = false;
+        setStatus(
+          'unsupported',
+          'Falas registradas sem transcrição textual',
+          'O navegador não forneceu reconhecimento de voz e a transcrição de servidor ainda não foi configurada.'
+        );
+        return;
+      }
+      throw new Error(payload?.error || `Falha na transcrição (${response.status}).`);
+    }
+
+    const text = String(payload?.text || '').replace(/\s+/g, ' ').trim();
+    if (text) await saveFinalTranscript(text, 'server');
+    else if (serverFallbackActive) setStatus('active', 'Transcrição automática ativa', 'Aguardando a próxima fala.');
+  } catch (error) {
+    console.warn('[ASSEMBLY TRANSCRIPTION] Fallback de servidor:', error);
+    if (serverFallbackActive && !serverFallbackUnavailable) {
+      setStatus('waiting', 'Transcrição automática aguardando', error?.message || 'Falha temporária ao processar áudio.');
+    }
+  }
+}
+
+function cleanupServerRecorderTrack() {
+  if (serverRecorderTimer) {
+    clearTimeout(serverRecorderTimer);
+    serverRecorderTimer = null;
+  }
+  try { serverRecorderTrack?.stop?.(); } catch (_) {}
+  serverRecorderTrack = null;
+}
+
+function startServerAudioSegment() {
+  if (!serverFallbackActive || serverFallbackUnavailable || !shouldRun || !microphoneEnabled() || !localSpeaking) return;
+  if (!window.MediaRecorder || serverRecorder?.state === 'recording') return;
+
+  const sourceTrack = getLocalMicrophoneTrack();
+  if (!sourceTrack) {
+    setStatus('waiting', 'Preparando transcrição...', 'Aguardando a faixa de microfone da chamada.');
+    return;
+  }
+
+  try {
+    serverRecorderTrack = sourceTrack.clone();
+    const stream = new MediaStream([serverRecorderTrack]);
+    const mimeType = chooseRecorderMimeType();
+    serverChunks = [];
+    serverRecorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
+
+    serverRecorder.ondataavailable = (event) => {
+      if (event.data?.size) serverChunks.push(event.data);
+    };
+
+    serverRecorder.onerror = (event) => {
+      console.warn('[ASSEMBLY TRANSCRIPTION] MediaRecorder:', event?.error || event);
+      cleanupServerRecorderTrack();
+      serverRecorder = null;
+      serverChunks = [];
+    };
+
+    serverRecorder.onstop = () => {
+      const recorderMime = serverRecorder?.mimeType || mimeType || 'audio/webm';
+      const chunks = serverChunks.slice();
+      cleanupServerRecorderTrack();
+      serverRecorder = null;
+      serverChunks = [];
+
+      if (chunks.length) {
+        const blob = new Blob(chunks, { type: recorderMime });
+        serverUploadQueue = serverUploadQueue
+          .catch(() => {})
+          .then(() => sendAudioForServerTranscription(blob, recorderMime));
+      }
+
+      if (serverFallbackActive && localSpeaking && shouldRun && microphoneEnabled()) {
+        window.setTimeout(startServerAudioSegment, 80);
+      }
+    };
+
+    serverRecorder.start();
+    setStatus('active', 'Transcrição automática ativa', 'A Condomit está ouvindo apenas enquanto você fala.');
+
+    // Segmentos independentes evitam arquivos enormes e permitem transcrição
+    // progressiva mesmo em falas longas.
+    serverRecorderTimer = window.setTimeout(() => {
+      try {
+        if (serverRecorder?.state === 'recording') serverRecorder.stop();
+      } catch (_) {}
+    }, 15000);
+  } catch (error) {
+    cleanupServerRecorderTrack();
+    serverRecorder = null;
+    serverChunks = [];
+    console.warn('[ASSEMBLY TRANSCRIPTION] Não foi possível iniciar fallback de áudio:', error);
+    setStatus('waiting', 'Preparando transcrição...', error?.message || 'Falha ao acessar faixa de áudio.');
+  }
+}
+
+function stopServerAudioSegment() {
+  if (serverRecorderTimer) {
+    clearTimeout(serverRecorderTimer);
+    serverRecorderTimer = null;
+  }
+  try {
+    if (serverRecorder?.state === 'recording') {
+      serverRecorder.stop();
+      return;
+    }
+  } catch (_) {}
+  cleanupServerRecorderTrack();
+  serverRecorder = null;
+  serverChunks = [];
+}
+
+function activateServerFallback(reason = 'reconhecimento do navegador indisponível') {
+  if (serverFallbackUnavailable || !shouldRun || !microphoneEnabled()) return false;
+
+  clearRestartTimer();
+  serverFallbackActive = true;
+  recognitionStarting = false;
+  recognitionRunning = false;
+  try { recognition?.abort?.(); } catch (_) {}
+
+  if (!window.MediaRecorder) {
+    serverFallbackUnavailable = true;
+    serverFallbackActive = false;
+    setStatus(
+      'unsupported',
+      'Falas registradas sem transcrição textual',
+      'Este navegador não oferece reconhecimento de voz nem gravação de áudio compatível para o fallback.'
+    );
+    return false;
+  }
+
+  setStatus('active', 'Transcrição automática ativa', `Fallback ativado: ${reason}.`);
+  if (localSpeaking) startServerAudioSegment();
+  return true;
+}
+
 function syncSpeechActivityFromIdentities(identities) {
   const ownIdentity = localIdentity();
   if (!ownIdentity) return;
@@ -113,13 +373,20 @@ function syncSpeechActivityFromIdentities(identities) {
 
   if (speaking && !speechStartedAt) {
     speechStartedAt = Date.now();
-    return;
   }
 
   if (!speaking && speechStartedAt) {
     const start = speechStartedAt;
     speechStartedAt = 0;
     queueSpeechActivity(start, Date.now());
+  }
+
+  if (speaking !== localSpeaking) {
+    localSpeaking = speaking;
+    if (serverFallbackActive) {
+      if (speaking) startServerAudioSegment();
+      else stopServerAudioSegment();
+    }
   }
 }
 
@@ -130,6 +397,7 @@ export async function flushAssemblySpeechActivity() {
     queueSpeechActivity(start, Date.now());
   }
   try { await speechSavePromise; } catch (_) {}
+  try { await serverUploadQueue; } catch (_) {}
 }
 
 function clearRestartTimer() {
@@ -139,12 +407,18 @@ function clearRestartTimer() {
   }
 }
 
-function scheduleRecognitionRestart(reason = 'reinício automático', delay = null) {
-  if (!shouldRun || permanentFailure || !microphoneEnabled()) return;
+function scheduleRecognitionRestart(reason = 'nova tentativa', delay = null) {
+  if (!shouldRun || serverFallbackActive || !microphoneEnabled()) return;
   clearRestartTimer();
-  const baseDelay = delay ?? Math.min(5000, 350 + (restartAttempts * 450));
+
+  if (browserFailureCount >= 2 || browserEmptyEndCount >= 3) {
+    activateServerFallback(reason);
+    return;
+  }
+
+  const baseDelay = delay ?? Math.min(3500, 450 + (restartAttempts * 450));
   restartAttempts += 1;
-  setStatus('starting', 'Reconectando transcrição...', reason);
+  setStatus('starting', 'Preparando transcrição...', reason);
   restartTimer = window.setTimeout(() => {
     restartTimer = null;
     attemptRecognitionStart(reason);
@@ -154,8 +428,6 @@ function scheduleRecognitionRestart(reason = 'reinício automático', delay = nu
 function commitLastInterimIfUseful() {
   const partial = String(lastInterimText || '').replace(/\s+/g, ' ').trim();
   lastInterimText = '';
-  // Se o serviço encerrou antes de marcar o resultado como final, preservamos
-  // somente uma hipótese textual minimamente útil que ele próprio já retornou.
   if (partial.length >= 3) saveFinalTranscript(partial, 'web_speech');
 }
 
@@ -165,8 +437,6 @@ function createRecognition() {
 
   const instance = new Recognition();
   instance.lang = 'pt-BR';
-  // O modo contínuo é mais confiável em navegadores Chromium desktop. No
-  // celular, reiniciamos a sessão a cada encerramento para evitar travamentos.
   instance.continuous = !isMobileSpeechDevice();
   instance.interimResults = true;
   instance.maxAlternatives = 1;
@@ -174,21 +444,22 @@ function createRecognition() {
   instance.onstart = () => {
     recognitionStarting = false;
     recognitionRunning = true;
+    browserHadResultThisSession = false;
     restartAttempts = 0;
-    permanentFailure = '';
     setStatus('active', 'Transcrição ativa');
   };
 
-  instance.onspeechstart = () => {
-    setStatus('active', 'Transcrevendo...');
-  };
-
+  instance.onspeechstart = () => setStatus('active', 'Transcrevendo...');
   instance.onspeechend = () => {
-    if (shouldRun && microphoneEnabled()) setStatus('waiting', 'Aguardando fala');
+    if (shouldRun && microphoneEnabled() && !serverFallbackActive) setStatus('waiting', 'Aguardando fala');
   };
 
   instance.onresult = (event) => {
+    browserHadResultThisSession = true;
+    browserFailureCount = 0;
+    browserEmptyEndCount = 0;
     let interim = '';
+
     for (let index = event.resultIndex; index < event.results.length; index += 1) {
       const result = event.results[index];
       const text = String(result?.[0]?.transcript || '').trim();
@@ -200,6 +471,7 @@ function createRecognition() {
         interim += `${text} `;
       }
     }
+
     if (interim.trim()) {
       lastInterimText = interim.trim();
       setStatus('active', 'Transcrevendo...');
@@ -210,20 +482,11 @@ function createRecognition() {
     recognitionStarting = false;
     const code = String(event?.error || 'unknown');
 
-    if (['not-allowed', 'service-not-allowed'].includes(code)) {
-      permanentFailure = code;
-      shouldRun = false;
-      setStatus(
-        'error',
-        'Transcrição sem permissão',
-        'Permita o uso do microfone/reconhecimento de voz no navegador e recarregue a sala.'
-      );
-      return;
-    }
+    if (serverFallbackActive) return;
 
-    if (code === 'audio-capture') {
-      setStatus('error', 'Microfone indisponível para transcrição', 'Verifique se outro aplicativo está usando o microfone.');
-      scheduleRecognitionRestart('falha de captura de áudio', 1500);
+    if (['not-allowed', 'service-not-allowed', 'audio-capture'].includes(code)) {
+      browserFailureCount = 2;
+      activateServerFallback(`reconhecimento do navegador: ${code}`);
       return;
     }
 
@@ -233,18 +496,26 @@ function createRecognition() {
     }
 
     if (code === 'network') {
-      setStatus('waiting', 'Reconectando transcrição...', 'O reconhecimento de voz do navegador depende de um serviço de rede.');
-      scheduleRecognitionRestart('falha temporária de rede', 1800);
+      browserFailureCount += 1;
+      if (browserFailureCount >= 2) {
+        activateServerFallback('serviço de reconhecimento do navegador indisponível');
+      } else {
+        scheduleRecognitionRestart('primeira falha do reconhecimento do navegador', 900);
+      }
       return;
     }
 
     if (code === 'aborted') {
-      if (shouldRun && microphoneEnabled()) scheduleRecognitionRestart('reconhecimento interrompido', 500);
+      if (shouldRun && microphoneEnabled() && !serverFallbackActive) {
+        scheduleRecognitionRestart('reconhecimento interrompido', 500);
+      }
       return;
     }
 
+    browserFailureCount += 1;
     console.warn('[ASSEMBLY TRANSCRIPTION] SpeechRecognition:', code, event);
-    setStatus('waiting', 'Reconectando transcrição...', `Erro do navegador: ${code}`);
+    if (browserFailureCount >= 2) activateServerFallback(`erro do navegador: ${code}`);
+    else scheduleRecognitionRestart(`erro do navegador: ${code}`, 900);
   };
 
   instance.onend = () => {
@@ -252,17 +523,24 @@ function createRecognition() {
     recognitionRunning = false;
     commitLastInterimIfUseful();
 
+    if (serverFallbackActive) return;
     if (!shouldRun) {
       setStatus('paused', 'Transcrição pausada');
       return;
     }
-
     if (!microphoneEnabled()) {
       setStatus('paused', 'Transcrição aguardando microfone');
       return;
     }
 
-    if (permanentFailure) return;
+    if (!browserHadResultThisSession) browserEmptyEndCount += 1;
+    else browserEmptyEndCount = 0;
+
+    if (browserEmptyEndCount >= 3) {
+      activateServerFallback('o navegador encerrou repetidamente a transcrição sem produzir texto');
+      return;
+    }
+
     scheduleRecognitionRestart('sessão de reconhecimento encerrada pelo navegador');
   };
 
@@ -270,35 +548,33 @@ function createRecognition() {
 }
 
 function attemptRecognitionStart(reason = 'inicialização') {
-  if (!shouldRun || permanentFailure || !microphoneEnabled()) return false;
+  if (!shouldRun || serverFallbackActive || !microphoneEnabled()) return false;
+
   const Recognition = getRecognitionClass();
-  if (!Recognition) {
-    setStatus(
-      'unsupported',
-      'Falas registradas sem transcrição textual',
-      'Este navegador não disponibiliza a API de reconhecimento de voz. Use uma versão atual do Chrome ou Edge para transcrição textual automática.'
-    );
-    return false;
-  }
+  if (!Recognition) return activateServerFallback('API de reconhecimento de voz não disponível');
 
   if (!recognition) recognition = createRecognition();
-  if (!recognition || recognitionRunning || recognitionStarting) return Boolean(recognitionRunning || recognitionStarting);
+  if (!recognition || recognitionRunning || recognitionStarting) {
+    return Boolean(recognitionRunning || recognitionStarting);
+  }
 
   recognitionStarting = true;
+  browserHadResultThisSession = false;
   setStatus('starting', 'Ativando transcrição...', reason);
+
   try {
     recognition.start();
     return true;
   } catch (error) {
     recognitionStarting = false;
     if (error?.name === 'InvalidStateError') {
-      // A implementação Chromium pode estar terminando uma sessão anterior.
       scheduleRecognitionRestart('aguardando o navegador liberar o reconhecimento', 650);
       return true;
     }
+    browserFailureCount += 1;
     console.warn('[ASSEMBLY TRANSCRIPTION] Não foi possível iniciar:', error);
-    setStatus('waiting', 'Reconectando transcrição...', error?.message || 'Falha ao iniciar reconhecimento');
-    scheduleRecognitionRestart('falha ao iniciar reconhecimento', 1200);
+    if (browserFailureCount >= 2) return activateServerFallback(error?.message || 'falha ao iniciar reconhecimento');
+    scheduleRecognitionRestart('falha ao iniciar reconhecimento', 1000);
     return false;
   }
 }
@@ -309,16 +585,21 @@ function ensureWatchdog() {
     if (!state.connected) return;
 
     if (!microphoneEnabled()) {
-      if (shouldRun) {
-        shouldRun = false;
-        try { recognition?.stop(); } catch (_) {}
-      }
+      shouldRun = false;
+      try { recognition?.abort?.(); } catch (_) {}
+      stopServerAudioSegment();
       setStatus('paused', 'Transcrição aguardando microfone');
       return;
     }
 
-    if (!permanentFailure) shouldRun = true;
-    if (shouldRun && !recognitionRunning && !recognitionStarting && !restartTimer) {
+    shouldRun = true;
+
+    if (serverFallbackActive) {
+      if (localSpeaking && !serverRecorder) startServerAudioSegment();
+      return;
+    }
+
+    if (!recognitionRunning && !recognitionStarting && !restartTimer) {
       attemptRecognitionStart('verificação automática');
     }
   }, 2500);
@@ -333,8 +614,12 @@ export function startAssemblyTranscription() {
     return false;
   }
 
-  permanentFailure = '';
   shouldRun = true;
+  if (serverFallbackActive) {
+    setStatus('active', 'Transcrição automática ativa');
+    if (localSpeaking) startServerAudioSegment();
+    return true;
+  }
   return attemptRecognitionStart('microfone ativo');
 }
 
@@ -342,7 +627,9 @@ export async function stopAssemblyTranscription() {
   shouldRun = false;
   clearRestartTimer();
   recognitionStarting = false;
-  try { recognition?.stop(); } catch (_) {}
+  recognitionRunning = false;
+  try { recognition?.abort?.(); } catch (_) {}
+  stopServerAudioSegment();
   setStatus('paused', 'Transcrição pausada');
   await flushAssemblySpeechActivity();
 }
@@ -350,7 +637,6 @@ export async function stopAssemblyTranscription() {
 export function syncAssemblyTranscriptionWithMicrophone() {
   if (microphoneEnabled()) {
     shouldRun = true;
-    permanentFailure = '';
     startAssemblyTranscription();
   } else {
     flushAssemblySpeechActivity();
@@ -359,28 +645,33 @@ export function syncAssemblyTranscriptionWithMicrophone() {
 }
 
 function retryFromUserInteraction() {
-  if (!state.connected || !microphoneEnabled() || permanentFailure) return;
+  if (!state.connected || !microphoneEnabled()) return;
   shouldRun = true;
+  if (serverFallbackActive) {
+    if (localSpeaking) startServerAudioSegment();
+    return;
+  }
   if (!recognitionRunning && !recognitionStarting) attemptRecognitionStart('interação do usuário');
 }
 
-// Alguns navegadores Chromium exigem uma interação recente do usuário para
-// iniciar/reiniciar serviços de reconhecimento. Uma tentativa leve após a
-// primeira interação evita que a ata fique presa em "Transcrição pausada".
 ['pointerdown', 'keydown', 'touchstart'].forEach((eventName) => {
   window.addEventListener(eventName, retryFromUserInteraction, { passive: true });
 });
 
 window.addEventListener('focus', () => {
-  if (shouldRun && microphoneEnabled() && !recognitionRunning) scheduleRecognitionRestart('janela voltou ao foco', 150);
+  if (shouldRun && microphoneEnabled() && !serverFallbackActive && !recognitionRunning) {
+    scheduleRecognitionRestart('janela voltou ao foco', 150);
+  }
 });
 
 window.addEventListener('online', () => {
-  if (shouldRun && microphoneEnabled() && !recognitionRunning) scheduleRecognitionRestart('conexão restabelecida', 250);
+  if (shouldRun && microphoneEnabled() && !serverFallbackActive && !recognitionRunning) {
+    scheduleRecognitionRestart('conexão restabelecida', 250);
+  }
 });
 
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && shouldRun && microphoneEnabled() && !recognitionRunning) {
+  if (!document.hidden && shouldRun && microphoneEnabled() && !serverFallbackActive && !recognitionRunning) {
     scheduleRecognitionRestart('aba voltou a ficar visível', 200);
   }
 });
@@ -389,7 +680,6 @@ window.addEventListener('condomit:assembly-microphone-state', (event) => {
   const enabled = Boolean(event?.detail?.enabled);
   if (enabled) {
     shouldRun = true;
-    permanentFailure = '';
     startAssemblyTranscription();
   } else {
     flushAssemblySpeechActivity();
@@ -405,8 +695,17 @@ window.addEventListener('condomit:assembly-livekit-transcription', (event) => {
   const detail = event?.detail || {};
   const ownIdentity = localIdentity();
   if (detail.participantIdentity && ownIdentity && detail.participantIdentity !== ownIdentity) return;
+
   const segments = Array.isArray(detail.segments) ? detail.segments : [];
-  segments
-    .filter((segment) => segment?.final === true && String(segment?.text || '').trim())
-    .forEach((segment) => saveFinalTranscript(segment.text, 'livekit'));
+  const finalSegments = segments.filter((segment) => segment?.final === true && String(segment?.text || '').trim());
+  if (!finalSegments.length) return;
+
+  // Se o LiveKit já estiver fornecendo texto, ele tem prioridade e o fallback
+  // de áudio é interrompido para não gerar transcrições duplicadas.
+  if (serverFallbackActive) {
+    serverFallbackActive = false;
+    stopServerAudioSegment();
+  }
+
+  finalSegments.forEach((segment) => saveFinalTranscript(segment.text, 'livekit'));
 });
