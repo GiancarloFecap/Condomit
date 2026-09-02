@@ -17,7 +17,7 @@ const OPENAI_API_KEY = String(
   process.env.TRANSCRIPTION_OPENAI_API_KEY ||
   process.env.OPENAI_API_KEY ||
   ''
-).trim();
+).trim().replace(/^['\"]|['\"]$/g, '');
 
 const TRANSCRIPTION_MODEL = String(
   process.env.OPENAI_TRANSCRIPTION_MODEL ||
@@ -86,7 +86,7 @@ async function userBelongsToAssembly(admin, email, assembly) {
   const { data: links } = await admin
     .from('user_condominiums')
     .select('condominium_id')
-    .eq('user_email', email);
+    .ilike('user_email', email);
 
   if (Array.isArray(links) && links.some((row) => sameCep(row?.condominium_id, assembly.cep))) {
     return true;
@@ -95,7 +95,7 @@ async function userBelongsToAssembly(admin, email, assembly) {
   const { data: userRow } = await admin
     .from('users')
     .select('cep,condominium')
-    .eq('email', email)
+    .ilike('email', email)
     .maybeSingle();
 
   if (sameCep(userRow?.cep, assembly.cep)) return true;
@@ -121,6 +121,47 @@ function extensionFromMime(mime) {
   if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'mp3';
   if (normalized.includes('wav')) return 'wav';
   return 'webm';
+}
+
+function baseMimeType(mime) {
+  const normalized = String(mime || 'audio/webm').toLowerCase().split(';')[0].trim();
+  return /^audio\/(webm|ogg|mp4|mpeg|mp3|wav|x-wav|m4a)$/i.test(normalized)
+    ? normalized
+    : 'audio/webm';
+}
+
+function providerMessage(result, fallback = '') {
+  return String(
+    result?.error?.message ||
+    result?.message ||
+    result?.raw ||
+    fallback ||
+    ''
+  ).replace(/\s+/g, ' ').trim().slice(0, 700);
+}
+
+async function requestTranscription(audioBuffer, mimeType, assemblyId, model) {
+  const form = new FormData();
+  const uploadMime = baseMimeType(mimeType);
+  const ext = extensionFromMime(uploadMime);
+  const bytes = new Uint8Array(audioBuffer.buffer, audioBuffer.byteOffset, audioBuffer.byteLength);
+  form.append('file', new Blob([bytes], { type: uploadMime }), `assembleia-${assemblyId}.${ext}`);
+  form.append('model', model);
+  form.append('language', 'pt');
+  form.append('response_format', 'json');
+  form.append('temperature', '0');
+  form.append('prompt', 'Transcreva fielmente em português do Brasil uma fala de uma assembleia de condomínio. Preserve nomes próprios, números e termos administrativos. Não resuma e não invente conteúdo.');
+
+  const openaiResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+    body: form
+  });
+
+  const raw = await openaiResponse.text();
+  let result = null;
+  try { result = raw ? JSON.parse(raw) : null; } catch (_) { result = { raw }; }
+  return { response: openaiResponse, result };
 }
 
 exports.handler = async (event) => {
@@ -199,33 +240,55 @@ exports.handler = async (event) => {
   }
 
   try {
-    const form = new FormData();
-    const ext = extensionFromMime(mimeType);
-    form.append('file', new Blob([audioBuffer], { type: mimeType || 'audio/webm' }), `assembleia-${assemblyId}.${ext}`);
-    form.append('model', TRANSCRIPTION_MODEL);
-    form.append('language', 'pt');
-    form.append('prompt', 'Transcreva fielmente em português do Brasil uma fala de uma assembleia de condomínio. Preserve nomes próprios, números e termos administrativos. Não resuma e não invente conteúdo.');
+    let usedModel = TRANSCRIPTION_MODEL;
+    let attempt = await requestTranscription(audioBuffer, mimeType, assemblyId, usedModel);
+    let openaiResponse = attempt.response;
+    let result = attempt.result;
 
-    const openaiResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`
-      },
-      body: form
-    });
-
-    const raw = await openaiResponse.text();
-    let result = null;
-    try { result = raw ? JSON.parse(raw) : null; } catch (_) { result = { raw }; }
+    // Algumas contas podem não ter o modelo configurado na variável de ambiente
+    // ou podem receber uma resposta de modelo inválido. Whisper-1 funciona como
+    // fallback compatível com os mesmos formatos de arquivo aceitos aqui.
+    if (!openaiResponse.ok && !['whisper-1'].includes(usedModel)) {
+      const firstMessage = providerMessage(result).toLowerCase();
+      const modelOrRequestProblem = [400, 404].includes(openaiResponse.status)
+        || /model|unsupported|invalid.*model|not found/.test(firstMessage);
+      if (modelOrRequestProblem) {
+        usedModel = 'whisper-1';
+        attempt = await requestTranscription(audioBuffer, mimeType, assemblyId, usedModel);
+        openaiResponse = attempt.response;
+        result = attempt.result;
+      }
+    }
 
     if (!openaiResponse.ok) {
+      const detail = providerMessage(result, `OpenAI HTTP ${openaiResponse.status}`);
       console.error('[assembly-transcribe] OpenAI:', openaiResponse.status, result);
+
+      let code = 'TRANSCRIPTION_PROVIDER_ERROR';
+      let friendly = 'Não foi possível transcrever este trecho de áudio.';
+      if (openaiResponse.status === 401) {
+        code = 'TRANSCRIPTION_INVALID_KEY';
+        friendly = 'A chave OPENAI_API_KEY configurada na Netlify foi recusada.';
+      } else if (openaiResponse.status === 429) {
+        code = 'TRANSCRIPTION_QUOTA';
+        friendly = 'A API de transcrição está sem cota disponível ou atingiu o limite de uso.';
+      } else if (openaiResponse.status === 413) {
+        code = 'TRANSCRIPTION_AUDIO_TOO_LARGE';
+        friendly = 'O trecho de áudio ultrapassou o limite aceito pelo serviço de transcrição.';
+      } else if (openaiResponse.status === 400 && /audio|file|format|decode|corrupt/i.test(detail)) {
+        code = 'TRANSCRIPTION_AUDIO_INVALID';
+        friendly = 'O serviço não conseguiu interpretar o arquivo de áudio gerado pelo navegador.';
+      }
+
       return response(502, {
         ok: false,
-        code: 'TRANSCRIPTION_PROVIDER_ERROR',
-        error: 'Não foi possível transcrever este trecho de áudio.',
+        code,
+        error: friendly,
         provider_status: openaiResponse.status,
-        provider_error: String(result?.error?.message || '').slice(0, 500) || null
+        provider_error: detail || null,
+        model: usedModel,
+        audio_bytes: audioBuffer.length,
+        audio_mime: baseMimeType(mimeType)
       });
     }
 
@@ -238,7 +301,7 @@ exports.handler = async (event) => {
         const { data: profile } = await admin
           .from('users')
           .select('name,user_type')
-          .eq('email', email)
+          .ilike('email', email)
           .maybeSingle();
 
         const participantName = String(profile?.name || authUser.user_metadata?.name || email).trim() || email;
@@ -275,7 +338,7 @@ exports.handler = async (event) => {
       text,
       saved,
       save_error: saveError,
-      model: TRANSCRIPTION_MODEL
+      model: usedModel
     });
   } catch (error) {
     console.error('[assembly-transcribe] Falha:', error);
