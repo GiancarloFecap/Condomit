@@ -1,0 +1,273 @@
+/* ============================================================
+   Condomit v0.56 - modo escuro global + alternador de tema
+   Somente regras do tema escuro e do botão sol/lua.
+============================================================ */
+
+.theme-icon-toggle {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(34,82,189,.18);
+  border-radius: 50%;
+  background: rgba(255,255,255,.82);
+  color: #183B86;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(20,50,95,.10);
+  backdrop-filter: blur(14px);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease, border-color .18s ease;
+  z-index: 20;
+}
+.theme-icon-toggle svg { width: 20px; height: 20px; display: block; }
+.theme-icon-toggle:hover { transform: translateY(-1px); box-shadow: 0 11px 25px rgba(20,50,95,.15); }
+.theme-icon-toggle:focus-visible { outline: 3px solid rgba(59,130,246,.35); outline-offset: 2px; }
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0B1120;
+  --card-bg: #111827;
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-tertiary: #94A3B8;
+  --border-color: #2D3B50;
+  --surface-secondary: #162235;
+  --surface-elevated: #1E293B;
+  --input-bg: #0F172A;
+}
+html[data-theme="dark"] body { color: var(--text-primary, #F8FAFC); }
+html[data-theme="dark"] .theme-icon-toggle {
+  background: rgba(15,23,42,.88);
+  color: #F8FAFC;
+  border-color: rgba(148,163,184,.24);
+  box-shadow: 0 9px 24px rgba(0,0,0,.28);
+}
+html[data-theme="dark"] .theme-icon-toggle:hover { background: #1E293B; }
+
+/* Fallback global para páginas que ainda não tinham regras próprias. */
+html[data-theme="dark"] body:not(.login-modern-page):not(.type-user-page):not(.landing-page) {
+  background-color: #0B1120;
+}
+html[data-theme="dark"] :where(.modal-card,.modal-box,.dialog-card,.card-shell,.content-card,.settings-content-card,.form-card,.panel,.section-card) {
+  border-color: var(--border-color, #2D3B50);
+}
+html[data-theme="dark"] :where(input,select,textarea) {
+  background-color: var(--input-bg, #0F172A);
+  color: var(--text-primary, #F8FAFC);
+  border-color: var(--border-color, #2D3B50);
+}
+html[data-theme="dark"] :where(input,textarea)::placeholder { color: #8190A5; }
+html[data-theme="dark"] :where(option) { background: #111827; color: #F8FAFC; }
+
+/* ------------------------------------------------------------
+   Landing / inicio.html
+------------------------------------------------------------ */
+html[data-theme="dark"] body.landing-page { background: #080F1D; color: #E5ECF7; }
+html[data-theme="dark"] body.landing-page .hero-overlay {
+  background: linear-gradient(90deg, rgba(4,12,27,.92) 0%, rgba(7,24,54,.78) 48%, rgba(8,20,40,.68) 100%);
+}
+html[data-theme="dark"] body.landing-page .header {
+  background: rgba(8,17,34,.80);
+  border-color: rgba(148,163,184,.16);
+  box-shadow: 0 16px 40px rgba(0,0,0,.18);
+  backdrop-filter: blur(18px);
+}
+html[data-theme="dark"] body.landing-page .header-nav > a:not(.btn-login):not(.btn-signup) { color: #E2E8F0; }
+html[data-theme="dark"] body.landing-page .header-nav > a:not(.btn-login):not(.btn-signup):hover { color: #93C5FD; }
+html[data-theme="dark"] body.landing-page .landing-language-switcher {
+  background: rgba(15,23,42,.80);
+  border-color: #334155;
+  color: #E2E8F0;
+}
+html[data-theme="dark"] body.landing-page .landing-language-switcher select { background: transparent; color: #F8FAFC; border: 0; }
+html[data-theme="dark"] body.landing-page .landing-language-switcher option { background: #111827; color: #F8FAFC; }
+html[data-theme="dark"] body.landing-page :where(.sobre-section,.planos-section,.faq-section) { background: #0B1120; }
+html[data-theme="dark"] body.landing-page :where(.section-title,.section-title-center,.plano-name,.faq-question h3,.faq-content h3,.feature-card h4) { color: #F8FAFC; }
+html[data-theme="dark"] body.landing-page :where(.sobre-description,.planos-subtitle,.plano-features li,.faq-answer,.faq-content p) { color: #CBD5E1; }
+html[data-theme="dark"] body.landing-page :where(.feature-card,.plano-card,.faq-item,.stats-card) {
+  background: #111827;
+  border-color: #2D3B50;
+  box-shadow: 0 14px 36px rgba(0,0,0,.24);
+}
+html[data-theme="dark"] body.landing-page .plano-card.featured { background: #111A2C; border-color: #4265CB; }
+html[data-theme="dark"] body.landing-page .faq-item.active { background: #111827; }
+html[data-theme="dark"] body.landing-page .footer { background: #07101E; border-top: 1px solid #1E293B; }
+html[data-theme="dark"] body.landing-page .footer :where(h4,p,a) { color: #CBD5E1; }
+html[data-theme="dark"] body.landing-page .footer a:hover { color: #93C5FD; }
+
+/* ------------------------------------------------------------
+   Entrar
+------------------------------------------------------------ */
+html[data-theme="dark"] body.login-modern-page {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(34,82,189,.22), transparent 30rem),
+    radial-gradient(circle at 84% 18%, rgba(21,96,189,.16), transparent 31rem),
+    linear-gradient(180deg,#08101E 0%,#0B1424 100%);
+}
+html[data-theme="dark"] body.login-modern-page::before {
+  background: radial-gradient(circle at 50% 0%,rgba(37,99,235,.09),transparent 35rem), linear-gradient(145deg,rgba(51,65,85,.20),transparent 42%);
+}
+html[data-theme="dark"] .login-modern-card { background: rgba(15,23,42,.94); border-color: #334155; box-shadow: 0 28px 80px rgba(0,0,0,.38); }
+html[data-theme="dark"] .login-modern-card h1,
+html[data-theme="dark"] .login-field label { color: #F8FAFC; }
+html[data-theme="dark"] .login-modern-subtitle,
+html[data-theme="dark"] .login-signup,
+html[data-theme="dark"] .login-terms { color: #AAB8CC; }
+html[data-theme="dark"] .login-field input { background: #0B1322; border-color: #334155; color: #F8FAFC; }
+html[data-theme="dark"] .login-field input:focus { border-color: #6588DC; box-shadow: 0 0 0 4px rgba(34,82,189,.22); }
+html[data-theme="dark"] .login-back { background: rgba(15,23,42,.92); color: #BFDBFE; border-color: #334155; }
+html[data-theme="dark"] .login-divider { background: #334155; }
+html[data-theme="dark"] .login-password-toggle { color: #CBD5E1; }
+html[data-theme="dark"] .login-building { border-color: #5B82E0; }
+html[data-theme="dark"] .login-building::before,
+html[data-theme="dark"] .login-building::after { opacity: .75; }
+
+/* ------------------------------------------------------------
+   Tipo de usuário
+------------------------------------------------------------ */
+html[data-theme="dark"] body.type-user-page {
+  --surface: rgba(15,23,42,.86);
+  --surface-solid: #111827;
+  --text: #F8FAFC;
+  --muted: #B8C4D6;
+  --line: rgba(148,163,184,.20);
+  --shadow: 0 24px 70px rgba(0,0,0,.30);
+  --shadow-hover: 0 28px 80px rgba(0,0,0,.38);
+  background:
+    radial-gradient(circle at 8% 5%, rgba(34,82,189,.19), transparent 26rem),
+    radial-gradient(circle at 92% 10%, rgba(16,213,212,.08), transparent 25rem),
+    linear-gradient(180deg,#080F1D 0%,#0B1424 100%);
+}
+html[data-theme="dark"] body.type-user-page::before { opacity: .18; }
+html[data-theme="dark"] .type-user-page h1,
+html[data-theme="dark"] .type-user-page .profile h2 { color: #F8FAFC; }
+html[data-theme="dark"] .type-user-page .profile { background: rgba(17,24,39,.90); border-color: #334155; }
+html[data-theme="dark"] .type-user-page .profile.is-selected { background: #111C31; }
+html[data-theme="dark"] .type-user-page .profile .description,
+html[data-theme="dark"] .type-user-page .feature-list li,
+html[data-theme="dark"] .type-user-page .choose,
+html[data-theme="dark"] .type-user-page .hint { color: #CBD5E1; }
+html[data-theme="dark"] .type-user-page .icon-box { background: #162235; border-color: #334155; }
+html[data-theme="dark"] .type-user-page .choose-bubble { background: #1E293B; color: #AFC0D5; }
+html[data-theme="dark"] .type-user-page .select-check { background: #162235; border-color: #334155; }
+html[data-theme="dark"] .type-user-page .bottom,
+html[data-theme="dark"] .type-user-page .login-link,
+html[data-theme="dark"] .type-user-page .back-link { background: rgba(15,23,42,.78); border-color: #334155; color: #DCE8FA; }
+html[data-theme="dark"] .type-user-page .login-link:hover,
+html[data-theme="dark"] .type-user-page .back-link:hover { background: #162235; }
+
+/* ------------------------------------------------------------
+   Cadastros Morador / Síndico / Porteiro
+------------------------------------------------------------ */
+html[data-theme="dark"] body.registration-page { background: #0B1120 !important; color: #F8FAFC; }
+html[data-theme="dark"] body.registration-page .signup-wrapper { box-shadow: 0 20px 55px rgba(0,0,0,.28); }
+html[data-theme="dark"] body.registration-page .right-panel,
+html[data-theme="dark"] body.registration-page .form-card { background: #111827 !important; }
+html[data-theme="dark"] body.registration-page .right-panel { border: 1px solid #2D3B50; border-left: 0; }
+html[data-theme="dark"] body.registration-page .signup-header h1,
+html[data-theme="dark"] body.registration-page .form-group label { color: #F8FAFC !important; }
+html[data-theme="dark"] body.registration-page .signup-header p,
+html[data-theme="dark"] body.registration-page .login-link,
+html[data-theme="dark"] body.registration-page .copyright,
+html[data-theme="dark"] body.registration-page .footer-text { color: #AEBBCD !important; }
+html[data-theme="dark"] body.registration-page .input-icon-wrapper input { background: #0F172A !important; border-color: #334155 !important; color: #F8FAFC !important; }
+html[data-theme="dark"] body.registration-page .input-icon-wrapper input:focus { border-color: #6385D8 !important; box-shadow: 0 0 0 3px rgba(34,82,189,.22) !important; }
+html[data-theme="dark"] body.registration-page .input-icon-wrapper > i { color: #94A3B8 !important; }
+html[data-theme="dark"] body.registration-page .toggle-password { color: #CBD5E1 !important; }
+html[data-theme="dark"] body.registration-page .btn-back { background: rgba(15,23,42,.94); color: #BFDBFE; border: 1px solid #334155; }
+html[data-theme="dark"] body.registration-page .requirements-list li { color: #B8C4D6; }
+html[data-theme="dark"] body.registration-page .strength-bar-item { background: #334155; }
+
+/* ------------------------------------------------------------
+   Checkout
+------------------------------------------------------------ */
+html[data-theme="dark"] body.checkout-page,
+html[data-theme="dark"] body.condomit-app-page.checkout-page { background: #0B1120 !important; color: #F8FAFC; }
+html[data-theme="dark"] .checkout-page .checkout-header { background: #0F172A; border-color: #2D3B50; }
+html[data-theme="dark"] .checkout-page :where(.header-content h1,.column-title,.summary-title,.plan-meta h3,.summary-total,.summary-line .value) { color: #F8FAFC; }
+html[data-theme="dark"] .checkout-page :where(.header-content p,.back-link,.plan-meta p,.plan-mini-features li,.summary-line .label,.payment-hint,.payment-direct-fallback p) { color: #B8C4D6; }
+html[data-theme="dark"] .checkout-page :where(.plan-card-option,.summary-card,.payment-direct-fallback) { background: #111827; border-color: #334155; box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+html[data-theme="dark"] .checkout-page .plan-card-option:hover { border-color: #5B82E0; }
+html[data-theme="dark"] .checkout-page .plan-card-option.selected { background: #111D34; border-color: #4169CE; }
+html[data-theme="dark"] .checkout-page .plan-icon { background: #172554; color: #93C5FD; }
+html[data-theme="dark"] .checkout-page .selected .plan-icon { background: #162235; }
+html[data-theme="dark"] .checkout-page :where(.plan-mini-features,.summary-divider) { border-color: #334155; }
+html[data-theme="dark"] .checkout-page .security-badges { color: #AFC0D5; }
+html[data-theme="dark"] .checkout-page .payment-feedback.info { background: #0C2C47; border-color: #164E63; color: #BAE6FD; }
+html[data-theme="dark"] .checkout-page .payment-feedback.success { background: #052E2B; color: #A7F3D0; }
+html[data-theme="dark"] .checkout-page .payment-feedback.error { background: #450A0A; color: #FECACA; }
+
+/* ------------------------------------------------------------
+   Configurações: sessão global
+------------------------------------------------------------ */
+html[data-theme="dark"] .privacy-session-action-icon {
+  background: rgba(248,113,113,.16) !important;
+  color: #FCA5A5 !important;
+  border: 1px solid rgba(248,113,113,.24);
+}
+html[data-theme="dark"] .privacy-session-action > i { color: #CBD5E1 !important; }
+html[data-theme="dark"] .privacy-session-action:hover .privacy-session-action-icon { color: #F87171 !important; background: rgba(248,113,113,.22) !important; }
+
+@media (max-width: 760px) {
+  .theme-icon-toggle { width: 40px; height: 40px; flex-basis: 40px; }
+}
+
+/* Posicionamento dos alternadores solicitados */
+.landing-theme-toggle { margin-left: 2px; }
+.login-theme-toggle { position: fixed; top: 22px; right: 22px; }
+.type-user-theme-toggle { width: 40px; height: 40px; flex-basis: 40px; }
+.registration-theme-toggle { position: fixed; top: 20px; right: 20px; }
+.checkout-header-actions { display: flex; align-items: center; gap: 14px; }
+.checkout-theme-toggle { width: 40px; height: 40px; flex-basis: 40px; box-shadow: none; }
+
+@media (max-width: 700px) {
+  .login-theme-toggle { top: 15px; right: 14px; }
+  .registration-theme-toggle { top: 14px; right: 14px; }
+  .landing-theme-toggle { width: 36px; height: 36px; flex: 0 0 36px; }
+  .checkout-header-actions { gap: 8px; }
+}
+
+/* Páginas públicas legais / suporte */
+html[data-theme="dark"] .legal-topbar { background: rgba(8,15,29,.92); border-color: #1E293B; }
+html[data-theme="dark"] .legal-wrap { color: #E2E8F0; }
+html[data-theme="dark"] .legal-hero h1,
+html[data-theme="dark"] .legal-card h2,
+html[data-theme="dark"] .legal-card h3 { color: #F8FAFC; }
+html[data-theme="dark"] .legal-hero p,
+html[data-theme="dark"] .legal-card p,
+html[data-theme="dark"] .legal-card li,
+html[data-theme="dark"] .legal-footer { color: #CBD5E1; }
+html[data-theme="dark"] .legal-card { background: #111827; border-color: #2D3B50; box-shadow: 0 12px 32px rgba(0,0,0,.24); }
+html[data-theme="dark"] .legal-home { background: #162235; color: #BFDBFE; border-color: #334155; }
+html[data-theme="dark"] .public-form input,
+html[data-theme="dark"] .public-form textarea { background: #0F172A; border-color: #334155; color: #F8FAFC; }
+
+/* Autenticação auxiliar / 2FA / confirmação de e-mail */
+html[data-theme="dark"] :where(.security-shell,.email-confirm-page,.forgot-password-page,.reset-page) { background: #0B1120 !important; }
+html[data-theme="dark"] :where(.security-card,.email-confirm-card,.forgot-password-container,.reset-container) { background: #111827 !important; border-color: #334155 !important; box-shadow: 0 18px 45px rgba(0,0,0,.30) !important; }
+html[data-theme="dark"] :where(.security-card h1,.security-card h2,.email-confirm-card h1,.forgot-password-container h1,.reset-container h1) { color: #F8FAFC !important; }
+html[data-theme="dark"] :where(.security-card p,.email-confirm-card p,.forgot-password-container .subtitle,.reset-subtitle) { color: #CBD5E1 !important; }
+
+/* Resultados do checkout também acompanham o tema. */
+html[data-theme="dark"] .payment-result-page { background: #0B1120 !important; }
+html[data-theme="dark"] .payment-result-card { background: #111827 !important; color: #F8FAFC; border-color: #334155 !important; box-shadow: 0 18px 48px rgba(0,0,0,.30) !important; }
+html[data-theme="dark"] .payment-result-card h1 { color: #F8FAFC !important; }
+html[data-theme="dark"] .payment-result-card p { color: #CBD5E1 !important; }
+html[data-theme="dark"] .payment-result-actions .secondary { background: #162235 !important; color: #E2E8F0 !important; border-color: #334155 !important; }
+
+/* A nova logo possui lettering azul-marinho; fundo claro preserva fidelidade no dark mode. */
+html[data-theme="dark"] .login-modern-logo-wrap {
+  width: max-content;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 8px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.96);
+}
+html[data-theme="dark"] .type-user-page .logo-link {
+  padding: 0 8px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.96);
+}

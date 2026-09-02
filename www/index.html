@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <script src="scripts/theme-manager.js?v=056"></script>
     <title>Condomit</title>
     <link rel="icon" type="image/png" href="assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -11,8 +12,10 @@
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#2252BD">
     <link rel="stylesheet" href="styles/ux-polish.css?v=049">
+    <link rel="stylesheet" href="styles/theme.css?v=056">
+    <link rel="stylesheet" href="styles/dark-mode-global.css?v=056">
 </head>
-<body>
+<body class="landing-page">
     <!-- Hero and Header -->
     <section class="hero-section" id="inicio">
         <div class="hero-background">
@@ -39,6 +42,7 @@
                             </select>
                             <i class="fas fa-chevron-down landing-language-arrow" aria-hidden="true"></i>
                         </div>
+                        <button type="button" class="theme-icon-toggle landing-theme-toggle" id="landingThemeToggle" aria-label="Alterar tema"></button>
                         <a href="pages/entrar.html" class="btn-login"> <i class="fas fa-user"></i>   Entrar</a>
                         <a href="pages/tipo-usuario.html" class="btn-signup">Cadastre-se</a>
                     </nav>

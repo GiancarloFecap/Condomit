@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <script src="../scripts/theme-manager.js?v=056"></script>
     <title>Condomit - Cadastro do Síndico</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -13,8 +14,10 @@
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=053">
     <link rel="stylesheet" href="../styles/cadastro-shared-fixes.css?v=055">
+    <link rel="stylesheet" href="../styles/dark-mode-global.css?v=056">
 </head>
-<body class="condomit-app-page">
+<body class="condomit-app-page registration-page">
+    <button type="button" class="theme-icon-toggle registration-theme-toggle" id="registrationThemeToggle" aria-label="Alterar tema"></button>
     <button class="btn-back" onclick="window.location.href='tipo-usuario.html'">
         <i class="fas fa-arrow-left"></i> Voltar
     </button>

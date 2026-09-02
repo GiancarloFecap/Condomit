@@ -1638,7 +1638,7 @@ function updateDeviceNotificationStatus() {
     }
     if (Notification.permission === 'granted') {
         status.className = 'device-notification-status success';
-        status.innerHTML = '<i class="fas fa-bell"></i><span>Notificações do dispositivo ativadas.</span>';
+        status.hidden = true; status.innerHTML = '';
     } else if (Notification.permission === 'denied') {
         status.className = 'device-notification-status warning';
         status.innerHTML = '<i class="fas fa-bell-slash"></i><span>Notificações do dispositivo bloqueadas pelo navegador. As atualizações continuam na Central de Notificações.</span>';

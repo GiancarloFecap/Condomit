@@ -605,3 +605,8 @@ h1 { margin:0 0 7px; font-size:clamp(1.75rem,3vw,2.5rem); }
   h1 { font-size:1.75rem; }
   .hero p { font-size:.86rem; }
 }
+
+/* 056 - logo fornecida pelo usuário */
+.logo { width: 280px; height: 96px; object-fit: contain; }
+.logo-link { min-height: 76px; }
+@media (max-width:620px) { .logo { width: 210px; height: 74px; } .logo-link { min-height: 60px; } }
