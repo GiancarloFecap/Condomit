@@ -1593,6 +1593,7 @@ function ensureAppVersionModal() {
             <div class="current-version-banner"><span>Versão instalada</span><strong>v${CONDOMIT_APP_VERSION}</strong><small>Você está usando a versão mais recente incluída neste projeto.</small></div>
             <div class="release-history">
                 ${[
+                    ['0.66.0','Gravações na Ata e falas identificadas','A Ata passa a reproduzir gravações privadas da assembleia e registra cada trecho reconhecido com o nome do participante, sem resumir o que foi dito.'],
                     ['0.63.0','Transcrição de voz renovada','As falas da assembleia passam a ser capturadas em áudio WAV e transcritas no servidor, sem depender do reconhecimento de voz do navegador.'],
                     ['0.62.0','Transcrição mais estável','Melhorias no processamento de áudio e mensagens mais claras quando a transcrição encontra algum problema.'],
                     ['0.61.0','Registro automático das falas','A Condomit passou a encaminhar automaticamente a voz para transcrição quando o navegador não conseguia gerar o texto.'],

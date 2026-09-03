@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/assembleia-resumo.css?v=053">
+    <link rel="stylesheet" href="../styles/assembleia-resumo.css?v=066">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=053">
@@ -37,6 +37,7 @@
             <nav class="summary-tabs" aria-label="Seções da ata">
                 <button class="summary-tab active" type="button" data-summary-tab="ata">Resumo / Ata</button>
                 <button class="summary-tab" type="button" data-summary-tab="votacoes">Votações</button>
+                <button class="summary-tab" type="button" data-summary-tab="gravacoes">Gravações</button>
                 <button class="summary-tab" type="button" data-summary-tab="comentarios">Comentários</button>
             </nav>
 
@@ -46,6 +47,13 @@
 
             <section class="summary-panel" data-summary-panel="votacoes">
                 <div class="card-shell summary-section"><div class="section-title"><div><h2>Votações realizadas</h2><p>Opções originais e totais registrados durante a assembleia.</p></div></div><div id="assemblyPollResults" class="poll-results-list"></div></div>
+            </section>
+
+            <section class="summary-panel" data-summary-panel="gravacoes">
+                <div class="card-shell summary-section">
+                    <div class="section-title"><div><h2>Gravações da assembleia</h2><p>Registro audiovisual completo da reunião, disponível apenas para usuários autorizados do condomínio.</p></div></div>
+                    <div id="assemblyRecordings" class="recordings-list"></div>
+                </div>
             </section>
 
             <section class="summary-panel" data-summary-panel="comentarios">
@@ -98,7 +106,7 @@
 <script src="../scripts/supabase-client.js?v=043"></script>
 <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
 <script src="../scripts/sidebar-links.js?v=043"></script>
-<script src="../scripts/assembly/assembly-summary.js?v=057"></script>
+<script src="../scripts/assembly/assembly-summary.js?v=066"></script>
 <script src="../scripts/topbar-actions.js?v=035"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>

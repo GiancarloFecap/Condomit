@@ -1,4 +1,4 @@
-import { state } from './state.js?v=065';
+import { state } from './state.js?v=066';
 
 // Condomit v0.64.0
 // Transcrição sem OpenAI/GPT: usa o reconhecimento de voz disponibilizado pelo
@@ -41,7 +41,7 @@ function recognitionConstructor() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
-async function saveFinalTranscript(text, source = 'browser') {
+async function saveFinalTranscript(text, source = 'browser', confidence = null) {
   const normalized = String(text || '').replace(/\s+/g, ' ').trim();
   if (!normalized || typeof window.supabaseFetch !== 'function') return false;
 
@@ -55,7 +55,9 @@ async function saveFinalTranscript(text, source = 'browser') {
       body: JSON.stringify({
         target_assembly_id: Number(state.assemblyId),
         transcript_text: normalized.slice(0, 4000),
-        participant_identity_value: localIdentity() || null
+        participant_identity_value: localIdentity() || null,
+        transcript_source_value: source,
+        confidence_value: Number.isFinite(Number(confidence)) ? Number(confidence) : null
       })
     });
     lastSavedText = normalized;
@@ -140,9 +142,13 @@ function startRecognition() {
       let finalText = '';
       for (let i = event.resultIndex || 0; i < event.results.length; i += 1) {
         const result = event.results[i];
-        if (result?.isFinal) finalText += ` ${result[0]?.transcript || ''}`;
+        if (result?.isFinal) {
+          const alternative = result[0];
+          finalText += ` ${alternative?.transcript || ''}`;
+          if (Number.isFinite(Number(alternative?.confidence))) window.__condomitLastTranscriptConfidence = Number(alternative.confidence);
+        }
       }
-      if (finalText.trim()) saveFinalTranscript(finalText, 'browser');
+      if (finalText.trim()) saveFinalTranscript(finalText, 'browser', window.__condomitLastTranscriptConfidence ?? null);
     };
 
     instance.onerror = (event) => {
@@ -260,5 +266,5 @@ window.addEventListener('condomit:assembly-livekit-transcription', (event) => {
   const segments = Array.isArray(detail.segments) ? detail.segments : [];
   segments
     .filter((segment) => segment?.final === true && String(segment?.text || '').trim())
-    .forEach((segment) => saveFinalTranscript(segment.text, 'livekit'));
+    .forEach((segment) => saveFinalTranscript(segment.text, 'livekit', segment.confidence ?? null));
 });

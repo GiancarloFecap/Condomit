@@ -15,6 +15,7 @@
         events: [],
         comments: [],
         transcripts: [],
+        recordings: [],
         speechActivities: [],
         condominium: null,
         signature: null,
@@ -97,7 +98,7 @@
     async function loadAll() {
         if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase não inicializado.');
 
-        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, speechActivities, signatures, commentVotes] = await Promise.all([
+        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings, speechActivities, signatures, commentVotes] = await Promise.all([
             fetchRows(`/scheduled_assemblies?select=*&id=eq.${state.id}&limit=1`),
             fetchRows(`/assembly_attendance?select=*&assembly_id=eq.${state.id}&order=joined_at.asc`),
             fetchRows(`/assembly_chat_messages?select=*&assembly_id=eq.${state.id}&order=created_at.asc`),
@@ -107,6 +108,7 @@
             fetchRows(`/assembly_event_logs?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => []),
+            fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&status=eq.concluido&order=started_at.asc`).catch(() => []),
             fetchRows(`/assembly_speech_activity?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
             fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code,signature_data&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
             fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => [])
@@ -114,7 +116,7 @@
 
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
-        Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, speechActivities, commentVotes });
+        Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings, speechActivities, commentVotes });
         state.signature = signatures[0] || null;
 
         // Dados institucionais usados somente como texto na ata. A ata não inclui
@@ -170,6 +172,7 @@
         renderHero();
         renderMinutes();
         renderPolls();
+        renderRecordings();
         renderComments();
     }
 
@@ -186,6 +189,7 @@
                 <span><i class="far fa-clock"></i> ${esc(String(a.start_time || '--:--').slice(0, 5))}${a.end_time ? ` – ${esc(String(a.end_time).slice(0, 5))}` : ''}</span>
                 <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
+                <span><i class="fas fa-video"></i> ${state.recordings.length} gravação${state.recordings.length === 1 ? '' : 'ões'}</span>
                 <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.length ? `${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} transcrito${state.transcripts.length === 1 ? '' : 's'}` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
             </div>
             <div class="summary-hero-actions">
@@ -309,41 +313,31 @@
             paragraphs.push(`Quanto ao item “${item.title}”, ficou registrado em ata o seguinte teor de discussão: ${sentenceFragment(item.notes)}.`);
         });
 
-        const transcriptGroups = new Map();
-        state.transcripts.forEach((row) => {
-            const text = cleanFormalText(row.transcript || '');
-            if (!text) return;
-            const name = cleanFormalText(row.participant_name || row.participant_email || 'Participante');
-            const key = String(row.participant_email || name).trim().toLowerCase();
-            const current = transcriptGroups.get(key) || { name, texts: [] };
-            current.texts.push(text);
-            transcriptGroups.set(key, current);
-        });
+        const orderedTranscripts = [...state.transcripts]
+            .filter((row) => cleanFormalText(row.transcript || ''))
+            .sort((a, b) => new Date(a.spoken_at || a.created_at || 0) - new Date(b.spoken_at || b.created_at || 0));
 
-        if (transcriptGroups.size) {
-            transcriptGroups.forEach(({ name, texts }) => {
-                const joined = texts.join(' ');
-                paragraphs.push(`Durante os debates, registrou-se manifestação de ${name}, cujo teor transcrito foi: “${ensureTerminalPunctuation(joined)}”`);
+        if (orderedTranscripts.length) {
+            orderedTranscripts.forEach((row) => {
+                const name = cleanFormalText(row.participant_name || row.participant_email || 'Participante');
+                const text = ensureTerminalPunctuation(row.transcript || '');
+                const time = row.spoken_at ? new Date(row.spoken_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+                paragraphs.push(`${time ? `Às ${time}, ` : ''}${name} declarou: “${text}”`);
             });
 
-            const transcribedKeys = new Set(Array.from(transcriptGroups.keys()));
+            const transcribedKeys = new Set(orderedTranscripts.map((row) => String(row.participant_email || row.participant_name || '').trim().toLowerCase()).filter(Boolean));
             const untranscribedSpeakers = uniqueSpeechParticipants().filter((speaker) => {
                 const key = String(speaker.email || speaker.name || '').trim().toLowerCase();
                 return key && !transcribedKeys.has(key);
             });
             if (untranscribedSpeakers.length) {
-                paragraphs.push(`Também foram detectadas manifestações orais de ${formatHumanList(untranscribedSpeakers.map((speaker) => speaker.name))}, sem transcrição textual automática disponível. O conteúdo dessas falas não foi presumido pelo sistema.`);
+                paragraphs.push(`Também foram detectadas manifestações orais de ${formatHumanList(untranscribedSpeakers.map((speaker) => speaker.name))}, sem transcrição textual automática disponível. Consulte a gravação audiovisual da assembleia para conferência do conteúdo.`);
             }
         } else if (!agendaNotes.length) {
             const speakers = uniqueSpeechParticipants();
             if (speakers.length) {
                 const names = speakers.map((speaker) => speaker.name).filter(Boolean);
-                const totalSeconds = Math.round(state.speechActivities.reduce((sum, row) => sum + Number(row.duration_seconds || 0), 0));
-                const participation = names.length
-                    ? `Foram detectadas manifestações orais de ${formatHumanList(names)}`
-                    : 'Foram detectadas manifestações orais durante a assembleia';
-                const durationText = totalSeconds > 0 ? `, totalizando aproximadamente ${formatDurationFormal(totalSeconds)} de fala registrada` : '';
-                paragraphs.push(`${participation}${durationText}. O navegador ou dispositivo utilizado não forneceu transcrição textual automática dessas falas; por essa razão, o sistema registra a existência da participação oral sem presumir ou inventar o conteúdo discutido.`);
+                paragraphs.push(`Foram detectadas manifestações orais de ${formatHumanList(names)}. Como não há texto reconhecido com segurança suficiente, o sistema não presume o conteúdo; consulte a gravação audiovisual disponível nesta Ata.`);
             } else {
                 paragraphs.push('Não foram localizadas transcrições textuais, anotações formais de discussão ou registros técnicos de atividade de fala vinculados a esta assembleia.');
             }
@@ -588,6 +582,66 @@
         } else if (window.confirm('Confirmar este voto?')) {
             await execute();
         }
+    }
+
+    async function createSignedRecordingUrl(recordingRow) {
+        const raw = String(recordingRow?.recording_url || '').trim();
+        if (!raw) return null;
+        if (!raw.startsWith('storage://')) return raw;
+        const match = raw.match(/^storage:\/\/([^/]+)\/(.+)$/);
+        if (!match) return null;
+        const [, bucket, objectPath] = match;
+        const token = await window.resolveSupabaseAccessToken?.().catch(() => null);
+        if (!token) return null;
+        const endpoint = `${window.SUPABASE_URL}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${objectPath.split('/').map(encodeURIComponent).join('/')}`;
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, apikey: window.SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ expiresIn: 3600 })
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        const signed = data?.signedURL || data?.signedUrl || data?.signed_url;
+        if (!signed) return null;
+        return signed.startsWith('http') ? signed : `${window.SUPABASE_URL}/storage/v1${signed}`;
+    }
+
+    function formatBytes(bytes) {
+        const n = Number(bytes || 0);
+        if (!n) return 'Tamanho não informado';
+        if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
+        return `${(n / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
+    }
+
+    function formatDuration(seconds) {
+        const n = Math.max(0, Number(seconds || 0));
+        const h = Math.floor(n / 3600), m = Math.floor((n % 3600) / 60), sec = Math.floor(n % 60);
+        return h ? `${h}h ${String(m).padStart(2, '0')}min` : `${m}min ${String(sec).padStart(2, '0')}s`;
+    }
+
+    function renderRecordings() {
+        const container = document.getElementById('assemblyRecordings');
+        if (!container) return;
+        if (!state.recordings.length) {
+            container.innerHTML = '<div class="summary-empty">Nenhuma gravação concluída foi vinculada a esta assembleia.</div>';
+            return;
+        }
+        container.innerHTML = state.recordings.map((row, index) => `
+            <article class="recording-card" data-recording-index="${index}">
+                <div class="recording-card-head"><div><strong><i class="fas fa-video"></i> Gravação ${index + 1}</strong><small>${row.started_at ? new Date(row.started_at).toLocaleString('pt-BR') : 'Horário não informado'} • ${formatDuration(row.duration_seconds)} • ${formatBytes(row.file_size_bytes)}</small></div></div>
+                <div class="recording-player-loading"><i class="fas fa-spinner fa-spin"></i> Preparando reprodução segura...</div>
+            </article>`).join('');
+        state.recordings.forEach(async (row, index) => {
+            const card = container.querySelector(`[data-recording-index="${index}"]`);
+            if (!card) return;
+            const url = await createSignedRecordingUrl(row).catch(() => null);
+            const holder = card.querySelector('.recording-player-loading');
+            if (!holder) return;
+            holder.className = 'recording-player-wrap';
+            holder.innerHTML = url
+                ? `<video controls preload="metadata" playsinline src="${esc(url)}"></video><a class="summary-secondary recording-open" href="${esc(url)}" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> Abrir gravação</a>`
+                : '<div class="summary-empty">Não foi possível gerar o acesso temporário a esta gravação.</div>';
+        });
     }
 
     function renderComments() {

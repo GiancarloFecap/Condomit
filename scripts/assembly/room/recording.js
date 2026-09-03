@@ -1,4 +1,4 @@
-import { state } from './state.js?v=065';
+import { state } from './state.js?v=066';
 
 const recording = {
   recorder: null,
@@ -218,6 +218,53 @@ function downloadBlob(blob) {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
+
+async function uploadRecordingBlob(blob, startedAt, endedAt) {
+  if (!blob?.size || !state.assemblyId || !state.assembly?.cep) return null;
+  const token = await window.resolveSupabaseAccessToken?.().catch(() => null);
+  if (!token) throw new Error('Sessão expirada: não foi possível salvar a gravação na Ata.');
+
+  const bucket = 'condomit-assembly-recordings';
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';
+  const storagePath = `${Number(state.assemblyId)}/${stamp}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.${extension}`;
+  const url = `${window.SUPABASE_URL}/storage/v1/object/${bucket}/${storagePath.split('/').map(encodeURIComponent).join('/')}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: window.SUPABASE_ANON_KEY,
+      'Content-Type': blob.type || 'video/webm',
+      'x-upsert': 'false'
+    },
+    body: blob
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail || `Falha ao enviar gravação (${response.status}).`);
+  }
+
+  const durationSeconds = Math.max(1, Math.round((endedAt.getTime() - startedAt.getTime()) / 1000));
+  const rows = await window.supabaseFetch('/assembly_recordings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      assembly_id: Number(state.assemblyId),
+      cep: String(state.assembly.cep),
+      livekit_room_name: state.room?.name || null,
+      recording_url: `storage://${bucket}/${storagePath}`,
+      recording_type: 'room_composite',
+      status: 'concluido',
+      duration_seconds: durationSeconds,
+      file_size_bytes: blob.size,
+      started_at: startedAt.toISOString(),
+      ended_at: endedAt.toISOString(),
+      started_by: String(state.user?.email || state.tokenInfo?.email || '').trim() || null
+    })
+  });
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
 export function isRecordingSupported() {
   return typeof window.MediaRecorder === 'function' && typeof HTMLCanvasElement.prototype.captureStream === 'function';
 }
@@ -285,7 +332,17 @@ export async function stopAssemblyRecording({ download = true } = {}) {
   recording.drawTimer = null;
 
   const blob = new Blob(recording.chunks, { type: recorder.mimeType || 'video/webm' });
-  if (download && blob.size > 0) downloadBlob(blob);
+  const endedAt = new Date();
+  if (blob.size > 0) {
+    try {
+      await uploadRecordingBlob(blob, recording.startedAt || endedAt, endedAt);
+    } catch (error) {
+      console.error('[Assembly Recording] Não foi possível persistir a gravação na Ata:', error);
+      const label = document.getElementById('recording-status');
+      if (label) { label.hidden = false; label.textContent = 'Gravação salva apenas neste dispositivo'; label.title = error?.message || ''; }
+    }
+    if (download) downloadBlob(blob);
+  }
 
   recording.audioNodes.forEach((item) => { try { item.source?.disconnect?.(); } catch (_) {} });
   recording.audioNodes.clear();
