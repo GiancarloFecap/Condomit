@@ -1,10 +1,10 @@
-import { state } from './state.js?v=069';
+import { state } from './state.js?v=070';
 import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=064';
 import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=060';
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=064';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=060';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=066';
-import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=069';
+import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=070';
 
 function $(id) {
   return document.getElementById(id);
@@ -123,6 +123,17 @@ function bindControls() {
     return;
   }
 
+  // Primeiro encerra e persiste a gravação oficial. A navegação só continua
+  // depois que o arquivo estiver vinculado à Ata desta assembleia.
+  try {
+    await stopAssemblyRecording();
+  } catch (error) {
+    console.warn('Não foi possível finalizar/salvar a gravação:', error);
+    toast(error?.message || 'Não foi possível salvar a gravação na Ata. Tente sair novamente.', 'error');
+    showBanner('A saída foi interrompida porque a gravação ainda não foi salva na Ata. Mantenha esta página aberta e tente novamente.', 'error');
+    return;
+  }
+
   try {
     await presenceLeave();
   } catch (error) {
@@ -130,12 +141,6 @@ function bindControls() {
       'Não foi possível registrar a saída:',
       error
     );
-  }
-
-  try {
-    await stopAssemblyRecording({ download: true });
-  } catch (error) {
-    console.warn('Não foi possível finalizar a gravação:', error);
   }
 
   await stopAssemblyTranscription();
@@ -600,10 +605,14 @@ async function init() {
   }
 }
 
-window.addEventListener('beforeunload', () => {
-  try { stopAssemblyRecording({ download: false }); } catch (_) {}
-  stopAssemblyTranscription();
-  try { presenceLeave(); } catch (_) {}
+window.addEventListener('beforeunload', (event) => {
+  // Upload de vídeo não é confiável durante beforeunload. Enquanto houver uma
+  // gravação oficial em andamento, orientamos o organizador a usar “Sair”, que
+  // aguarda o upload e o vínculo com a Ata antes de navegar.
+  if (isPrivilegedUser()) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
 });
 
 document.addEventListener('DOMContentLoaded', init);

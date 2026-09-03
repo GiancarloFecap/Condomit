@@ -332,5 +332,8 @@ html[data-theme="dark"] .signature-modal-card .modal-actions{border-color:#33415
 .recording-card-head small { display:block; color:var(--text-secondary,#64748b); margin-top:5px; }
 .recording-player-wrap video { display:block; width:100%; max-height:620px; border-radius:12px; background:#05070b; }
 .recording-player-loading { padding:28px; text-align:center; color:var(--text-secondary,#64748b); }
-.recording-open { display:inline-flex; margin-top:10px; text-decoration:none; }
+
 @media (max-width: 720px) { .recording-card { padding:12px; } .recording-player-wrap video { max-height:360px; } }
+
+.recording-access-note { display:flex; align-items:center; gap:7px; margin-top:9px; color:#64748b; font-size:.82rem; }
+.assembly-recording-player { width:100%; max-height:560px; border-radius:14px; background:#0b1220; }

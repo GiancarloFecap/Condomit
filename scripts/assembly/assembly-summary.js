@@ -640,7 +640,7 @@
             if (!holder) return;
             holder.className = 'recording-player-wrap';
             holder.innerHTML = url
-                ? `<video controls preload="metadata" playsinline src="${esc(url)}"></video><a class="summary-secondary recording-open" href="${esc(url)}" target="_blank" rel="noopener"><i class="fas fa-up-right-from-square"></i> Abrir gravação</a>`
+                ? `<video class="assembly-recording-player" controls controlsList="nodownload noremoteplayback" disablePictureInPicture preload="metadata" playsinline src="${esc(url)}" oncontextmenu="return false;"></video><small class="recording-access-note"><i class="fas fa-shield-halved"></i> Reprodução disponível somente nesta Ata para usuários autorizados.</small>`
                 : '<div class="summary-empty">Não foi possível gerar o acesso temporário a esta gravação.</div>';
         });
     }

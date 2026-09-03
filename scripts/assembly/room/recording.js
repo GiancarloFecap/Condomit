@@ -1,4 +1,4 @@
-import { state } from './state.js?v=069';
+import { state } from './state.js?v=070';
 
 const recording = {
   recorder: null,
@@ -11,7 +11,8 @@ const recording = {
   refreshTimer: null,
   drawTimer: null,
   startedAt: null,
-  stopping: false
+  stopping: false,
+  pendingUpload: null
 };
 
 function safeText(value) {
@@ -188,29 +189,6 @@ function chooseMimeType() {
   return candidates.find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || '';
 }
 
-function sanitizeFilename(value) {
-  return safeText(value || 'assembleia')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 70) || 'assembleia';
-}
-
-function downloadBlob(blob) {
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const title = sanitizeFilename(state.assembly?.title || `assembleia-${state.assemblyId}`);
-  const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${title}-${stamp}.${extension}`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
-}
-
-
 function base64Metadata(value) {
   const bytes = new TextEncoder().encode(String(value ?? ''));
   let binary = '';
@@ -343,7 +321,7 @@ async function uploadRecordingBlob(blob, startedAt, endedAt) {
     body: JSON.stringify(payload)
   });
 }
-
+\n\nasync function persistPendingRecording() {\n  const pending = recording.pendingUpload;\n  if (!pending?.blob?.size) return null;\n  let lastError = null;\n  for (let attempt = 1; attempt <= 4; attempt += 1) {\n    try {\n      const label = document.getElementById('recording-status');\n      if (label) {\n        label.hidden = false;\n        label.textContent = attempt === 1\n          ? 'Salvando gravação na Ata…'\n          : `Tentando salvar gravação novamente (${attempt}/4)…`;\n      }\n      const result = await uploadRecordingBlob(pending.blob, pending.startedAt, pending.endedAt);\n      recording.pendingUpload = null;\n      return result;\n    } catch (error) {\n      lastError = error;\n      console.warn(`[Assembly Recording] Tentativa ${attempt}/4 falhou.`, error);\n      if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, 1200 * attempt));\n    }\n  }\n  throw lastError || new Error('Não foi possível salvar a gravação na Ata.');\n}\n
 
 export function isRecordingSupported() {
   return typeof window.MediaRecorder === 'function' && typeof HTMLCanvasElement.prototype.captureStream === 'function';
@@ -394,51 +372,4 @@ export async function startAssemblyRecording() {
   return true;
 }
 
-export async function stopAssemblyRecording({ download = true } = {}) {
-  if (!recording.recorder || recording.recorder.state === 'inactive' || recording.stopping) return null;
-  recording.stopping = true;
-
-  const recorder = recording.recorder;
-  const stopped = new Promise((resolve) => {
-    recorder.addEventListener('stop', () => resolve(), { once: true });
-  });
-  try { recorder.requestData?.(); } catch (_) {}
-  recorder.stop();
-  await stopped;
-
-  clearInterval(recording.refreshTimer);
-  clearInterval(recording.drawTimer);
-  recording.refreshTimer = null;
-  recording.drawTimer = null;
-
-  const blob = new Blob(recording.chunks, { type: recorder.mimeType || 'video/webm' });
-  const endedAt = new Date();
-  if (blob.size > 0) {
-    try {
-      await uploadRecordingBlob(blob, recording.startedAt || endedAt, endedAt);
-    } catch (error) {
-      console.error('[Assembly Recording] Não foi possível persistir a gravação na Ata:', error);
-      const label = document.getElementById('recording-status');
-      if (label) { label.hidden = false; label.textContent = 'Gravação salva apenas neste dispositivo'; label.title = error?.message || ''; }
-    }
-    if (download) downloadBlob(blob);
-  }
-
-  recording.audioNodes.forEach((item) => { try { item.source?.disconnect?.(); } catch (_) {} });
-  recording.audioNodes.clear();
-  try { recording.canvasStream?.getTracks?.().forEach((track) => track.stop()); } catch (_) {}
-  try { await recording.audioContext?.close?.(); } catch (_) {}
-  try { recording.canvas?.remove?.(); } catch (_) {}
-
-  recording.recorder = null;
-  recording.canvas = null;
-  recording.canvasStream = null;
-  recording.audioContext = null;
-  recording.audioDestination = null;
-  recording.chunks = [];
-  recording.startedAt = null;
-  recording.stopping = false;
-  setUi(false);
-  window.dispatchEvent(new CustomEvent('condomit:assembly-recording-state', { detail: { active: false } }));
-  return blob;
-}
+export async function stopAssemblyRecording() {\n  // Se uma tentativa anterior de upload falhou, um novo clique em Sair tenta\n  // persistir exatamente o mesmo arquivo antes de abandonar a página.\n  if ((!recording.recorder || recording.recorder.state === 'inactive') && recording.pendingUpload) {\n    await persistPendingRecording();\n    setUi(false);\n    return true;\n  }\n\n  if (!recording.recorder || recording.recorder.state === 'inactive' || recording.stopping) return null;\n  recording.stopping = true;\n\n  const recorder = recording.recorder;\n  const stopped = new Promise((resolve) => {\n    recorder.addEventListener('stop', () => resolve(), { once: true });\n  });\n  try { recorder.requestData?.(); } catch (_) {}\n  recorder.stop();\n  await stopped;\n\n  clearInterval(recording.refreshTimer);\n  clearInterval(recording.drawTimer);\n  recording.refreshTimer = null;\n  recording.drawTimer = null;\n\n  const blob = new Blob(recording.chunks, { type: recorder.mimeType || 'video/webm' });\n  const endedAt = new Date();\n  if (blob.size > 0) {\n    recording.pendingUpload = {\n      blob,\n      startedAt: recording.startedAt || endedAt,\n      endedAt\n    };\n  }\n\n  recording.audioNodes.forEach((item) => { try { item.source?.disconnect?.(); } catch (_) {} });\n  recording.audioNodes.clear();\n  try { recording.canvasStream?.getTracks?.().forEach((track) => track.stop()); } catch (_) {}\n  try { await recording.audioContext?.close?.(); } catch (_) {}\n  try { recording.canvas?.remove?.(); } catch (_) {}\n\n  recording.recorder = null;\n  recording.canvas = null;\n  recording.canvasStream = null;\n  recording.audioContext = null;\n  recording.audioDestination = null;\n  recording.chunks = [];\n  recording.startedAt = null;\n  recording.stopping = false;\n\n  if (recording.pendingUpload) {\n    try {\n      await persistPendingRecording();\n    } catch (error) {\n      const label = document.getElementById('recording-status');\n      if (label) {\n        label.hidden = false;\n        label.textContent = 'Não foi possível salvar a gravação. Não feche esta página e tente sair novamente.';\n        label.title = error?.message || '';\n      }\n      // Não há download local como fallback. A página deve permanecer aberta\n      // para permitir nova tentativa de persistência na Ata.\n      throw error;\n    }\n  }\n\n  setUi(false);\n  window.dispatchEvent(new CustomEvent('condomit:assembly-recording-state', { detail: { active: false } }));\n  return true;\n}\n
