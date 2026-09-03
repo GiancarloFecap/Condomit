@@ -1144,7 +1144,11 @@ async function fetchCurrentCondominiumInfo() {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
             });
             const info036 = Array.isArray(result036) ? result036[0] : result036;
-            if (info036 && typeof info036 === 'object') return { ...localCondo, ...info036 };
+            if (info036 && typeof info036 === 'object') {
+                const condominium = { ...localCondo, ...info036 };
+                const manager = await fetchCurrentCondominiumManager(condominium, currentUser);
+                return mergeCondominiumManagerInfo(condominium, manager);
+            }
         } catch (error) {
             console.warn('RPC 036 de condomínio indisponível, usando compatibilidade:', error?.message || error);
         }
@@ -1156,7 +1160,9 @@ async function fetchCurrentCondominiumInfo() {
             });
             const rpcInfo = Array.isArray(result) ? result[0] : result;
             if (rpcInfo && typeof rpcInfo === 'object') {
-                return { ...localCondo, ...rpcInfo };
+                const condominium = { ...localCondo, ...rpcInfo };
+                const manager = await fetchCurrentCondominiumManager(condominium, currentUser);
+                return mergeCondominiumManagerInfo(condominium, manager);
             }
         } catch (error) {
             console.warn('RPC de informações do condomínio indisponível, usando fallback:', error?.message || error);
@@ -1184,17 +1190,26 @@ async function fetchCurrentCondominiumInfo() {
 async function fetchCurrentCondominiumManager(condominium, currentUser = getCurrentUser()) {
     if (typeof supabaseFetch !== 'function') return null;
 
+    // Fonte preferencial: RPC SECURITY DEFINER, que respeita o condomínio atual
+    // sem exigir SELECT amplo em public.users (normalmente bloqueado por RLS).
+    try {
+        const result = await supabaseFetch('/rpc/condomit_current_condominium_manager_039', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+        });
+        const manager = Array.isArray(result) ? result[0] : result;
+        if (manager?.email || manager?.name) return manager;
+    } catch (error) {
+        console.warn('RPC do síndico responsável indisponível, usando compatibilidade:', error?.message || error);
+    }
+
     const normalizedCondoIdentifiers = getCondominiumIdentifiersForModal(condominium, currentUser);
     if (!normalizedCondoIdentifiers.length) return null;
-
     try {
         const users = await supabaseFetch('/users?select=name,phone,email,type,user_type,condominium');
         if (!Array.isArray(users)) return null;
-
         return users.find((user) => {
             const userType = String(user?.type || user?.user_type || '').trim().toLowerCase();
-            if (userType !== 'sindico') return false;
-
+            if (!['sindico','síndico','admin'].includes(userType)) return false;
             const userIdentifiers = getCondominiumIdentifiersForModal(user?.condominium, user);
             return userIdentifiers.some((identifier) => normalizedCondoIdentifiers.includes(identifier));
         }) || null;

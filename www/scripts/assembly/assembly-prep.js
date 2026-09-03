@@ -1025,30 +1025,49 @@
   }
 
   function savePreferencesAndEnter() {
-    const audioOnly = $('audio-only-check').checked;
-    const devicesOff = $('devices-off-check').checked;
+    const enterRoom = () => {
+      const audioOnly = $('audio-only-check').checked;
+      const devicesOff = $('devices-off-check').checked;
 
-    let finalCameraOn = state.cameraOn;
-    let finalMicOn = state.micOn;
+      let finalCameraOn = state.cameraOn;
+      let finalMicOn = state.micOn;
 
-    if (devicesOff) {
-      finalCameraOn = false;
-      finalMicOn = false;
-    } else if (audioOnly) {
-      finalCameraOn = false;
+      if (devicesOff) {
+        finalCameraOn = false;
+        finalMicOn = false;
+      } else if (audioOnly) {
+        finalCameraOn = false;
+      }
+
+      try {
+        sessionStorage.setItem('prep_camera_on', finalCameraOn ? '1' : '0');
+        sessionStorage.setItem('prep_mic_on', finalMicOn ? '1' : '0');
+        sessionStorage.setItem('prep_camera_dev', state.cameraDeviceId || '');
+        sessionStorage.setItem('prep_mic_dev', state.micDeviceId || '');
+        sessionStorage.setItem('prep_audio_only', audioOnly ? '1' : '0');
+        sessionStorage.setItem('prep_devices_off', devicesOff ? '1' : '0');
+        sessionStorage.setItem(`assembly_recording_notice_${state.assemblyId}`, 'accepted');
+      } catch (_) {}
+
+      cleanupStreams();
+      window.location.href = `assembleia-sala.html?id=${encodeURIComponent(state.assemblyId)}`;
+    };
+
+    const message = 'Esta assembleia será gravada em áudio e vídeo. A gravação poderá ser disponibilizada na Ata para consulta pelos usuários autorizados do condomínio. Ao entrar, você declara estar ciente da gravação.';
+
+    if (typeof window.showModal === 'function') {
+      window.showModal({
+        title: 'Esta assembleia será gravada',
+        message,
+        type: 'warning',
+        confirmText: 'Estou ciente e quero entrar',
+        cancelText: 'Cancelar',
+        onConfirm: enterRoom
+      });
+      return;
     }
 
-    try {
-      sessionStorage.setItem('prep_camera_on', finalCameraOn ? '1' : '0');
-      sessionStorage.setItem('prep_mic_on', finalMicOn ? '1' : '0');
-      sessionStorage.setItem('prep_camera_dev', state.cameraDeviceId || '');
-      sessionStorage.setItem('prep_mic_dev', state.micDeviceId || '');
-      sessionStorage.setItem('prep_audio_only', audioOnly ? '1' : '0');
-      sessionStorage.setItem('prep_devices_off', devicesOff ? '1' : '0');
-    } catch (_) {}
-
-    cleanupStreams();
-    window.location.href = `assembleia-sala.html?id=${encodeURIComponent(state.assemblyId)}`;
+    if (window.confirm(`${message}\n\nDeseja entrar na assembleia?`)) enterRoom();
   }
 
   async function loadData() {

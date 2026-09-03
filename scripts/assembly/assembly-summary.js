@@ -108,7 +108,7 @@
             fetchRows(`/assembly_event_logs?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => []),
-            fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&status=eq.concluido&order=started_at.asc`).catch(() => []),
+            fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
             fetchRows(`/assembly_speech_activity?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
             fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code,signature_data&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
             fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => [])
@@ -116,7 +116,8 @@
 
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
-        Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings, speechActivities, commentVotes });
+        const playableRecordings = (recordings || []).filter((row) => String(row?.recording_url || '').trim());
+        Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings: playableRecordings, speechActivities, commentVotes });
         state.signature = signatures[0] || null;
 
         // Dados institucionais usados somente como texto na ata. A ata não inclui
