@@ -1214,13 +1214,6 @@ body {
   letter-spacing: .08em;
   box-shadow: 0 8px 24px rgba(0,0,0,.2);
 }
-.control-btn.recording {
-  background: rgba(185, 28, 28, .96) !important;
-  color: #fff !important;
-}
-.control-btn.recording i {
-  animation: condomit-rec-pulse 1.2s ease-in-out infinite;
-}
 @keyframes condomit-rec-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: .55; transform: scale(.88); }

@@ -1,4 +1,4 @@
-import { state } from './state.js?v=068';
+import { state } from './state.js?v=069';
 
 const recording = {
   recorder: null,
@@ -19,18 +19,10 @@ function safeText(value) {
 }
 
 function setUi(active) {
-  const button = document.getElementById('btn-recording');
   const label = document.getElementById('recording-status');
-  if (button) {
-    button.classList.toggle('active', active);
-    button.classList.toggle('recording', active);
-    button.setAttribute('aria-pressed', active ? 'true' : 'false');
-    const span = button.querySelector('span');
-    if (span) span.textContent = active ? 'Gravando' : 'Gravar';
-  }
   if (label) {
     label.hidden = !active;
-    label.textContent = active ? '● REC' : '';
+    label.textContent = active ? '● REC · Gravação automática' : '';
   }
 }
 

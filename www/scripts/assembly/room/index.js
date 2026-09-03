@@ -1,10 +1,10 @@
-import { state } from './state.js?v=066';
+import { state } from './state.js?v=069';
 import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=064';
 import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=060';
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=064';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=060';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=066';
-import { startAssemblyRecording, stopAssemblyRecording, isAssemblyRecording, isRecordingSupported } from './recording.js?v=068';
+import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=069';
 
 function $(id) {
   return document.getElementById(id);
@@ -115,19 +115,6 @@ function bindControls() {
   });
   $('btn-toggle-panel')?.addEventListener('click', () => {
     setPanelOpen(!state.panelOpen);
-  });
-  $('btn-recording')?.addEventListener('click', async () => {
-    try {
-      if (isAssemblyRecording()) {
-        await stopAssemblyRecording({ download: true });
-        toast('Gravação finalizada e salva no dispositivo.', 'success');
-      } else {
-        await startAssemblyRecording();
-        toast('Gravação da assembleia iniciada.', 'success');
-      }
-    } catch (e) {
-      toast(e.message || 'Não foi possível controlar a gravação', 'error');
-    }
   });
   $('btn-leave')?.addEventListener('click', async () => {
   const ok = window.confirm('Deseja sair da assembleia?');
@@ -574,17 +561,18 @@ async function init() {
 
     await connectToRoom(tokenInfo);
 
-    const recordingButton = $('btn-recording');
-    if (recordingButton) {
-      const allowed = isPrivilegedUser() && isRecordingSupported();
-      recordingButton.hidden = !allowed;
-      if (allowed) {
+    // A gravação oficial é automática e não possui controle manual.
+    // Apenas um usuário com permissão de gestão grava para evitar arquivos duplicados.
+    if (isPrivilegedUser()) {
+      if (!isRecordingSupported()) {
+        showBanner('Este dispositivo não oferece suporte à gravação automática. Entre pelo navegador do computador do síndico para manter o registro audiovisual da assembleia.', 'error');
+      } else {
         try {
           await startAssemblyRecording();
-          toast('Esta assembleia está sendo gravada.', 'success');
+          toast('Esta assembleia está sendo gravada automaticamente.', 'success');
         } catch (recordingError) {
-          console.warn('Não foi possível iniciar a gravação automaticamente:', recordingError);
-          toast('A gravação automática não pôde ser iniciada. Use o botão Gravar.', 'warning');
+          console.error('Não foi possível iniciar a gravação automática:', recordingError);
+          showBanner(`Não foi possível iniciar a gravação automática: ${recordingError?.message || 'erro desconhecido'}`, 'error');
         }
       }
     }
