@@ -1302,9 +1302,9 @@ function buildCityStateLabel(condominium) {
 
 
 // ============================================================
-// 0.56.0 - Gestão de reservas/espaços, edição do condomínio e versão
+// 0.63.0 - Gestão de reservas/espaços, edição do condomínio e histórico de versões
 // ============================================================
-const CONDOMIT_APP_VERSION = '0.56.0';
+const CONDOMIT_APP_VERSION = '0.63.0';
 let reservationManagementState = { reservations: [], spaces: [], selected: new Set(), isSindico: false };
 
 async function condomitRpc056(name, payload = {}) {
@@ -1593,11 +1593,14 @@ function ensureAppVersionModal() {
             <div class="current-version-banner"><span>Versão instalada</span><strong>v${CONDOMIT_APP_VERSION}</strong><small>Você está usando a versão mais recente incluída neste projeto.</small></div>
             <div class="release-history">
                 ${[
+                    ['0.63.0','Transcrição de voz renovada','As falas da assembleia passam a ser capturadas em áudio WAV e transcritas no servidor, sem depender do reconhecimento de voz do navegador.'],
+                    ['0.62.0','Transcrição mais estável','Melhorias no processamento de áudio e mensagens mais claras quando a transcrição encontra algum problema.'],
+                    ['0.61.0','Registro automático das falas','A Condomit passou a encaminhar automaticamente a voz para transcrição quando o navegador não conseguia gerar o texto.'],
+                    ['0.59.0','Recuperação da transcrição','Melhorias para evitar que a transcrição permanecesse pausada ou presa em tentativas de reconexão.'],
+                    ['0.58.0','Assembleia e identidade visual','Correção de entrada na sala da assembleia e ajuste das logos das telas de acesso.'],
+                    ['0.57.0','Câmeras e atas','Melhorias na câmera do computador e do celular e registro de participação oral nas atas.'],
                     ['0.56.0','Configurações mais completas','Gestão de reservas e espaços, edição das informações e foto do condomínio e histórico de versões.'],
-                    ['0.55.0','Cadastro e acesso mais confortáveis','Nova seleção de perfil, nova tela de entrar e melhorias nos campos de cadastro e senha.'],
-                    ['0.53.0','Notificações e segurança','Preferências de notificações, notificações do dispositivo, sessões e melhorias na assinatura das atas.'],
-                    ['0.52.0','Assembleias mais interativas','Comentários com respostas, curtidas e descurtidas, além da assinatura desenhada da ata.'],
-                    ['0.51.0','Ata e financeiro','Correções de assembleias, fotos nos comentários e inclusão da assinatura do plano nas despesas.']
+                    ['0.55.0','Cadastro e acesso mais confortáveis','Nova seleção de perfil, nova tela de entrar e melhorias nos campos de cadastro e senha.']
                 ].map(([version,title,copy]) => `<article class="release-item"><span>v${version}</span><div><strong>${title}</strong><p>${copy}</p></div></article>`).join('')}
             </div>
         </div>
@@ -1658,7 +1661,7 @@ const translations = {
         language_label: 'Idioma',
         about: 'Sobre',
         about_company: 'Sobre a empresa',
-        app_version: 'Versão do app: 0.56.0',
+        app_version: 'Versão do app: 0.63.0',
         updates: 'Verifique novas atualizações',
         footer_condo: '© 2026 Condomit.',
         footer_rights: 'Todos os direitos reservados',
@@ -1748,7 +1751,7 @@ const translations = {
         language_label: 'Language',
         about: 'About',
         about_company: 'About the Company',
-        app_version: 'App version: 0.56.0',
+        app_version: 'App version: 0.63.0',
         updates: 'Check for updates',
         footer_condo: '© 2026 Condomit.',
         footer_rights: 'All rights reserved',

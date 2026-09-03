@@ -2,15 +2,19 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
+// As chaves abaixo são públicas no frontend do próprio projeto e servem apenas
+// para validar a sessão do usuário. A OPENAI_API_KEY continua exclusivamente no
+// ambiente da Netlify e nunca é enviada ao navegador.
 const SUPABASE_URL = String(
   process.env.SUPABASE_URL ||
   process.env.VITE_SUPABASE_URL ||
-  ''
+  'https://zoplefkruidaxeapnrjp.supabase.co'
 ).trim();
 
-const SUPABASE_SERVICE_ROLE_KEY = String(
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  ''
+const SUPABASE_ANON_KEY = String(
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  'sb_publishable_z9bRGucN09k7_E6taywKIg_FUpIEzaR'
 ).trim();
 
 const OPENAI_API_KEY = String(
@@ -34,24 +38,8 @@ const HEADERS = {
   'Cache-Control': 'no-store'
 };
 
-let supabaseAdmin = null;
-
-function getAdmin() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
-  if (!supabaseAdmin) {
-    supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
-  }
-  return supabaseAdmin;
-}
-
 function response(statusCode, body) {
-  return {
-    statusCode,
-    headers: HEADERS,
-    body: JSON.stringify(body)
-  };
+  return { statusCode, headers: HEADERS, body: JSON.stringify(body) };
 }
 
 function getBearerToken(event) {
@@ -69,65 +57,31 @@ function parseJson(event) {
   return JSON.parse(raw);
 }
 
-function normalizeCep(value) {
-  const digits = String(value || '').replace(/\D/g, '');
-  return digits.length === 8 ? digits : '';
-}
-
-function sameCep(a, b) {
-  const left = normalizeCep(a);
-  const right = normalizeCep(b);
-  return Boolean(left && right && left === right);
-}
-
-async function userBelongsToAssembly(admin, email, assembly) {
-  if (!email || !assembly?.cep) return false;
-
-  const { data: links } = await admin
-    .from('user_condominiums')
-    .select('condominium_id')
-    .ilike('user_email', email);
-
-  if (Array.isArray(links) && links.some((row) => sameCep(row?.condominium_id, assembly.cep))) {
-    return true;
-  }
-
-  const { data: userRow } = await admin
-    .from('users')
-    .select('cep,condominium')
-    .ilike('email', email)
-    .maybeSingle();
-
-  if (sameCep(userRow?.cep, assembly.cep)) return true;
-
-  let condominium = userRow?.condominium;
-  if (typeof condominium === 'string') {
-    try { condominium = JSON.parse(condominium); } catch (_) { condominium = null; }
-  }
-
-  const candidates = [
-    condominium?.cep,
-    condominium?.condominium_cep,
-    condominium?.condominium_id,
-    condominium?.id
-  ];
-  return candidates.some((candidate) => sameCep(candidate, assembly.cep));
+function createUserClient(token) {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  });
 }
 
 function extensionFromMime(mime) {
   const normalized = String(mime || '').toLowerCase();
+  if (normalized.includes('wav')) return 'wav';
   if (normalized.includes('ogg')) return 'ogg';
   if (normalized.includes('mp4') || normalized.includes('m4a')) return 'm4a';
   if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'mp3';
-  if (normalized.includes('wav')) return 'wav';
   return 'webm';
 }
 
 function baseMimeType(mime) {
-  const normalized = String(mime || 'audio/webm').toLowerCase().split(';')[0].trim();
+  const normalized = String(mime || 'audio/wav').toLowerCase().split(';')[0].trim();
   return /^audio\/(webm|ogg|mp4|mpeg|mp3|wav|x-wav|m4a)$/i.test(normalized)
     ? normalized
-    : 'audio/webm';
+    : 'audio/wav';
 }
 
 function providerMessage(result, fallback = '') {
@@ -137,7 +91,7 @@ function providerMessage(result, fallback = '') {
     result?.raw ||
     fallback ||
     ''
-  ).replace(/\s+/g, ' ').trim().slice(0, 700);
+  ).replace(/\s+/g, ' ').trim().slice(0, 900);
 }
 
 async function requestTranscription(audioBuffer, mimeType, assemblyId, model) {
@@ -145,12 +99,14 @@ async function requestTranscription(audioBuffer, mimeType, assemblyId, model) {
   const uploadMime = baseMimeType(mimeType);
   const ext = extensionFromMime(uploadMime);
   const bytes = new Uint8Array(audioBuffer.buffer, audioBuffer.byteOffset, audioBuffer.byteLength);
+
   form.append('file', new Blob([bytes], { type: uploadMime }), `assembleia-${assemblyId}.${ext}`);
   form.append('model', model);
   form.append('language', 'pt');
-  form.append('response_format', 'json');
-  form.append('temperature', '0');
-  form.append('prompt', 'Transcreva fielmente em português do Brasil uma fala de uma assembleia de condomínio. Preserve nomes próprios, números e termos administrativos. Não resuma e não invente conteúdo.');
+  form.append(
+    'prompt',
+    'Transcreva fielmente em português do Brasil a fala desta assembleia de condomínio. Preserve nomes próprios, números e termos administrativos. Não resuma. Não invente conteúdo. Se houver apenas silêncio ou ruído sem fala inteligível, retorne texto vazio.'
+  );
 
   const openaiResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST',
@@ -164,6 +120,28 @@ async function requestTranscription(audioBuffer, mimeType, assemblyId, model) {
   return { response: openaiResponse, result };
 }
 
+function mapProviderError(openaiResponse, result) {
+  const detail = providerMessage(result, `OpenAI HTTP ${openaiResponse.status}`);
+  let code = 'TRANSCRIPTION_PROVIDER_ERROR';
+  let friendly = 'Não foi possível transcrever este trecho de áudio.';
+
+  if (openaiResponse.status === 401 || openaiResponse.status === 403) {
+    code = 'TRANSCRIPTION_INVALID_KEY';
+    friendly = 'A OPENAI_API_KEY configurada na Netlify foi recusada.';
+  } else if (openaiResponse.status === 429) {
+    code = 'TRANSCRIPTION_QUOTA';
+    friendly = 'A API de transcrição está sem cota/créditos disponíveis ou atingiu um limite de uso.';
+  } else if (openaiResponse.status === 413) {
+    code = 'TRANSCRIPTION_AUDIO_TOO_LARGE';
+    friendly = 'O trecho de áudio ultrapassou o limite aceito pelo serviço de transcrição.';
+  } else if ([400, 415, 422].includes(openaiResponse.status) && /audio|file|format|decode|corrupt|wav/i.test(detail)) {
+    code = 'TRANSCRIPTION_AUDIO_INVALID';
+    friendly = 'O serviço não conseguiu interpretar o trecho de áudio WAV.';
+  }
+
+  return { code, friendly, detail };
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return response(200, { ok: true });
   if (event.httpMethod !== 'POST') return response(405, { ok: false, error: 'Método não permitido.' });
@@ -172,26 +150,35 @@ exports.handler = async (event) => {
     return response(503, {
       ok: false,
       code: 'TRANSCRIPTION_NOT_CONFIGURED',
-      error: 'Transcrição de servidor não configurada.'
+      error: 'OPENAI_API_KEY não configurada na Netlify.'
     });
   }
 
-  const admin = getAdmin();
-  if (!admin) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return response(503, {
       ok: false,
-      code: 'SUPABASE_NOT_CONFIGURED',
-      error: 'Supabase não configurado no servidor.'
+      code: 'TRANSCRIPTION_AUTH',
+      error: 'Configuração pública do Supabase indisponível no servidor.'
     });
   }
 
   const token = getBearerToken(event);
-  if (!token) return response(401, { ok: false, error: 'Sessão ausente.' });
+  if (!token) {
+    return response(401, {
+      ok: false,
+      code: 'TRANSCRIPTION_AUTH',
+      error: 'Sessão ausente. Entre novamente na Condomit.'
+    });
+  }
 
-  const { data: authData, error: authError } = await admin.auth.getUser(token);
-  const authUser = authData?.user;
-  if (authError || !authUser?.email) {
-    return response(401, { ok: false, error: 'Sessão inválida ou expirada.' });
+  const userClient = createUserClient(token);
+  const { data: authData, error: authError } = await userClient.auth.getUser(token);
+  if (authError || !authData?.user?.email) {
+    return response(401, {
+      ok: false,
+      code: 'TRANSCRIPTION_AUTH',
+      error: 'Sessão inválida ou expirada. Entre novamente na Condomit.'
+    });
   }
 
   let payload;
@@ -203,7 +190,7 @@ exports.handler = async (event) => {
 
   const assemblyId = Number(payload?.assembly_id);
   const audioBase64 = String(payload?.audio_base64 || '').trim();
-  const mimeType = String(payload?.mime_type || 'audio/webm').trim();
+  const mimeType = baseMimeType(payload?.mime_type || 'audio/wav');
   const participantIdentity = String(payload?.participant_identity || '').trim() || null;
 
   if (!Number.isFinite(assemblyId) || assemblyId <= 0) {
@@ -217,26 +204,15 @@ exports.handler = async (event) => {
   try {
     audioBuffer = Buffer.from(audioBase64, 'base64');
   } catch (_) {
-    return response(400, { ok: false, error: 'Áudio inválido.' });
+    return response(400, { ok: false, code: 'TRANSCRIPTION_AUDIO_INVALID', error: 'Áudio inválido.' });
   }
 
   if (!audioBuffer.length || audioBuffer.length > MAX_AUDIO_BYTES) {
-    return response(413, { ok: false, error: 'Trecho de áudio inválido ou muito grande.' });
-  }
-
-  const { data: assembly, error: assemblyError } = await admin
-    .from('scheduled_assemblies')
-    .select('id,cep,status')
-    .eq('id', assemblyId)
-    .maybeSingle();
-
-  if (assemblyError || !assembly) {
-    return response(404, { ok: false, error: 'Assembleia não encontrada.' });
-  }
-
-  const email = String(authUser.email || '').trim().toLowerCase();
-  if (!(await userBelongsToAssembly(admin, email, assembly))) {
-    return response(403, { ok: false, error: 'Esta assembleia pertence a outro condomínio.' });
+    return response(413, {
+      ok: false,
+      code: 'TRANSCRIPTION_AUDIO_TOO_LARGE',
+      error: 'Trecho de áudio vazio ou acima do limite permitido.'
+    });
   }
 
   try {
@@ -245,14 +221,11 @@ exports.handler = async (event) => {
     let openaiResponse = attempt.response;
     let result = attempt.result;
 
-    // Algumas contas podem não ter o modelo configurado na variável de ambiente
-    // ou podem receber uma resposta de modelo inválido. Whisper-1 funciona como
-    // fallback compatível com os mesmos formatos de arquivo aceitos aqui.
-    if (!openaiResponse.ok && !['whisper-1'].includes(usedModel)) {
-      const firstMessage = providerMessage(result).toLowerCase();
-      const modelOrRequestProblem = [400, 404].includes(openaiResponse.status)
-        || /model|unsupported|invalid.*model|not found/.test(firstMessage);
-      if (modelOrRequestProblem) {
+    // Erros de credencial/cota não melhoram trocando de modelo. Para erros de
+    // requisição/modelo, tenta whisper-1 como compatibilidade adicional.
+    if (!openaiResponse.ok && !['whisper-1'].includes(usedModel) && ![401, 403, 429, 413].includes(openaiResponse.status)) {
+      const detail = providerMessage(result).toLowerCase();
+      if ([400, 404, 415, 422].includes(openaiResponse.status) || /model|unsupported|invalid.*model|not found/.test(detail)) {
         usedModel = 'whisper-1';
         attempt = await requestTranscription(audioBuffer, mimeType, assemblyId, usedModel);
         openaiResponse = attempt.response;
@@ -261,83 +234,56 @@ exports.handler = async (event) => {
     }
 
     if (!openaiResponse.ok) {
-      const detail = providerMessage(result, `OpenAI HTTP ${openaiResponse.status}`);
       console.error('[assembly-transcribe] OpenAI:', openaiResponse.status, result);
-
-      let code = 'TRANSCRIPTION_PROVIDER_ERROR';
-      let friendly = 'Não foi possível transcrever este trecho de áudio.';
-      if (openaiResponse.status === 401) {
-        code = 'TRANSCRIPTION_INVALID_KEY';
-        friendly = 'A chave OPENAI_API_KEY configurada na Netlify foi recusada.';
-      } else if (openaiResponse.status === 429) {
-        code = 'TRANSCRIPTION_QUOTA';
-        friendly = 'A API de transcrição está sem cota disponível ou atingiu o limite de uso.';
-      } else if (openaiResponse.status === 413) {
-        code = 'TRANSCRIPTION_AUDIO_TOO_LARGE';
-        friendly = 'O trecho de áudio ultrapassou o limite aceito pelo serviço de transcrição.';
-      } else if (openaiResponse.status === 400 && /audio|file|format|decode|corrupt/i.test(detail)) {
-        code = 'TRANSCRIPTION_AUDIO_INVALID';
-        friendly = 'O serviço não conseguiu interpretar o arquivo de áudio gerado pelo navegador.';
-      }
-
+      const mapped = mapProviderError(openaiResponse, result);
       return response(502, {
         ok: false,
-        code,
-        error: friendly,
+        code: mapped.code,
+        error: mapped.friendly,
         provider_status: openaiResponse.status,
-        provider_error: detail || null,
+        provider_error: mapped.detail || null,
         model: usedModel,
         audio_bytes: audioBuffer.length,
-        audio_mime: baseMimeType(mimeType)
+        audio_mime: mimeType
       });
     }
 
     const text = String(result?.text || '').replace(/\s+/g, ' ').trim();
-    let saved = false;
-    let saveError = null;
+    if (!text) {
+      return response(200, {
+        ok: true,
+        text: '',
+        saved: false,
+        model: usedModel,
+        reason: 'no_speech'
+      });
+    }
 
-    if (text) {
-      try {
-        const { data: profile } = await admin
-          .from('users')
-          .select('name,user_type')
-          .ilike('email', email)
-          .maybeSingle();
+    // Salva usando a sessão do próprio usuário. A RPC já valida se o usuário
+    // pertence ao condomínio da assembleia e se a assembleia aceita transcrição.
+    // Não é mais necessário configurar SUPABASE_SERVICE_ROLE_KEY só para isto.
+    const { data: savedRow, error: saveError } = await userClient.rpc('condomit_append_assembly_transcript', {
+      target_assembly_id: assemblyId,
+      transcript_text: text.slice(0, 4000),
+      participant_identity_value: participantIdentity
+    });
 
-        const participantName = String(profile?.name || authUser.user_metadata?.name || email).trim() || email;
-        const participantRole = String(profile?.user_type || authUser.user_metadata?.user_type || 'morador').trim().toLowerCase() || 'morador';
-
-        const { error: insertError } = await admin
-          .from('assembly_transcripts')
-          .insert({
-            assembly_id: assembly.id,
-            cep: assembly.cep,
-            participant_email: email,
-            participant_name: participantName,
-            participant_role: participantRole,
-            participant_identity: participantIdentity,
-            transcript: text.slice(0, 4000),
-            source: 'server_transcribe',
-            spoken_at: new Date().toISOString()
-          });
-
-        if (insertError) {
-          saveError = insertError.message || 'Falha ao salvar transcrição.';
-          console.error('[assembly-transcribe] Supabase insert:', insertError);
-        } else {
-          saved = true;
-        }
-      } catch (error) {
-        saveError = error?.message || 'Falha ao salvar transcrição.';
-        console.error('[assembly-transcribe] Persistência:', error);
-      }
+    if (saveError) {
+      const denied = String(saveError.code || '') === '42501' || /condomínio|permiss|sessão/i.test(String(saveError.message || ''));
+      console.error('[assembly-transcribe] RPC de persistência:', saveError);
+      return response(denied ? 403 : 500, {
+        ok: false,
+        code: denied ? 'TRANSCRIPTION_SAVE_DENIED' : 'TRANSCRIPTION_SAVE_ERROR',
+        error: saveError.message || 'A fala foi transcrita, mas não pôde ser registrada na ata.',
+        text,
+        model: usedModel
+      });
     }
 
     return response(200, {
       ok: true,
       text,
-      saved,
-      save_error: saveError,
+      saved: Boolean(savedRow),
       model: usedModel
     });
   } catch (error) {
@@ -345,7 +291,7 @@ exports.handler = async (event) => {
     return response(500, {
       ok: false,
       code: 'TRANSCRIPTION_ERROR',
-      error: 'Falha interna ao transcrever o áudio.'
+      error: error?.message || 'Falha interna ao transcrever o áudio.'
     });
   }
 };
