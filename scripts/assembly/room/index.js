@@ -1,9 +1,10 @@
-import { state } from './state.js?v=063';
+import { state } from './state.js?v=065';
 import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=064';
 import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=060';
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=064';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=060';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=064';
+import { startAssemblyRecording, stopAssemblyRecording, isAssemblyRecording, isRecordingSupported } from './recording.js?v=065';
 
 function $(id) {
   return document.getElementById(id);
@@ -115,6 +116,19 @@ function bindControls() {
   $('btn-toggle-panel')?.addEventListener('click', () => {
     setPanelOpen(!state.panelOpen);
   });
+  $('btn-recording')?.addEventListener('click', async () => {
+    try {
+      if (isAssemblyRecording()) {
+        await stopAssemblyRecording({ download: true });
+        toast('Gravação finalizada e salva no dispositivo.', 'success');
+      } else {
+        await startAssemblyRecording();
+        toast('Gravação da assembleia iniciada.', 'success');
+      }
+    } catch (e) {
+      toast(e.message || 'Não foi possível controlar a gravação', 'error');
+    }
+  });
   $('btn-leave')?.addEventListener('click', async () => {
   const ok = window.confirm('Deseja sair da assembleia?');
 
@@ -129,6 +143,12 @@ function bindControls() {
       'Não foi possível registrar a saída:',
       error
     );
+  }
+
+  try {
+    await stopAssemblyRecording({ download: true });
+  } catch (error) {
+    console.warn('Não foi possível finalizar a gravação:', error);
   }
 
   await stopAssemblyTranscription();
@@ -554,6 +574,21 @@ async function init() {
 
     await connectToRoom(tokenInfo);
 
+    const recordingButton = $('btn-recording');
+    if (recordingButton) {
+      const allowed = isPrivilegedUser() && isRecordingSupported();
+      recordingButton.hidden = !allowed;
+      if (allowed) {
+        try {
+          await startAssemblyRecording();
+          toast('Esta assembleia está sendo gravada.', 'success');
+        } catch (recordingError) {
+          console.warn('Não foi possível iniciar a gravação automaticamente:', recordingError);
+          toast('A gravação automática não pôde ser iniciada. Use o botão Gravar.', 'warning');
+        }
+      }
+    }
+
     const switchCameraButton = $('btn-switch-camera');
     if (switchCameraButton) {
       switchCameraButton.hidden = !(await canSwitchMobileCamera());
@@ -578,6 +613,7 @@ async function init() {
 }
 
 window.addEventListener('beforeunload', () => {
+  try { stopAssemblyRecording({ download: false }); } catch (_) {}
   stopAssemblyTranscription();
   try { presenceLeave(); } catch (_) {}
 });

@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../styles/index.css?v=053">
   <link rel="stylesheet" href="../styles/theme.css?v=044">
-  <link rel="stylesheet" href="../styles/assembleia-room.css?v=059">
+  <link rel="stylesheet" href="../styles/assembleia-room.css?v=065">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
 </head>
@@ -147,6 +147,8 @@
       </aside>
     </div>
 
+    <div id="recording-status" class="recording-status" hidden aria-live="polite"></div>
+
     <footer class="call-controls" aria-label="Controles da chamada">
       <button class="control-btn" id="btn-mic" type="button" aria-label="Microfone">
         <i class="fas fa-microphone"></i>
@@ -167,6 +169,10 @@
       <button class="control-btn" id="btn-hand" type="button" aria-label="Levantar mão">
         <i class="fas fa-hand-paper"></i>
         <span>Mão</span>
+      </button>
+      <button class="control-btn recording-control" id="btn-recording" type="button" aria-label="Gravar assembleia" aria-pressed="false" hidden>
+        <i class="fas fa-record-vinyl"></i>
+        <span>Gravar</span>
       </button>
       <button class="control-btn" id="btn-toggle-panel" type="button" aria-label="Mostrar ou ocultar painel">
         <i class="fas fa-columns"></i>
@@ -190,7 +196,7 @@
   <script src="../scripts/assembly/auth.js"></script>
   <script src="../scripts/assembly/api.js"></script>
   <script src="../scripts/assembly/permissions.js"></script>
-  <script type="module" src="../scripts/assembly/room/index.js?v=063"></script>
+  <script type="module" src="../scripts/assembly/room/index.js?v=065"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/advanced-global.js?v=057"></script>
 </body>

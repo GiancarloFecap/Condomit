@@ -1,4 +1,4 @@
-import { state } from './state.js?v=064';
+import { state } from './state.js?v=065';
 
 // Condomit v0.64.0
 // Transcrição sem OpenAI/GPT: usa o reconhecimento de voz disponibilizado pelo
