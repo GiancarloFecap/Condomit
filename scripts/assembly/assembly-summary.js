@@ -190,7 +190,7 @@
                 <span><i class="far fa-clock"></i> ${esc(String(a.start_time || '--:--').slice(0, 5))}${a.end_time ? ` – ${esc(String(a.end_time).slice(0, 5))}` : ''}</span>
                 <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
-                <span><i class="fas fa-video"></i> ${state.recordings.length} gravação${state.recordings.length === 1 ? '' : 'ões'}</span>
+                <span><i class="fas fa-video"></i> ${state.recordings.length} ${state.recordings.length === 1 ? 'gravação' : 'gravações'}</span>
                 <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.length ? `${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} transcrito${state.transcripts.length === 1 ? '' : 's'}` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
             </div>
             <div class="summary-hero-actions">

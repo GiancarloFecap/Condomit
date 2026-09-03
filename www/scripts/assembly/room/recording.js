@@ -1,4 +1,4 @@
-import { state } from './state.js?v=066';
+import { state } from './state.js?v=068';
 
 const recording = {
   recorder: null,
@@ -219,15 +219,84 @@ function downloadBlob(blob) {
 }
 
 
-async function uploadRecordingBlob(blob, startedAt, endedAt) {
-  if (!blob?.size || !state.assemblyId || !state.assembly?.cep) return null;
-  const token = await window.resolveSupabaseAccessToken?.().catch(() => null);
-  if (!token) throw new Error('Sessão expirada: não foi possível salvar a gravação na Ata.');
+function base64Metadata(value) {
+  const bytes = new TextEncoder().encode(String(value ?? ''));
+  let binary = '';
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary);
+}
 
-  const bucket = 'condomit-assembly-recordings';
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';
-  const storagePath = `${Number(state.assemblyId)}/${stamp}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.${extension}`;
+async function uploadRecordingTus(blob, bucket, storagePath, token) {
+  const endpoint = `${window.SUPABASE_URL}/storage/v1/upload/resumable`;
+  const metadata = [
+    ['bucketName', bucket],
+    ['objectName', storagePath],
+    ['contentType', blob.type || 'video/webm'],
+    ['cacheControl', '3600']
+  ].map(([key, value]) => `${key} ${base64Metadata(value)}`).join(',');
+
+  const create = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: window.SUPABASE_ANON_KEY,
+      'Tus-Resumable': '1.0.0',
+      'Upload-Length': String(blob.size),
+      'Upload-Metadata': metadata,
+      'x-upsert': 'false'
+    }
+  });
+  if (!create.ok) {
+    const detail = await create.text().catch(() => '');
+    throw new Error(detail || `Falha ao preparar upload da gravação (${create.status}).`);
+  }
+
+  const location = create.headers.get('Location');
+  if (!location) throw new Error('O armazenamento não retornou a URL do upload da gravação.');
+  const uploadUrl = new URL(location, endpoint).toString();
+  const chunkSize = 6 * 1024 * 1024;
+  let offset = 0;
+
+  while (offset < blob.size) {
+    const chunk = blob.slice(offset, Math.min(offset + chunkSize, blob.size));
+    let response = null;
+    let lastError = null;
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        response = await fetch(uploadUrl, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: window.SUPABASE_ANON_KEY,
+            'Tus-Resumable': '1.0.0',
+            'Upload-Offset': String(offset),
+            'Content-Type': 'application/offset+octet-stream'
+          },
+          body: chunk
+        });
+        if (response.ok) break;
+        lastError = new Error((await response.text().catch(() => '')) || `Falha no envio (${response.status}).`);
+      } catch (error) {
+        lastError = error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, [800, 2000, 4000, 7000][attempt]));
+    }
+
+    if (!response?.ok) throw lastError || new Error('Falha ao enviar um trecho da gravação.');
+    const nextOffset = Number(response.headers.get('Upload-Offset'));
+    offset = Number.isFinite(nextOffset) && nextOffset > offset ? nextOffset : offset + chunk.size;
+
+    const label = document.getElementById('recording-status');
+    if (label) {
+      const percent = Math.min(100, Math.round((offset / blob.size) * 100));
+      label.hidden = false;
+      label.textContent = `Salvando gravação… ${percent}%`;
+    }
+  }
+}
+
+async function uploadRecordingStandard(blob, bucket, storagePath, token) {
   const url = `${window.SUPABASE_URL}/storage/v1/object/${bucket}/${storagePath.split('/').map(encodeURIComponent).join('/')}`;
   const response = await fetch(url, {
     method: 'POST',
@@ -243,27 +312,46 @@ async function uploadRecordingBlob(blob, startedAt, endedAt) {
     const detail = await response.text().catch(() => '');
     throw new Error(detail || `Falha ao enviar gravação (${response.status}).`);
   }
+}
+
+async function uploadRecordingBlob(blob, startedAt, endedAt) {
+  if (!blob?.size || !state.assemblyId || !state.assembly?.cep) return null;
+  const token = await window.resolveSupabaseAccessToken?.().catch(() => null);
+  if (!token) throw new Error('Sessão expirada: não foi possível salvar a gravação na Ata.');
+
+  const bucket = 'condomit-assembly-recordings';
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';
+  const storagePath = `${Number(state.assemblyId)}/${stamp}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.${extension}`;
+
+  // Uploads maiores são enviados em blocos de 6 MB. Isso evita perder uma
+  // assembleia inteira por limite/t instabilidade de uma única requisição HTTP.
+  if (blob.size > 6 * 1024 * 1024) {
+    await uploadRecordingTus(blob, bucket, storagePath, token);
+  } else {
+    await uploadRecordingStandard(blob, bucket, storagePath, token);
+  }
 
   const durationSeconds = Math.max(1, Math.round((endedAt.getTime() - startedAt.getTime()) / 1000));
-  const rows = await window.supabaseFetch('/assembly_recordings', {
+  const payload = {
+    target_assembly_id: Number(state.assemblyId),
+    storage_url_value: `storage://${bucket}/${storagePath}`,
+    livekit_room_name_value: state.room?.name || null,
+    duration_seconds_value: durationSeconds,
+    file_size_bytes_value: blob.size,
+    started_at_value: startedAt.toISOString(),
+    ended_at_value: endedAt.toISOString()
+  };
+
+  // O registro é feito por RPC SECURITY DEFINER para não depender de uma
+  // segunda política RLS depois que o arquivo já foi enviado ao Storage.
+  return await window.supabaseFetch('/rpc/condomit_register_assembly_recording_040', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
-    body: JSON.stringify({
-      assembly_id: Number(state.assemblyId),
-      cep: String(state.assembly.cep),
-      livekit_room_name: state.room?.name || null,
-      recording_url: `storage://${bucket}/${storagePath}`,
-      recording_type: 'room_composite',
-      status: 'concluido',
-      duration_seconds: durationSeconds,
-      file_size_bytes: blob.size,
-      started_at: startedAt.toISOString(),
-      ended_at: endedAt.toISOString(),
-      started_by: String(state.user?.email || state.tokenInfo?.email || '').trim() || null
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
   });
-  return Array.isArray(rows) ? rows[0] : rows;
 }
+
 
 export function isRecordingSupported() {
   return typeof window.MediaRecorder === 'function' && typeof HTMLCanvasElement.prototype.captureStream === 'function';
@@ -299,7 +387,7 @@ export async function startAssemblyRecording() {
   recording.audioDestination.stream.getAudioTracks().forEach((track) => output.addTrack(track));
 
   const mimeType = chooseMimeType();
-  const options = mimeType ? { mimeType, videoBitsPerSecond: 2500000, audioBitsPerSecond: 128000 } : undefined;
+  const options = mimeType ? { mimeType, videoBitsPerSecond: 1200000, audioBitsPerSecond: 96000 } : undefined;
   recording.recorder = new MediaRecorder(output, options);
   recording.recorder.ondataavailable = (event) => {
     if (event.data?.size) recording.chunks.push(event.data);
