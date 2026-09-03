@@ -189,6 +189,12 @@ function chooseMimeType() {
   return candidates.find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || '';
 }
 
+function normalizeStorageMimeType(value) {
+  const mime = String(value || '').split(';', 1)[0].trim().toLowerCase();
+  if (mime === 'video/webm' || mime === 'video/mp4' || mime === 'audio/webm') return mime;
+  return 'video/webm';
+}
+
 function base64Metadata(value) {
   const bytes = new TextEncoder().encode(String(value ?? ''));
   let binary = '';
@@ -201,7 +207,7 @@ async function uploadRecordingTus(blob, bucket, storagePath, token) {
   const metadata = [
     ['bucketName', bucket],
     ['objectName', storagePath],
-    ['contentType', blob.type || 'video/webm'],
+    ['contentType', normalizeStorageMimeType(blob.type)],
     ['cacheControl', '3600']
   ].map(([key, value]) => `${key} ${base64Metadata(value)}`).join(',');
 
@@ -273,7 +279,7 @@ async function uploadRecordingStandard(blob, bucket, storagePath, token) {
     headers: {
       Authorization: `Bearer ${token}`,
       apikey: window.SUPABASE_ANON_KEY,
-      'Content-Type': blob.type || 'video/webm',
+      'Content-Type': normalizeStorageMimeType(blob.type),
       'x-upsert': 'false'
     },
     body: blob
