@@ -297,11 +297,37 @@ exports.handler = async (event) => {
   }
 
   const assemblyCepDigits = normalizeCep(assembly.cep);
+  let belongsToAssemblyCondominium = Boolean(
+    assemblyCepDigits && auth.condominiumDigits.has(assemblyCepDigits)
+  );
 
-  if (
-    !assemblyCepDigits ||
-    !auth.condominiumDigits.has(assemblyCepDigits)
-  ) {
+  /*
+   * v0.64.0: quem já foi admitido/autenticado na própria assembleia não deve
+   * receber um falso "outro condomínio" por causa de vínculo/CEP legado.
+   * A presença é criada apenas pelo fluxo autenticado da sala, portanto serve
+   * como fallback seguro sem liberar a assembleia para usuários aleatórios.
+   */
+  if (!belongsToAssemblyCondominium) {
+    const { data: attendance, error: attendanceError } = await supabase
+      .from('assembly_attendance')
+      .select('assembly_id,user_email,cep,presence_status,last_heartbeat_at')
+      .eq('assembly_id', assembly.id)
+      .eq('user_email', auth.userEmail)
+      .maybeSingle();
+
+    if (attendanceError) {
+      console.warn('[raise-hand] Falha ao validar presença como fallback:', attendanceError.message);
+    }
+
+    belongsToAssemblyCondominium = Boolean(
+      attendance &&
+      Number(attendance.assembly_id) === Number(assembly.id) &&
+      String(attendance.user_email || '').trim().toLowerCase() === auth.userEmail &&
+      (!normalizeCep(attendance.cep) || normalizeCep(attendance.cep) === assemblyCepDigits)
+    );
+  }
+
+  if (!assemblyCepDigits || !belongsToAssemblyCondominium) {
     return httpError(
       403,
       auth.condominiumDigits.size

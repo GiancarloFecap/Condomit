@@ -6,7 +6,7 @@ import {
 
 import {
   state
-} from './state.js?v=063';
+} from './state.js?v=064';
 
 import {
   renderGrid,
@@ -660,6 +660,56 @@ function getAudioTrackIdentifier(
   );
 }
 
+let audioUnlockInstalled = false;
+let audioUnlockInProgress = false;
+
+async function unlockRemoteAudioPlayback() {
+  const room = state.room;
+  if (!room || audioUnlockInProgress) return false;
+
+  audioUnlockInProgress = true;
+  try {
+    // LiveKit exige startAudio() em navegadores que bloqueiam autoplay,
+    // principalmente Safari/iOS, Chrome Android e WebViews.
+    if (typeof room.startAudio === 'function') {
+      await room.startAudio();
+    }
+
+    const audioElements = Array.from(document.querySelectorAll('[data-lk-audio="1"]'));
+    await Promise.allSettled(audioElements.map(async (element) => {
+      element.autoplay = true;
+      element.playsInline = true;
+      element.muted = false;
+      element.volume = 1;
+      if (typeof element.play === 'function' && element.paused) {
+        await element.play();
+      }
+    }));
+    return true;
+  } catch (error) {
+    warnLiveKit('O áudio remoto ainda aguarda uma interação do usuário.', error);
+    return false;
+  } finally {
+    audioUnlockInProgress = false;
+  }
+}
+
+function installAudioUnlockHandlers() {
+  if (audioUnlockInstalled) return;
+  audioUnlockInstalled = true;
+
+  const resume = () => { unlockRemoteAudioPlayback().catch(() => {}); };
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach((eventName) => {
+    window.addEventListener(eventName, resume, { passive: true });
+  });
+  window.addEventListener('focus', resume);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) resume();
+  });
+}
+
+installAudioUnlockHandlers();
+
 function attachAudio(
   track,
   participant = null
@@ -727,6 +777,10 @@ function attachAudio(
       .appendChild(
         element
       );
+
+    // Tenta imediatamente e, se o autoplay estiver bloqueado, os handlers de
+    // interação instalados acima repetem startAudio()/play no primeiro toque.
+    unlockRemoteAudioPlayback().catch(() => {});
 
     const playPromise =
       element.play?.();
@@ -1912,6 +1966,10 @@ export async function connectToRoom(
           1
       }
     );
+
+    // Em desktop normalmente resolve imediatamente; em celular a chamada é
+    // repetida no primeiro gesto do usuário caso a política de autoplay bloqueie.
+    await unlockRemoteAudioPlayback().catch(() => false);
 
     const preferences =
       getInitialDevicePrefs();
