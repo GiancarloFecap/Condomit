@@ -585,26 +585,134 @@
         }
     }
 
+    function normalizeSignedStorageUrl(value) {
+        const signed = String(value || '').trim();
+        if (!signed) return null;
+        if (/^https?:\/\//i.test(signed)) return signed;
+        const base = String(window.SUPABASE_URL || '').replace(/\/$/, '');
+        if (!base) return null;
+        if (signed.startsWith('/storage/v1/')) return `${base}${signed}`;
+        if (signed.startsWith('/object/')) return `${base}/storage/v1${signed}`;
+        if (signed.startsWith('storage/v1/')) return `${base}/${signed}`;
+        if (signed.startsWith('object/')) return `${base}/storage/v1/${signed}`;
+        return `${base}/storage/v1/${signed.replace(/^\/+/, '')}`;
+    }
+
+    function recordingMimeType(recordingRow) {
+        const raw = String(recordingRow?.recording_url || '').toLowerCase();
+        if (raw.includes('.mp4')) return 'video/mp4';
+        if (raw.includes('.webm')) return 'video/webm';
+        return 'video/webm';
+    }
+
     async function createSignedRecordingUrl(recordingRow) {
         const raw = String(recordingRow?.recording_url || '').trim();
-        if (!raw) return null;
+        if (!raw) throw new Error('A gravação não possui endereço de armazenamento.');
         if (!raw.startsWith('storage://')) return raw;
         const match = raw.match(/^storage:\/\/([^/]+)\/(.+)$/);
-        if (!match) return null;
+        if (!match) throw new Error('Endereço interno da gravação inválido.');
         const [, bucket, objectPath] = match;
         const token = await window.resolveSupabaseAccessToken?.().catch(() => null);
-        if (!token) return null;
+        if (!token) throw new Error('Sua sessão expirou. Entre novamente para reproduzir a gravação.');
         const endpoint = `${window.SUPABASE_URL}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${objectPath.split('/').map(encodeURIComponent).join('/')}`;
         const response = await fetch(endpoint, {
             method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, apikey: window.SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ expiresIn: 3600 })
+            headers: {
+                Authorization: `Bearer ${token}`,
+                apikey: window.SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ expiresIn: 3600 }),
+            cache: 'no-store'
         });
-        if (!response.ok) return null;
+        if (!response.ok) {
+            const detail = await response.text().catch(() => '');
+            throw new Error(detail || `Não foi possível autorizar a reprodução (${response.status}).`);
+        }
         const data = await response.json();
         const signed = data?.signedURL || data?.signedUrl || data?.signed_url;
-        if (!signed) return null;
-        return signed.startsWith('http') ? signed : `${window.SUPABASE_URL}/storage/v1${signed}`;
+        const normalized = normalizeSignedStorageUrl(signed);
+        if (!normalized) throw new Error('O Storage não retornou uma URL de reprodução válida.');
+        return normalized;
+    }
+
+    function renderRecordingPlayer(card, row, url) {
+        const holder = card.querySelector('.recording-player-loading, .recording-player-wrap');
+        if (!holder) return;
+        holder.className = 'recording-player-wrap';
+        holder.innerHTML = '';
+
+        const video = document.createElement('video');
+        video.className = 'assembly-recording-player';
+        video.controls = true;
+        video.preload = 'metadata';
+        video.playsInline = true;
+        video.disablePictureInPicture = true;
+        video.setAttribute('controlsList', 'nodownload noremoteplayback');
+        video.setAttribute('oncontextmenu', 'return false;');
+
+        const source = document.createElement('source');
+        source.src = url;
+        source.type = recordingMimeType(row);
+        video.appendChild(source);
+
+        const note = document.createElement('small');
+        note.className = 'recording-access-note';
+        note.innerHTML = '<i class="fas fa-shield-halved"></i> Reprodução disponível somente nesta Ata para usuários autorizados.';
+
+        const errorBox = document.createElement('div');
+        errorBox.className = 'recording-playback-error';
+        errorBox.hidden = true;
+
+        const retryButton = document.createElement('button');
+        retryButton.type = 'button';
+        retryButton.className = 'summary-secondary recording-retry-btn';
+        retryButton.innerHTML = '<i class="fas fa-rotate-right"></i> Tentar reproduzir novamente';
+        retryButton.hidden = true;
+
+        let retrying = false;
+        const retryPlayback = async () => {
+            if (retrying) return;
+            retrying = true;
+            retryButton.disabled = true;
+            errorBox.hidden = true;
+            try {
+                const freshUrl = await createSignedRecordingUrl(row);
+                source.src = freshUrl;
+                video.load();
+                // play() pode ser bloqueado por autoplay; como esta chamada vem de
+                // clique do usuário, navegadores normalmente permitem a reprodução.
+                await video.play().catch(() => {});
+            } catch (error) {
+                errorBox.textContent = error?.message || 'Não foi possível renovar o acesso à gravação.';
+                errorBox.hidden = false;
+                retryButton.hidden = false;
+            } finally {
+                retrying = false;
+                retryButton.disabled = false;
+            }
+        };
+
+        video.addEventListener('error', () => {
+            const mediaError = video.error;
+            const messages = {
+                1: 'A reprodução foi interrompida.',
+                2: 'Falha de rede ao carregar a gravação.',
+                3: 'O navegador não conseguiu decodificar esta gravação.',
+                4: 'O formato desta gravação não é compatível com este navegador.'
+            };
+            errorBox.textContent = messages[mediaError?.code] || 'Não foi possível reproduzir esta gravação.';
+            errorBox.hidden = false;
+            retryButton.hidden = false;
+        });
+        video.addEventListener('loadedmetadata', () => {
+            errorBox.hidden = true;
+            retryButton.hidden = true;
+        });
+        retryButton.addEventListener('click', retryPlayback);
+
+        holder.append(video, note, errorBox, retryButton);
+        video.load();
     }
 
     function formatBytes(bytes) {
@@ -635,13 +743,15 @@
         state.recordings.forEach(async (row, index) => {
             const card = container.querySelector(`[data-recording-index="${index}"]`);
             if (!card) return;
-            const url = await createSignedRecordingUrl(row).catch(() => null);
             const holder = card.querySelector('.recording-player-loading');
             if (!holder) return;
-            holder.className = 'recording-player-wrap';
-            holder.innerHTML = url
-                ? `<video class="assembly-recording-player" controls controlsList="nodownload noremoteplayback" disablePictureInPicture preload="metadata" playsinline src="${esc(url)}" oncontextmenu="return false;"></video><small class="recording-access-note"><i class="fas fa-shield-halved"></i> Reprodução disponível somente nesta Ata para usuários autorizados.</small>`
-                : '<div class="summary-empty">Não foi possível gerar o acesso temporário a esta gravação.</div>';
+            try {
+                const url = await createSignedRecordingUrl(row);
+                renderRecordingPlayer(card, row, url);
+            } catch (error) {
+                holder.className = 'recording-player-wrap';
+                holder.innerHTML = `<div class="summary-empty">${esc(error?.message || 'Não foi possível gerar o acesso temporário a esta gravação.')}</div>`;
+            }
         });
     }
 

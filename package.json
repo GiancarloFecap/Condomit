@@ -1,6 +1,6 @@
 {
   "name": "condomit",
-  "version": "0.70.2",
+  "version": "0.70.3",
   "private": true,
   "description": "Plataforma Condomit para web, PWA, Android e iOS.",
   "engines": {

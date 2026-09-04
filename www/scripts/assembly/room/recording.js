@@ -1,4 +1,4 @@
-import { state } from './state.js?v=070';
+import { state } from './state.js?v=0703';
 
 const recording = {
   recorder: null,
@@ -178,15 +178,33 @@ function drawMeetingFrame() {
   ctx.fillText('REC', 57, 47);
 }
 
+function canRecordAndPlay(mimeType) {
+  if (!window.MediaRecorder?.isTypeSupported?.(mimeType)) return false;
+  try {
+    const video = document.createElement('video');
+    const result = video.canPlayType?.(mimeType) || '';
+    // `maybe` e `probably` indicam que o navegador reconhece o formato.
+    return result === 'maybe' || result === 'probably';
+  } catch (_) {
+    return true;
+  }
+}
+
 function chooseMimeType() {
+  // Prefere formatos mais portáveis. MP4/H.264 é escolhido quando o navegador
+  // realmente consegue gravar E reproduzir esse perfil. No WebM, VP8 vem antes
+  // de VP9 por ter compatibilidade mais ampla entre navegadores/WebViews.
   const candidates = [
-    'video/webm;codecs=vp9,opus',
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4;codecs=avc1.42001E,mp4a.40.2',
+    'video/mp4',
     'video/webm;codecs=vp8,opus',
-    'video/webm',
-    'audio/webm;codecs=opus',
-    'audio/webm'
+    'video/webm;codecs=vp9,opus',
+    'video/webm'
   ];
-  return candidates.find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || '';
+  return candidates.find(canRecordAndPlay)
+    || candidates.find((type) => window.MediaRecorder?.isTypeSupported?.(type))
+    || '';
 }
 
 function normalizeStorageMimeType(value) {

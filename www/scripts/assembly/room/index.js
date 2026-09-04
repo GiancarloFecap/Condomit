@@ -1,10 +1,10 @@
-import { state } from './state.js?v=070';
+import { state } from './state.js?v=0703';
 import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=064';
 import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=060';
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=064';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=060';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=066';
-import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=0702';
+import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=0703';
 
 function $(id) {
   return document.getElementById(id);
