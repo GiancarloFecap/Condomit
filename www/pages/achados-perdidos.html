@@ -8,10 +8,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/achados-perdidos.css?v=0710">
+    <link rel="stylesheet" href="../styles/achados-perdidos.css?v=0711">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="../styles/ux-polish.css?v=0710">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=0711">
 </head>
 <body class="condomit-app-page">
     <div class="dashboard-sindico">
@@ -71,6 +71,10 @@
                                         <option value="az">A-Z</option>
                                     </select>
                                 </div>
+                                <button class="ghost-btn compact-btn mine-filter-btn" id="lostFoundMineFilter" type="button" aria-pressed="false">
+                                    <i class="fas fa-user-tag"></i>
+                                    <span>Meus itens</span>
+                                </button>
                                 <button class="ghost-btn compact-btn" id="clearLostFoundFilters" type="button">
                                     <i class="fas fa-rotate-left"></i>
                                     Limpar
@@ -211,6 +215,25 @@
             </form>
         </div>
     </div>
+
+    <div class="modal-backdrop" id="lostFoundDetailsModal" aria-hidden="true">
+        <div class="modal-card lost-found-details-card" role="dialog" aria-modal="true" aria-labelledby="lostFoundDetailsTitle">
+            <div class="modal-header">
+                <div>
+                    <h3 id="lostFoundDetailsTitle">Detalhes do item</h3>
+                    <p>Informações completas do registro.</p>
+                </div>
+                <button class="modal-close" id="closeLostFoundDetailsModal" type="button" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="lostFoundDetailsBody" class="lost-found-details-body"></div>
+            <div class="modal-actions">
+                <button class="ghost-btn" id="closeLostFoundDetailsAction" type="button">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="../scripts/platform-config.js?v=035"></script>
 
 
@@ -220,8 +243,8 @@
   src="../scripts/supabase-auth.js?v=036"
 ></script>
     <script src="../scripts/community-hub.js?v=053"></script>
-    <script src="../scripts/sidebar-links.js?v=0710"></script>
-    <script src="../scripts/achados-perdidos.js?v=0710"></script>
+    <script src="../scripts/sidebar-links.js?v=0711"></script>
+    <script src="../scripts/achados-perdidos.js?v=0711"></script>
     <script src="../scripts/topbar-actions.js?v=035"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>

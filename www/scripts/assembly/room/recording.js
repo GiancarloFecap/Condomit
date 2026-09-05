@@ -1,4 +1,5 @@
-import { state } from './state.js?v=0710';
+import { state } from './state.js?v=0711';
+import { transcribeRecordedAssembly } from './recorded-transcription.js?v=0711';
 
 const recording = {
   recorder: null,
@@ -12,12 +13,101 @@ const recording = {
   drawTimer: null,
   startedAt: null,
   stopping: false,
-  pendingUpload: null
+  pendingUpload: null,
+  speakerTimeline: [],
+  currentSpeakerSegment: null,
+  participantDirectory: {}
 };
 
 function safeText(value) {
   return String(value ?? '').trim();
 }
+
+function parseParticipantMetadata(participant) {
+  try {
+    const raw = participant?.metadata;
+    return raw && typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
+  } catch (_) {
+    return {};
+  }
+}
+
+function captureParticipantDirectory() {
+  const directory = {};
+  const add = (participant) => {
+    const identity = safeText(participant?.identity);
+    if (!identity) return;
+    const meta = parseParticipantMetadata(participant);
+    directory[identity] = {
+      identity,
+      email: safeText(meta?.user_email).toLowerCase(),
+      name: safeText(meta?.user_name || participant?.name || meta?.user_email || identity),
+      role: safeText(meta?.user_type || 'morador').toLowerCase()
+    };
+  };
+  add(state.room?.localParticipant);
+  state.room?.remoteParticipants?.forEach?.(add);
+  recording.participantDirectory = { ...recording.participantDirectory, ...directory };
+  return recording.participantDirectory;
+}
+
+function sameIdentitySet(a, b) {
+  const left = Array.isArray(a) ? a : [];
+  const right = Array.isArray(b) ? b : [];
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function recordingOffsetSeconds(now = Date.now()) {
+  const start = recording.startedAt?.getTime?.() || now;
+  return Math.max(0, (now - start) / 1000);
+}
+
+function updateSpeakerTimeline(identities) {
+  if (!isAssemblyRecording() || !recording.startedAt) return;
+  captureParticipantDirectory();
+  const normalized = Array.from(new Set((Array.isArray(identities) ? identities : [])
+    .map((value) => safeText(value))
+    .filter(Boolean)));
+
+  const nowOffset = recordingOffsetSeconds();
+  const current = recording.currentSpeakerSegment;
+  if (current && sameIdentitySet(current.identities, normalized)) return;
+
+  if (current && nowOffset > current.start) {
+    recording.speakerTimeline.push({
+      start: current.start,
+      end: nowOffset,
+      identities: [...current.identities]
+    });
+  }
+  recording.currentSpeakerSegment = { start: nowOffset, identities: normalized };
+}
+
+function finalizeSpeakerTimeline(endedAt) {
+  const current = recording.currentSpeakerSegment;
+  const endOffset = recording.startedAt
+    ? Math.max(0, (endedAt.getTime() - recording.startedAt.getTime()) / 1000)
+    : 0;
+  if (current && endOffset > current.start) {
+    recording.speakerTimeline.push({
+      start: current.start,
+      end: endOffset,
+      identities: [...current.identities]
+    });
+  }
+  recording.currentSpeakerSegment = null;
+  return recording.speakerTimeline
+    .filter((segment) => Number(segment.end) - Number(segment.start) >= 0.15)
+    .map((segment) => ({
+      start: Number(segment.start),
+      end: Number(segment.end),
+      identities: [...segment.identities]
+    }));
+}
+
+window.addEventListener('condomit:assembly-active-speakers', (event) => {
+  updateSpeakerTimeline(event?.detail?.identities || []);
+});
 
 function setUi(active) {
   const label = document.getElementById('recording-status');
@@ -360,6 +450,33 @@ async function persistPendingRecording() {
           : `Tentando salvar gravação novamente (${attempt}/4)…`;
       }
       const result = await uploadRecordingBlob(pending.blob, pending.startedAt, pending.endedAt);
+
+      // A transcrição é produzida a partir do arquivo de vídeo finalizado,
+      // nunca diretamente do microfone. Trechos com múltiplos participantes
+      // falando ao mesmo tempo são descartados do texto oficial.
+      try {
+        const label = document.getElementById('recording-status');
+        if (label) {
+          label.hidden = false;
+          label.textContent = 'Gerando transcrição a partir da gravação…';
+        }
+        await transcribeRecordedAssembly({
+          blob: pending.blob,
+          assemblyId: Number(state.assemblyId),
+          startedAt: pending.startedAt,
+          speakerTimeline: pending.speakerTimeline || [],
+          participantDirectory: pending.participantDirectory || {}
+        });
+      } catch (transcriptionError) {
+        console.warn('[Assembly Recording] Gravação salva, mas a transcrição do vídeo não foi concluída.', transcriptionError);
+        const label = document.getElementById('recording-status');
+        if (label) {
+          label.hidden = false;
+          label.textContent = 'Gravação salva. A transcrição automática do vídeo não pôde ser concluída neste dispositivo.';
+          label.title = transcriptionError?.message || '';
+        }
+      }
+
       recording.pendingUpload = null;
       return result;
     } catch (error) {
@@ -387,6 +504,10 @@ export async function startAssemblyRecording() {
 
   recording.chunks = [];
   recording.stopping = false;
+  recording.speakerTimeline = [];
+  recording.currentSpeakerSegment = { start: 0, identities: [] };
+  recording.participantDirectory = {};
+  captureParticipantDirectory();
   recording.canvas = document.createElement('canvas');
   recording.canvas.width = 1280;
   recording.canvas.height = 720;
@@ -449,11 +570,15 @@ export async function stopAssemblyRecording() {
 
   const blob = new Blob(recording.chunks, { type: recorder.mimeType || 'video/webm' });
   const endedAt = new Date();
+  const speakerTimeline = finalizeSpeakerTimeline(endedAt);
+  captureParticipantDirectory();
   if (blob.size > 0) {
     recording.pendingUpload = {
       blob,
       startedAt: recording.startedAt || endedAt,
-      endedAt
+      endedAt,
+      speakerTimeline,
+      participantDirectory: { ...recording.participantDirectory }
     };
   }
 
@@ -470,6 +595,9 @@ export async function stopAssemblyRecording() {
   recording.audioDestination = null;
   recording.chunks = [];
   recording.startedAt = null;
+  recording.speakerTimeline = [];
+  recording.currentSpeakerSegment = null;
+  recording.participantDirectory = {};
   recording.stopping = false;
 
   if (recording.pendingUpload) {

@@ -1549,7 +1549,12 @@ async function loadScheduledAssemblies() {
 
         pastAssemblies = rawList.filter((assembly) =>
             isPastStatus(assembly) || String(assembly.date || '').localeCompare(todayIso) < 0
-        );
+        ).sort((left, right) => {
+            const leftDate = getScheduledAssemblyStartDate(left)?.getTime() || 0;
+            const rightDate = getScheduledAssemblyStartDate(right)?.getTime() || 0;
+            if (rightDate !== leftDate) return rightDate - leftDate;
+            return Number(right?.id || 0) - Number(left?.id || 0);
+        });
 
         scheduledAssemblies = rawList.filter((assembly) =>
             !isPastStatus(assembly) && String(assembly.date || '').localeCompare(todayIso) >= 0

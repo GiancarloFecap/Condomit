@@ -314,7 +314,12 @@
             paragraphs.push(`Quanto ao item “${item.title}”, ficou registrado em ata o seguinte teor de discussão: ${sentenceFragment(item.notes)}.`);
         });
 
-        const orderedTranscripts = [...state.transcripts]
+        const recordingTranscripts = [...state.transcripts].filter((row) => {
+            const source = String(row.transcript_source || row.source || '').trim().toLowerCase();
+            return source === 'recording_video_whisper' || source === 'recording_whisper_local';
+        });
+        const transcriptSourceRows = recordingTranscripts.length ? recordingTranscripts : [...state.transcripts];
+        const orderedTranscripts = transcriptSourceRows
             .filter((row) => cleanFormalText(row.transcript || ''))
             .sort((a, b) => new Date(a.spoken_at || a.created_at || 0) - new Date(b.spoken_at || b.created_at || 0));
 

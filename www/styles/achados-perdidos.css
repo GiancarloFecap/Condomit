@@ -569,3 +569,61 @@ html[data-theme="dark"] .sort-filter-wrap select{color:#e2e8f0!important}
 
 .status-chip.procurando{background:#fff7ed;color:#c2410c}.status-chip.localizado{background:#dcfce7;color:#166534}
 .lost-found-status-editor{margin-top:12px;display:flex;align-items:center;gap:10px}.lost-found-status-editor span{font-size:.78rem;font-weight:700;color:#64748b}.lost-found-status-editor select{min-height:36px;border:1px solid #dbe2f0;border-radius:10px;padding:0 10px;background:var(--card-bg,#fff);color:var(--text-primary,#172033)}
+
+
+/* 0.71.1 - filtro "Meus itens" e detalhes em modal */
+.mine-filter-btn.active{
+    background:#eaf1ff;
+    border-color:#8fb0ff;
+    color:#1d4ed8;
+}
+.res-item-card-clickable{
+    cursor:pointer;
+    transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;
+}
+.res-item-card-clickable:hover,
+.res-item-card-clickable:focus-visible{
+    transform:translateY(-2px);
+    box-shadow:0 16px 34px rgba(15,23,42,.11);
+    border-color:#9bb7ef;
+    outline:none;
+}
+.lost-found-details-card{width:min(100%,700px)}
+.lost-found-details-body{display:grid;gap:18px;margin-top:18px}
+.lost-found-detail-image-wrap{
+    width:100%;height:min(330px,42vh);border-radius:18px;overflow:hidden;
+    background:#f8fafc;border:1px solid #e2e8f0;
+}
+.lost-found-detail-image{width:100%;height:100%;object-fit:contain;display:block;background:#fff}
+.lost-found-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.lost-found-detail-grid>div,.lost-found-detail-section,.lost-found-owner-editor{
+    padding:14px 16px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;
+}
+.lost-found-detail-grid span,.lost-found-detail-section>span{
+    display:block;font-size:.78rem;color:#64748b;margin-bottom:5px;font-weight:700;
+}
+.lost-found-detail-grid strong{color:#172033}
+.lost-found-detail-section p{margin:0;color:#334155;line-height:1.55}
+.lost-found-owner-editor{display:grid;gap:14px;background:#f0f6ff;border-color:#cbdcfb}
+.lost-found-owner-editor>div p{margin:4px 0 0;color:#64748b;font-size:.88rem}
+.lost-found-owner-editor label{display:grid;gap:7px;font-weight:700;color:#1e293b}
+.lost-found-owner-editor select{
+    width:100%;padding:12px 14px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;font:inherit;color:#334155;
+}
+@media(max-width:720px){
+    .lost-found-detail-grid{grid-template-columns:1fr}
+    .lost-found-filter-actions{align-items:stretch}
+    .mine-filter-btn{width:100%}
+}
+html[data-theme="dark"] .mine-filter-btn.active{background:#172554;border-color:#3153b8;color:#bfdbfe}
+html[data-theme="dark"] .lost-found-detail-grid>div,
+html[data-theme="dark"] .lost-found-detail-section,
+html[data-theme="dark"] .lost-found-owner-editor{
+    background:#101826;border-color:#334155;color:#e2e8f0;
+}
+html[data-theme="dark"] .lost-found-detail-grid strong,
+html[data-theme="dark"] .lost-found-owner-editor label{color:#e2e8f0}
+html[data-theme="dark"] .lost-found-detail-section p,
+html[data-theme="dark"] .lost-found-owner-editor>div p{color:#94a3b8}
+html[data-theme="dark"] .lost-found-detail-image-wrap,
+html[data-theme="dark"] .lost-found-detail-image{background:#0f172a;border-color:#334155}

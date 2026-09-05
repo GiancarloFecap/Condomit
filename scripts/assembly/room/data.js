@@ -1,4 +1,4 @@
-import { state } from './state.js?v=0710';
+import { state } from './state.js?v=0711';
 import { renderChatMessage, renderSimpleList } from './ui.js?v=060';
 
 function normalizeCepForDatabase(value) {

@@ -6,7 +6,7 @@ import {
 
 import {
   state
-} from './state.js?v=0710';
+} from './state.js?v=0711';
 
 import {
   renderGrid,

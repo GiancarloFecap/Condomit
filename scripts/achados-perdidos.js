@@ -5,7 +5,10 @@ const lostFoundState = {
     status: 'todos',
     draftImage: '',
     matches: [],
-    sort: 'recentes'
+    sort: 'recentes',
+    mineOnly: false,
+    selectedItem: null,
+    cachedItems: []
 };
 
 const LOST_FOUND_IMAGES = {
@@ -112,6 +115,12 @@ function setupLostFoundActions() {
 
     document.getElementById('clearLostFoundFilters')?.addEventListener('click', clearLostFoundFilters);
 
+    document.getElementById('lostFoundMineFilter')?.addEventListener('click', () => {
+        lostFoundState.mineOnly = !lostFoundState.mineOnly;
+        syncMineFilter();
+        renderLostFoundPage();
+    });
+
     document.getElementById('createLostFoundBtn')?.addEventListener('click', openLostFoundModal);
     document.getElementById('closeLostFoundModal')?.addEventListener('click', closeLostFoundModal);
     document.getElementById('cancelLostFoundModal')?.addEventListener('click', closeLostFoundModal);
@@ -121,6 +130,12 @@ function setupLostFoundActions() {
         if (event.target.id === 'lostFoundModal') {
             closeLostFoundModal();
         }
+    });
+
+    document.getElementById('closeLostFoundDetailsModal')?.addEventListener('click', closeLostFoundDetailsModal);
+    document.getElementById('closeLostFoundDetailsAction')?.addEventListener('click', closeLostFoundDetailsModal);
+    document.getElementById('lostFoundDetailsModal')?.addEventListener('click', (event) => {
+        if (event.target.id === 'lostFoundDetailsModal') closeLostFoundDetailsModal();
     });
 
     document.getElementById('lostFoundForm')?.addEventListener('submit', (event) => {
@@ -210,6 +225,7 @@ async function fetchLostFoundFromSupabase() {
             status: normalizeLostFoundStatus(row.item_status, type),
             type,
             author: row.created_by || 'Condomínio',
+            authorEmail: String(row.created_by || '').trim().toLowerCase(),
             image: row.image_url || LOST_FOUND_IMAGES.default
         }); });
     } catch (err) {
@@ -343,15 +359,21 @@ async function renderLostFoundPage() {
     } catch (_) { lostFoundState.matches = []; }
 
     const allItems = await getLostFoundItems();
+    lostFoundState.cachedItems = allItems;
     renderLostFoundHighlights(allItems);
     renderLostFoundMatchesPanel(allItems);
 
+    const currentEmail = String(lostFoundState.currentUser?.email || '').trim().toLowerCase();
     const items = allItems.filter((item) => {
         const matchesType = lostFoundState.type === 'todos' || item.type === lostFoundState.type;
         const matchesStatus = lostFoundState.status === 'todos' || item.status === lostFoundState.status;
         const haystack = `${item.title} ${item.location} ${item.description} ${item.date}`.toLowerCase();
         const matchesSearch = !lostFoundState.search || haystack.includes(lostFoundState.search);
-        return matchesType && matchesStatus && matchesSearch;
+        const matchesOwner = !lostFoundState.mineOnly || (
+            currentEmail &&
+            String(item.authorEmail || '').trim().toLowerCase() === currentEmail
+        );
+        return matchesType && matchesStatus && matchesSearch && matchesOwner;
     });
 
     sortLostFoundItems(items);
@@ -387,7 +409,9 @@ function renderLostFoundGrid(items) {
     }
 
     grid.innerHTML = items.map((item) => `
-        <article class="res-item-card">
+        <article class="res-item-card res-item-card-clickable" tabindex="0" role="button"
+            data-lf-open-id="${escapeHtml(String(item.id || ''))}"
+            aria-label="Ver detalhes de ${escapeHtml(item.title)}">
             <img class="res-item-image" src="${item.image || LOST_FOUND_IMAGES.default}" alt="${escapeHtml(item.title)}">
             <div class="res-item-body">
                 <div class="res-item-top">
@@ -403,23 +427,21 @@ function renderLostFoundGrid(items) {
                     <span><i class="fas fa-calendar-day"></i>${formatDate(item.date)}</span>
                 </div>
                 <div class="res-item-author"><i class="fas fa-user"></i><span>Registrado por ${escapeHtml(item.author || 'Condomínio')}</span></div>
-                ${item.dbId ? `<label class="lost-found-status-editor"><span>Status</span><select data-lf-status-id="${item.dbId}" data-lf-type="${item.type}">${getStatusOptions(item.type, item.status)}</select></label>` : ''}
             </div>
         </article>
     `).join('');
-    grid.querySelectorAll('[data-lf-status-id]').forEach((select) => {
-        select.dataset.previous = select.value;
-        select.addEventListener('change', async () => {
-            const previous = select.dataset.previous || '';
-            select.disabled = true;
-            try {
-                await updateLostFoundStatus(Number(select.dataset.lfStatusId), select.value);
-                select.dataset.previous = select.value;
-                await renderLostFoundPage();
-            } catch (error) {
-                if (previous) select.value = previous;
-                window.showToast?.(error?.message || 'Não foi possível atualizar o status.', 'error');
-            } finally { select.disabled = false; }
+
+    grid.querySelectorAll('[data-lf-open-id]').forEach((card) => {
+        const open = () => {
+            const item = lostFoundState.cachedItems.find((candidate) => String(candidate.id) === String(card.dataset.lfOpenId));
+            if (item) openLostFoundDetailsModal(item);
+        };
+        card.addEventListener('click', open);
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                open();
+            }
         });
     });
 }
@@ -448,6 +470,97 @@ function syncStatusFilters() {
     buttons.forEach((button) => {
         button.classList.toggle('active', (button.dataset.lostStatus || 'todos') === lostFoundState.status);
         button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
+    });
+}
+
+
+function syncMineFilter() {
+    const button = document.getElementById('lostFoundMineFilter');
+    if (!button) return;
+    button.classList.toggle('active', lostFoundState.mineOnly);
+    button.setAttribute('aria-pressed', lostFoundState.mineOnly ? 'true' : 'false');
+    const label = button.querySelector('span');
+    if (label) label.textContent = lostFoundState.mineOnly ? 'Meus itens: ativo' : 'Meus itens';
+}
+
+function isOwnLostFoundItem(item) {
+    const currentEmail = String(lostFoundState.currentUser?.email || '').trim().toLowerCase();
+    const authorEmail = String(item?.authorEmail || '').trim().toLowerCase();
+    return Boolean(currentEmail && authorEmail && currentEmail === authorEmail);
+}
+
+function closeLostFoundDetailsModal() {
+    lostFoundState.selectedItem = null;
+    const modal = document.getElementById('lostFoundDetailsModal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function openLostFoundDetailsModal(item) {
+    const modal = document.getElementById('lostFoundDetailsModal');
+    const body = document.getElementById('lostFoundDetailsBody');
+    const title = document.getElementById('lostFoundDetailsTitle');
+    if (!modal || !body || !item) return;
+
+    lostFoundState.selectedItem = item;
+    const own = isOwnLostFoundItem(item);
+    const typeLabel = item.type === 'perdido' ? 'Item perdido' : 'Item encontrado';
+    if (title) title.textContent = item.title || 'Detalhes do item';
+
+    body.innerHTML = `
+        <div class="lost-found-detail-image-wrap">
+            <img class="lost-found-detail-image" src="${item.image || LOST_FOUND_IMAGES.default}" alt="${escapeHtml(item.title)}">
+        </div>
+        <div class="lost-found-detail-grid">
+            <div><span>Tipo</span><strong>${typeLabel}</strong></div>
+            <div><span>Status</span><strong>${getStatusLabel(item.status)}</strong></div>
+            <div><span>Local</span><strong>${escapeHtml(item.location || 'Não informado')}</strong></div>
+            <div><span>Data</span><strong>${formatDate(item.date)}</strong></div>
+        </div>
+        <div class="lost-found-detail-section">
+            <span>Descrição</span>
+            <p>${escapeHtml(item.description || 'Sem descrição.')}</p>
+        </div>
+        <div class="lost-found-detail-section">
+            <span>Registrado por</span>
+            <p>${escapeHtml(item.author || 'Condomínio')}</p>
+        </div>
+        ${own && item.dbId ? `
+            <div class="lost-found-owner-editor">
+                <div>
+                    <strong>Gerenciar meu item</strong>
+                    <p>Somente quem cadastrou este registro pode alterar o status por este painel.</p>
+                </div>
+                <label>
+                    Status do objeto
+                    <select id="lostFoundDetailsStatus">${getStatusOptions(item.type, item.status)}</select>
+                </label>
+                <button class="primary-action" type="button" id="saveLostFoundDetailsStatus">
+                    <i class="fas fa-check"></i> Salvar status
+                </button>
+            </div>
+        ` : ''}
+    `;
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+
+    const saveButton = document.getElementById('saveLostFoundDetailsStatus');
+    saveButton?.addEventListener('click', async () => {
+        const select = document.getElementById('lostFoundDetailsStatus');
+        if (!select || !isOwnLostFoundItem(item)) return;
+        saveButton.disabled = true;
+        try {
+            await updateLostFoundStatus(Number(item.dbId), select.value);
+            window.showToast?.('Status do item atualizado.', 'success');
+            closeLostFoundDetailsModal();
+            await renderLostFoundPage();
+        } catch (error) {
+            window.showToast?.(error?.message || 'Não foi possível atualizar o status.', 'error');
+        } finally {
+            saveButton.disabled = false;
+        }
     });
 }
 
@@ -511,6 +624,7 @@ async function saveLostFoundItem() {
         description,
         status: type === 'perdido' ? 'procurando' : 'disponivel',
         author: lostFoundState.currentUser?.name || 'Usuário',
+        authorEmail: String(lostFoundState.currentUser?.email || '').trim().toLowerCase(),
         image: lostFoundState.draftImage || LOST_FOUND_IMAGES.default
     };
     const saved = await saveLostFoundToSupabase(draftItem);
@@ -527,6 +641,7 @@ async function saveLostFoundItem() {
         description,
         status: type === 'perdido' ? 'procurando' : 'disponivel',
         author: lostFoundState.currentUser?.name || 'Usuário',
+        authorEmail: String(lostFoundState.currentUser?.email || '').trim().toLowerCase(),
         image: saved && saved.image_url ? saved.image_url : draftItem.image
     });
     setLostFoundItems(items);
@@ -597,10 +712,12 @@ function clearLostFoundFilters() {
     lostFoundState.search = '';
     lostFoundState.status = 'todos';
     lostFoundState.sort = 'recentes';
+    lostFoundState.mineOnly = false;
     const search = document.getElementById('lostFoundSearch');
     const sort = document.getElementById('lostFoundSort');
     if (search) search.value = '';
     if (sort) sort.value = 'recentes';
+    syncMineFilter();
     syncStatusFilters();
     renderLostFoundPage();
 }
