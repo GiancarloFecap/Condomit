@@ -1152,7 +1152,7 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
     sidebar.classList.toggle('morador-sidebar', userType === 'morador');
     sidebar.innerHTML = `
         <div class="sidebar-header">
-            <img src="${escapeSidebarHtml(getImmediateSidebarLogo(currentUser))}" alt="Logo do condomínio" class="sidebar-logo" onerror="this.onerror=null;this.src='../assets/logo-lado.png';">
+            <img src="${escapeSidebarHtml(getImmediateSidebarLogo(currentUser))}" alt="Logo do condomínio" class="sidebar-logo" data-condo-logo="${getImmediateSidebarLogo(currentUser) !== '../assets/logo-lado.png' ? 'true' : 'false'}" onerror="this.onerror=null;this.dataset.condoLogo='false';this.src='../assets/logo-lado.png';">
             <h2 class="condo-name" id="sidebarApartment">${formatSidebarCondoName(getSidebarCondoName(currentUser, lang), lang)}</h2>
         </div>
         ${buildSidebarNav(userType, currentPage, lang)}
@@ -1202,6 +1202,7 @@ async function refreshSidebarCondominiumLogo(user) {
                 img.onerror = null;
                 img.src = fallback;
             };
+            img.dataset.condoLogo = 'true';
             img.src = immediate;
         });
         return;
@@ -1209,7 +1210,7 @@ async function refreshSidebarCondominiumLogo(user) {
 
     const cep = getSidebarCondominiumCep(user);
     if (!cep) {
-        logoElements.forEach((img) => { img.src = fallback; });
+        logoElements.forEach((img) => { img.dataset.condoLogo = 'false'; img.src = fallback; });
         return;
     }
 
@@ -1247,6 +1248,7 @@ async function refreshSidebarCondominiumLogo(user) {
                 img.onerror = null;
                 img.src = fallback;
             };
+            img.dataset.condoLogo = resolved !== fallback ? 'true' : 'false';
             img.src = resolved;
         });
 
@@ -1265,7 +1267,7 @@ async function refreshSidebarCondominiumLogo(user) {
     } catch (error) {
         console.warn('[Sidebar] Não foi possível carregar a logo do condomínio:', error?.message || error);
         sidebarCondoLogoCache.set(cep, fallback);
-        logoElements.forEach((img) => { img.src = fallback; });
+        logoElements.forEach((img) => { img.dataset.condoLogo = 'false'; img.src = fallback; });
     }
 }
 

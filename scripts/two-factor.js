@@ -23,25 +23,38 @@
         return data;
     }
 
-    async function getAccessToken() {
-        if (typeof window.resolveSupabaseAccessToken === 'function') {
-            return window.resolveSupabaseAccessToken();
+    async function getAccessToken(forceRefresh = false) {
+        const auth = window.supabase?.auth;
+        if (auth) {
+            try {
+                if (forceRefresh && typeof auth.refreshSession === 'function') {
+                    const { data } = await auth.refreshSession();
+                    if (data?.session?.access_token) return data.session.access_token;
+                }
+                const { data } = await auth.getSession?.() || {};
+                if (data?.session?.access_token) return data.session.access_token;
+            } catch (_) {}
         }
-        const { data } = await window.supabase?.auth?.getSession?.() || {};
-        return data?.session?.access_token || '';
+        if (typeof window.resolveSupabaseAccessToken === 'function') {
+            return (await window.resolveSupabaseAccessToken()) || '';
+        }
+        return '';
     }
 
-    async function status() {
-        const token = await getAccessToken();
+    async function authenticatedRequest(payload) {
+        let token = await getAccessToken(false);
         if (!token) throw new Error('Sua sessão expirou. Entre novamente.');
-        return request({ action: 'status' }, token);
+        try { return await request(payload, token); }
+        catch (error) {
+            if (error?.status !== 401) throw error;
+            token = await getAccessToken(true);
+            if (!token) throw error;
+            return request(payload, token);
+        }
     }
 
-    async function requestChange(enabled) {
-        const token = await getAccessToken();
-        if (!token) throw new Error('Sua sessão expirou. Entre novamente.');
-        return request({ action: 'request-change', enabled: enabled === true }, token);
-    }
+    async function status() { return authenticatedRequest({ action: 'status' }); }
+    async function requestChange(enabled) { return authenticatedRequest({ action: 'request-change', enabled: enabled === true }); }
 
     async function passwordLogin(email, password) {
         return request({

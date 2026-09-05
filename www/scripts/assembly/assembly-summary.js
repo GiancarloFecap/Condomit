@@ -651,10 +651,7 @@
         video.setAttribute('controlsList', 'nodownload noremoteplayback');
         video.setAttribute('oncontextmenu', 'return false;');
 
-        const source = document.createElement('source');
-        source.src = url;
-        source.type = recordingMimeType(row);
-        video.appendChild(source);
+        video.src = url;
 
         const note = document.createElement('small');
         note.className = 'recording-access-note';
@@ -671,6 +668,23 @@
         retryButton.hidden = true;
 
         let retrying = false;
+        let blobFallbackTried = false;
+        let blobObjectUrl = '';
+
+        const loadRecordingAsBlob = async () => {
+            if (blobFallbackTried) return false;
+            blobFallbackTried = true;
+            const response = await fetch(video.src, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`Não foi possível carregar os dados da gravação (${response.status}).`);
+            const blob = await response.blob();
+            if (!blob?.size) throw new Error('A gravação armazenada está vazia.');
+            if (blobObjectUrl) URL.revokeObjectURL(blobObjectUrl);
+            blobObjectUrl = URL.createObjectURL(blob);
+            video.src = blobObjectUrl;
+            video.load();
+            return true;
+        };
+
         const retryPlayback = async () => {
             if (retrying) return;
             retrying = true;
@@ -678,7 +692,9 @@
             errorBox.hidden = true;
             try {
                 const freshUrl = await createSignedRecordingUrl(row);
-                source.src = freshUrl;
+                blobFallbackTried = false;
+                if (blobObjectUrl) { URL.revokeObjectURL(blobObjectUrl); blobObjectUrl = ''; }
+                video.src = freshUrl;
                 video.load();
                 // play() pode ser bloqueado por autoplay; como esta chamada vem de
                 // clique do usuário, navegadores normalmente permitem a reprodução.
@@ -693,8 +709,20 @@
             }
         };
 
-        video.addEventListener('error', () => {
+        video.addEventListener('error', async () => {
             const mediaError = video.error;
+            // URLs assinadas podem não responder a Range da mesma forma em todos
+            // os WebViews. Tenta uma vez carregar o arquivo em memória como Blob,
+            // sem salvar/baixar no dispositivo do usuário.
+            if (!blobFallbackTried && !String(video.src || '').startsWith('blob:')) {
+                try {
+                    errorBox.textContent = 'Preparando modo de reprodução compatível...';
+                    errorBox.hidden = false;
+                    if (await loadRecordingAsBlob()) return;
+                } catch (fallbackError) {
+                    console.warn('[Ata] Fallback Blob da gravação falhou:', fallbackError);
+                }
+            }
             const messages = {
                 1: 'A reprodução foi interrompida.',
                 2: 'Falha de rede ao carregar a gravação.',
@@ -708,10 +736,16 @@
         video.addEventListener('loadedmetadata', () => {
             errorBox.hidden = true;
             retryButton.hidden = true;
+            if (!Number.isFinite(video.duration) || video.duration === Infinity || video.duration === 0) {
+                const restore = () => { try { video.currentTime = 0; } catch (_) {} };
+                video.addEventListener('timeupdate', restore, { once: true });
+                try { video.currentTime = 1e10; } catch (_) {}
+            }
         });
         retryButton.addEventListener('click', retryPlayback);
 
         holder.append(video, note, errorBox, retryButton);
+        window.addEventListener('beforeunload', () => { if (blobObjectUrl) URL.revokeObjectURL(blobObjectUrl); }, { once: true });
         video.load();
     }
 

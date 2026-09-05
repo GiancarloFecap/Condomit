@@ -524,3 +524,36 @@ function openQuickChatChooser() {
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('viewFullCondoReportBtn')?.addEventListener('click', openFullCondoReport);
+});
+async function openFullCondoReport(){
+    let modal=document.getElementById('fullCondoReportModal');
+    if(!modal){
+        modal=document.createElement('div'); modal.id='fullCondoReportModal'; modal.className='full-report-overlay';
+        modal.innerHTML=`<section class="full-report-card" role="dialog" aria-modal="true"><header><div><h2>Relatório completo do condomínio</h2><p>Visão consolidada dos dados disponíveis no painel.</p></div><button type="button" data-report-close aria-label="Fechar"><i class="fas fa-xmark"></i></button></header><div class="full-report-body" id="fullCondoReportBody"></div><footer><button type="button" class="btn-secondary-large" data-report-close>Fechar</button><button type="button" class="btn-primary-large" id="printFullCondoReport"><i class="fas fa-print"></i> Imprimir relatório</button></footer></section>`;
+        document.body.appendChild(modal);
+        modal.querySelectorAll('[data-report-close]').forEach(b=>b.addEventListener('click',()=>modal.classList.remove('open')));
+        modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open')});
+        modal.querySelector('#printFullCondoReport')?.addEventListener('click',()=>window.print());
+    }
+    const body=modal.querySelector('#fullCondoReportBody');
+    body.innerHTML='<div class="report-loading"><i class="fas fa-spinner fa-spin"></i> Consolidando informações...</div>';
+    modal.classList.add('open');
+    const user=(()=>{try{return JSON.parse(sessionStorage.getItem('condominiumUser')||'null')}catch(_){return null}})();
+    const text=(sel,fallback='Não informado')=>document.querySelector(sel)?.textContent?.trim()||fallback;
+    const statusItems=Array.from(document.querySelectorAll('.status-item span')).map(el=>el.textContent.trim()).filter(Boolean);
+    const activities=Array.from(document.querySelectorAll('table tbody tr')).slice(0,20).map(row=>Array.from(row.children).map(c=>c.textContent.trim()).filter(Boolean).join(' • ')).filter(Boolean);
+    const maintenance=Array.from(document.querySelectorAll('#dashboardMaintenanceList .maintenance-item')).map(el=>el.textContent.trim()).filter(Boolean);
+    let residents=[]; try{const rows=await window.supabaseFetch('/rpc/condomit_list_condo_residents',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});residents=Array.isArray(rows)?rows:[]}catch(_){}
+    body.innerHTML=`<div class="full-report-grid">
+      <section><h3>Identificação</h3><p><strong>Condomínio:</strong> ${escapeHtmlReport(user?.condominium?.name||text('#sidebarApartment'))}</p><p><strong>Plano:</strong> ${escapeHtmlReport(user?.plan_name||'Não informado')}</p><p><strong>Responsável:</strong> ${escapeHtmlReport(user?.name||'Não informado')}</p></section>
+      <section><h3>Financeiro do mês</h3><p><strong>Despesas:</strong> ${escapeHtmlReport(text('#monthly-expenses'))}</p><p>${escapeHtmlReport(text('#monthly-expenses-meta',''))}</p><p><strong>Receitas:</strong> ${escapeHtmlReport(text('#monthly-income'))}</p><p>${escapeHtmlReport(text('#monthly-income-meta',''))}</p></section>
+      <section><h3>Moradores</h3><p><strong>${residents.length}</strong> morador${residents.length===1?'':'es'} vinculado${residents.length===1?'':'s'}.</p>${residents.slice(0,30).map(r=>`<p>${escapeHtmlReport(r.name||r.email||'Morador')} — ${escapeHtmlReport([r.block&&`Bloco ${r.block}`,r.apartment&&`Apto ${r.apartment}`].filter(Boolean).join(' · ')||'Unidade não informada')}</p>`).join('')}</section>
+      <section><h3>Status operacional</h3>${statusItems.length?statusItems.map(x=>`<p>${escapeHtmlReport(x)}</p>`).join(''):'<p>Sem indicadores disponíveis.</p>'}</section>
+      <section class="report-wide"><h3>Atividades recentes</h3>${activities.length?activities.map(x=>`<p>${escapeHtmlReport(x)}</p>`).join(''):'<p>Nenhuma atividade recente disponível.</p>'}</section>
+      <section class="report-wide"><h3>Manutenções</h3>${maintenance.length?maintenance.map(x=>`<p>${escapeHtmlReport(x)}</p>`).join(''):'<p>Nenhuma manutenção listada.</p>'}</section>
+    </div>`;
+}
+function escapeHtmlReport(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;")}

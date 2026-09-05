@@ -4359,56 +4359,44 @@ async function fetchCondomitPlanCatalog(force = false) {
 async function getCondomitPlanAccess(billing = null, force = false) {
   const currentBilling = billing || await getCondomitBillingStatus(force);
   const user = getStoredCondominiumUser();
-
-  let planName = normalizeCondomitPlanName(
-    currentBilling?.plan_name || user?.plan_name || user?.planName
-  );
-
-  if (!planName && currentBilling?.plan_id != null) {
+  const candidates = [];
+  const add = (name,id=null) => {
+    const normalized = normalizeCondomitPlanName(name);
+    const level = getCondomitPlanLevelFromName(normalized);
+    if (level) candidates.push({name:normalized,level,id});
+  };
+  add(currentBilling?.plan_name,currentBilling?.plan_id);
+  add(user?.plan_name || user?.planName,user?.plan || user?.plan_id);
+  [currentBilling?.plan_id,user?.plan,user?.plan_id].map(Number).filter(x=>x>=1&&x<=3).forEach(id=>{
+    candidates.push({name:CONDOMIT_PLAN_LABELS[id]||'',level:id,id});
+  });
+  if (currentBilling?.plan_id != null) {
     try {
       const catalog = await fetchCondomitPlanCatalog(force);
-      const matched = catalog.find((plan) => String(plan?.id) === String(currentBilling.plan_id));
-      planName = normalizeCondomitPlanName(matched?.nome || matched?.name);
-    } catch (error) {
-      console.warn('[Plan Access] Falha ao resolver o nome do plano:', error?.message || error);
-    }
+      const matched = catalog.find(plan=>String(plan?.id)===String(currentBilling.plan_id));
+      add(matched?.nome || matched?.name,currentBilling.plan_id);
+    } catch(error) { console.warn('[Plan Access] Falha ao resolver o catálogo:', error?.message||error); }
   }
-
-  const level = getCondomitPlanLevelFromName(planName);
+  const best = candidates.sort((a,b)=>b.level-a.level)[0] || {name:'',level:0,id:null};
   const access = {
-    resolved: level > 0,
-    plan_id: currentBilling?.plan_id ?? null,
-    plan_name: planName || null,
-    level,
+    resolved: best.level > 0,
+    plan_id: currentBilling?.plan_id ?? best.id ?? user?.plan ?? user?.plan_id ?? null,
+    plan_name: best.name || null,
+    level: best.level,
     billing: currentBilling
   };
-
   if (user && access.resolved) {
-    user.plan = currentBilling?.plan_id ?? user.plan ?? null;
-    user.plan_name = planName;
-    user.plan_level = level;
+    user.plan = access.plan_id ?? user.plan ?? null;
+    user.plan_name = access.plan_name;
+    user.plan_level = access.level;
+    try { sessionStorage.setItem('condominiumUser', JSON.stringify(user)); } catch (_) {}
     try {
-      sessionStorage.setItem('condominiumUser', JSON.stringify(user));
-    } catch (_) {}
-
-    try {
-      const condo = user?.condominium && typeof user.condominium === 'object' ? user.condominium : {};
-      const cep = String(condo.cep || condo.condominium_id || billing?.cep || '').replace(/\D/g, '');
-      if (cep) {
-        localStorage.setItem(`condomitPlanAccess:${cep}`, JSON.stringify({
-          level,
-          plan_name: planName,
-          plan_id: access.plan_id,
-          savedAt: Date.now()
-        }));
-      }
-    } catch (_) {}
-
-    try {
-      window.dispatchEvent(new CustomEvent('condomit:plan-access-ready', { detail: access }));
-    } catch (_) {}
+      const condo=user?.condominium&&typeof user.condominium==='object'?user.condominium:{};
+      const cep=String(condo.cep||condo.condominium_id||currentBilling?.cep||'').replace(/\D/g,'');
+      if(cep) localStorage.setItem(`condomitPlanAccess:${cep}`,JSON.stringify({level:access.level,plan_name:access.plan_name,plan_id:access.plan_id,savedAt:Date.now()}));
+    } catch(_){}
+    try { window.dispatchEvent(new CustomEvent('condomit:plan-access-ready',{detail:access})); } catch(_){}
   }
-
   return access;
 }
 

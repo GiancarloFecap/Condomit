@@ -98,7 +98,9 @@ function setupLostFoundActions() {
     document.querySelectorAll('[data-type]').forEach((button) => {
         button.addEventListener('click', () => {
             lostFoundState.type = button.dataset.type;
+            lostFoundState.status = 'todos';
             syncTypeCards();
+            syncStatusFilters();
             renderLostFoundPage();
         });
     });
@@ -136,12 +138,14 @@ function getDefaultLostFoundItems() {
     return [];
 }
 
-function normalizeLostFoundStatus(value) {
+function normalizeLostFoundStatus(value, type = 'encontrado') {
     const status = String(value || '').trim().toLowerCase().replaceAll('_','-');
-    if (['devolvido','returned','entregue'].includes(status)) return 'devolvido';
+    if (['devolvido','returned','entregue'].includes(status)) return type === 'perdido' ? 'localizado' : 'devolvido';
+    if (['localizado','found-again'].includes(status)) return 'localizado';
+    if (['procurando','perdido','ativo'].includes(status) && type === 'perdido') return 'procurando';
     if (['em-analise','em análise','analise','analysis'].includes(status)) return 'em-analise';
     if (['arquivado','archived'].includes(status)) return 'arquivado';
-    return 'disponivel';
+    return type === 'perdido' ? 'procurando' : 'disponivel';
 }
 
 function typeToDbItemType(type) {
@@ -149,7 +153,8 @@ function typeToDbItemType(type) {
 }
 
 function dbItemTypeToType(dbType) {
-    return dbType === 'Perdido' ? 'perdido' : 'encontrado';
+    const normalized = String(dbType || '').trim().toLowerCase();
+    return normalized === 'perdido' || normalized === 'lost' ? 'perdido' : 'encontrado';
 }
 
 function normalizeLostFoundCepForDb(value) {
@@ -193,18 +198,20 @@ async function fetchLostFoundFromSupabase() {
     try {
         const rows = await window.supabaseFetch(`/lost_and_found_items?select=*&cep=eq.${encodeURIComponent(cep)}&order=item_date.desc,created_at.desc`);
         if (!Array.isArray(rows)) return [];
-        return rows.map((row) => ({
+        return rows.map((row) => {
+            const type = dbItemTypeToType(row.item_type);
+            return ({
             id: `db-lf-${row.id}`,
             dbId: row.id,
             title: row.item_name || '',
             description: row.item_name || '',
             location: row.location || '',
             date: row.item_date || new Date().toISOString().slice(0, 10),
-            status: normalizeLostFoundStatus(row.item_status),
-            type: dbItemTypeToType(row.item_type),
+            status: normalizeLostFoundStatus(row.item_status, type),
+            type,
             author: row.created_by || 'Condomínio',
             image: row.image_url || LOST_FOUND_IMAGES.default
-        }));
+        }); });
     } catch (err) {
         console.warn('fetchLostFoundFromSupabase falhou:', err?.message || err);
         return [];
@@ -262,6 +269,8 @@ async function saveLostFoundToSupabase(
       item.image ||
       LOST_FOUND_IMAGES.default,
 
+    item_status: item.status || (item.type === 'perdido' ? 'procurando' : 'disponivel'),
+
     created_by: lostFoundState.currentUser?.email || null
   };
 
@@ -309,8 +318,11 @@ async function getLostFoundItems() {
     const remoteItems = await fetchLostFoundFromSupabase();
     const seen = new Set();
     const merged = [];
-    for (const item of [...remoteItems, ...localItems]) {
-        const k = `${String(item.title || '').trim().toLowerCase()}|${String(item.location || '').trim().toLowerCase()}|${String(item.date || '')}`;
+    for (const rawItem of [...remoteItems, ...localItems]) {
+        const item = { ...rawItem };
+        item.type = item.type === 'perdido' ? 'perdido' : 'encontrado';
+        item.status = normalizeLostFoundStatus(item.status, item.type);
+        const k = `${item.type}|${String(item.title || '').trim().toLowerCase()}|${String(item.location || '').trim().toLowerCase()}|${String(item.date || '')}`;
         if (seen.has(k)) continue;
         seen.add(k);
         merged.push(item);
@@ -391,9 +403,25 @@ function renderLostFoundGrid(items) {
                     <span><i class="fas fa-calendar-day"></i>${formatDate(item.date)}</span>
                 </div>
                 <div class="res-item-author"><i class="fas fa-user"></i><span>Registrado por ${escapeHtml(item.author || 'Condomínio')}</span></div>
+                ${item.dbId ? `<label class="lost-found-status-editor"><span>Status</span><select data-lf-status-id="${item.dbId}" data-lf-type="${item.type}">${getStatusOptions(item.type, item.status)}</select></label>` : ''}
             </div>
         </article>
     `).join('');
+    grid.querySelectorAll('[data-lf-status-id]').forEach((select) => {
+        select.dataset.previous = select.value;
+        select.addEventListener('change', async () => {
+            const previous = select.dataset.previous || '';
+            select.disabled = true;
+            try {
+                await updateLostFoundStatus(Number(select.dataset.lfStatusId), select.value);
+                select.dataset.previous = select.value;
+                await renderLostFoundPage();
+            } catch (error) {
+                if (previous) select.value = previous;
+                window.showToast?.(error?.message || 'Não foi possível atualizar o status.', 'error');
+            } finally { select.disabled = false; }
+        });
+    });
 }
 
 function getSuggestedMatch(item) {
@@ -409,7 +437,15 @@ function syncTypeCards() {
 }
 
 function syncStatusFilters() {
-    document.querySelectorAll('[data-lost-status]').forEach((button) => {
+    const buttons = Array.from(document.querySelectorAll('[data-lost-status]'));
+    if (buttons.length >= 4) {
+        const lostMode = lostFoundState.type === 'perdido';
+        buttons[0].dataset.lostStatus = 'todos'; buttons[0].textContent = 'Todos';
+        buttons[1].dataset.lostStatus = lostMode ? 'procurando' : 'disponivel'; buttons[1].textContent = lostMode ? 'À procura' : 'Disponíveis';
+        buttons[2].dataset.lostStatus = lostMode ? 'localizado' : 'devolvido'; buttons[2].textContent = lostMode ? 'Localizados' : 'Devolvidos';
+        buttons[3].dataset.lostStatus = 'em-analise'; buttons[3].textContent = 'Em análise';
+    }
+    buttons.forEach((button) => {
         button.classList.toggle('active', (button.dataset.lostStatus || 'todos') === lostFoundState.status);
         button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
     });
@@ -473,7 +509,7 @@ async function saveLostFoundItem() {
         location,
         date,
         description,
-        status: 'disponivel',
+        status: type === 'perdido' ? 'procurando' : 'disponivel',
         author: lostFoundState.currentUser?.name || 'Usuário',
         image: lostFoundState.draftImage || LOST_FOUND_IMAGES.default
     };
@@ -489,7 +525,7 @@ async function saveLostFoundItem() {
         location,
         date: saved && saved.item_date ? saved.item_date : date,
         description,
-        status: 'disponivel',
+        status: type === 'perdido' ? 'procurando' : 'disponivel',
         author: lostFoundState.currentUser?.name || 'Usuário',
         image: saved && saved.image_url ? saved.image_url : draftItem.image
     });
@@ -503,9 +539,27 @@ async function saveLostFoundItem() {
 
 function getStatusLabel(status) {
     if (status === 'devolvido') return 'Devolvido';
+    if (status === 'localizado') return 'Localizado';
+    if (status === 'procurando') return 'À procura';
     if (status === 'em-analise') return 'Em análise';
     if (status === 'arquivado') return 'Arquivado';
     return 'Disponível';
+}
+
+function getStatusOptions(type, current) {
+    const options = type === 'perdido'
+        ? [['procurando','À procura'],['em-analise','Em análise'],['localizado','Localizado']]
+        : [['disponivel','Disponível'],['em-analise','Em análise'],['devolvido','Devolvido']];
+    return options.map(([value,label]) => `<option value="${value}" ${value===current?'selected':''}>${label}</option>`).join('');
+}
+
+async function updateLostFoundStatus(id, status) {
+    if (!id) throw new Error('Item inválido.');
+    await window.supabaseFetch(`/lost_and_found_items?id=eq.${id}`, {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json', Prefer:'return=minimal'},
+        body:JSON.stringify({item_status:status})
+    });
 }
 
 function formatDate(dateString) {

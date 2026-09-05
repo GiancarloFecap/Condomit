@@ -1,4 +1,4 @@
-import { state } from './state.js?v=0703';
+import { state } from './state.js?v=0710';
 
 const recording = {
   recorder: null,
@@ -195,12 +195,11 @@ function chooseMimeType() {
   // realmente consegue gravar E reproduzir esse perfil. No WebM, VP8 vem antes
   // de VP9 por ter compatibilidade mais ampla entre navegadores/WebViews.
   const candidates = [
-    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-    'video/mp4;codecs=avc1.42001E,mp4a.40.2',
-    'video/mp4',
     'video/webm;codecs=vp8,opus',
+    'video/webm',
     'video/webm;codecs=vp9,opus',
-    'video/webm'
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4'
   ];
   return candidates.find(canRecordAndPlay)
     || candidates.find((type) => window.MediaRecorder?.isTypeSupported?.(type))
@@ -415,7 +414,7 @@ export async function startAssemblyRecording() {
   recording.recorder.onerror = (event) => {
     console.error('[Assembly Recording] Erro no MediaRecorder', event?.error || event);
   };
-  recording.recorder.start(1000);
+  recording.recorder.start();
   recording.startedAt = new Date();
   setUi(true);
   window.dispatchEvent(new CustomEvent('condomit:assembly-recording-state', { detail: { active: true } }));
@@ -438,7 +437,8 @@ export async function stopAssemblyRecording() {
   const stopped = new Promise((resolve) => {
     recorder.addEventListener('stop', () => resolve(), { once: true });
   });
-  try { recorder.requestData?.(); } catch (_) {}
+  // stop() gera o bloco final e os metadados do contêiner. Evitamos
+  // requestData() porque alguns navegadores geram WebM fragmentado sem duração.
   recorder.stop();
   await stopped;
 

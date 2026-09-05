@@ -110,16 +110,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 code
             );
 
-            if (!result?.verified || !result?.tokenHash) {
+            if (!result?.verified || !result?.session?.access_token || !result?.session?.refresh_token) {
                 throw new Error('Não foi possível concluir o login.');
             }
 
             const supabase = await waitForSupabaseClient();
 
             const { data: authData, error: authError } =
-                await supabase.auth.verifyOtp({
-                    token_hash: result.tokenHash,
-                    type: result.verificationType || 'magiclink'
+                await supabase.auth.setSession({
+                    access_token: result.session.access_token,
+                    refresh_token: result.session.refresh_token
                 });
 
             if (authError) {
@@ -135,6 +135,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 authData.user?.user_metadata?.user_type ||
                 authData.user?.user_metadata?.type
             );
+
+            try {
+                sessionStorage.setItem('sb-session', JSON.stringify(authData.session));
+                sessionStorage.setItem('sb-access-token', authData.session.access_token);
+                const email = String(authData.session.user.email || pending.email || '').trim().toLowerCase();
+                if (email && typeof window.supabaseFetch === 'function') {
+                    const rows = await window.supabaseFetch(`/users?select=email,name,user_type,phone,condominium,profile_photo&email=eq.${encodeURIComponent(email)}&limit=1`);
+                    const profile = Array.isArray(rows) ? rows[0] : rows;
+                    if (profile) {
+                        const normalized = normalizeUserType(profile.user_type || result.userType);
+                        const loaded = { ...profile, type: normalized, user_type: normalized };
+                        sessionStorage.setItem('condominiumUser', JSON.stringify(loaded));
+                        try { localStorage.setItem('condominiumPersistentUser', JSON.stringify(loaded)); } catch (_) {}
+                    }
+                }
+            } catch (profileError) {
+                console.warn('[2FA] Sessão criada; o perfil será completado no dashboard:', profileError?.message || profileError);
+            }
 
             sessionStorage.removeItem('condomitPendingTwoFactorLogin');
             sessionStorage.removeItem('condomitVerifiedTwoFactorUserType');
@@ -156,7 +174,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
             }
 
-            const destination = destinationForUserType(userType);
+            let destinationType = userType;
+            try {
+                const loaded = JSON.parse(sessionStorage.getItem('condominiumUser') || 'null');
+                destinationType = normalizeUserType(loaded?.type || loaded?.user_type || userType);
+            } catch (_) {}
+            const destination = destinationForUserType(destinationType);
 
             if (feedback) {
                 feedback.textContent = 'Código confirmado. Entrando...';

@@ -234,6 +234,14 @@ function updateUIWithUserData(currentUser) {
 
     // O código de acesso do condomínio é uma função administrativa exclusiva do síndico.
     // Esta regra independe do plano e é reaplicada ao atualizar os dados do usuário.
+    const housematesRow = document.getElementById('myHousematesConfigRow');
+    if (housematesRow) {
+        const canViewHousemates = normalizedUserType === 'sindico';
+        housematesRow.hidden = !canViewHousemates;
+        housematesRow.style.display = canViewHousemates ? '' : 'none';
+        housematesRow.setAttribute('aria-hidden', canViewHousemates ? 'false' : 'true');
+    }
+
     const accessCodeRow = document.getElementById('condominiumAccessCodeRow');
     if (accessCodeRow) {
         const canManageAccessCode = normalizedUserType === 'sindico';
@@ -399,7 +407,11 @@ function openConfigSection(sectionKey) {
             openTwoFactorSettingsModal();
             break;
         case 'minha-unidade':
+            openPrivacyPolicyModal();
+            break;
         case 'meus-condominos':
+            openMyHousematesModal();
+            break;
         case 'comunicados-sindico':
         case 'avisos-gerais':
         case 'reserva-areas':
@@ -425,7 +437,7 @@ function openConfigSection(sectionKey) {
             openAboutCompanyModal();
             break;
         case 'consentimentos':
-            window.showToast(`Funcionalidade ainda não implementada: ${sectionKey.replace(/-/g, ' ')}`, 'info');
+            openConsentManagementModal();
             break;
         case 'versao-app':
         case 'novas-atualizacoes':
@@ -824,7 +836,8 @@ function renderReservationsModal(reservations) {
     body.innerHTML = reservations.map((reservation) => {
         const date = formatReservationDate(reservation.data_reserva);
         const time = `${formatReservationTime(reservation.horario_inicio)} - ${formatReservationTime(reservation.horario_fim)}`;
-        const statusClass = String(reservation.status || '').toLowerCase();
+        const rawStatus = String(reservation.status || '').toLowerCase();
+        const statusClass = rawStatus === 'indisponivel' || rawStatus === 'confirmada' ? 'confirmada' : rawStatus;
         const statusLabel = getReservationStatusLabel(reservation.status);
 
         return `
@@ -2764,6 +2777,100 @@ async function renderProviderRegistrationInSettings() {
     });
 }
 
+
+
+async function openMyHousematesModal() {
+    if (getSettingsUserType() !== 'sindico') {
+        window.showToast?.('Esta área é exclusiva do síndico.', 'warning');
+        return;
+    }
+    const modal = openSettingsContentModal({
+        title: 'Meus condôminos',
+        subtitle: 'Moradores que entraram no seu condomínio.',
+        html: '<div class="reservas-empty-state"><i class="fas fa-spinner fa-spin"></i><p>Carregando moradores...</p></div>'
+    });
+    const body = modal.querySelector('#settingsContentBody');
+    try {
+        const rows = await window.supabaseFetch('/rpc/condomit_list_condo_residents', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+        });
+        const residents = Array.isArray(rows) ? rows : [];
+        if (!residents.length) {
+            body.innerHTML = '<div class="reservas-empty-state"><i class="fas fa-users-slash"></i><p>Nenhum morador entrou neste condomínio ainda.</p></div>';
+            return;
+        }
+        body.innerHTML = `<div class="settings-resident-list">${residents.map((resident) => `
+            <article class="settings-resident-card">
+                <div class="settings-resident-avatar">${escapeReservationHtml(String(resident?.name || resident?.email || 'M').split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase())}</div>
+                <div class="settings-resident-copy">
+                    <strong>${escapeReservationHtml(resident?.name || resident?.email || 'Morador')}</strong>
+                    <span>${escapeReservationHtml([resident?.block ? `Bloco ${resident.block}` : '', resident?.apartment ? `Apto ${resident.apartment}` : ''].filter(Boolean).join(' · ') || 'Unidade não informada')}</span>
+                    <small>${escapeReservationHtml(resident?.email || '')}${resident?.phone ? ` · ${escapeReservationHtml(resident.phone)}` : ''}</small>
+                </div>
+            </article>`).join('')}</div>`;
+    } catch (error) {
+        body.innerHTML = `<div class="reservas-empty-state"><i class="fas fa-circle-exclamation"></i><p>${escapeReservationHtml(error?.message || 'Não foi possível carregar os moradores.')}</p></div>`;
+    }
+}
+
+async function openConsentManagementModal() {
+    const modal = openSettingsContentModal({
+        title: 'Gerenciar consentimentos',
+        subtitle: 'Controle autorizações opcionais de uso dos seus dados.',
+        html: '<div class="reservas-empty-state"><i class="fas fa-spinner fa-spin"></i><p>Carregando consentimentos...</p></div>'
+    });
+    const body = modal.querySelector('#settingsContentBody');
+    const footer = modal.querySelector('#settingsContentFooter');
+    try {
+        const raw = await window.supabaseFetch('/rpc/condomit_get_my_consents_041', {
+            method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
+        });
+        const state = Array.isArray(raw) ? raw[0] : (raw || {});
+        body.innerHTML = `
+            <div class="consent-management-list">
+                <article class="consent-management-row required">
+                    <div><strong>Funcionamento essencial da Condomit</strong><small>Autenticação, segurança, condomínio e recursos solicitados por você. Necessário para prestar o serviço.</small></div>
+                    <label class="notification-switch"><input type="checkbox" checked disabled><span class="notification-switch-track"><span class="notification-switch-thumb"></span></span></label>
+                </article>
+                <article class="consent-management-row">
+                    <div><strong>Comunicações não essenciais</strong><small>Novidades e pesquisas que não são necessárias para executar uma ação solicitada.</small></div>
+                    <label class="notification-switch"><input id="consentOptionalCommunications" type="checkbox" ${state.optional_communications ? 'checked' : ''}><span class="notification-switch-track"><span class="notification-switch-thumb"></span></span></label>
+                </article>
+                <article class="consent-management-row">
+                    <div><strong>Análises de uso</strong><small>Métricas de uso para melhorar a experiência da plataforma.</small></div>
+                    <label class="notification-switch"><input id="consentAnalytics" type="checkbox" ${state.analytics ? 'checked' : ''}><span class="notification-switch-track"><span class="notification-switch-thumb"></span></span></label>
+                </article>
+                <article class="consent-management-row">
+                    <div><strong>Personalização</strong><small>Uso das suas preferências para adaptar sugestões e organização da interface.</small></div>
+                    <label class="notification-switch"><input id="consentPersonalization" type="checkbox" ${state.personalization ? 'checked' : ''}><span class="notification-switch-track"><span class="notification-switch-thumb"></span></span></label>
+                </article>
+                <p class="consent-legal-note"><i class="fas fa-shield-halved"></i> Você pode alterar consentimentos opcionais a qualquer momento. Tratamentos necessários para executar o serviço ou cumprir obrigações legais permanecem ativos.</p>
+            </div>`;
+        footer.innerHTML = `
+            <button type="button" class="btn-edit-profile" data-settings-close>Cancelar</button>
+            <button type="button" class="btn-edit-profile visitor-submit-btn" id="saveConsentSettings"><i class="fas fa-check"></i> Salvar consentimentos</button>`;
+        footer.querySelector('[data-settings-close]')?.addEventListener('click', closeSettingsContentModal);
+        footer.querySelector('#saveConsentSettings')?.addEventListener('click', async (event) => {
+            const button = event.currentTarget; button.disabled = true;
+            try {
+                await window.supabaseFetch('/rpc/condomit_save_my_consents_041', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({
+                        optional_communications_value: !!body.querySelector('#consentOptionalCommunications')?.checked,
+                        analytics_value: !!body.querySelector('#consentAnalytics')?.checked,
+                        personalization_value: !!body.querySelector('#consentPersonalization')?.checked
+                    })
+                });
+                window.showToast?.('Consentimentos atualizados.', 'success');
+                closeSettingsContentModal();
+            } catch (error) {
+                window.showToast?.(error?.message || 'Não foi possível salvar os consentimentos.', 'error');
+            } finally { button.disabled = false; }
+        });
+    } catch (error) {
+        body.innerHTML = `<div class="reservas-empty-state"><i class="fas fa-circle-exclamation"></i><p>${escapeReservationHtml(error?.message || 'Não foi possível carregar os consentimentos.')}</p></div>`;
+    }
+}
 
 /* ============================================================
    CONFIGURAÇÕES 016 - VERIFICAÇÃO EM DUAS ETAPAS POR E-MAIL

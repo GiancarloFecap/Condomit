@@ -2036,3 +2036,12 @@ html[data-theme="dark"] .release-item>span{background:#172554}
  .reservation-management-tabs{overflow-x:auto}
  .reservation-management-footer>*{flex:1 1 100%}
 }
+
+/* 0.71.0 */
+.reserva-status-badge.confirmada{background:#dcfce7;color:#166534}
+.settings-content-footer .visitor-submit-btn i{margin-right:8px}
+.settings-resident-list{display:grid;gap:12px}
+.settings-resident-card{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid var(--border-color,#dbe2f0);border-radius:14px;background:var(--card-bg,#fff)}
+.settings-resident-avatar{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#e8efff;color:#2252bd;font-weight:800;flex:0 0 auto}
+.settings-resident-copy{display:grid;gap:3px;min-width:0}.settings-resident-copy strong{color:var(--text-primary,#172033)}.settings-resident-copy span,.settings-resident-copy small{color:var(--text-secondary,#64748b)}
+.consent-management-list{display:grid;gap:12px}.consent-management-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px;border:1px solid var(--border-color,#dbe2f0);border-radius:14px}.consent-management-row>div{display:grid;gap:5px}.consent-management-row small{color:var(--text-secondary,#64748b);line-height:1.45}.consent-management-row.required{background:rgba(34,82,189,.05)}.consent-legal-note{display:flex;gap:9px;align-items:flex-start;padding:12px;border-radius:12px;background:rgba(34,82,189,.06);color:var(--text-secondary,#64748b)}

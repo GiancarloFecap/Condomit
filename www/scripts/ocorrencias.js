@@ -34,20 +34,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadOccurrenceUser() {
     let user = null;
-
-    try {
-        user = typeof window.refreshCurrentUserFromDb === 'function'
-            ? await window.refreshCurrentUserFromDb()
-            : JSON.parse(sessionStorage.getItem('condominiumUser') || 'null');
-    } catch (error) {
-        console.warn('[OCORRÊNCIAS] Falha ao atualizar usuário:', error);
+    try { user = JSON.parse(sessionStorage.getItem('condominiumUser') || 'null'); } catch (_) {}
+    if (!user && typeof window.restorePersistentLogin === 'function') {
+        try { user = await window.restorePersistentLogin(); } catch (_) {}
     }
-
     if (!user) {
         window.location.href = 'entrar.html';
         return null;
     }
-
+    if (typeof window.refreshCurrentUserFromDb === 'function') {
+        window.refreshCurrentUserFromDb().then((fresh) => {
+            if (!fresh) return;
+            occurrenceState.currentUser = fresh;
+            occurrenceState.userType = normalizeOccurrenceUserType(fresh);
+            setupOccurrenceShell(fresh);
+        }).catch((error) => console.warn('[OCORRÊNCIAS] Atualização em segundo plano falhou:', error));
+    }
     return user;
 }
 

@@ -54,6 +54,26 @@ function hashLoginCode(challengeId, code) {
     .digest('hex');
 }
 
+
+function encryptPendingSession(session) {
+  const key = crypto.createHash('sha256').update(TWO_FACTOR_SECRET).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify(session), 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, encrypted]).toString('base64url');
+}
+
+function decryptPendingSession(payload) {
+  const packed = Buffer.from(String(payload || ''), 'base64url');
+  if (packed.length < 29) throw new Error('Sessão pendente inválida.');
+  const key = crypto.createHash('sha256').update(TWO_FACTOR_SECRET).digest();
+  const iv = packed.subarray(0,12), tag = packed.subarray(12,28), encrypted = packed.subarray(28);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  return JSON.parse(Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8'));
+}
+
 function safeEqualHex(a, b) {
   try {
     const left = Buffer.from(String(a || ''), 'hex');
@@ -320,7 +340,11 @@ async function handlePasswordLogin(payload) {
       challenge_id: challengeId,
       user_email: email,
       code_hash: codeHash,
-      expires_at: expiresAt
+      expires_at: expiresAt,
+      session_ciphertext: encryptPendingSession({
+        access_token: authData.session.access_token,
+        refresh_token: authData.session.refresh_token
+      })
     });
   if (insertError) throw insertError;
 
@@ -388,31 +412,14 @@ async function handleVerifyLogin(payload) {
   const rawUserType = String(profile?.user_type || '').trim().toLowerCase();
   const userType = rawUserType === 'síndico' ? 'sindico' : rawUserType;
 
-  /*
-   * Gera um token de autenticação Supabase, mas NÃO redireciona o navegador
-   * para o action_link. O frontend troca o token_hash diretamente por uma
-   * sessão com supabase.auth.verifyOtp(). Isso evita depender de Site URL /
-   * Redirect URLs do Supabase e impede redirecionamentos para localhost.
-   */
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type: 'magiclink',
-    email: row.user_email
-  });
-  if (linkError) throw linkError;
-
-  const tokenHash = String(linkData?.properties?.hashed_token || '').trim();
-  const verificationType = String(
-    linkData?.properties?.verification_type || 'magiclink'
-  ).trim();
-
-  if (!tokenHash) {
-    throw new Error('Não foi possível concluir a autenticação.');
+  const pendingSession = decryptPendingSession(row.session_ciphertext);
+  if (!pendingSession?.access_token || !pendingSession?.refresh_token) {
+    throw new Error('Não foi possível recuperar a sessão validada.');
   }
 
   return response(200, {
     verified: true,
-    tokenHash,
-    verificationType,
+    session: pendingSession,
     userType
   });
 }
