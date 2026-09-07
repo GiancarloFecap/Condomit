@@ -23,19 +23,23 @@ jobs:
             platform: linux
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - name: Instalar dependências
-        run: npm ci
+      - name: Instalar dependências desktop
+        run: npm install --include=dev --no-audit --no-fund
+      - name: Verificar Electron
+        shell: bash
+        run: |
+          npx electron --version
+          npx electron-builder --version
       - name: Gerar aplicativo desktop
         shell: bash
         run: npm run desktop:dist:${{ matrix.platform }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          GH_TOKEN: ''
       - name: Enviar artefatos do build
         uses: actions/upload-artifact@v4
         with:
