@@ -4,8 +4,8 @@
   "start_url": "/inicio.html",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2457c5",
+  "background_color": "#EAF0F8",
+  "theme_color": "#183B86",
   "description": "Gestão, comunicação, segurança e serviços do condomínio em um só lugar.",
   "icons": [
     {
