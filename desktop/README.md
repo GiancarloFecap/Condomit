@@ -1,6 +1,6 @@
 # Condomit Desktop
 
-A partir da v0.71.5, o botão de download do site aponta para instaladores desktop reais, e não para a instalação PWA do navegador.
+A partir da v0.71.6, o botão de download do site aponta para instaladores desktop reais, e não para a instalação PWA do navegador.
 
 ## Sistemas suportados
 
@@ -40,8 +40,8 @@ O arquivo `.github/workflows/desktop-release.yml` cria os três instaladores aut
 3. Faça push de uma tag, por exemplo:
 
 ```bash
-git tag v0.71.5
-git push origin v0.71.5
+git tag v0.71.6
+git push origin v0.71.6
 ```
 
 O GitHub Actions executará três builds e publicará os arquivos em **GitHub Releases**. A página `pages/download-desktop.html` consulta a função Netlify `desktop-downloads` e mostra os links da release mais recente.
@@ -49,3 +49,8 @@ O GitHub Actions executará três builds e publicará os arquivos em **GitHub Re
 ### Assinatura de código
 
 Sem assinatura, Windows SmartScreen ou macOS Gatekeeper podem mostrar um aviso de editor não verificado. Para distribuição pública profissional, configure certificados de assinatura no GitHub Actions. Isso não altera o código da Condomit; apenas autentica o instalador perante o sistema operacional.
+
+
+## Observação sobre Linux no GitHub Actions
+
+O workflow não executa `npx electron --version` no runner Linux. Esse comando inicia o binário Chromium do Electron e pode abortar por causa do SUID sandbox do ambiente de CI. A versão é validada lendo `electron/package.json`, sem iniciar o aplicativo.

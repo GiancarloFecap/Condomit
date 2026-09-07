@@ -30,11 +30,11 @@ jobs:
           cache: npm
       - name: Instalar dependências desktop
         run: npm install --include=dev --no-audit --no-fund
-      - name: Verificar Electron
+      - name: Verificar dependências Electron sem iniciar o Chromium
         shell: bash
         run: |
-          npx electron --version
-          npx electron-builder --version
+          node -e "console.log('Electron:', require('electron/package.json').version)"
+          node -e "console.log('electron-builder:', require('electron-builder/package.json').version)"
       - name: Gerar aplicativo desktop
         shell: bash
         run: npm run desktop:dist:${{ matrix.platform }}
