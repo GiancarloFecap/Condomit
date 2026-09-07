@@ -1,0 +1,985 @@
+/* ======================================================================
+   Condomit · Apple HIG inspired UI/UX layer · v0.72
+   ----------------------------------------------------------------------
+   Objetivo: aproximar o produto dos princípios de clareza, hierarquia,
+   consistência, acessibilidade e adaptação entre iOS/macOS sem alterar a
+   lógica do sistema, as logos ou a identidade principal da Condomit.
+
+   Esta camada é carregada por último e funciona como um design system
+   não destrutivo sobre as telas existentes.
+   ====================================================================== */
+
+:root {
+    /* Condomit brand + semantic system palette */
+    --hig-blue: #0A66D8;
+    --hig-blue-hover: #005BC4;
+    --hig-blue-pressed: #004FA8;
+    --hig-brand: #2252BD;
+    --hig-cyan: #15B8D6;
+    --hig-green: #248A3D;
+    --hig-orange: #C93400;
+    --hig-red: #D70015;
+    --hig-yellow: #A05A00;
+
+    --hig-label: #1D1D1F;
+    --hig-secondary-label: #6E6E73;
+    --hig-tertiary-label: #86868B;
+    --hig-quaternary-label: #AEAEB2;
+
+    --hig-background: #F5F5F7;
+    --hig-grouped: #F2F2F7;
+    --hig-surface: #FFFFFF;
+    --hig-surface-2: #FAFAFC;
+    --hig-fill: rgba(118, 118, 128, .12);
+    --hig-fill-strong: rgba(118, 118, 128, .18);
+    --hig-separator: rgba(60, 60, 67, .16);
+    --hig-separator-strong: rgba(60, 60, 67, .24);
+
+    --hig-material: rgba(246, 248, 252, .78);
+    --hig-material-strong: rgba(255, 255, 255, .88);
+    --hig-material-dark: rgba(12, 22, 42, .78);
+
+    --hig-focus: rgba(10, 102, 216, .24);
+    --hig-shadow-1: 0 1px 2px rgba(0, 0, 0, .035), 0 7px 24px rgba(20, 38, 68, .055);
+    --hig-shadow-2: 0 1px 3px rgba(0, 0, 0, .05), 0 16px 42px rgba(20, 38, 68, .09);
+    --hig-shadow-overlay: 0 22px 70px rgba(10, 22, 43, .20);
+
+    --hig-r-sm: 10px;
+    --hig-r-md: 14px;
+    --hig-r-lg: 18px;
+    --hig-r-xl: 24px;
+    --hig-r-2xl: 30px;
+
+    --hig-content-max: 1440px;
+    --hig-sidebar-width: 276px;
+    --hig-topbar-height: 74px;
+
+    --hig-ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --hig-label: #F5F5F7;
+    --hig-secondary-label: #C7C7CC;
+    --hig-tertiary-label: #98989D;
+    --hig-quaternary-label: #636366;
+    --hig-background: #0B0C0F;
+    --hig-grouped: #111216;
+    --hig-surface: #18191D;
+    --hig-surface-2: #202126;
+    --hig-fill: rgba(120, 120, 128, .20);
+    --hig-fill-strong: rgba(120, 120, 128, .28);
+    --hig-separator: rgba(84, 84, 88, .55);
+    --hig-separator-strong: rgba(99, 99, 102, .72);
+    --hig-material: rgba(22, 24, 30, .80);
+    --hig-material-strong: rgba(30, 32, 38, .90);
+    --hig-focus: rgba(64, 156, 255, .32);
+    --hig-shadow-1: 0 1px 2px rgba(0,0,0,.25), 0 9px 26px rgba(0,0,0,.18);
+    --hig-shadow-2: 0 2px 4px rgba(0,0,0,.28), 0 18px 46px rgba(0,0,0,.28);
+    --hig-shadow-overlay: 0 24px 80px rgba(0,0,0,.55);
+}
+
+/* ----------------------------------------------------------------------
+   Foundation: system typography, legibility, safe layout, keyboard focus
+   ---------------------------------------------------------------------- */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    background: var(--hig-background);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", Arial, sans-serif !important;
+}
+
+body {
+    color: var(--hig-label);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+    background: rgba(10, 102, 216, .18);
+}
+
+:where(button, a, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+    outline: 3px solid var(--hig-focus) !important;
+    outline-offset: 2px !important;
+}
+
+:where(button, a, [role="button"]) {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+:where(button, .btn, .btn-primary, .btn-secondary, .primary-btn, .secondary-btn,
+.primary-action, .ghost-btn, .action-btn, .control-btn, .page-btn, .card-btn,
+.icon-btn, .mobile-menu-btn) {
+    transition: transform .15s var(--hig-ease), background-color .18s var(--hig-ease),
+                color .18s var(--hig-ease), border-color .18s var(--hig-ease),
+                box-shadow .18s var(--hig-ease), opacity .18s var(--hig-ease) !important;
+}
+
+:where(button, .btn, .btn-primary, .btn-secondary, .primary-btn, .secondary-btn,
+.primary-action, .ghost-btn, .action-btn, .control-btn, .page-btn, .card-btn):active:not(:disabled) {
+    transform: scale(.975) !important;
+}
+
+:where(button, input, select, textarea):disabled,
+:where(.btn, .btn-primary, .btn-secondary, .primary-btn, .secondary-btn,
+.primary-action, .ghost-btn, .action-btn).disabled {
+    opacity: .48 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+/* ----------------------------------------------------------------------
+   Authenticated app shell
+   ---------------------------------------------------------------------- */
+body.condomit-app-page {
+    min-height: 100dvh;
+    background:
+        radial-gradient(circle at 78% -10%, rgba(10, 102, 216, .055), transparent 30rem),
+        var(--hig-background) !important;
+    color: var(--hig-label);
+}
+
+body.condomit-app-page .dashboard-sindico {
+    background: transparent !important;
+    min-height: 100dvh;
+}
+
+/* Liquid-glass-like material only for navigation / chrome */
+body.condomit-app-page .sidebar {
+    width: var(--hig-sidebar-width) !important;
+    background: var(--hig-material) !important;
+    color: var(--hig-label) !important;
+    border-right: 1px solid var(--hig-separator) !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: saturate(180%) blur(26px);
+    backdrop-filter: saturate(180%) blur(26px);
+    padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom)) !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120,120,128,.25) transparent;
+}
+
+body.condomit-app-page .sidebar-header {
+    border-bottom: 0 !important;
+    padding: 6px 8px 14px !important;
+    margin-bottom: 4px !important;
+    text-align: left !important;
+}
+
+body.condomit-app-page .sidebar-logo {
+    max-width: 100% !important;
+    object-fit: contain !important;
+    filter: none !important;
+}
+
+body.condomit-app-page .sidebar .condo-name {
+    color: var(--hig-label) !important;
+    font-size: .93rem !important;
+    font-weight: 650 !important;
+    letter-spacing: -.01em;
+}
+
+body.condomit-app-page .sidebar-nav {
+    gap: 2px !important;
+}
+
+body.condomit-app-page .sidebar .nav-section {
+    margin-bottom: 9px !important;
+}
+
+body.condomit-app-page .sidebar .nav-section-title {
+    color: var(--hig-tertiary-label) !important;
+    margin: 12px 11px 5px !important;
+    font-size: .68rem !important;
+    font-weight: 700 !important;
+    letter-spacing: .055em !important;
+    text-transform: uppercase;
+}
+
+body.condomit-app-page .sidebar .nav-item {
+    min-height: 40px !important;
+    padding: 8px 11px !important;
+    gap: 10px !important;
+    border-radius: 10px !important;
+    border: 0 !important;
+    color: var(--hig-secondary-label) !important;
+    background: transparent !important;
+    font-size: .89rem !important;
+    font-weight: 560 !important;
+    line-height: 1.2;
+    transform: none !important;
+}
+
+body.condomit-app-page .sidebar .nav-item i {
+    width: 22px !important;
+    min-width: 22px !important;
+    color: var(--hig-tertiary-label) !important;
+    font-size: 1rem !important;
+    transition: color .18s var(--hig-ease), transform .18s var(--hig-ease);
+}
+
+@media (hover:hover) and (pointer:fine) {
+    body.condomit-app-page .sidebar .nav-item:hover {
+        background: var(--hig-fill) !important;
+        color: var(--hig-label) !important;
+    }
+    body.condomit-app-page .sidebar .nav-item:hover i {
+        color: var(--hig-blue) !important;
+    }
+}
+
+body.condomit-app-page .sidebar .nav-item.active {
+    background: rgba(10, 102, 216, .12) !important;
+    color: var(--hig-blue) !important;
+    font-weight: 670 !important;
+    box-shadow: none !important;
+}
+
+body.condomit-app-page .sidebar .nav-item.active::before {
+    display: none !important;
+}
+
+body.condomit-app-page .sidebar .nav-item.active i {
+    color: var(--hig-blue) !important;
+}
+
+body.condomit-app-page .sidebar-footer {
+    border-top: 1px solid var(--hig-separator) !important;
+    gap: 7px !important;
+    margin-top: 8px !important;
+    padding-top: 10px !important;
+}
+
+body.condomit-app-page .sidebar :where(.btn-support, .btn-logout-sidebar) {
+    min-height: 40px !important;
+    border-radius: 10px !important;
+    padding: 8px 11px !important;
+    justify-content: flex-start !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    font-size: .86rem !important;
+    font-weight: 600 !important;
+    background: transparent !important;
+    color: var(--hig-secondary-label) !important;
+}
+
+body.condomit-app-page .sidebar .btn-support:hover {
+    background: var(--hig-fill) !important;
+    color: var(--hig-label) !important;
+}
+
+body.condomit-app-page .sidebar .btn-logout-sidebar {
+    color: var(--hig-red) !important;
+}
+body.condomit-app-page .sidebar .btn-logout-sidebar:hover {
+    color: var(--hig-red) !important;
+    background: rgba(215,0,21,.08) !important;
+}
+
+body.condomit-app-page .main-content {
+    min-width: 0;
+    background: transparent !important;
+}
+
+body.condomit-app-page .top-bar {
+    position: sticky !important;
+    top: 0;
+    z-index: 70;
+    min-height: var(--hig-topbar-height);
+    padding: max(13px, env(safe-area-inset-top)) clamp(18px, 3vw, 36px) 13px !important;
+    background: var(--hig-material-strong) !important;
+    border-bottom: 1px solid var(--hig-separator) !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+    backdrop-filter: saturate(180%) blur(24px);
+}
+
+body.condomit-app-page .top-bar-left h1 {
+    color: var(--hig-label) !important;
+    font-size: clamp(1.25rem, 1.8vw, 1.65rem) !important;
+    font-weight: 700 !important;
+    letter-spacing: -.032em !important;
+    line-height: 1.15 !important;
+}
+
+body.condomit-app-page .top-bar-left p {
+    color: var(--hig-secondary-label) !important;
+    font-size: .89rem !important;
+    margin-top: 4px !important;
+}
+
+body.condomit-app-page .top-bar-right {
+    gap: 12px !important;
+}
+body.condomit-app-page .top-icons {
+    gap: 5px !important;
+}
+
+body.condomit-app-page .icon-btn,
+body.condomit-app-page .mobile-menu-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    border-radius: 50% !important;
+    border: 0 !important;
+    color: var(--hig-secondary-label) !important;
+    background: var(--hig-fill) !important;
+    box-shadow: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (hover:hover) and (pointer:fine) {
+    body.condomit-app-page .icon-btn:hover,
+    body.condomit-app-page .mobile-menu-btn:hover {
+        background: var(--hig-fill-strong) !important;
+        color: var(--hig-label) !important;
+    }
+}
+
+body.condomit-app-page .user-profile-small {
+    gap: 9px !important;
+}
+body.condomit-app-page .user-info-small .name {
+    color: var(--hig-label) !important;
+    font-weight: 650 !important;
+}
+body.condomit-app-page .user-info-small .type {
+    color: var(--hig-tertiary-label) !important;
+}
+body.condomit-app-page .user-profile-small .avatar,
+body.condomit-app-page .avatar {
+    box-shadow: inset 0 0 0 1px var(--hig-separator);
+}
+
+/* ----------------------------------------------------------------------
+   Content layer: opaque surfaces, spacing, hierarchy
+   ---------------------------------------------------------------------- */
+body.condomit-app-page :where(.dashboard-grid, .porteiro-page, .lost-found-page,
+.ai-comunicados-page, .assembly-detail, .assembly-summary-page, .access-page,
+.chat-page, .config-content, .residents-page, .maintenance-page, .marketplace-page,
+.notifications-page, .occurrences-page, .visitor-page, .visitantes-liberados-page,
+.reservas-content, .sugestoes-content, .admin-company-page, .advanced-shell,
+.checkout-page, .register-content, .content-wrapper) {
+    width: min(100%, var(--hig-content-max));
+}
+
+body.condomit-app-page .dashboard-grid {
+    padding: clamp(18px, 2.5vw, 32px) !important;
+    gap: clamp(14px, 1.8vw, 22px) !important;
+}
+
+body.condomit-app-page :where(.card, .card-shell, .panel-card, .panel, .info-card,
+.quick-card, .config-card, .welcome-card, .side-card, .metric-card, .content-card,
+.section-card, .form-card, .summary-card, .filter-card, .management-card) {
+    background: var(--hig-surface) !important;
+    color: var(--hig-label) !important;
+    border: 1px solid var(--hig-separator) !important;
+    border-radius: var(--hig-r-lg) !important;
+    box-shadow: var(--hig-shadow-1) !important;
+}
+
+@media (hover:hover) and (pointer:fine) {
+    body.condomit-app-page :where(.card, .card-shell, .panel-card, .info-card,
+    .quick-card, .config-card, .welcome-card, .side-card, .metric-card):hover {
+        border-color: var(--hig-separator-strong) !important;
+    }
+}
+
+body.condomit-app-page :where(h1,h2,h3,h4) {
+    color: var(--hig-label);
+}
+
+body.condomit-app-page :where(.card, .card-shell, .panel-card, .info-card, .quick-card,
+.config-card, .welcome-card, .side-card, .metric-card) :where(h2,h3,h4) {
+    letter-spacing: -.02em;
+}
+
+body.condomit-app-page :where(.eyebrow, .section-kicker, .overline) {
+    color: var(--hig-blue) !important;
+    font-weight: 700 !important;
+    letter-spacing: .045em !important;
+}
+
+body.condomit-app-page :where(.subtitle, .helper-text, .muted, .caption,
+.metric-caption, .section-subtitle, .panel-heading p, .empty-state p) {
+    color: var(--hig-secondary-label) !important;
+}
+
+/* Metric cards: data first */
+body.condomit-app-page .metric-card {
+    min-height: 124px;
+    padding: 18px !important;
+}
+body.condomit-app-page .metric-label,
+body.condomit-app-page .metric-card > span {
+    color: var(--hig-secondary-label) !important;
+    font-size: .82rem !important;
+    font-weight: 590 !important;
+}
+body.condomit-app-page .metric-value,
+body.condomit-app-page .metric-card > strong {
+    color: var(--hig-label) !important;
+    font-size: clamp(1.35rem, 2vw, 1.8rem) !important;
+    font-weight: 700 !important;
+    letter-spacing: -.035em;
+}
+body.condomit-app-page .metric-icon {
+    border-radius: 12px !important;
+    box-shadow: none !important;
+}
+
+/* ----------------------------------------------------------------------
+   Buttons / actions
+   ---------------------------------------------------------------------- */
+body.condomit-app-page :where(.btn-primary, .primary-btn, .primary-action,
+.submit-btn, .save-btn, button.primary, .login-submit) {
+    border: 1px solid transparent !important;
+    border-radius: 11px !important;
+    background: var(--hig-blue) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    font-weight: 650 !important;
+    letter-spacing: -.005em;
+}
+
+@media (hover:hover) and (pointer:fine) {
+    body.condomit-app-page :where(.btn-primary, .primary-btn, .primary-action,
+    .submit-btn, .save-btn, button.primary):hover:not(:disabled) {
+        background: var(--hig-blue-hover) !important;
+        box-shadow: none !important;
+    }
+}
+body.condomit-app-page :where(.btn-primary, .primary-btn, .primary-action,
+.submit-btn, .save-btn, button.primary):active:not(:disabled) {
+    background: var(--hig-blue-pressed) !important;
+}
+
+body.condomit-app-page :where(.btn-secondary, .secondary-btn, .ghost-btn,
+.btn-outline, .action-btn, .control-btn, .page-btn, .card-btn) {
+    border: 1px solid var(--hig-separator) !important;
+    border-radius: 11px !important;
+    background: var(--hig-fill) !important;
+    color: var(--hig-label) !important;
+    box-shadow: none !important;
+    font-weight: 600 !important;
+}
+@media (hover:hover) and (pointer:fine) {
+    body.condomit-app-page :where(.btn-secondary, .secondary-btn, .ghost-btn,
+    .btn-outline, .action-btn, .control-btn, .page-btn, .card-btn):hover:not(:disabled) {
+        background: var(--hig-fill-strong) !important;
+        border-color: var(--hig-separator-strong) !important;
+    }
+}
+
+body.condomit-app-page :where(.btn-danger, .danger-btn, .delete-btn, .remove-btn) {
+    color: var(--hig-red) !important;
+    border-color: rgba(215,0,21,.18) !important;
+    background: rgba(215,0,21,.075) !important;
+}
+
+/* ----------------------------------------------------------------------
+   Forms and search
+   ---------------------------------------------------------------------- */
+body.condomit-app-page :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select, textarea) {
+    min-height: 42px;
+    border: 1px solid var(--hig-separator-strong) !important;
+    border-radius: 10px !important;
+    background: var(--hig-surface) !important;
+    color: var(--hig-label) !important;
+    box-shadow: inset 0 1px 0 rgba(0,0,0,.015) !important;
+    transition: border-color .16s var(--hig-ease), box-shadow .16s var(--hig-ease), background .16s var(--hig-ease) !important;
+}
+
+body.condomit-app-page :where(input, textarea)::placeholder {
+    color: var(--hig-tertiary-label) !important;
+    opacity: 1;
+}
+
+body.condomit-app-page :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):focus {
+    border-color: var(--hig-blue) !important;
+    box-shadow: 0 0 0 3px var(--hig-focus) !important;
+    outline: none !important;
+}
+
+body.condomit-app-page :where(label, .form-group label, .field-label) {
+    color: var(--hig-secondary-label) !important;
+    font-size: .82rem;
+    font-weight: 600 !important;
+}
+
+body.condomit-app-page :where(.search-box, .search-field, .search-input-wrapper,
+.input-search, .toolbar-search) input {
+    background: var(--hig-fill) !important;
+    border-color: transparent !important;
+    border-radius: 12px !important;
+}
+
+body.condomit-app-page :where(.search-box, .search-field, .search-input-wrapper,
+.input-search, .toolbar-search) input:focus {
+    background: var(--hig-surface) !important;
+    border-color: var(--hig-blue) !important;
+}
+
+/* Native-feeling checks/radios without touching custom switch logic */
+body.condomit-app-page input[type="checkbox"],
+body.condomit-app-page input[type="radio"] {
+    accent-color: var(--hig-blue);
+}
+
+/* ----------------------------------------------------------------------
+   Segmented controls / tabs / filters
+   ---------------------------------------------------------------------- */
+body.condomit-app-page :where(.tabs, .tab-list, .status-tabs, .filter-tabs,
+.segmented-control, .view-switcher) {
+    background: var(--hig-fill) !important;
+    border: 1px solid var(--hig-separator) !important;
+    border-radius: 11px !important;
+    padding: 3px !important;
+    gap: 2px !important;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.025);
+}
+
+body.condomit-app-page :where(.tab, .tab-btn, .status-tab, .filter-tab,
+.segmented-control button, .view-switcher button) {
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: var(--hig-secondary-label) !important;
+    box-shadow: none !important;
+}
+
+body.condomit-app-page :where(.tab, .tab-btn, .status-tab, .filter-tab,
+.segmented-control button, .view-switcher button).active,
+body.condomit-app-page :where(.tab, .tab-btn, .status-tab, .filter-tab,
+.segmented-control button, .view-switcher button)[aria-selected="true"] {
+    background: var(--hig-surface) !important;
+    color: var(--hig-label) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,.10) !important;
+    font-weight: 650 !important;
+}
+
+/* ----------------------------------------------------------------------
+   Tables / lists
+   ---------------------------------------------------------------------- */
+body.condomit-app-page :where(.table-container, .table-wrapper, .table-wrap,
+.residents-table, .maintenance-table-wrapper, .access-table-wrapper) {
+    border: 1px solid var(--hig-separator) !important;
+    border-radius: var(--hig-r-md) !important;
+    overflow: auto;
+    background: var(--hig-surface) !important;
+    box-shadow: none !important;
+}
+
+body.condomit-app-page table {
+    background: transparent !important;
+    color: var(--hig-label) !important;
+    border-collapse: collapse;
+}
+
+body.condomit-app-page table th {
+    background: var(--hig-surface-2) !important;
+    color: var(--hig-secondary-label) !important;
+    border-color: var(--hig-separator) !important;
+    font-size: .76rem !important;
+    font-weight: 650 !important;
+    letter-spacing: .01em;
+}
+
+body.condomit-app-page table td {
+    color: var(--hig-label) !important;
+    border-color: var(--hig-separator) !important;
+}
+
+@media (hover:hover) and (pointer:fine) {
+    body.condomit-app-page table tbody tr:hover {
+        background: rgba(10,102,216,.035) !important;
+    }
+}
+
+body.condomit-app-page :where(.list-item, .stack-list > *, .card-item,
+.notification-item, .assembly-item, .resident-item) {
+    border-color: var(--hig-separator) !important;
+}
+
+/* ----------------------------------------------------------------------
+   Overlays, sheets, alerts
+   ---------------------------------------------------------------------- */
+body.condomit-app-page :where(.modal-backdrop, .modal-overlay) {
+    background: rgba(0,0,0,.26) !important;
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
+    backdrop-filter: blur(8px) saturate(120%);
+}
+
+body.condomit-app-page :where(.modal-card, .modal-content, .dialog-card, .modal-dialog) {
+    background: var(--hig-surface) !important;
+    color: var(--hig-label) !important;
+    border: 1px solid var(--hig-separator) !important;
+    border-radius: var(--hig-xl, 22px) !important;
+    box-shadow: var(--hig-shadow-overlay) !important;
+}
+
+body.condomit-app-page :where(.modal-header, .modal-footer, .modal-actions) {
+    border-color: var(--hig-separator) !important;
+}
+
+body.condomit-app-page :where(.modal-close, .close-btn) {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    color: var(--hig-secondary-label) !important;
+    background: var(--hig-fill) !important;
+}
+
+body.condomit-app-page :where(.alert, .notice, .migration-warning,
+.info-banner, .warning-banner, .success-banner) {
+    border-radius: 12px !important;
+    border-width: 1px !important;
+    box-shadow: none !important;
+}
+
+body.condomit-app-page :where(.empty-state, .no-data, .no-results) {
+    border-radius: var(--hig-r-lg) !important;
+    color: var(--hig-secondary-label) !important;
+}
+
+/* ----------------------------------------------------------------------
+   Login: keep logo/form structure; refine background, chrome and depth
+   ---------------------------------------------------------------------- */
+body.login-modern-page {
+    background:
+        radial-gradient(circle at 18% 2%, rgba(10,102,216,.13), transparent 30rem),
+        radial-gradient(circle at 90% 88%, rgba(21,184,214,.10), transparent 28rem),
+        linear-gradient(180deg,#F9FAFD 0%,#F2F5FA 100%) !important;
+}
+
+body.login-modern-page::before {
+    opacity: .55;
+}
+
+body.login-modern-page .login-buildings { opacity: .065 !important; }
+body.login-modern-page .login-dots { opacity: .13 !important; }
+body.login-modern-page .login-wave-left {
+    opacity: .68;
+    filter: saturate(.84);
+}
+body.login-modern-page .login-wave-right { opacity: .64; }
+
+body.login-modern-page .login-back {
+    min-height: 40px;
+    border-radius: 999px !important;
+    color: var(--hig-blue) !important;
+    background: rgba(250,251,253,.74) !important;
+    border: 1px solid rgba(60,60,67,.10) !important;
+    box-shadow: 0 6px 20px rgba(20,38,68,.08) !important;
+    -webkit-backdrop-filter: saturate(180%) blur(22px);
+    backdrop-filter: saturate(180%) blur(22px);
+}
+
+body.login-modern-page .login-modern-card {
+    border-radius: 28px !important;
+    background: rgba(255,255,255,.97) !important;
+    border: 1px solid rgba(60,60,67,.12) !important;
+    box-shadow: 0 18px 55px rgba(21,42,76,.12) !important;
+    backdrop-filter: none !important;
+}
+
+body.login-modern-page .login-modern-card h1 {
+    color: #1D1D1F !important;
+    font-weight: 720 !important;
+    letter-spacing: -.035em !important;
+}
+body.login-modern-page .login-modern-subtitle,
+body.login-modern-page .login-signup,
+body.login-modern-page .login-terms {
+    color: #6E6E73 !important;
+}
+body.login-modern-page .login-field label {
+    color: #3A3A3C !important;
+    font-weight: 600 !important;
+}
+body.login-modern-page .login-field input {
+    min-height: 48px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(60,60,67,.22) !important;
+    background: #fff !important;
+    box-shadow: none !important;
+}
+body.login-modern-page .login-field input:focus {
+    border-color: var(--hig-blue) !important;
+    box-shadow: 0 0 0 3px var(--hig-focus) !important;
+}
+body.login-modern-page .login-submit {
+    min-height: 48px !important;
+    border-radius: 12px !important;
+    background: var(--hig-blue) !important;
+    box-shadow: none !important;
+    font-weight: 650 !important;
+}
+body.login-modern-page .login-submit:hover:not(:disabled) {
+    background: var(--hig-blue-hover) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+body.login-modern-page .login-divider { background: rgba(60,60,67,.16) !important; }
+body.login-modern-page :where(.login-forgot, .login-signup a) { color: var(--hig-blue) !important; }
+
+/* ----------------------------------------------------------------------
+   User type/onboarding: Apple-style selection cards, no logo changes
+   ---------------------------------------------------------------------- */
+body.condomit-onboarding-page {
+    background:
+      radial-gradient(circle at 20% -4%, rgba(10,102,216,.11), transparent 28rem),
+      linear-gradient(180deg,#F9FAFD 0%,#F3F5F9 100%) !important;
+}
+
+body.condomit-onboarding-page .topbar {
+    position: sticky;
+    top: 10px;
+    z-index: 20;
+    padding: 8px 10px;
+    border: 1px solid rgba(60,60,67,.10);
+    border-radius: 18px;
+    background: rgba(250,251,253,.72);
+    -webkit-backdrop-filter: saturate(180%) blur(22px);
+    backdrop-filter: saturate(180%) blur(22px);
+}
+body.condomit-onboarding-page .profile {
+    border-radius: 22px !important;
+    background: #fff !important;
+    border-color: rgba(60,60,67,.14) !important;
+    box-shadow: var(--hig-shadow-1) !important;
+    backdrop-filter: none !important;
+    transform: none !important;
+}
+body.condomit-onboarding-page .profile:hover {
+    border-color: rgba(10,102,216,.28) !important;
+    box-shadow: var(--hig-shadow-2) !important;
+    transform: none !important;
+}
+body.condomit-onboarding-page .profile.is-selected {
+    border-color: var(--hig-blue) !important;
+    box-shadow: 0 0 0 3px var(--hig-focus), var(--hig-shadow-2) !important;
+    transform: none !important;
+}
+body.condomit-onboarding-page .bottom {
+    border-radius: 18px !important;
+    background: rgba(255,255,255,.72) !important;
+    border-color: rgba(60,60,67,.12) !important;
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    backdrop-filter: saturate(180%) blur(18px);
+}
+body.condomit-onboarding-page .continue {
+    border-radius: 12px !important;
+    background: var(--hig-blue) !important;
+    box-shadow: none !important;
+}
+
+/* ----------------------------------------------------------------------
+   Advanced/admin pages: macOS-like denser controls on pointer devices
+   ---------------------------------------------------------------------- */
+@media (hover:hover) and (pointer:fine) and (min-width:901px) {
+    body.advanced-page :where(button, .btn, .primary-btn, .secondary-btn,
+    .ghost-btn, .action-btn, .advanced-nav-item) {
+        min-height: 32px !important;
+    }
+    body.advanced-page :where(input:not([type="checkbox"]):not([type="radio"]), select) {
+        min-height: 34px !important;
+    }
+}
+
+/* ----------------------------------------------------------------------
+   iOS/mobile adaptation: comfortable 44px targets, safe areas, sheets
+   ---------------------------------------------------------------------- */
+@media (max-width: 900px), (pointer:coarse) {
+    body.condomit-app-page .top-bar {
+        min-height: 64px;
+        padding-top: max(10px, env(safe-area-inset-top)) !important;
+        padding-right: max(12px, env(safe-area-inset-right)) !important;
+        padding-left: max(12px, env(safe-area-inset-left)) !important;
+    }
+
+    body.condomit-app-page :where(button, [role="button"], .btn, .btn-primary,
+    .btn-secondary, .primary-btn, .secondary-btn, .primary-action, .ghost-btn,
+    .action-btn, .control-btn, .page-btn, .card-btn, .nav-item, .icon-btn,
+    .mobile-menu-btn) {
+        min-height: 44px !important;
+    }
+
+    body.condomit-app-page .icon-btn,
+    body.condomit-app-page .mobile-menu-btn {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+    }
+
+    body.condomit-app-page :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+        min-height: 44px !important;
+        font-size: 16px !important; /* avoids iOS focus zoom */
+    }
+
+    body.condomit-app-page .dashboard-grid {
+        padding: 14px !important;
+        gap: 12px !important;
+    }
+
+    body.condomit-app-page :where(.card, .card-shell, .panel-card, .panel, .info-card,
+    .quick-card, .config-card, .welcome-card, .side-card, .metric-card, .content-card) {
+        border-radius: 16px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,.035) !important;
+    }
+
+    body.condomit-app-page :where(.modal-backdrop, .modal-overlay) {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+    body.condomit-app-page :where(.modal-card, .modal-content, .dialog-card, .modal-dialog) {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: calc(92dvh - env(safe-area-inset-top)) !important;
+        border-radius: 22px 22px 0 0 !important;
+        padding-bottom: max(18px, env(safe-area-inset-bottom)) !important;
+    }
+
+    body.condomit-app-page .sidebar {
+        width: min(86vw, 320px) !important;
+        padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+        box-shadow: 14px 0 44px rgba(0,0,0,.14) !important;
+    }
+
+    body.condomit-onboarding-page .profile {
+        min-height: 0 !important;
+    }
+}
+
+@media (max-width: 600px) {
+    body.login-modern-page .login-modern-shell {
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+        align-items: center;
+    }
+    body.login-modern-page .login-modern-card {
+        border-radius: 24px !important;
+        padding: 28px 21px 24px !important;
+    }
+    body.login-modern-page .login-buildings,
+    body.login-modern-page .login-dots { opacity: .04 !important; }
+
+    body.condomit-onboarding-page .shell {
+        width: min(100% - 20px, 1240px) !important;
+    }
+    body.condomit-onboarding-page .topbar {
+        top: 6px;
+        border-radius: 16px;
+    }
+}
+
+/* ----------------------------------------------------------------------
+   Dark mode corrections for the new light navigation material
+   ---------------------------------------------------------------------- */
+html[data-theme="dark"] body.condomit-app-page .sidebar .nav-item.active {
+    background: rgba(64,156,255,.18) !important;
+    color: #64A8FF !important;
+}
+html[data-theme="dark"] body.condomit-app-page .sidebar .nav-item.active i {
+    color: #64A8FF !important;
+}
+html[data-theme="dark"] body.condomit-app-page :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+    background: #1C1C1E !important;
+}
+html[data-theme="dark"] body.condomit-app-page table th {
+    background: #202126 !important;
+}
+
+/* ----------------------------------------------------------------------
+   Accessibility preferences
+   ---------------------------------------------------------------------- */
+@media (prefers-contrast: more) {
+    :root {
+        --hig-separator: rgba(60,60,67,.34);
+        --hig-separator-strong: rgba(60,60,67,.52);
+    }
+    body.condomit-app-page :where(.card, .card-shell, .panel-card, input, select, textarea) {
+        border-width: 1.5px !important;
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    body.condomit-app-page .sidebar,
+    body.condomit-app-page .top-bar,
+    body.login-modern-page .login-back,
+    body.condomit-onboarding-page .topbar,
+    body.condomit-onboarding-page .bottom {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+        background: var(--hig-surface) !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto !important; }
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+@media print {
+    body.condomit-app-page {
+        background: #fff !important;
+    }
+    body.condomit-app-page .sidebar,
+    body.condomit-app-page .top-bar,
+    body.condomit-app-page .mobile-menu-btn {
+        display: none !important;
+    }
+    body.condomit-app-page :where(.card, .card-shell, .panel-card) {
+        box-shadow: none !important;
+        border-color: #bbb !important;
+    }
+}
+
+/* Final small ergonomics refinements */
+body.condomit-app-page .sidebar-logo {
+    height: auto !important;
+    max-height: 96px !important;
+}
+body.login-modern-page .login-password-toggle {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border-radius: 50% !important;
+}
+@media (max-width: 900px), (pointer: coarse) {
+    body.login-modern-page :where(.login-back, .login-password-toggle, .login-submit) {
+        min-height: 44px !important;
+    }
+    body.login-modern-page .login-password-toggle {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+    }
+    body.condomit-onboarding-page :where(.back-link, .login-link, .continue) {
+        min-height: 44px !important;
+    }
+}
