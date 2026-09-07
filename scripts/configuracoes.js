@@ -1332,7 +1332,7 @@ function buildCityStateLabel(condominium) {
 // ============================================================
 // 0.63.0 - Gestão de reservas/espaços, edição do condomínio e histórico de versões
 // ============================================================
-const CONDOMIT_APP_VERSION = '0.63.0';
+const CONDOMIT_APP_VERSION = '0.71.2';
 let reservationManagementState = { reservations: [], spaces: [], selected: new Set(), isSindico: false };
 
 async function condomitRpc056(name, payload = {}) {
@@ -1690,7 +1690,7 @@ const translations = {
         language_label: 'Idioma',
         about: 'Sobre',
         about_company: 'Sobre a empresa',
-        app_version: 'Versão do app: 0.63.0',
+        app_version: 'Versão do app: 0.71.2',
         updates: 'Verifique novas atualizações',
         footer_condo: '© 2026 Condomit.',
         footer_rights: 'Todos os direitos reservados',
@@ -1780,7 +1780,7 @@ const translations = {
         language_label: 'Language',
         about: 'About',
         about_company: 'About the Company',
-        app_version: 'App version: 0.63.0',
+        app_version: 'App version: 0.71.2',
         updates: 'Check for updates',
         footer_condo: '© 2026 Condomit.',
         footer_rights: 'All rights reserved',

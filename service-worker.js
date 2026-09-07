@@ -1,5 +1,5 @@
-const CACHE='condomit-shell-v072';
-const CORE=['/favicon.ico','/inicio.html','/pages/entrar.html','/pages/tipo-usuario.html','/styles/theme.css','/styles/responsive-mobile.css','/styles/ux-polish.css','/styles/apple-hig.css','/scripts/apple-ux.js','/scripts/device-notifications.js','/assets/favicon.png','/assets/logo-nova-condomit.png','/assets/icon-192.png','/assets/icon-512.png','/manifest.webmanifest','/privacidade.html','/suporte.html','/excluir-conta.html'];
+const CACHE='condomit-shell-v063';
+const CORE=['/favicon.ico','/inicio.html','/pages/entrar.html','/pages/tipo-usuario.html','/styles/theme.css','/styles/responsive-mobile.css','/styles/ux-polish.css','/scripts/device-notifications.js','/assets/favicon.png','/assets/logo-nova-condomit.png','/assets/icon-192.png','/assets/icon-512.png','/manifest.webmanifest','/privacidade.html','/suporte.html','/excluir-conta.html'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).catch(()=>{}));

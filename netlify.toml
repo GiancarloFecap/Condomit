@@ -39,6 +39,11 @@
   status = 200
 
 [[redirects]]
+  from = "/desktop-download"
+  to = "/pages/download-desktop.html"
+  status = 200
+
+[[redirects]]
   from = "/pages/*"
   to = "/pages/:splat"
   status = 200

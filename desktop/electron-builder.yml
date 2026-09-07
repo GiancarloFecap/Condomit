@@ -1,0 +1,54 @@
+appId: com.condomit.desktop
+productName: Condomit
+copyright: Copyright © 2026 Condomit
+asar: true
+compression: maximum
+directories:
+  output: desktop/dist
+  buildResources: desktop/build
+files:
+  - desktop/main.cjs
+  - desktop/preload.cjs
+  - desktop/offline.html
+  - desktop/build/icon.png
+  - assets/logo-lado.png
+extraMetadata:
+  main: desktop/main.cjs
+win:
+  icon: desktop/build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  artifactName: Condomit-${version}-Windows-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Condomit
+mac:
+  icon: desktop/build/icon.icns
+  category: public.app-category.business
+  target:
+    - target: dmg
+      arch: [universal]
+    - target: zip
+      arch: [universal]
+  artifactName: Condomit-${version}-macOS-${arch}.${ext}
+linux:
+  icon: desktop/build/icon.png
+  category: Office
+  synopsis: Gestão inteligente para condomínios
+  description: Aplicativo desktop da plataforma Condomit.
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  artifactName: Condomit-${version}-Linux-${arch}.${ext}
+publish:
+  provider: github
+  releaseType: release

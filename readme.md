@@ -98,3 +98,8 @@ Dependendo dos recursos usados:
 ## Observação sobre `package-lock.json`
 
 Ao receber esta versão em uma máquina onde as dependências mobile ainda não foram instaladas, execute `npm install`. O npm atualizará o lockfile de acordo com o `package.json`; depois disso, mantenha o `package-lock.json` atualizado no repositório.
+
+
+## Aplicativo desktop
+
+A v0.71.2 inclui um aplicativo Electron para Windows, macOS e Linux. Consulte `desktop/README.md`. O botão da landing page agora leva a `pages/download-desktop.html`, que lista os instaladores publicados em GitHub Releases.

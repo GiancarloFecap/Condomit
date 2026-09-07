@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baixar Condomit Desktop</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../styles/download-desktop.css?v=0712">
+</head>
+<body>
+  <header class="download-header">
+    <a href="../inicio.html" class="brand" aria-label="Voltar para Condomit">
+      <img src="../assets/logo-lado.png" alt="Condomit">
+    </a>
+    <a href="../inicio.html" class="back-link"><i class="fa-solid fa-arrow-left"></i><span>Voltar ao site</span></a>
+  </header>
+
+  <main class="download-main">
+    <section class="download-hero">
+      <span class="eyebrow"><i class="fa-solid fa-desktop"></i> Condomit Desktop</span>
+      <h1>Condomit no seu computador</h1>
+      <p>Instale a versão desktop para acessar a Condomit em uma janela própria no Windows, macOS ou Linux.</p>
+      <div id="detectedPlatform" class="detected-platform" hidden></div>
+    </section>
+
+    <section class="platform-grid" aria-label="Downloads disponíveis">
+      <article class="platform-card" data-platform-card="windows">
+        <div class="platform-icon"><i class="fa-brands fa-windows"></i></div>
+        <div class="platform-copy">
+          <span class="recommended-pill" hidden>Recomendado para este computador</span>
+          <h2>Windows</h2>
+          <p>Windows 10 ou 11, 64 bits.</p>
+          <div class="download-actions" data-download-list="windows">
+            <button class="download-button loading" type="button" disabled><i class="fa-solid fa-spinner fa-spin"></i> Procurando instalador...</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="platform-card" data-platform-card="macos">
+        <div class="platform-icon"><i class="fa-brands fa-apple"></i></div>
+        <div class="platform-copy">
+          <span class="recommended-pill" hidden>Recomendado para este computador</span>
+          <h2>macOS</h2>
+          <p>Mac Intel e Apple Silicon.</p>
+          <div class="download-actions" data-download-list="macos">
+            <button class="download-button loading" type="button" disabled><i class="fa-solid fa-spinner fa-spin"></i> Procurando instalador...</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="platform-card" data-platform-card="linux">
+        <div class="platform-icon"><i class="fa-brands fa-linux"></i></div>
+        <div class="platform-copy">
+          <span class="recommended-pill" hidden>Recomendado para este computador</span>
+          <h2>Linux</h2>
+          <p>AppImage ou pacote Debian, 64 bits.</p>
+          <div class="download-actions" data-download-list="linux">
+            <button class="download-button loading" type="button" disabled><i class="fa-solid fa-spinner fa-spin"></i> Procurando instalador...</button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="download-status" id="downloadStatus" hidden></section>
+
+    <section class="desktop-benefits">
+      <div><i class="fa-solid fa-window-maximize"></i><span><strong>Aplicativo de verdade</strong><small>Abre em uma janela própria, sem depender da aba do navegador.</small></span></div>
+      <div><i class="fa-solid fa-video"></i><span><strong>Assembleias completas</strong><small>Câmera, microfone e compartilhamento de tela continuam disponíveis.</small></span></div>
+      <div><i class="fa-solid fa-arrows-rotate"></i><span><strong>Sempre conectado à versão atual</strong><small>O desktop usa a plataforma oficial da Condomit, mantendo as funcionalidades atualizadas.</small></span></div>
+    </section>
+
+    <p class="download-footnote">Cada sistema operacional utiliza um instalador próprio. Por segurança, baixe somente os arquivos publicados oficialmente pela Condomit.</p>
+  </main>
+
+  <script src="../scripts/desktop-downloads.js?v=0712"></script>
+</body>
+</html>

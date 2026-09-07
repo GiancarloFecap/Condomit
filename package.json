@@ -1,8 +1,8 @@
 {
   "name": "condomit",
-  "version": "0.72.0",
+  "version": "0.71.2",
   "private": true,
-  "description": "Plataforma Condomit para web, PWA, Android e iOS.",
+  "description": "Plataforma Condomit para web, desktop (Windows, macOS e Linux), Android e iOS.",
   "engines": {
     "node": ">=22"
   },
@@ -15,7 +15,13 @@
     "mobile:ios": "npm run mobile:sync && npx cap open ios",
     "mobile:run:android": "npm run mobile:sync && npx cap run android",
     "mobile:run:ios": "npm run mobile:sync && npx cap run ios",
-    "mobile:doctor": "npx cap doctor"
+    "mobile:doctor": "npx cap doctor",
+    "desktop:dev": "electron .",
+    "desktop:build": "electron-builder --dir --config desktop/electron-builder.yml",
+    "desktop:dist": "electron-builder --config desktop/electron-builder.yml",
+    "desktop:dist:win": "electron-builder --config desktop/electron-builder.yml --win",
+    "desktop:dist:mac": "electron-builder --config desktop/electron-builder.yml --mac",
+    "desktop:dist:linux": "electron-builder --config desktop/electron-builder.yml --linux"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
@@ -30,6 +36,9 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0",
-    "typescript": "^5.9.2"
-  }
+    "typescript": "^5.9.2",
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "main": "desktop/main.cjs"
 }

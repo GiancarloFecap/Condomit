@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const isNative = (() => { try { return Boolean(window.Capacitor?.isNativePlatform?.()); } catch (_) { return false; } })();
+  const isDesktop = Boolean(window.CondomitDesktop?.isDesktop);
   const buttons = () => Array.from(document.querySelectorAll('[data-install-condomit]'));
   let deferredPrompt = null;
 
@@ -16,7 +17,7 @@
     });
   }
 
-  if (isNative || window.matchMedia?.('(display-mode: standalone)')?.matches) {
+  if (isNative || isDesktop || window.matchMedia?.('(display-mode: standalone)')?.matches) {
     setInstallVisible(false);
     return;
   }
