@@ -1,6 +1,6 @@
 {
   "name": "condomit",
-  "version": "0.71.3",
+  "version": "0.71.4",
   "private": true,
   "description": "Plataforma Condomit para web, desktop (Windows, macOS e Linux), Android e iOS.",
   "engines": {
@@ -17,11 +17,11 @@
     "mobile:run:ios": "npm run mobile:sync && npx cap run ios",
     "mobile:doctor": "npx cap doctor",
     "desktop:dev": "electron .",
-    "desktop:build": "electron-builder --dir --config desktop/electron-builder.yml",
-    "desktop:dist": "electron-builder --config desktop/electron-builder.yml",
-    "desktop:dist:win": "electron-builder --config desktop/electron-builder.yml --win",
-    "desktop:dist:mac": "electron-builder --config desktop/electron-builder.yml --mac",
-    "desktop:dist:linux": "electron-builder --config desktop/electron-builder.yml --linux"
+    "desktop:build": "electron-builder --dir --config desktop/electron-builder.yml --publish never",
+    "desktop:dist": "electron-builder --config desktop/electron-builder.yml --publish never",
+    "desktop:dist:win": "electron-builder --config desktop/electron-builder.yml --win --publish never",
+    "desktop:dist:mac": "electron-builder --config desktop/electron-builder.yml --mac --publish never",
+    "desktop:dist:linux": "electron-builder --config desktop/electron-builder.yml --linux --publish never"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
@@ -40,5 +40,14 @@
     "electron": "^37.2.6",
     "electron-builder": "^26.0.12"
   },
-  "main": "desktop/main.cjs"
+  "main": "desktop/main.cjs",
+  "author": {
+    "name": "Condomit",
+    "email": "noreply@condomit.app"
+  },
+  "desktopName": "Condomit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GiancarloFecap/Condomit.git"
+  }
 }

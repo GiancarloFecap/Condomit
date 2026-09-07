@@ -17,7 +17,7 @@ function resolveRepository() {
   if (/^[\w.-]+\/[\w.-]+$/.test(explicit)) return explicit;
   const repositoryUrl = String(process.env.REPOSITORY_URL || '').trim();
   const match = repositoryUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)(?:\.git)?$/i);
-  return match ? `${match[1]}/${match[2]}` : '';
+  return match ? `${match[1]}/${match[2]}` : 'GiancarloFecap/Condomit';
 }
 
 function classify(asset) {

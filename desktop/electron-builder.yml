@@ -19,9 +19,7 @@ win:
   target:
     - target: nsis
       arch: [x64]
-    - target: portable
-      arch: [x64]
-  artifactName: Condomit-${version}-Windows-${arch}.${ext}
+  artifactName: Condomit-${version}-Windows-${arch}-Setup.${ext}
 nsis:
   oneClick: false
   perMachine: false
@@ -40,6 +38,8 @@ mac:
   artifactName: Condomit-${version}-macOS-${arch}.${ext}
 linux:
   icon: desktop/build/icon.png
+  maintainer: Condomit <noreply@condomit.app>
+  syncDesktopName: true
   category: Office
   synopsis: Gestão inteligente para condomínios
   description: Aplicativo desktop da plataforma Condomit.
@@ -49,6 +49,3 @@ linux:
     - target: deb
       arch: [x64]
   artifactName: Condomit-${version}-Linux-${arch}.${ext}
-publish:
-  provider: github
-  releaseType: release
