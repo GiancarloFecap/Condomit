@@ -17,6 +17,7 @@ async function fetchCondominiumBillingStatus(force = false) {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
+    setupDesktopUpdateSettings();
     let currentUser = null;
     try {
         const raw = sessionStorage.getItem('condominiumUser');
@@ -440,8 +441,10 @@ function openConfigSection(sectionKey) {
             openConsentManagementModal();
             break;
         case 'versao-app':
-        case 'novas-atualizacoes':
             openAppVersionModal();
+            break;
+        case 'novas-atualizacoes':
+            openDesktopUpdateModal();
             break;
         case 'minhas-reservas':
             openReservationsModal();
@@ -1332,7 +1335,7 @@ function buildCityStateLabel(condominium) {
 // ============================================================
 // 0.63.0 - Gestão de reservas/espaços, edição do condomínio e histórico de versões
 // ============================================================
-const CONDOMIT_APP_VERSION = '0.71.2';
+const CONDOMIT_APP_VERSION = '0.71.7';
 let reservationManagementState = { reservations: [], spaces: [], selected: new Set(), isSindico: false };
 
 async function condomitRpc056(name, payload = {}) {
@@ -1609,6 +1612,181 @@ async function saveCondominiumEdit056() {
     finally { if (action) action.disabled = false; }
 }
 
+
+function isCondomitDesktopApp() {
+    return Boolean(
+        window.CondomitDesktop?.isDesktop &&
+        typeof window.CondomitDesktop?.checkForUpdates === 'function' &&
+        typeof window.CondomitDesktop?.installUpdate === 'function'
+    );
+}
+
+async function setupDesktopUpdateSettings() {
+    const item = document.getElementById('desktopUpdateSettingsItem');
+    const label = document.getElementById('appVersionSettingsLabel');
+    const desktop = isCondomitDesktopApp();
+
+    if (item) {
+        item.hidden = !desktop;
+        item.style.display = desktop ? 'flex' : 'none';
+        item.setAttribute('aria-hidden', desktop ? 'false' : 'true');
+    }
+
+    if (!desktop) return;
+    try {
+        const info = await window.CondomitDesktop.getInfo?.();
+        const version = String(info?.version || CONDOMIT_APP_VERSION).replace(/^v/i, '');
+        if (label) label.textContent = `Versão do app: ${version}`;
+    } catch (_) {
+        if (label) label.textContent = `Versão do app: ${CONDOMIT_APP_VERSION}`;
+    }
+}
+
+function desktopUpdateStatusHtml({ icon = 'fa-arrows-rotate', title, copy, tone = 'neutral' } = {}) {
+    return `
+        <div class="desktop-update-status desktop-update-status--${tone}">
+            <div class="desktop-update-status-icon"><i class="fas ${icon}"></i></div>
+            <div>
+                <strong>${escapeReservationHtml(title || '')}</strong>
+                <p>${escapeReservationHtml(copy || '')}</p>
+            </div>
+        </div>
+    `;
+}
+
+async function openDesktopUpdateModal() {
+    if (!isCondomitDesktopApp()) return;
+
+    openSettingsContentModal({
+        title: 'Atualizações da Condomit',
+        subtitle: 'Verifique se existe uma versão mais recente do aplicativo desktop.',
+        html: `
+            <div class="desktop-update-card">
+                <div class="desktop-update-version-row">
+                    <span>Versão instalada</span>
+                    <strong id="desktopCurrentVersion">v${escapeReservationHtml(CONDOMIT_APP_VERSION)}</strong>
+                </div>
+                <div id="desktopUpdateResult">
+                    ${desktopUpdateStatusHtml({
+                        icon: 'fa-spinner fa-spin',
+                        title: 'Verificando atualizações...',
+                        copy: 'Consultando a versão mais recente publicada pela Condomit.'
+                    })}
+                </div>
+                <div class="desktop-update-progress" id="desktopUpdateProgress" hidden>
+                    <div class="desktop-update-progress-track"><span id="desktopUpdateProgressBar"></span></div>
+                    <small id="desktopUpdateProgressText">Preparando atualização...</small>
+                </div>
+            </div>
+        `,
+        footerHtml: `
+            <button type="button" class="btn-secondary-settings" data-settings-close>Fechar</button>
+            <button type="button" class="btn-edit-profile" id="desktopInstallUpdateBtn" hidden>
+                <i class="fas fa-download"></i> Atualizar Condomit
+            </button>
+        `
+    });
+
+    const modal = document.getElementById('settingsContentModal');
+    const result = modal?.querySelector('#desktopUpdateResult');
+    const current = modal?.querySelector('#desktopCurrentVersion');
+    const installButton = modal?.querySelector('#desktopInstallUpdateBtn');
+    const progress = modal?.querySelector('#desktopUpdateProgress');
+    const progressBar = modal?.querySelector('#desktopUpdateProgressBar');
+    const progressText = modal?.querySelector('#desktopUpdateProgressText');
+    modal?.querySelectorAll('[data-settings-close]').forEach((button) => button.addEventListener('click', closeSettingsContentModal));
+
+    let removeProgressListener = () => {};
+    try {
+        removeProgressListener = window.CondomitDesktop.onUpdateProgress?.((payload) => {
+            if (!progress || !progressBar || !progressText) return;
+            progress.hidden = false;
+            const percent = Number(payload?.percent);
+            progressBar.style.width = Number.isFinite(percent) ? `${Math.max(2, percent)}%` : '18%';
+            progressText.textContent = Number.isFinite(percent)
+                ? `Baixando atualização... ${percent}%`
+                : 'Baixando atualização...';
+        }) || (() => {});
+
+        const info = await window.CondomitDesktop.checkForUpdates();
+        if (!info?.ok) throw new Error(info?.error || 'Não foi possível verificar atualizações.');
+
+        const currentVersion = String(info.currentVersion || CONDOMIT_APP_VERSION).replace(/^v/i, '');
+        const latestVersion = String(info.latestVersion || currentVersion).replace(/^v/i, '');
+        if (current) current.textContent = `v${currentVersion}`;
+
+        if (!info.hasUpdate) {
+            if (result) result.innerHTML = desktopUpdateStatusHtml({
+                icon: 'fa-circle-check',
+                title: 'A Condomit está atualizada',
+                copy: `Você já está usando a versão mais recente (v${currentVersion}).`,
+                tone: 'success'
+            });
+            return;
+        }
+
+        if (result) result.innerHTML = desktopUpdateStatusHtml({
+            icon: 'fa-arrow-up-right-dots',
+            title: `Nova versão v${latestVersion} disponível`,
+            copy: info.canInstall
+                ? 'A atualização está pronta para ser baixada e instalada neste computador.'
+                : 'A nova versão foi publicada, mas o instalador deste sistema ainda não está disponível.',
+            tone: 'available'
+        });
+
+        if (installButton && info.canInstall) {
+            installButton.hidden = false;
+            installButton.addEventListener('click', async () => {
+                installButton.disabled = true;
+                installButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Baixando atualização...';
+                if (progress) progress.hidden = false;
+                try {
+                    const install = await window.CondomitDesktop.installUpdate();
+                    if (!install?.ok) throw new Error(install?.error || 'Não foi possível iniciar a atualização.');
+                    if (install?.noUpdate) {
+                        if (result) result.innerHTML = desktopUpdateStatusHtml({
+                            icon: 'fa-circle-check',
+                            title: 'A Condomit já está atualizada',
+                            copy: 'Nenhuma nova versão precisa ser instalada.',
+                            tone: 'success'
+                        });
+                        installButton.hidden = true;
+                        return;
+                    }
+                    if (progressBar) progressBar.style.width = '100%';
+                    if (progressText) progressText.textContent = install.manualMessage || 'Atualização baixada. O instalador foi iniciado.';
+                    if (result) result.innerHTML = desktopUpdateStatusHtml({
+                        icon: 'fa-circle-check',
+                        title: 'Atualização preparada',
+                        copy: install.manualMessage || 'O instalador da nova versão foi iniciado. Siga as instruções exibidas pelo sistema.',
+                        tone: 'success'
+                    });
+                    installButton.hidden = true;
+                } catch (error) {
+                    if (result) result.innerHTML = desktopUpdateStatusHtml({
+                        icon: 'fa-triangle-exclamation',
+                        title: 'Não foi possível atualizar',
+                        copy: error?.message || 'Tente novamente em alguns instantes.',
+                        tone: 'error'
+                    });
+                    installButton.disabled = false;
+                    installButton.innerHTML = '<i class="fas fa-rotate"></i> Tentar atualizar novamente';
+                }
+            });
+        }
+    } catch (error) {
+        if (result) result.innerHTML = desktopUpdateStatusHtml({
+            icon: 'fa-triangle-exclamation',
+            title: 'Não foi possível verificar atualizações',
+            copy: error?.message || 'Verifique sua conexão com a internet e tente novamente.',
+            tone: 'error'
+        });
+    } finally {
+        const closeButtons = modal?.querySelectorAll('[data-settings-close], #settingsContentClose') || [];
+        closeButtons.forEach((button) => button.addEventListener('click', removeProgressListener, { once: true }));
+    }
+}
+
 function ensureAppVersionModal() {
     let modal = document.getElementById('appVersionModal056');
     if (modal) return modal;
@@ -1690,7 +1868,7 @@ const translations = {
         language_label: 'Idioma',
         about: 'Sobre',
         about_company: 'Sobre a empresa',
-        app_version: 'Versão do app: 0.71.2',
+        app_version: 'Versão do app: 0.71.7',
         updates: 'Verifique novas atualizações',
         footer_condo: '© 2026 Condomit.',
         footer_rights: 'Todos os direitos reservados',
@@ -1780,7 +1958,7 @@ const translations = {
         language_label: 'Language',
         about: 'About',
         about_company: 'About the Company',
-        app_version: 'App version: 0.71.2',
+        app_version: 'App version: 0.71.7',
         updates: 'Check for updates',
         footer_condo: '© 2026 Condomit.',
         footer_rights: 'All rights reserved',

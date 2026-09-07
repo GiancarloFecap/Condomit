@@ -2045,3 +2045,26 @@ html[data-theme="dark"] .release-item>span{background:#172554}
 .settings-resident-avatar{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#e8efff;color:#2252bd;font-weight:800;flex:0 0 auto}
 .settings-resident-copy{display:grid;gap:3px;min-width:0}.settings-resident-copy strong{color:var(--text-primary,#172033)}.settings-resident-copy span,.settings-resident-copy small{color:var(--text-secondary,#64748b)}
 .consent-management-list{display:grid;gap:12px}.consent-management-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px;border:1px solid var(--border-color,#dbe2f0);border-radius:14px}.consent-management-row>div{display:grid;gap:5px}.consent-management-row small{color:var(--text-secondary,#64748b);line-height:1.45}.consent-management-row.required{background:rgba(34,82,189,.05)}.consent-legal-note{display:flex;gap:9px;align-items:flex-start;padding:12px;border-radius:12px;background:rgba(34,82,189,.06);color:var(--text-secondary,#64748b)}
+
+
+/* Condomit Desktop - atualização do aplicativo */
+#desktopUpdateSettingsItem[hidden] { display: none !important; }
+.desktop-update-card { display:flex; flex-direction:column; gap:18px; }
+.desktop-update-version-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; border:1px solid #dbe4f0; border-radius:14px; background:#f8fafc; }
+.desktop-update-version-row span { color:#64748b; font-size:.92rem; }
+.desktop-update-version-row strong { color:#0f172a; font-size:1.08rem; }
+.desktop-update-status { display:flex; gap:14px; align-items:flex-start; padding:18px; border-radius:16px; border:1px solid #dbe4f0; background:#fff; }
+.desktop-update-status-icon { width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center; background:#edf3ff; color:#2454c4; flex:0 0 42px; }
+.desktop-update-status strong { display:block; color:#172033; margin:1px 0 5px; }
+.desktop-update-status p { margin:0; color:#64748b; line-height:1.55; }
+.desktop-update-status--success { border-color:#bbebcd; background:#f3fbf6; }
+.desktop-update-status--success .desktop-update-status-icon { background:#dcf7e6; color:#0b8b45; }
+.desktop-update-status--available { border-color:#bfd0ff; background:#f5f8ff; }
+.desktop-update-status--available .desktop-update-status-icon { background:#e5edff; color:#1d4ed8; }
+.desktop-update-status--error { border-color:#ffd2d2; background:#fff7f7; }
+.desktop-update-status--error .desktop-update-status-icon { background:#ffe7e7; color:#c62828; }
+.desktop-update-progress { padding:4px 2px 0; }
+.desktop-update-progress-track { height:9px; background:#e8edf5; border-radius:999px; overflow:hidden; margin-bottom:8px; }
+.desktop-update-progress-track span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,#2252bd,#3d73ea); transition:width .22s ease; }
+.desktop-update-progress small { color:#64748b; }
+.btn-secondary-settings { border:1px solid #cdd8e8; background:#fff; color:#315078; border-radius:12px; padding:11px 18px; font-weight:700; cursor:pointer; }

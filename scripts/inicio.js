@@ -36,6 +36,14 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('Condomit Landing Page Loaded');
+    if (window.CondomitDesktop?.isDesktop) {
+        const desktopDownload = document.getElementById('desktopDownloadCta') || document.querySelector('a[href*="download-desktop"]');
+        if (desktopDownload) {
+            desktopDownload.hidden = true;
+            desktopDownload.style.setProperty('display', 'none', 'important');
+            desktopDownload.setAttribute('aria-hidden', 'true');
+        }
+    }
     if (typeof window.resumeCondomitSession === 'function') {
         try { await window.resumeCondomitSession({ redirect: true }); } catch (error) {
             console.warn('[SESSION] Não foi possível restaurar automaticamente a sessão:', error?.message || error);

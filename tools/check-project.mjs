@@ -1,8 +1,9 @@
 import { readdir, readFile, access } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { dirname, extname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = resolve(new URL('..', import.meta.url).pathname.replace(/^\/(?:[A-Za-z]:)/, (m) => m.slice(1)));
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const ignoredDirs = new Set(['node_modules', '.git', 'www', 'android', 'ios']);
 const errors = [];
 let htmlCount = 0;
