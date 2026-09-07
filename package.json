@@ -1,6 +1,6 @@
 {
   "name": "condomit",
-  "version": "0.71.2",
+  "version": "0.71.3",
   "private": true,
   "description": "Plataforma Condomit para web, desktop (Windows, macOS e Linux), Android e iOS.",
   "engines": {

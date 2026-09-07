@@ -1,6 +1,6 @@
 # Condomit Desktop
 
-A partir da v0.71.2, o botão de download do site aponta para instaladores desktop reais, e não para a instalação PWA do navegador.
+A partir da v0.71.3, o botão de download do site aponta para instaladores desktop reais, e não para a instalação PWA do navegador.
 
 ## Sistemas suportados
 
@@ -40,8 +40,8 @@ O arquivo `.github/workflows/desktop-release.yml` cria os três instaladores aut
 3. Faça push de uma tag, por exemplo:
 
 ```bash
-git tag v0.71.2
-git push origin v0.71.2
+git tag v0.71.3
+git push origin v0.71.3
 ```
 
 O GitHub Actions executará três builds e publicará os arquivos em **GitHub Releases**. A página `pages/download-desktop.html` consulta a função Netlify `desktop-downloads` e mostra os links da release mais recente.

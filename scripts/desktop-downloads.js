@@ -95,18 +95,31 @@
       renderDownloads('windows', payload.downloads?.windows);
       renderDownloads('macos', payload.downloads?.macos);
       renderDownloads('linux', payload.downloads?.linux);
-      if (payload.version && status) {
+
+      const hasDownloads = ['windows', 'macos', 'linux'].some(platform =>
+        Array.isArray(payload.downloads?.[platform]) && payload.downloads[platform].length > 0
+      );
+
+      if (status) {
+        status.hidden = true;
+        status.removeAttribute('style');
+        status.textContent = '';
+      }
+
+      if (payload.version && hasDownloads && status) {
         status.hidden = false;
-        status.style.borderColor = '#d5e6dc';
-        status.style.background = '#f0faf4';
-        status.style.color = '#246342';
+        status.classList.add('available');
         status.textContent = `Versão desktop disponível: ${payload.version}`;
       }
     } catch (error) {
+      console.warn('[desktop-downloads]', error);
       ['windows', 'macos', 'linux'].forEach(platform => renderDownloads(platform, []));
+      // Uma indisponibilidade temporária do GitHub não deve aparecer ao usuário
+      // como um erro da Condomit. Os cards já deixam claro quando não há build publicado.
       if (status) {
-        status.hidden = false;
-        status.textContent = error?.message || 'Os instaladores desktop ainda não foram publicados.';
+        status.hidden = true;
+        status.removeAttribute('style');
+        status.textContent = '';
       }
     }
   }
