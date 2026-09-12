@@ -252,17 +252,17 @@
             }
         });
 
-        let label = 'Fraca';
+        let label = currentUiLanguage === 'en' ? 'Weak' : 'Fraca';
         let labelColor = '#dc2626';
 
         if (validCount === 2) {
-            label = 'Razoável';
+            label = currentUiLanguage === 'en' ? 'Fair' : 'Razoável';
             labelColor = '#f97316';
         } else if (validCount === 3) {
-            label = 'Bom';
+            label = currentUiLanguage === 'en' ? 'Good' : 'Bom';
             labelColor = '#eab308';
         } else if (validCount >= 4) {
-            label = 'Forte';
+            label = currentUiLanguage === 'en' ? 'Strong' : 'Forte';
             labelColor = '#22c55e';
         }
 

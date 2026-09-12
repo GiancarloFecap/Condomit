@@ -302,6 +302,14 @@ function normalizeStorageMimeType(value) {
   return 'video/webm';
 }
 
+function normalizeUploadError(error) {
+  const message = String(error?.message || error || '');
+  if (/maximum size exceeded/i.test(message)) {
+    return new Error('A gravação da assembleia ficou maior que o limite permitido. A qualidade foi reduzida para as próximas reuniões. Tente encerrar novamente.');
+  }
+  return error instanceof Error ? error : new Error(message || 'Não foi possível salvar a gravação.');
+}
+
 function base64Metadata(value) {
   const bytes = new TextEncoder().encode(String(value ?? ''));
   let binary = '';
@@ -331,7 +339,7 @@ async function uploadRecordingTus(blob, bucket, storagePath, token) {
   });
   if (!create.ok) {
     const detail = await create.text().catch(() => '');
-    throw new Error(detail || `Falha ao preparar upload da gravação (${create.status}).`);
+    throw normalizeUploadError(detail || `Falha ao preparar upload da gravação (${create.status}).`);
   }
 
   const location = create.headers.get('Location');
@@ -366,7 +374,7 @@ async function uploadRecordingTus(blob, bucket, storagePath, token) {
       await new Promise((resolve) => setTimeout(resolve, [800, 2000, 4000, 7000][attempt]));
     }
 
-    if (!response?.ok) throw lastError || new Error('Falha ao enviar um trecho da gravação.');
+    if (!response?.ok) throw normalizeUploadError(lastError || new Error('Falha ao enviar um trecho da gravação.'));
     const nextOffset = Number(response.headers.get('Upload-Offset'));
     offset = Number.isFinite(nextOffset) && nextOffset > offset ? nextOffset : offset + chunk.size;
 
@@ -393,7 +401,7 @@ async function uploadRecordingStandard(blob, bucket, storagePath, token) {
   });
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
-    throw new Error(detail || `Falha ao enviar gravação (${response.status}).`);
+    throw normalizeUploadError(detail || `Falha ao enviar gravação (${response.status}).`);
   }
 }
 
@@ -509,8 +517,8 @@ export async function startAssemblyRecording() {
   recording.participantDirectory = {};
   captureParticipantDirectory();
   recording.canvas = document.createElement('canvas');
-  recording.canvas.width = 1280;
-  recording.canvas.height = 720;
+  recording.canvas.width = 960;
+  recording.canvas.height = 540;
   recording.canvas.style.display = 'none';
   recording.canvas.setAttribute('aria-hidden', 'true');
   document.body.appendChild(recording.canvas);
@@ -518,16 +526,16 @@ export async function startAssemblyRecording() {
   await ensureAudioGraph();
   await refreshAudioSources();
   recording.refreshTimer = window.setInterval(() => refreshAudioSources().catch(() => {}), 1500);
-  recording.drawTimer = window.setInterval(drawMeetingFrame, 1000 / 24);
+  recording.drawTimer = window.setInterval(drawMeetingFrame, 1000 / 12);
   drawMeetingFrame();
 
-  recording.canvasStream = recording.canvas.captureStream(24);
+  recording.canvasStream = recording.canvas.captureStream(18);
   const output = new MediaStream();
   recording.canvasStream.getVideoTracks().forEach((track) => output.addTrack(track));
   recording.audioDestination.stream.getAudioTracks().forEach((track) => output.addTrack(track));
 
   const mimeType = chooseMimeType();
-  const options = mimeType ? { mimeType, videoBitsPerSecond: 1200000, audioBitsPerSecond: 96000 } : undefined;
+  const options = mimeType ? { mimeType, videoBitsPerSecond: 700000, audioBitsPerSecond: 64000 } : undefined;
   recording.recorder = new MediaRecorder(output, options);
   recording.recorder.ondataavailable = (event) => {
     if (event.data?.size) recording.chunks.push(event.data);

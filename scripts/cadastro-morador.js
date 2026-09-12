@@ -206,17 +206,17 @@
             }
         });
 
-        let strengthLabelText = 'Fraca';
+        let strengthLabelText = currentUiLanguage === 'en' ? 'Weak' : 'Fraca';
         let strengthColor = '#dc2626';
 
         if (validCount === 2) {
-            strengthLabelText = 'Razoável';
+            strengthLabelText = currentUiLanguage === 'en' ? 'Fair' : 'Razoável';
             strengthColor = '#f97316';
         } else if (validCount === 3) {
-            strengthLabelText = 'Bom';
+            strengthLabelText = currentUiLanguage === 'en' ? 'Good' : 'Bom';
             strengthColor = '#eab308';
         } else if (validCount >= 4) {
-            strengthLabelText = 'Forte';
+            strengthLabelText = currentUiLanguage === 'en' ? 'Strong' : 'Forte';
             strengthColor = '#22c55e';
         }
 
