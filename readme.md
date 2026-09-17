@@ -1,31 +1,62 @@
 # Condomit
 
-Plataforma de gestão condominial para síndicos, moradores e porteiros, com versão Web/PWA e preparação para Android/iOS via Capacitor.
+**Condomit** é uma plataforma completa de gestão condominial que centraliza, em um único ecossistema, a rotina de **síndicos, moradores e porteiros**. O projeto possui versões Web/PWA, Android/iOS via Capacitor e aplicativo Desktop via Electron.
+
+## Diferenciais
+
+O principal objetivo da Condomit é reduzir a fragmentação da gestão do condomínio. Em vez de depender de várias ferramentas externas, recursos administrativos e de comunicação ficam integrados à mesma conta e ao mesmo condomínio.
+
+- **Assembleias digitais com videoconferência integrada via LiveKit**, sem precisar sair da Condomit ou abrir Zoom/Meet em outra aplicação.
+- Gravação automática da assembleia, vinculada à própria Ata.
+- Ata com presença, votações, comentários, transcrição e assinatura eletrônica do síndico.
+- IA Condomit para dúvidas do condomínio e apoio à criação de comunicados.
+- Gestão de moradores e unidades.
+- Controle de acesso, visitantes, prestadores, porteiros, encomendas e ocorrências.
+- Reservas de áreas comuns e manutenção preventiva.
+- Mural, notificações, chats, Achados e Perdidos e Marketplace.
+- Gestão avançada para operação e acompanhamento do condomínio.
+- Planos Essencial, Pro e Premium, com controle de permissões por assinatura.
+- Aplicativo desktop para Windows, macOS e Linux, além da experiência web e mobile.
+
+## Tecnologias principais
+
+- **HTML, CSS e JavaScript** — interface e experiência do usuário.
+- **Node.js / Netlify Functions** — backend serverless e integrações privadas.
+- **Supabase (PostgreSQL/Auth/Storage/RLS)** — dados, autenticação, arquivos e segurança.
+- **LiveKit** — áudio, vídeo e videoconferências das assembleias.
+- **Mercado Pago** — checkout e cobrança dos planos.
+- **Brevo** — envio de e-mails transacionais.
+- **ViaCEP** — apoio ao preenchimento e validação de endereço.
+- **Capacitor** — empacotamento mobile Android/iOS.
+- **Electron / electron-builder** — aplicativo desktop e instaladores multiplataforma.
+- **GitHub Actions** — builds e Releases do aplicativo desktop.
 
 ## Estrutura principal
 
 - `inicio.html` — landing page pública.
-- `pages/` — telas autenticadas e fluxos de cadastro/login.
-- `scripts/` — lógica de frontend e cliente Supabase.
-- `styles/` — estilos e responsividade.
-- `netlify/functions/` — backend serverless e integrações privadas.
-- `supabase/migrations/` — migrations SQL do banco e RLS.
-- `mobile/` — scripts para preparar Android/iOS.
+- `pages/` — telas autenticadas e fluxos de login/cadastro.
+- `scripts/` — lógica do frontend e integrações do cliente.
+- `styles/` — identidade visual, temas e responsividade.
+- `netlify/functions/` — backend serverless.
+- `supabase/migrations/` — banco, RPCs e políticas RLS.
+- `mobile/` / `android/` — aplicação mobile.
+- `desktop/` — aplicação Electron e configuração dos instaladores.
+- `.github/workflows/desktop-release.yml` — build Windows/macOS/Linux e GitHub Release.
 - `tools/check-project.mjs` — validação estática do projeto.
 
-## Desenvolvimento web
+## Desenvolvimento e segurança
 
-O deploy de produção usa Netlify. As credenciais privadas devem existir somente nas Environment Variables do Netlify. Nunca coloque `SUPABASE_SERVICE_ROLE_KEY`, chaves privadas de LiveKit, Mercado Pago ou Brevo em HTML/JS do navegador.
+O deploy web de produção utiliza Netlify. Segredos e chaves privadas devem existir somente em variáveis de ambiente. **Nunca** coloque `SUPABASE_SERVICE_ROLE_KEY`, segredos do LiveKit, Mercado Pago ou Brevo em HTML/JS entregue ao navegador.
+
+O projeto utiliza autenticação Supabase, RLS no PostgreSQL, buckets privados para conteúdos sensíveis e funções backend para operações privilegiadas.
 
 ## Banco de dados
 
-Execute as migrations na ordem numérica. Para esta versão, as migrations mais recentes são:
+Execute as migrations de `supabase/migrations/` na ordem numérica. Antes de publicar uma versão nova, confirme se todas as migrations adicionadas à versão foram executadas no projeto Supabase correspondente.
 
-1. `024_advanced_management_suite.sql`
-2. `025_marketplace_delete_and_ui_polish.sql`
-3. `026_secure_condominium_access.sql`
+## Web / PWA
 
-A migration 026 substitui a antiga regra insegura em que o nome do condomínio funcionava como senha. O síndico passa a gerar códigos temporários em **Configurações → Condomínio → Gerar código de acesso**.
+`manifest.webmanifest` e `service-worker.js` permitem instalação nos navegadores compatíveis. O site público continua sendo a porta de entrada para login, cadastro, apresentação dos planos e download da versão Desktop.
 
 ## Android/iOS
 
@@ -34,42 +65,17 @@ Requer Node.js 22+.
 ```powershell
 npm.cmd install
 npm.cmd run mobile:build
-npx.cmd cap add android   # apenas na primeira vez
 npm.cmd run mobile:sync
 npx.cmd cap open android
 ```
 
-Em macOS, para iOS:
+No macOS, o mesmo fluxo pode ser usado com o projeto iOS do Capacitor.
 
-```bash
-npm install
-npx cap add ios           # apenas na primeira vez
-npm run mobile:sync
-npx cap open ios
-```
+## Desktop
 
-Depois de alterar HTML/CSS/JS, use `npm run mobile:sync` antes de testar a nova versão nativa.
+A Condomit possui aplicativo Electron para **Windows, macOS e Linux**. O aplicativo utiliza a mesma infraestrutura online da versão Web, preservando Supabase, LiveKit, Mercado Pago e demais integrações.
 
-## PWA
-
-`manifest.webmanifest` e `service-worker.js` habilitam instalação em navegadores compatíveis. O botão **Instalar Condomit** aparece na landing page quando o navegador disponibiliza o prompt de instalação.
-
-## Páginas públicas
-
-- `/privacidade.html`
-- `/excluir-conta.html`
-- `/suporte.html`
-
-Essas páginas podem ser usadas como URLs públicas em cadastros de loja e suporte.
-
-## Segurança
-
-- Ações sensíveis de usuário no `api-proxy` exigem token Supabase.
-- PATCH de usuário possui allowlist de campos e não permite alterar `user_type`.
-- Exclusão de conta via API exige que o e-mail autenticado seja o próprio e-mail solicitado.
-- Exclusão de condomínio exige síndico autenticado vinculado ao condomínio.
-- Códigos de acesso do condomínio são armazenados somente como hash.
-- O deploy adiciona CSP, HSTS, `X-Content-Type-Options` e `X-Frame-Options`.
+Os instaladores são gerados pelo workflow do GitHub Actions a partir de tags `v*` e publicados em GitHub Releases. A versão desktop também possui verificação de atualizações pelo próprio aplicativo.
 
 ## Verificação antes do deploy
 
@@ -77,11 +83,9 @@ Essas páginas podem ser usadas como URLs públicas em cadastros de loja e supor
 npm.cmd run check:project
 ```
 
-O script valida sintaxe dos JavaScripts, referências locais de HTML, arquivos obrigatórios e resquícios do servidor de debug local.
+Esse comando valida JavaScript, referências locais de HTML e arquivos obrigatórios do projeto.
 
-## Variáveis de ambiente
-
-Dependendo dos recursos usados:
+## Variáveis de ambiente principais
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
@@ -92,14 +96,15 @@ Dependendo dos recursos usados:
 - `MERCADO_PAGO_PUBLIC_KEY`
 - `BREVO_API_KEY`
 - `BREVO_SENDER_EMAIL`
-- `BREVO_RECIPIENT_EMAIL` ou `CONDOMIT_SUPPORT_EMAIL`
 - `APP_BASE_URL=https://condomit.netlify.app`
+- `CONDOMIT_DESKTOP_GITHUB_REPO=GiancarloFecap/Condomit`
 
-## Observação sobre `package-lock.json`
+## Páginas públicas
 
-Ao receber esta versão em uma máquina onde as dependências mobile ainda não foram instaladas, execute `npm install`. O npm atualizará o lockfile de acordo com o `package.json`; depois disso, mantenha o `package-lock.json` atualizado no repositório.
+- `/privacidade.html`
+- `/excluir-conta.html`
+- `/suporte.html`
 
+## Visão do produto
 
-## Aplicativo desktop
-
-A v0.71.2 inclui um aplicativo Electron para Windows, macOS e Linux. Consulte `desktop/README.md`. O botão da landing page agora leva a `pages/download-desktop.html`, que lista os instaladores publicados em GitHub Releases.
+A Condomit busca transformar a gestão condominial em uma experiência contínua: o morador acompanha sua rotina, o porteiro opera acessos e entregas e o síndico administra comunicação, assembleias, finanças e processos **sem trocar de aplicativo a cada tarefa**. A videoconferência nativa nas assembleias é um dos exemplos mais claros desse princípio.

@@ -195,7 +195,7 @@
             </div>
             <div class="summary-hero-actions">
                 ${currentUserRole() === 'sindico' ? '<button type="button" id="generateAssemblyTasks027" class="summary-secondary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button>' : ''}
-                ${currentUserRole() === 'sindico' && !state.signature ? '<button type="button" id="signAssemblyMinutes049" class="summary-primary"><i class="fas fa-signature"></i> Assinar ata</button>' : ''}
+                ${currentUserRole() === 'sindico' ? `<button type="button" id="signAssemblyMinutes049" class="summary-primary"><i class="fas fa-signature"></i> ${state.signature ? 'Corrigir assinatura' : 'Assinar ata'}</button>` : ''}
                 ${state.signature ? `<span class="summary-signed-chip"><i class="fas fa-circle-check"></i> Ata assinada por ${esc(state.signature.signer_name || state.signature.signer_email || 'Síndico')}</span>` : ''}
                 <button type="button" id="printAssemblyMinutes049" class="summary-secondary"><i class="fas fa-print"></i> Imprimir ata</button>
             </div>`;
@@ -1081,6 +1081,12 @@
     function openAssemblySignatureModal() {
         const modal = document.getElementById('assemblySignatureModal');
         if (!modal) return;
+        const title = modal.querySelector('.modal-header h3');
+        const subtitle = modal.querySelector('.modal-header p');
+        const confirm = document.getElementById('confirmAssemblySignatureBtn');
+        if (title) title.textContent = state.signature ? 'Corrigir assinatura da ata' : 'Assinar ata';
+        if (subtitle) subtitle.textContent = state.signature ? 'Desenhe a nova assinatura. Ao salvar, ela substituirá a assinatura anterior.' : 'Desenhe sua assinatura abaixo, como no livro de ocorrências.';
+        if (confirm) confirm.innerHTML = `<i class="fas fa-signature"></i> ${state.signature ? 'Salvar nova assinatura' : 'Assinar ata'}`;
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
         document.body.classList.add('signature-modal-open');
@@ -1181,17 +1187,17 @@
             closeAssemblySignatureModal();
             renderHero();
             renderMinutes();
-            window.showToast?.('Ata assinada eletronicamente com sucesso.', 'success');
+            window.showToast?.(state.signature ? 'Assinatura da ata salva com sucesso.' : 'Ata assinada eletronicamente com sucesso.', 'success');
         } catch (error) {
             window.showToast?.(error?.message || 'Não foi possível assinar a ata.', 'error');
         } finally {
             button.disabled = false;
-            button.innerHTML = '<i class="fas fa-signature"></i> Assinar ata';
+            button.innerHTML = `<i class="fas fa-signature"></i> ${state.signature ? 'Corrigir assinatura' : 'Assinar ata'}`;
         }
     }
 
     async function signAssemblyMinutes() {
-        if (currentUserRole() !== 'sindico' || state.signature) return;
+        if (currentUserRole() !== 'sindico') return;
         openAssemblySignatureModal();
     }
 

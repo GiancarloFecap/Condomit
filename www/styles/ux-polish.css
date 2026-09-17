@@ -1227,3 +1227,23 @@ body:not(.advanced-page) .sidebar .sidebar-logo[data-condo-logo="true"]{
     padding:4px!important;background:#fff!important;border:1px solid rgba(255,255,255,.45)!important;
     box-shadow:0 10px 28px rgba(0,0,0,.18)!important;filter:none!important;
 }
+
+/* 0.72.0 - logo/foto do condomínio sempre recortada em círculo */
+body:not(.advanced-page) .sidebar .sidebar-header .sidebar-logo[data-condo-logo="true"],
+body:not(.advanced-page) .sidebar.sindico-sidebar .sidebar-header .sidebar-logo[data-condo-logo="true"],
+body:not(.advanced-page) .sidebar.morador-sidebar .sidebar-header .sidebar-logo[data-condo-logo="true"],
+body:not(.advanced-page) .sidebar.porteiro-sidebar .sidebar-header .sidebar-logo[data-condo-logo="true"] {
+    width: 92px !important;
+    height: 92px !important;
+    min-width: 92px !important;
+    min-height: 92px !important;
+    max-width: 92px !important;
+    max-height: 92px !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    overflow: hidden !important;
+    padding: 3px !important;
+    background: #fff !important;
+}

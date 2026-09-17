@@ -3,6 +3,121 @@
 
     const state = { user: null, history: [] };
     const $ = (id) => document.getElementById(id);
+    const appLanguage = () => { try { return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt'; } catch (_) { return 'pt'; } };
+    const isEnglish = () => appLanguage() === 'en';
+
+    const AI_EN_REPLACEMENTS = [
+        ['O código de acesso do condomínio é uma informação administrativa exclusiva do síndico. Entre em contato com o síndico do seu condomínio para receber as orientações necessárias.', 'The condominium access code is administrative information available only to the property manager. Contact your property manager for the necessary instructions.'],
+        ['Como síndico, você pode gerar o código em Configurações → Condomínio → Gerar código de acesso. O novo código revoga automaticamente o anterior. Se preferir, posso gerar um código agora pelo próprio chat.', 'As the property manager, you can generate the code in Settings → Condominium → Generate access code. A new code automatically revokes the previous one. If you prefer, I can generate one now in this chat.'],
+        ['Não encontrei manutenções preventivas atrasadas neste momento.', 'I did not find any overdue preventive maintenance items at this time.'],
+        ['Nova conversa iniciada.', 'New conversation started.'],
+        ['Não consegui consultar o código de acesso agora.', 'I could not check the access code right now.'],
+        ['tente novamente.', 'please try again.'],
+        ['Você pode fazer reservas pela página de Reservas. Nela você consulta locais disponíveis, horários e acompanha as suas próprias reservas.', 'You can make reservations on the Reservations page. There you can check available common areas and times and manage your own reservations.'],
+        ['Como porteiro, você pode consultar os visitantes do condomínio, liberar ou revogar entradas e acompanhar os registros de acesso.', 'As a doorman, you can view condominium visitors, authorize or revoke entry and monitor access records.'],
+        ['Você pode cadastrar um visitante em Configurações, na área Segurança e acesso. O cadastro fica vinculado ao seu condomínio para que a portaria possa consultá-lo.', 'You can register a visitor in Settings, under Security and access. The registration is linked to your condominium so the front desk can view it.'],
+        ['Na área de Assembleias você acompanha reuniões agendadas e realizadas. Durante a chamada é possível participar do chat, levantar a mão e votar. Depois do encerramento, a ata reúne os registros persistidos e as votações.', 'In Assemblies you can follow scheduled and completed meetings. During the video meeting you can use chat, raise your hand and vote without leaving Condomit. After it ends, the minutes consolidate the saved records and voting results.'],
+        ['Na página Mural de Avisos o síndico pode publicar comunicados permanentes para os moradores e acompanhar todo o histórico.', 'On the Notice Board, the property manager can publish permanent announcements for residents and review the full history.'],
+        ['Na página Mural de Avisos você encontra todos os avisos permanentes publicados para o seu condomínio.', 'On the Notice Board you can find all permanent notices published for your condominium.'],
+        ['Use o Chat com Síndico para enviar mensagens diretamente ao síndico vinculado ao mesmo CEP do seu condomínio.', 'Use Property Manager Chat to send messages directly to the property manager linked to your condominium.'],
+        ['O Chat com Porteiro conecta você aos porteiros vinculados ao mesmo condomínio. Quando houver telefone cadastrado, o botão de ligação do chat também pode iniciar uma chamada telefônica.', 'Doorman Chat connects you to the doormen linked to the same condominium. When a phone number is available, the call button can also start a phone call.'],
+        ['Em Configurações, na área Segurança e acesso, você pode registrar uma encomenda para a própria conta. As encomendas registradas ficam disponíveis na área de autorização de entregas.', 'In Settings, under Security and access, you can register a package for your own account. Registered packages become available in the delivery authorization area.'],
+        ['Abra Configurações e selecione Foto de perfil. Você pode enviar uma imagem, reposicioná-la e também resetar a foto para voltar ao avatar padrão.', 'Open Settings and select Profile photo. You can upload an image, reposition it and reset it to return to the default avatar.'],
+        ['A Condomit possui uma área para controle de prestadores, com consulta e cadastro dos serviços vinculados ao condomínio.', 'Condomit has a service-provider management area where authorized users can view and register services linked to the condominium.'],
+        ['O controle de prestadores é administrado pela gestão e pela portaria do condomínio.', 'Service-provider control is managed by condominium management and the front desk.'],
+        ['O Marketplace mostra anúncios dos moradores do mesmo condomínio. Você pode publicar itens, favoritar anúncios e gerenciar os seus próprios anúncios.', 'Marketplace shows listings from residents of the same condominium. You can publish items, favorite listings and manage your own listings.'],
+        ['Na Condomit, as reservas dos espaços cadastrados em ', 'In Condomit, reservations for common areas registered in '],
+        [' ficam na página Reserva de Locais. Você pode escolher o local, a data e um horário disponível. Também é possível consultar suas próprias reservas.', ' are available on the Reservations page. You can choose the location, date and an available time, and you can also review your own reservations.'],
+        ['Você está usando uma conta de síndico. Para conversar com moradores ou com a portaria, use as páginas de chat correspondentes.', 'You are using a property-manager account. To talk to residents or the front desk, use the corresponding chat pages.'],
+        ['Abrir Reserva de Locais', 'Open Reservations'],
+        ['Liberação de visitantes', 'Visitor authorization'],
+        ['Registro de entrada e saída', 'Entry and exit log'],
+        ['Abrir Configurações', 'Open Settings'],
+        ['Abrir Assembleias', 'Open Assemblies'],
+        ['Chat com Moradores', 'Residents Chat'],
+        ['Chat com Síndico', 'Property Manager Chat'],
+        ['Chat com Porteiro', 'Doorman Chat'],
+        ['Registrar encomenda', 'Register package'],
+        ['Controle de Prestadores', 'Service Providers']
+    ];
+
+    function translateAiTextToEnglish(value) {
+        let text = String(value ?? '');
+        AI_EN_REPLACEMENTS.forEach(([pt, en]) => { text = text.split(pt).join(en); });
+        const patterns = [
+            [/Há (\d+) chamado\(s\) aberto\(s\), sendo (\d+) fora do prazo de SLA\./g, 'There are $1 open ticket(s), with $2 past the SLA deadline.'],
+            [/Existem (\d+) manutenções atrasadas\. As primeiras são: /g, 'There are $1 overdue maintenance items. The first ones are: '],
+            [/Sugestão de comunicado:/g, 'Suggested announcement:'],
+            [/Prezados moradores,/g, 'Dear residents,'],
+            [/Informamos /g, 'We would like to inform you about '],
+            [/Pedimos que acompanhem as orientações publicadas no Condomit e, em caso de dúvidas, entrem em contato com a administração\./g, 'Please follow the guidance published in Condomit and contact management if you have any questions.'],
+            [/Atenciosamente,/g, 'Sincerely,'],
+            [/Administração do condomínio\./g, 'Condominium Management.'],
+            [/Como faço/g, 'How do I'],
+            [/Abrir /g, 'Open '],
+            [/Gerar código de acesso/g, 'Generate access code'],
+            [/Configurações/g, 'Settings'],
+            [/Manutenção Preventiva/g, 'Preventive Maintenance'],
+            [/Gestão Avançada/g, 'Advanced Management'],
+            [/IA de Comunicados/g, 'Announcement AI'],
+            [/Mural de Avisos/g, 'Notice Board']
+        ];
+        patterns.forEach(([rx, en]) => { text = text.replace(rx, en); });
+        return text;
+    }
+
+    function localizeAnswer(answer) {
+        if (!isEnglish() || !answer) return answer;
+        return {
+            ...answer,
+            text: translateAiTextToEnglish(answer.text),
+            actions: (answer.actions || []).map(action => ({ ...action, label: translateAiTextToEnglish(action.label) }))
+        };
+    }
+
+    function applyAiPageLanguage() {
+        if (!isEnglish()) return;
+        document.documentElement.lang = 'en';
+        document.title = 'Condomit - AI Assistant';
+        const topTitle = document.querySelector('.top-bar-left h1');
+        if (topTitle) topTitle.textContent = 'Condomit AI';
+        const topSubtitle = document.querySelector('.top-bar-left p');
+        if (topSubtitle) topSubtitle.textContent = 'Your smart assistant for condominium questions.';
+        const identity = document.querySelector('.ai-assistant-identity strong');
+        if (identity) identity.textContent = 'Condomit Assistant';
+        const newChat = $('newAiConversationBtn');
+        if (newChat) newChat.innerHTML = '<i class="fas fa-pen-to-square"></i> New conversation';
+        const kicker = document.querySelector('.welcome-kicker');
+        if (kicker) kicker.innerHTML = '<i class="fas fa-shield-heart"></i> Questions about your condominium';
+        const title = document.querySelector('.welcome-title');
+        if (title) title.innerHTML = `Hello, <span id="firstName">${String(state.user?.name || 'Resident').split(/\s+/)[0]}</span>! How can I help?`;
+        const desc = document.querySelector('.welcome-description');
+        if (desc) desc.textContent = 'Ask about Condomit features and quickly navigate to reservations, visitors, assemblies, notifications, service providers and other areas of your condominium.';
+        const questions = [
+            ['How do I reserve a common area?', 'Reservations', 'Common areas, times and my reservations'],
+            ['How do I register or authorize a visitor?', 'Visitors', 'Registration and access authorization'],
+            ['How do online assemblies work?', 'Assemblies', 'Video meetings, voting and minutes'],
+            ['Where can I see condominium notifications?', 'Notifications', 'Alerts and condominium updates']
+        ];
+        document.querySelectorAll('.ai-category-card').forEach((button, index) => {
+            const item = questions[index]; if (!item) return;
+            button.dataset.question = item[0];
+            const strong = button.querySelector('strong'); if (strong) strong.textContent = item[1];
+            const small = button.querySelector('small'); if (small) small.textContent = item[2];
+        });
+        const suggestions = [
+            'How do I contact the property manager?',
+            'How do I register a package?',
+            'How do I change my profile photo?'
+        ];
+        document.querySelectorAll('.suggestion-btn').forEach((button, index) => {
+            if (!suggestions[index]) return;
+            button.dataset.question = suggestions[index];
+            const icon = button.querySelector('i')?.outerHTML || '';
+            button.innerHTML = `${icon} ${suggestions[index]}`;
+        });
+        const input = $('chatInput'); if (input) input.placeholder = 'Ask something about Condomit or your condominium...';
+    }
 
     document.addEventListener('DOMContentLoaded', init);
 
@@ -18,6 +133,7 @@
         }
 
         setupShell();
+        applyAiPageLanguage();
         bindEvents();
         resetConversation(false);
     }
@@ -53,13 +169,13 @@
         if (firstNameEl) firstNameEl.textContent = firstName;
         if (profileNameTop) profileNameTop.textContent = userName;
         if (profileAvatarTop) profileAvatarTop.textContent = initials(userName);
-        if (typeEl) typeEl.textContent = role === 'sindico' ? 'Síndico' : role === 'porteiro' ? 'Porteiro' : 'Morador';
+        if (typeEl) typeEl.textContent = isEnglish() ? (role === 'sindico' ? 'Property manager' : role === 'porteiro' ? 'Doorman' : 'Resident') : (role === 'sindico' ? 'Síndico' : role === 'porteiro' ? 'Porteiro' : 'Morador');
         if (sidebarSindico) sidebarSindico.style.display = role === 'sindico' ? 'block' : 'none';
         if (sidebarMorador) sidebarMorador.style.display = role === 'sindico' ? 'none' : 'block';
 
         const name = condoName(user);
         if (sidebarApartment) sidebarApartment.textContent = name;
-        if ($('aiCondoContext')) $('aiCondoContext').textContent = `Contexto: ${name}`;
+        if ($('aiCondoContext')) $('aiCondoContext').textContent = `${isEnglish() ? 'Context' : 'Contexto'}: ${name}`;
         window.syncAllAvatars?.(user);
     }
 
@@ -102,7 +218,7 @@
             input.style.height = 'auto';
         }
         updateCharCount();
-        if (showNotice) window.showToast?.('Nova conversa iniciada.', 'success');
+        if (showNotice) window.showToast?.(isEnglish() ? 'New conversation started.' : 'Nova conversa iniciada.', 'success');
     }
 
     function updateCharCount() {
@@ -125,7 +241,7 @@
 
         await new Promise((resolve) => setTimeout(resolve, 350));
         hideTyping();
-        const answer = await buildAnswer(message);
+        const answer = localizeAnswer(await buildAnswer(message));
         addMessage('ai', answer.text, answer.actions || []);
     }
 
@@ -139,7 +255,7 @@
         // Código de acesso é informação administrativa exclusiva do síndico.
         // Moradores e porteiros não recebem o código nem instruções para gerenciá-lo.
         const asksAccessCode = includesAny(q, [
-            'codigo de acesso', 'chave de acesso', 'codigo do condominio',
+            'codigo de acesso', 'chave de acesso', 'codigo do condominio', 'access code', 'condominium code',
             'codigo do condomínio', 'meu codigo', 'meu código'
         ]);
         if (asksAccessCode && !isSindico) {
@@ -151,11 +267,11 @@
 
         if (isSindico && asksAccessCode) {
             const asksHow = includesAny(q, [
-                'como gerar', 'como criar', 'onde gerar', 'onde criar', 'onde fica',
+                'como gerar', 'como criar', 'onde gerar', 'onde criar', 'onde fica', 'how to generate', 'how do i generate', 'where can i generate',
                 'como faco', 'como faço', 'como consigo', 'onde encontro'
             ]);
             const asksGenerateNow = includesAny(q, [
-                'gerar codigo de acesso', 'gerar código de acesso',
+                'gerar codigo de acesso', 'gerar código de acesso', 'generate access code', 'create access code',
                 'criar codigo de acesso', 'criar código de acesso',
                 'gere um codigo de acesso', 'gere um código de acesso'
             ]) && !asksHow;
@@ -202,14 +318,14 @@
         const documentAnswer = await answerFromCondominiumDocuments(question);
         if (documentAnswer) return documentAnswer;
 
-        if (includesAny(q, ['reserva', 'churrasqueira', 'salao de festas', 'salao', 'area comum'])) {
+        if (includesAny(q, ['reserva', 'churrasqueira', 'salao de festas', 'salao', 'area comum', 'reservation', 'reserve', 'common area', 'party room', 'barbecue'])) {
             return {
                 text: `Na Condomit, as reservas dos espaços cadastrados em ${condo} ficam na página Reserva de Locais. Você pode escolher o local, a data e um horário disponível. Também é possível consultar suas próprias reservas.`,
                 actions: [{ label: 'Abrir Reserva de Locais', href: 'reservas.html', icon: 'fa-calendar-check' }]
             };
         }
 
-        if (includesAny(q, ['visitante', 'visita', 'liberar entrada', 'liberacao'])) {
+        if (includesAny(q, ['visitante', 'visita', 'liberar entrada', 'liberacao', 'visitor', 'authorize visitor', 'visitor access'])) {
             if (isPorter) return {
                 text: 'Como porteiro, você pode consultar os visitantes do condomínio, liberar ou revogar entradas e acompanhar os registros de acesso.',
                 actions: [
@@ -223,14 +339,14 @@
             };
         }
 
-        if (includesAny(q, ['assembleia', 'votacao', 'votar', 'ata'])) {
+        if (includesAny(q, ['assembleia', 'votacao', 'votar', 'ata', 'assembly', 'assemblies', 'vote', 'voting', 'minutes'])) {
             return {
                 text: 'Na área de Assembleias você acompanha reuniões agendadas e realizadas. Durante a chamada é possível participar do chat, levantar a mão e votar. Depois do encerramento, a ata reúne os registros persistidos e as votações.',
                 actions: [{ label: 'Abrir Assembleias', href: 'assembleia.html', icon: 'fa-users-rectangle' }]
             };
         }
 
-        if (includesAny(q, ['notificacao', 'aviso', 'comunicado'])) {
+        if (includesAny(q, ['notificacao', 'aviso', 'comunicado', 'notification', 'notifications', 'notice', 'announcement'])) {
             return {
                 text: isSindico
                     ? 'Na página Mural de Avisos o síndico pode publicar comunicados permanentes para os moradores e acompanhar todo o histórico.'
@@ -239,35 +355,35 @@
             };
         }
 
-        if (includesAny(q, ['sindico', 'falar com sindico', 'contato sindico'])) {
+        if (includesAny(q, ['sindico', 'falar com sindico', 'contato sindico', 'property manager', 'manager', 'contact the property manager'])) {
             return {
                 text: isSindico ? 'Você está usando uma conta de síndico. Para conversar com moradores ou com a portaria, use as páginas de chat correspondentes.' : 'Use o Chat com Síndico para enviar mensagens diretamente ao síndico vinculado ao mesmo CEP do seu condomínio.',
                 actions: [{ label: isSindico ? 'Chat com Moradores' : 'Chat com Síndico', href: isSindico ? 'chat-moradores.html' : 'chat-sindico.html', icon: 'fa-comments' }]
             };
         }
 
-        if (includesAny(q, ['porteiro', 'portaria'])) {
+        if (includesAny(q, ['porteiro', 'portaria', 'doorman', 'front desk', 'concierge'])) {
             return {
                 text: 'O Chat com Porteiro conecta você aos porteiros vinculados ao mesmo condomínio. Quando houver telefone cadastrado, o botão de ligação do chat também pode iniciar uma chamada telefônica.',
                 actions: [{ label: 'Chat com Porteiro', href: 'chat-porteiro.html', icon: 'fa-door-open' }]
             };
         }
 
-        if (includesAny(q, ['encomenda', 'entrega', 'pacote'])) {
+        if (includesAny(q, ['encomenda', 'entrega', 'pacote', 'package', 'delivery'])) {
             return {
                 text: 'Em Configurações, na área Segurança e acesso, você pode registrar uma encomenda para a própria conta. As encomendas registradas ficam disponíveis na área de autorização de entregas.',
                 actions: [{ label: 'Registrar encomenda', href: 'configuracoes.html#registrar-encomenda', icon: 'fa-box' }]
             };
         }
 
-        if (includesAny(q, ['foto', 'perfil', 'avatar'])) {
+        if (includesAny(q, ['foto', 'perfil', 'avatar', 'photo', 'profile', 'profile picture'])) {
             return {
                 text: 'Abra Configurações e selecione Foto de perfil. Você pode enviar uma imagem, reposicioná-la e também resetar a foto para voltar ao avatar padrão.',
                 actions: [{ label: 'Abrir Configurações', href: 'configuracoes.html', icon: 'fa-user-pen' }]
             };
         }
 
-        if (includesAny(q, ['prestador', 'manutencao', 'servico'])) {
+        if (includesAny(q, ['prestador', 'manutencao', 'servico', 'service provider', 'maintenance', 'service'])) {
             return {
                 text: isSindico || isPorter
                     ? 'A Condomit possui uma área para controle de prestadores, com consulta e cadastro dos serviços vinculados ao condomínio.'
@@ -276,7 +392,7 @@
             };
         }
 
-        if (includesAny(q, ['marketplace', 'anuncio', 'vender'])) {
+        if (includesAny(q, ['marketplace', 'anuncio', 'vender', 'listing', 'sell'])) {
             return {
                 text: 'O Marketplace mostra anúncios dos moradores do mesmo condomínio. Você pode publicar itens, favoritar anúncios e gerenciar os seus próprios anúncios.',
                 actions: [{ label: 'Abrir Marketplace', href: 'marketplace.html', icon: 'fa-store' }]
@@ -284,7 +400,9 @@
         }
 
         return {
-            text: `Posso orientar você sobre as áreas disponíveis na Condomit para ${condo}: reservas, visitantes, assembleias, notificações, chats, encomendas, perfil, marketplace e prestadores. Escreva o que você deseja fazer e eu indico o caminho dentro do sistema.`,
+            text: isEnglish()
+                ? `I can guide you through the Condomit features available for ${condo}: reservations, visitors, assemblies, notifications, chats, packages, profile, marketplace and service providers. Tell me what you want to do and I will show you where to find it in the system.`
+                : `Posso orientar você sobre as áreas disponíveis na Condomit para ${condo}: reservas, visitantes, assembleias, notificações, chats, encomendas, perfil, marketplace e prestadores. Escreva o que você deseja fazer e eu indico o caminho dentro do sistema.`,
             actions: []
         };
     }
@@ -535,7 +653,7 @@
                 ${actions.length ? `<div class="ai-message-actions">${actions.map((action) => action.command
                     ? `<button type="button" class="ai-action-link ai-action-button" data-ai-command="${escapeHtml(action.command)}"><i class="fas ${escapeHtml(action.icon || 'fa-arrow-right')}"></i>${escapeHtml(action.label)}</button>`
                     : `<a href="${escapeHtml(action.href)}" class="ai-action-link"><i class="fas ${escapeHtml(action.icon || 'fa-arrow-right')}"></i>${escapeHtml(action.label)}</a>`).join('')}</div>` : ''}
-                <div class="message-time">${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
+                <div class="message-time">${new Date().toLocaleTimeString(isEnglish() ? 'en-US' : 'pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
             </div>`;
         messages.appendChild(item);
         item.querySelectorAll('[data-ai-command]').forEach((button) => {

@@ -102,10 +102,26 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             currentUser = JSON.parse(loggedInUser);
 
-            // 1.1 Atualizar foto/nome/telefone do banco para este morador
+            // Renderização imediata com dados já persistidos: evita a tela ficar
+            // aguardando chamadas de rede para exibir nome/avatar/condomínio.
+            try {
+                const firstNameEl = document.getElementById('firstName');
+                if (firstNameEl) firstNameEl.textContent = getFirstName(currentUser.name);
+                const profileNameEl = document.getElementById('profileNameTop');
+                if (profileNameEl) profileNameEl.textContent = currentUser.name || 'Morador';
+                const avatarEl = document.getElementById('profileAvatarTop');
+                if (avatarEl && currentUser.name) avatarEl.textContent = currentUser.name.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                const sidebarApart = document.getElementById('sidebarApartment');
+                const cachedCondoName = currentUser?.condominium?.name || currentUser?.condominium?.condominium_name;
+                if (sidebarApart && cachedCondoName) sidebarApart.textContent = cachedCondoName;
+                window.syncAllAvatars?.(currentUser);
+            } catch (_) {}
+
+            // 1.1 Atualizar foto/nome/telefone do banco para este morador em
+            // segundo plano. A página já fica utilizável enquanto isso ocorre.
             try {
                 if (typeof refreshCurrentUserFromDb === 'function') {
-                    const refreshed = await refreshCurrentUserFromDb();
+                    const refreshed = await Promise.race([refreshCurrentUserFromDb(), new Promise(resolve => setTimeout(() => resolve(null), 900))]);
                     if (refreshed) currentUser = refreshed;
                 } else {
                     if (currentUser.email && typeof fetchUserByEmail === 'function') {

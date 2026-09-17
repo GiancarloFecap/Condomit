@@ -1,4 +1,7 @@
 (function () {
+    const appLanguage = () => { try { return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt'; } catch (_) { return 'pt'; } };
+    const isEnglish = () => appLanguage() === 'en';
+
     const TEMPLATES = {
         manutencao: {
             title: 'Aviso de Manutenção Programada',
@@ -97,6 +100,97 @@ Administração.`
         }
     };
 
+    const TEMPLATES_EN = {
+        manutencao: {
+            title: 'Scheduled Maintenance Notice',
+            content: (data) => `Dear residents,
+
+We would like to inform you about scheduled maintenance to improve safety and the condominium infrastructure.
+
+📅 Date: ${data.data || 'to be defined'}
+⏰ Time: ${data.horario || 'to be defined'}
+📍 Location: ${data.local || 'to be defined'}
+🏢 Affected block(s): ${data.blocos || 'to be defined'}
+
+During this period, some services may be temporarily unavailable. Please plan accordingly and use alternative routes when necessary.
+
+Thank you for your understanding and cooperation.
+
+Sincerely,
+Condominium Management.`
+        },
+        festa: {
+            title: 'Condominium Event Invitation',
+            content: (data) => `Hello everyone!
+
+We are happy to invite you to a condominium event. Let us celebrate together!
+
+📅 Date: ${data.data || 'to be defined'}
+⏰ Time: ${data.horario || 'to be defined'}
+📍 Location: ${data.local || 'Party Room'}
+
+✨ Schedule:
+• Reception
+• Activities
+• Music and social gathering
+
+Please confirm your attendance by ${data.rsvp || 'the day before the event'}.
+
+We hope to see you there! 🥳
+
+Sincerely,
+Events Committee.`
+        },
+        regra: {
+            title: 'Condominium Rules Update',
+            content: (data) => `Dear residents,
+
+We would like to inform you that the condominium rules have been updated to improve coexistence and safety for everyone.
+
+Main updated points:
+
+${data.pontos || '• Quiet hours\n• Rules for common areas\n• Visitor procedures'}
+
+Please review the updated rules carefully. The full document is available in the resident area or at the front desk.
+
+Thank you for your cooperation.
+
+Sincerely,
+Condominium Management.`
+        },
+        urgente: {
+            title: '⚠️ Urgent Notice - Action Required',
+            content: (data) => `Dear residents,
+
+⚠️ URGENT ANNOUNCEMENT ⚠️
+
+${data.assunto || 'Important information for all residents.'}
+
+Please read carefully and follow the instructions below:
+
+${data.orientacoes || '• Detailed instructions will be shared shortly.\n• Contact the front desk or property manager if you have questions.'}
+
+Action deadline: ${data.prazo || 'by the informed date'}
+
+Sincerely,
+Condominium Management.`
+        },
+        geral: {
+            title: 'Condominium Announcement',
+            content: (data) => `Dear residents,
+
+${data.assunto || 'Condominium management would like to share the following information.'}
+
+Important details:
+${data.detalhes || '• Relevant information will be shared with all residents.\n• Management is available if you have any questions.'}
+
+Thank you for your attention.
+
+Sincerely,
+Condominium Management.`
+        }
+    };
+
     const state = {
         currentUser: null,
         userType: 'sindico',
@@ -120,17 +214,17 @@ Administração.`
 
     function formatDate(d) {
         const date = new Date(d);
-        return date.toLocaleDateString('pt-BR', {
+        return date.toLocaleDateString(isEnglish() ? 'en-US' : 'pt-BR', {
             day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
         });
     }
 
     function classifyPrompt(text) {
         const t = text.toLowerCase();
-        if (t.includes('urgente') || t.includes('emergên') || t.includes('imediat')) return 'urgente';
-        if (t.includes('manutenção') || t.includes('manutencao') || t.includes('elevador') || t.includes('obra') || t.includes('reforma') || t.includes('água') || t.includes('energia') || t.includes('luz') || t.includes('gás')) return 'manutencao';
-        if (t.includes('festa') || t.includes('evento') || t.includes('confraterniza') || t.includes('churrasco') || t.includes('reunião') || t.includes('reuniao') || t.includes('aniversário') || t.includes('aniversario')) return 'festa';
-        if (t.includes('regra') || t.includes('norma') || t.includes('regulamento') || t.includes('silêncio') || t.includes('silencio') || t.includes('multa')) return 'regra';
+        if (t.includes('urgente') || t.includes('emergên') || t.includes('imediat') || t.includes('urgent') || t.includes('emergency') || t.includes('immediate')) return 'urgente';
+        if (t.includes('manutenção') || t.includes('manutencao') || t.includes('elevador') || t.includes('obra') || t.includes('reforma') || t.includes('água') || t.includes('energia') || t.includes('luz') || t.includes('gás') || t.includes('maintenance') || t.includes('elevator') || t.includes('water') || t.includes('power') || t.includes('gas')) return 'manutencao';
+        if (t.includes('festa') || t.includes('evento') || t.includes('confraterniza') || t.includes('churrasco') || t.includes('reunião') || t.includes('reuniao') || t.includes('aniversário') || t.includes('aniversario') || t.includes('party') || t.includes('event') || t.includes('meeting') || t.includes('birthday')) return 'festa';
+        if (t.includes('regra') || t.includes('norma') || t.includes('regulamento') || t.includes('silêncio') || t.includes('silencio') || t.includes('multa') || t.includes('rule') || t.includes('regulation') || t.includes('quiet hours') || t.includes('fine')) return 'regra';
         return 'geral';
     }
 
@@ -139,22 +233,28 @@ Administração.`
         const reData = /(\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?)/;
         const matchData = text.match(reData);
         if (matchData) data.data = matchData[1];
-        const reHorario = /(\d{1,2}h\d{0,2}|\d{1,2}:\d{2})/i;
-        const matchH = text.match(reHorario);
-        if (matchH) data.horario = matchH[1];
+        // Aceita horário único e intervalos: 8h às 12h, 08:00-12:00,
+        // das 8h30 até 10h, etc. Antes só o primeiro formato era capturado.
+        const timePattern = '(?:\\d{1,2}(?::\\d{2}|h(?:\\d{2})?))';
+        const interval = text.match(new RegExp(`(?:das?\\s+)?(${timePattern})\\s*(?:às|as|a|até|ate|[-–—])\\s*(${timePattern})`, 'i'));
+        if (interval) data.horario = `${interval[1]} ${isEnglish() ? 'to' : 'às'} ${interval[2]}`;
+        else {
+            const single = text.match(new RegExp(`(${timePattern})`, 'i'));
+            if (single) data.horario = single[1];
+        }
         if (kind === 'manutencao') {
-            if (/bloco\s*[abc\d]/i.test(text)) {
-                const b = text.match(/bloco\s*([a-e\d]+(?:\s*e\s*[a-e\d]+)?)/i);
+            if (/(?:bloco|block)\s*[abc\d]/i.test(text)) {
+                const b = text.match(/(?:bloco|block)\s*([a-e\d]+(?:\s*(?:e|and)\s*[a-e\d]+)?)/i);
                 if (b) data.blocos = b[0];
             }
-            if (/elevador|portaria|piscina|salão|salao|garagem|hall/i.test(text)) {
+            if (/elevador|portaria|piscina|salão|salao|garagem|hall|elevator|front desk|pool|party room|garage|lobby/i.test(text)) {
                 const places = [];
-                if (/elevador/i.test(text)) places.push('Elevador');
-                if (/portaria/i.test(text)) places.push('Portaria');
-                if (/piscina/i.test(text)) places.push('Piscina');
-                if (/salão|salao/i.test(text)) places.push('Salão de Festas');
-                if (/garagem/i.test(text)) places.push('Garagem');
-                if (/hall/i.test(text)) places.push('Hall de Entrada');
+                if (/elevador|elevator/i.test(text)) places.push(isEnglish() ? 'Elevator' : 'Elevador');
+                if (/portaria|front desk/i.test(text)) places.push(isEnglish() ? 'Front desk' : 'Portaria');
+                if (/piscina|pool/i.test(text)) places.push(isEnglish() ? 'Pool' : 'Piscina');
+                if (/salão|salao|party room/i.test(text)) places.push(isEnglish() ? 'Party Room' : 'Salão de Festas');
+                if (/garagem|garage/i.test(text)) places.push(isEnglish() ? 'Garage' : 'Garagem');
+                if (/hall|lobby/i.test(text)) places.push(isEnglish() ? 'Lobby' : 'Hall de Entrada');
                 if (places.length) data.local = places.join(', ');
             }
         }
@@ -304,7 +404,7 @@ Administração.`
             btn.dataset.originalHtml = btn.innerHTML;
             btn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span> Gerando...';
             btn.disabled = true;
-            document.getElementById('resultTitle').textContent = 'A IA está escrevendo o comunicado...';
+            document.getElementById('resultTitle').textContent = isEnglish() ? 'The AI is writing the announcement...' : 'A IA está escrevendo o comunicado...';
             document.getElementById('resultContent').textContent = 'Aguarde um momento enquanto processamos o seu pedido.';
             document.getElementById('step2Badge').className = 'step-badge';
         } else {
@@ -320,9 +420,9 @@ Administração.`
         const text = input?.value.trim() || '';
         if (!text || text.length < 10) {
             if (typeof showToast === 'function') {
-                showToast('Descreva o comunicado com pelo menos 10 caracteres.', 'warning');
+                showToast(isEnglish() ? 'Describe the announcement using at least 10 characters.' : 'Descreva o comunicado com pelo menos 10 caracteres.', 'warning');
             } else {
-                alert('Descreva o comunicado com pelo menos 10 caracteres.');
+                alert(isEnglish() ? 'Describe the announcement using at least 10 characters.' : 'Descreva o comunicado com pelo menos 10 caracteres.');
             }
             return;
         }
@@ -331,7 +431,8 @@ Administração.`
 
         setTimeout(() => {
             const kind = classifyPrompt(text);
-            const template = TEMPLATES[kind] || TEMPLATES.geral;
+            const templateSet = isEnglish() ? TEMPLATES_EN : TEMPLATES;
+            const template = templateSet[kind] || templateSet.geral;
             const data = extractData(text, kind);
             const title = template.title;
             const content = template.content(data);
@@ -354,7 +455,7 @@ Administração.`
             setGeneratingUI(false, btn);
 
             if (typeof showToast === 'function') {
-                showToast('Comunicado gerado com sucesso!', 'success');
+                showToast(isEnglish() ? 'Announcement generated successfully!' : 'Comunicado gerado com sucesso!', 'success');
             }
         }, 1600 + Math.random() * 600);
     }
@@ -366,7 +467,7 @@ Administração.`
         const btn = document.getElementById('refineBtn');
         const originalText = btn.textContent;
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spin fa-spinner"></i> Refinando...';
+        btn.innerHTML = `<i class="fas fa-spin fa-spinner"></i> ${isEnglish() ? 'Refining...' : 'Refinando...'}`;
         setTimeout(() => {
             const refinedContent = content + '\n\nRefinamento: Caso não possa comparecer ou precise de mais informações, pedimos a gentileza de entrar em contato com a portaria ou com a administração. Estamos à disposição para quaisquer esclarecimentos necessários.';
             document.getElementById('resultContent').textContent = refinedContent;

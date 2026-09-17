@@ -463,3 +463,35 @@
 .reservation-cancel-btn:hover {
     background: #fee2e2 !important;
 }
+
+/* 0.72.0 - Reservas: superfícies coerentes no modo escuro */
+html[data-theme="dark"] .reservations-container,
+html[data-theme="dark"] .reservation-card,
+html[data-theme="dark"] .space-card,
+html[data-theme="dark"] .reservation-form,
+html[data-theme="dark"] .calendar-container,
+html[data-theme="dark"] .availability-card,
+html[data-theme="dark"] .reservation-summary,
+html[data-theme="dark"] .reservations-modal,
+html[data-theme="dark"] .reservation-modal-card {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+    border-color: #334155 !important;
+}
+html[data-theme="dark"] .reservations-modal-header,
+html[data-theme="dark"] .reservation-modal-card { border-color: #334155 !important; }
+html[data-theme="dark"] .reservations-modal-header h3,
+html[data-theme="dark"] .reservation-modal-card-title,
+html[data-theme="dark"] .reservation-empty-state h4 { color: #f8fafc !important; }
+html[data-theme="dark"] .reservation-modal-card-meta,
+html[data-theme="dark"] .reservation-empty-state,
+html[data-theme="dark"] .reservation-loading,
+html[data-theme="dark"] .reservation-inline-empty { color: #94a3b8 !important; }
+html[data-theme="dark"] .reservations-modal-close,
+html[data-theme="dark"] .btn-reservation-history.secondary { background: #1e293b !important; color: #dbeafe !important; border-color: #475569 !important; }
+html[data-theme="dark"] .reservation-modal-card-icon { background: #172554 !important; color: #93c5fd !important; }
+html[data-theme="dark"] .reservation-delete-btn,
+html[data-theme="dark"] .reservation-cancel-btn { background: rgba(127,29,29,.32) !important; color: #fecaca !important; border-color: #7f1d1d !important; }
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea { background-color: #0f172a !important; color: #f8fafc !important; border-color: #475569 !important; }

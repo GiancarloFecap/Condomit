@@ -29,14 +29,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (_) {}
     }
 
-    if (!deletionRedirect && !sessionStorage.getItem('condominiumUser') && typeof window.resumeCondomitSession === 'function') {
-        try {
-            const resumed = await window.resumeCondomitSession({ redirect: true });
-            if (resumed?.redirected) return;
-        } catch (error) {
-            console.warn('[LOGIN] Falha ao restaurar sessão persistente:', error?.message || error);
-        }
-    }
+    /*
+     * A página Entrar nunca restaura/redireciona uma sessão automaticamente.
+     * Se o usuário chegou aqui pelo botão Entrar, ele deve permanecer aqui até
+     * informar as credenciais. Isso também impede tokens antigos de levarem o
+     * usuário, segundos depois, para entrar-condominio/index de uma conta anterior.
+     */
+    try {
+        sessionStorage.removeItem('condominiumUser');
+        sessionStorage.removeItem('sb-session');
+        sessionStorage.removeItem('sb-access-token');
+    } catch (_) {}
 
     let resendCooldownUntil = 0;
     let resendInProgress = false;
