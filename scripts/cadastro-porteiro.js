@@ -42,6 +42,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+    const currentUiLanguage = (() => {
+        try {
+            if (typeof window.getCondomitAuthLanguage === 'function') {
+                return window.getCondomitAuthLanguage() === 'en' ? 'en' : 'pt';
+            }
+            return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt';
+        } catch (_) {
+            return 'pt';
+        }
+    })();
     const signupForm = document.getElementById('signupForm');
     const togglePassword = document.getElementById('togglePassword');
     const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
@@ -333,12 +343,12 @@
 
         if (submitButton.tagName === 'INPUT') {
             submitButton.value = isSubmitting
-                ? 'Cadastrando...'
-                : 'Cadastrar';
+                ? (currentUiLanguage === 'en' ? 'Creating account...' : 'Cadastrando...')
+                : (currentUiLanguage === 'en' ? 'Sign up on Condomit' : 'Cadastrar no Condomit');
         } else {
-            submitButton.textContent = isSubmitting
-                ? 'Cadastrando...'
-                : 'Cadastrar';
+            submitButton.innerHTML = isSubmitting
+                ? `<i class="fas fa-spinner fa-spin"></i> ${currentUiLanguage === 'en' ? 'Creating account...' : 'Cadastrando...'}`
+                : `<i class="fas fa-arrow-right-from-bracket"></i> ${currentUiLanguage === 'en' ? 'Sign up on Condomit' : 'Cadastrar no Condomit'}`;
         }
     }
 

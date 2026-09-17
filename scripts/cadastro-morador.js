@@ -42,6 +42,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+    const currentUiLanguage = (() => {
+        try {
+            if (typeof window.getCondomitAuthLanguage === 'function') {
+                return window.getCondomitAuthLanguage() === 'en' ? 'en' : 'pt';
+            }
+            return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt';
+        } catch (_) {
+            return 'pt';
+        }
+    })();
     const signupForm = document.getElementById('signupForm');
     const submitButton = document.getElementById('submitBtn');
 
@@ -321,11 +331,10 @@
 
         if (isSubmitting) {
             submitButton.innerHTML =
-                '<i class="fas fa-spinner fa-spin"></i> Cadastrando...';
+                `<i class="fas fa-spinner fa-spin"></i> ${currentUiLanguage === 'en' ? 'Creating account...' : 'Cadastrando...'}`;
         } else {
             submitButton.innerHTML =
-                '<i class="fas fa-arrow-right-from-bracket"></i> ' +
-                'Cadastrar no Condomit';
+                `<i class="fas fa-arrow-right-from-bracket"></i> ${currentUiLanguage === 'en' ? 'Sign up on Condomit' : 'Cadastrar no Condomit'}`;
         }
     }
 

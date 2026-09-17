@@ -173,6 +173,45 @@ function buildEntries(output, startedAt, timeline, participantDirectory) {
     .filter((entry) => entry.transcript && entry.transcript.length >= 2);
 }
 
+
+function compactEntriesForPayload(entries) {
+  const source = Array.isArray(entries) ? entries.filter(Boolean) : [];
+  if (!source.length) return [];
+
+  const merged = [];
+  for (const entry of source) {
+    const text = cleanText(entry?.transcript);
+    if (!text) continue;
+    const last = merged[merged.length - 1];
+    const sameSpeaker = last
+      && last.participant_email === entry.participant_email
+      && last.participant_identity === entry.participant_identity;
+    const lastTime = last ? new Date(last.spoken_at).getTime() : 0;
+    const currentTime = new Date(entry.spoken_at).getTime();
+    const closeEnough = sameSpeaker && Number.isFinite(lastTime) && Number.isFinite(currentTime) && (currentTime - lastTime) <= 12000;
+    const underTextLimit = sameSpeaker && (String(last.transcript || '').length + text.length + 1) <= 360;
+
+    if (closeEnough && underTextLimit) {
+      last.transcript = joinTranscriptTokens(last.transcript, text);
+      continue;
+    }
+
+    merged.push({ ...entry, transcript: text });
+  }
+
+  const limited = [];
+  let estimatedBytes = 0;
+  for (const entry of merged) {
+    const clone = { ...entry, transcript: cleanText(entry.transcript).slice(0, 420) };
+    const itemSize = new TextEncoder().encode(JSON.stringify(clone)).length;
+    if (limited.length >= 140) break;
+    if (estimatedBytes + itemSize > 220000 && limited.length >= 1) break;
+    limited.push(clone);
+    estimatedBytes += itemSize;
+  }
+  return limited;
+}
+
 async function loadTransformers() {
   // esm.sh já é permitido pela CSP da Condomit. A biblioteca e o modelo são
   // baixados/cached pelo navegador; não há consumo de créditos de API.
@@ -285,12 +324,13 @@ export async function transcribeRecordedAssembly({
       stride_length_s: 5
     });
 
-    const entries = buildEntries(
+    const rawEntries = buildEntries(
       output,
       startedAt,
       cleanTimeline,
       participantDirectory || {}
     );
+    const entries = compactEntriesForPayload(rawEntries);
 
     statusText('Salvando transcrição na Ata…');
     await persistEntries(assemblyId, entries);

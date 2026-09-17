@@ -41,3 +41,35 @@
 .password-strength { display:none; margin-top:10px; }
 .password-strength.is-visible { display:block; }
 html[data-theme="dark"] .input-icon-wrapper > i:first-child { color:#94a3b8 !important; }
+
+
+/* Condomit 0.71.9 - cadastro estável ao exibir força da senha */
+.signup-wrapper {
+    align-items: stretch;
+}
+.left-panel {
+    min-height: 720px;
+}
+.left-panel .building-image {
+    flex: 0 0 390px !important;
+    height: 390px !important;
+    min-height: 390px !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+}
+.password-strength {
+    min-height: 0;
+    overflow: hidden;
+}
+.password-strength.is-visible {
+    display: block;
+}
+@media (max-width: 900px) {
+    .left-panel { min-height: auto; }
+    .left-panel .building-image {
+        flex-basis: 280px !important;
+        height: 280px !important;
+        min-height: 280px !important;
+    }
+}
