@@ -1,5 +1,5 @@
-import { state } from './state.js?v=0711';
-import { transcribeRecordedAssembly } from './recorded-transcription.js?v=0711';
+import { state } from './state.js?v=0722';
+import { transcribeRecordedAssembly } from './recorded-transcription.js?v=0722';
 
 const recording = {
   recorder: null,
@@ -436,11 +436,49 @@ async function uploadRecordingBlob(blob, startedAt, endedAt) {
 
   // O registro é feito por RPC SECURITY DEFINER para não depender de uma
   // segunda política RLS depois que o arquivo já foi enviado ao Storage.
-  return await window.supabaseFetch('/rpc/condomit_register_assembly_recording_040', {
+  const recordingRow = await window.supabaseFetch('/rpc/condomit_register_assembly_recording_040', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
+
+  return {
+    recording: Array.isArray(recordingRow) ? recordingRow[0] : recordingRow,
+    bucket,
+    storagePath,
+    storageUrl: `storage://${bucket}/${storagePath}`
+  };
+}
+
+async function downloadSavedRecordingBlob(savedRecording) {
+  const bucket = String(savedRecording?.bucket || '').trim();
+  const storagePath = String(savedRecording?.storagePath || '').trim();
+  if (!bucket || !storagePath) {
+    throw new Error('A gravação salva na Ata não possui um endereço válido para transcrição.');
+  }
+
+  const token = await window.resolveSupabaseAccessToken?.().catch(() => null);
+  if (!token) throw new Error('Sessão expirada ao preparar a transcrição da gravação salva.');
+
+  const encodedPath = storagePath.split('/').map(encodeURIComponent).join('/');
+  const url = `${window.SUPABASE_URL}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${encodedPath}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      apikey: window.SUPABASE_ANON_KEY
+    },
+    cache: 'no-store'
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(detail || `Não foi possível ler a gravação salva na Ata (${response.status}).`);
+  }
+
+  const blob = await response.blob();
+  if (!blob?.size) throw new Error('A gravação salva na Ata está vazia e não pode ser transcrita.');
+  return blob;
 }
 
 
@@ -459,17 +497,20 @@ async function persistPendingRecording() {
       }
       const result = await uploadRecordingBlob(pending.blob, pending.startedAt, pending.endedAt);
 
-      // A transcrição é produzida a partir do arquivo de vídeo finalizado,
-      // nunca diretamente do microfone. Trechos com múltiplos participantes
-      // falando ao mesmo tempo são descartados do texto oficial.
+      // A transcrição oficial só começa DEPOIS que o vídeo foi enviado e
+      // registrado na Ata. A fonte do ASR é a própria cópia privada salva no
+      // Storage, baixada novamente após a confirmação do registro. Assim o
+      // texto da Ata sempre deriva exatamente da gravação audiovisual oficial.
       try {
         const label = document.getElementById('recording-status');
         if (label) {
           label.hidden = false;
-          label.textContent = 'Gerando transcrição a partir da gravação…';
+          label.textContent = 'Preparando a gravação salva na Ata para transcrição…';
         }
+        const savedVideoBlob = await downloadSavedRecordingBlob(result);
+        if (label) label.textContent = 'Gerando transcrição a partir do vídeo salvo na Ata…';
         await transcribeRecordedAssembly({
-          blob: pending.blob,
+          blob: savedVideoBlob,
           assemblyId: Number(state.assemblyId),
           startedAt: pending.startedAt,
           speakerTimeline: pending.speakerTimeline || [],

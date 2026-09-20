@@ -205,23 +205,22 @@ async function saveMaintenance(event) {
     }
 
     try {
-        const rows = await window.supabaseFetch('/maintenance_items', {
+        const saved = await window.supabaseFetch('/rpc/condomit_create_maintenance_043', {
             method: 'POST',
-            headers: { Prefer: 'return=representation' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                cep: maintenanceState.cep,
-                title,
-                description,
-                location,
-                category,
-                frequency,
-                next_date: nextDate,
-                status: 'pendente',
-                created_by: email
+                target_cep: maintenanceState.cep,
+                title_value: title,
+                description_value: description,
+                location_value: location,
+                category_value: category,
+                frequency_value: frequency,
+                next_date_value: nextDate
             })
         });
 
-        if (!Array.isArray(rows) || !rows[0]?.id) {
+        const savedRow = Array.isArray(saved) ? saved[0] : saved;
+        if (!savedRow?.id) {
             throw new Error('O banco não confirmou a manutenção.');
         }
 

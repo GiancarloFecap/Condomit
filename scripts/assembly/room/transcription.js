@@ -1,6 +1,6 @@
-import { state } from './state.js?v=0711';
+import { state } from './state.js?v=0722';
 
-// Condomit v0.71.1
+// Condomit v0.72.2
 // A transcrição textual não é mais feita diretamente do microfone.
 // Ela é gerada somente após a gravação ser finalizada, usando o áudio
 // contido no próprio vídeo. Este módulo mantém apenas o indicador de estado
@@ -75,7 +75,7 @@ export function startAssemblyTranscription() {
   setStatus(
     'active',
     'Transcrição pela gravação',
-    'O texto da Ata será produzido a partir do vídeo finalizado. Ruídos e trechos com fala paralela não são inseridos como declaração oficial.'
+    'O texto da Ata será produzido somente depois que o vídeo oficial for salvo. A fonte da transcrição é a própria gravação armazenada na Ata.'
   );
   return true;
 }

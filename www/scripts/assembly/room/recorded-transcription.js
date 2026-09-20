@@ -1,5 +1,5 @@
-// Condomit v0.71.1
-// Transcrição pós-reunião feita a partir do áudio contido no vídeo gravado.
+// Condomit v0.72.2
+// Transcrição pós-reunião feita exclusivamente a partir do áudio do vídeo já salvo na Ata.
 // O processamento roda no navegador com Whisper/Transformers.js, sem API GPT.
 //
 // Para evitar que conversas paralelas virem texto oficial, cada palavra só é
@@ -309,12 +309,12 @@ export async function transcribeRecordedAssembly({
     throw new Error('Não há linha do tempo de falantes suficiente para gerar uma transcrição confiável.');
   }
 
-  statusText('Preparando o vídeo para transcrição…');
+  statusText('Preparando o vídeo salvo na Ata para transcrição…');
   const objectUrl = URL.createObjectURL(blob);
 
   try {
     const transcriber = await getTranscriber();
-    statusText('Transcrevendo o áudio da gravação e removendo falas paralelas…');
+    statusText('Transcrevendo o áudio do vídeo da Ata e removendo falas paralelas…');
 
     const output = await transcriber(objectUrl, {
       language: 'portuguese',
