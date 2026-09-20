@@ -1,4 +1,4 @@
-import { state } from './state.js?v=0722';
+import { state } from './state.js?v=0723';
 
 // Condomit v0.72.2
 // A transcrição textual não é mais feita diretamente do microfone.

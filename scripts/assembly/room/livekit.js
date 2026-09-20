@@ -6,7 +6,7 @@ import {
 
 import {
   state
-} from './state.js?v=0711';
+} from './state.js?v=0723';
 
 import {
   renderGrid,
@@ -18,7 +18,7 @@ import {
   setConnectionConnecting,
   setConnectionDisconnected,
   setConnectionReconnecting
-} from './ui.js?v=060';
+} from './ui.js?v=0723';
 
 let intentionalDisconnect =
   false;

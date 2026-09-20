@@ -1,5 +1,5 @@
-import { state } from './state.js?v=0722';
-import { transcribeRecordedAssembly } from './recorded-transcription.js?v=0722';
+import { state } from './state.js?v=0723';
+import { transcribeRecordedAssembly } from './recorded-transcription.js?v=0723';
 
 const recording = {
   recorder: null,

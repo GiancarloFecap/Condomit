@@ -1,5 +1,5 @@
-import { state } from './state.js?v=0711';
-import { renderChatMessage, renderSimpleList } from './ui.js?v=060';
+import { state } from './state.js?v=0723';
+import { renderChatMessage, renderSimpleList } from './ui.js?v=0723';
 
 function normalizeCepForDatabase(value) {
   const digits = String(value || '').replace(/\D/g, '');
@@ -52,7 +52,13 @@ function ensureSupabase() {
 }
 
 export async function loadAssembly() {
-  if (!state.assemblyId) throw new Error('assemblyId ausente');
+  if (!state.assemblyId) {
+    const queryId = String(new URLSearchParams(window.location.search).get('id') || '').trim();
+    let cachedId = '';
+    try { cachedId = String(sessionStorage.getItem('condomit_current_assembly_id') || '').trim(); } catch (_) {}
+    state.assemblyId = queryId || cachedId || null;
+  }
+  if (!state.assemblyId) throw new Error('ID da assembleia não informado');
   if (typeof window.supabaseFetch !== 'function') throw new Error('supabaseFetch indisponível');
   const rows = await window.supabaseFetch(`/scheduled_assemblies?id=eq.${encodeURIComponent(String(state.assemblyId))}&limit=1`);
   const assembly = Array.isArray(rows) ? (rows[0] || null) : rows;

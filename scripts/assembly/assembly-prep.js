@@ -1050,6 +1050,7 @@
       } catch (_) {}
 
       cleanupStreams();
+      try { sessionStorage.setItem('condomit_current_assembly_id', String(state.assemblyId)); } catch (_) {}
       window.location.href = `assembleia-sala.html?id=${encodeURIComponent(state.assemblyId)}`;
     };
 

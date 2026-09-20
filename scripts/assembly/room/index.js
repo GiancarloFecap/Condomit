@@ -1,10 +1,10 @@
-import { state } from './state.js?v=0722';
-import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0722';
-import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=0722';
-import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=0722';
-import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0722';
-import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0722';
-import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=0722';
+import { state } from './state.js?v=0723';
+import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0723';
+import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=0723';
+import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=0723';
+import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0723';
+import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0723';
+import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=0723';
 
 function $(id) {
   return document.getElementById(id);
@@ -13,6 +13,20 @@ function $(id) {
 function getQueryParam(name) {
   if (window.AssemblyUtils?.getQueryParam) return window.AssemblyUtils.getQueryParam(name);
   return new URLSearchParams(window.location.search).get(name);
+}
+
+function resolveAssemblyId() {
+  const queryId = String(getQueryParam('id') || '').trim();
+  if (queryId) {
+    try { sessionStorage.setItem('condomit_current_assembly_id', queryId); } catch (_) {}
+    return queryId;
+  }
+
+  try {
+    const cached = String(sessionStorage.getItem('condomit_current_assembly_id') || '').trim();
+    if (cached) return cached;
+  } catch (_) {}
+  return '';
 }
 
 function toast(msg, type) {
@@ -546,8 +560,10 @@ async function init() {
     bindControls();
     bindChat();
 
-    const id = getQueryParam('id');
+    const id = resolveAssemblyId();
     if (!id) throw new Error('ID da assembleia não informado');
+    // Define o ID no estado compartilhado ANTES de qualquer chamada de dados,
+    // presença, LiveKit ou gravação.
     state.assemblyId = id;
 
     await loadAssembly();
