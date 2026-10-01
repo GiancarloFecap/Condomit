@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Condomit - Gestão de Moradores</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css?v=053">
+    <link rel="stylesheet" href="../styles/theme.css?v=044">
+    <link rel="stylesheet" href="../styles/gestao-moradores.css?v=015">
+    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
+</head>
+<body class="condomit-app-page">
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-lado.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Gestão de Moradores</h1>
+                    <p>Gerencie os moradores do seu condomínio de forma prática e segura.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Síndico</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="residents-page">
+                <div class="residents-layout">
+                    <section class="residents-main">
+                        <div class="toolbar card-shell">
+                            <div class="search-bar-group">
+                                <label class="search-bar-label" for="residentSearch">Barra de pesquisa</label>
+                                <div class="search-bar">
+                                    <i class="fas fa-search"></i>
+                                    <input id="residentSearch" type="search" placeholder="Buscar por nome, apartamento ou bloco...">
+                                </div>
+                            </div>
+                            <div class="toolbar-actions">
+                                <select id="residentBlockFilter">
+                                    <option value="todos">Todos os blocos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="stats-grid">
+                            <article class="stat-card card-shell">
+                                <div class="stat-icon aqua"><i class="fas fa-users"></i></div>
+                                <div>
+                                    <span>Total de moradores</span>
+                                    <strong id="totalResidents">0</strong>
+                                    <small>Ativos</small>
+                                </div>
+                            </article>
+                            <article class="stat-card card-shell">
+                                <div class="stat-icon blue"><i class="fas fa-building"></i></div>
+                                <div>
+                                    <span>Total de unidades</span>
+                                    <strong id="totalUnits">0</strong>
+                                    <small>Unidades</small>
+                                </div>
+                            </article>
+                            <article class="stat-card card-shell">
+                                <div class="stat-icon green"><i class="fas fa-user-plus"></i></div>
+                                <div>
+                                    <span>Novos este mês</span>
+                                    <strong id="newResidents">0</strong>
+                                    <small>Cadastros</small>
+                                </div>
+                            </article>
+                            <article class="stat-card card-shell">
+                                <div class="stat-icon purple"><i class="fas fa-id-card"></i></div>
+                                <div>
+                                    <span>Dependentes</span>
+                                    <strong id="dependentResidents">0</strong>
+                                    <small>Cadastrados</small>
+                                </div>
+                            </article>
+                        </div>
+
+                        <div class="table-card card-shell">
+                            <div class="section-head">
+                                <div>
+                                    <h2>Lista de moradores</h2>
+                                    <p id="residentCounter">0 moradores encontrados</p>
+                                </div>
+                                <button class="ghost-btn" type="button">
+                                    <i class="fas fa-download"></i>
+                                    Exportar lista
+                                </button>
+                            </div>
+
+                            <div class="table-wrap">
+                                <table class="residents-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Morador</th>
+                                            <th>Unidade</th>
+                                            <th>Bloco</th>
+                                            <th>Contato</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="residentsTableBody">
+                                        <tr>
+                                            <td colspan="5" class="table-empty">Carregando moradores...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside class="residents-sidebar">
+                        <div class="card-shell side-card">
+                            <h3>Distribuição por bloco</h3>
+                            <div class="chart-row">
+                                <div class="donut-chart" id="blockDonut"></div>
+                                <div class="chart-legend" id="blockLegend"></div>
+                            </div>
+                        </div>
+
+                        <div class="card-shell side-card tip-card">
+                            <h3>Dica</h3>
+                            <p>Mantenha os dados dos moradores sempre atualizados para uma comunicação mais eficiente e segura.</p>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="../scripts/platform-config.js?v=035"></script>
+
+
+    <script src="../scripts/supabase-client.js?v=0710"></script>
+    <script src="../scripts/sidebar-links.js?v=0720"></script>
+    <script src="../scripts/gestao-moradores.js?v=018"></script>
+    <script src="../scripts/topbar-actions.js?v=035"></script>
+    <script src="../scripts/condomit-alerts.js?v=014"></script>
+    <script src="../scripts/responsive-nav.js?v=025"></script>
+    <script src="../scripts/advanced-global.js?v=053"></script>
+</body>
+</html>

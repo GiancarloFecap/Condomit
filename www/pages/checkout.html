@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Checkout - Condomit</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/theme.css?v=044">
+    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
+    <link rel="stylesheet" href="../styles/checkout.css?v=041">
+    <link rel="manifest" href="../manifest.webmanifest">
+</head>
+<body class="condomit-app-page">
+    <div class="checkout-wrapper">
+        <header class="checkout-header">
+            <div class="container">
+                <div class="header-top">
+                    <img src="../assets/logo-full.png" alt="Condomit Logo" class="logo">
+                    <a href="#" class="back-link" id="btn-logout-checkout"><i class="fas fa-arrow-left"></i> Voltar para Login</a>
+                </div>
+                <div class="header-content">
+                    <h1>Escolha seu plano e conclua o pagamento</h1>
+                    <p>Finalize sua assinatura no ambiente seguro do Mercado Pago.</p>
+                </div>
+            </div>
+        </header>
+
+        <main class="checkout-container">
+            <div class="checkout-grid">
+                <!-- Coluna da Esquerda: Seleção de Planos -->
+                <section class="plans-column">
+                    <h2 class="column-title">Selecione seu Plano</h2>
+                    
+                    <div class="plans-list" id="plans-list-container">
+                        <!-- Plans will be dynamically loaded here -->
+                    </div>
+                </section>
+
+                <!-- Coluna da Direita: Resumo e Pagamento -->
+                <section class="payment-column">
+                    <div class="sticky-sidebar">
+                        <div class="summary-card">
+                            <h2 class="summary-title">Resumo do Pedido</h2>
+                            
+                            <div class="summary-details">
+                                <div class="summary-line">
+                                    <span class="label">Plano Selecionado</span>
+                                    <span class="value" id="summary-plan-name">Plano Pro</span>
+                                </div>
+                                <div class="summary-line">
+                                    <span class="label">Ciclo de Cobrança</span>
+                                    <span class="value">Mensal</span>
+                                </div>
+                                <div class="summary-divider"></div>
+                                <div class="summary-total">
+                                    <span>Total a Pagar</span>
+                                    <span class="total-amount" id="summary-total-price">R$ 149,00</span>
+                                </div>
+                            </div>
+
+                            <div class="payment-section">
+                                <p class="payment-hint">Ao continuar, você será direcionado ao ambiente seguro do Mercado Pago. Se voltar sem concluir o pagamento, sua sessão será encerrada por segurança.</p>
+                                <div id="payment-feedback" class="payment-feedback info" aria-live="polite">
+                                    Carregando os planos disponíveis...
+                                </div>
+                                <div id="payment-brick_container">
+                                    <div class="payment-direct-fallback">
+                                        <button type="button" class="mercado-pago-direct-button" disabled aria-busy="true">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <span>Carregando planos...</span>
+                                        </button>
+                                        <p>Pagamento processado no ambiente seguro do Mercado Pago.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="security-badges">
+                                <span><i class="fas fa-lock"></i> Pagamento Seguro</span>
+                                <span><i class="fas fa-shield-alt"></i> Proteção de Dados</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    <script src="../scripts/platform-config.js?v=035"></script>
+
+
+    <script src="../scripts/supabase-client.js?v=0710"></script>
+    <script src="../scripts/checkout.js?v=049"></script>
+    <script src="../scripts/condomit-alerts.js?v=014"></script>
+    <script src="../scripts/advanced-global.js?v=053"></script>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Condomit - Achados e Perdidos</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css?v=053">
+    <link rel="stylesheet" href="../styles/theme.css?v=044">
+    <link rel="stylesheet" href="../styles/achados-perdidos.css?v=0711">
+    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
+</head>
+<body class="condomit-app-page">
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-lado.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Achados e Perdidos</h1>
+                    <p>Encontre objetos perdidos ou veja o que foi encontrado no condomínio.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button" aria-label="Chat"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Assembleias"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Notificações"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Editar perfil"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small" id="topProfileBlock">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Perfil</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="lost-found-page">
+                <div class="lost-found-page-actions">
+                    <button class="primary-action" id="createLostFoundBtn" type="button">
+                        <i class="fas fa-plus"></i>
+                        Registrar achado
+                    </button>
+                </div>
+                <div class="lost-found-highlights" id="lostFoundHighlights"></div>
+                <div class="lost-found-layout">
+                    <section class="lost-found-main">
+                        <div class="toolbar card-shell">
+                            <div class="toolbar-actions lost-found-filter-actions">
+                                <div class="status-filter-group" id="lostFoundStatusFilters" aria-label="Filtrar por status">
+                                    <button type="button" class="status-filter-btn active" data-lost-status="todos">Todos</button>
+                                    <button type="button" class="status-filter-btn" data-lost-status="disponivel">Disponíveis</button>
+                                    <button type="button" class="status-filter-btn" data-lost-status="devolvido">Devolvidos</button>
+                                    <button type="button" class="status-filter-btn" data-lost-status="em-analise">Em análise</button>
+                                </div>
+                                <div class="sort-filter-wrap">
+                                    <i class="fas fa-arrow-down-wide-short"></i>
+                                    <select id="lostFoundSort" aria-label="Ordenar itens">
+                                        <option value="recentes">Mais recentes</option>
+                                        <option value="antigos">Mais antigos</option>
+                                        <option value="az">A-Z</option>
+                                    </select>
+                                </div>
+                                <button class="ghost-btn compact-btn mine-filter-btn" id="lostFoundMineFilter" type="button" aria-pressed="false">
+                                    <i class="fas fa-user-tag"></i>
+                                    <span>Meus itens</span>
+                                </button>
+                                <button class="ghost-btn compact-btn" id="clearLostFoundFilters" type="button">
+                                    <i class="fas fa-rotate-left"></i>
+                                    Limpar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="type-switcher">
+                            <button class="type-card active" type="button" data-type="encontrado">
+                                <span class="type-icon"><i class="fas fa-box-open"></i></span>
+                                <span>
+                                    <strong>Itens encontrados</strong>
+                                    <small>Veja itens que foram encontrados</small>
+                                </span>
+                            </button>
+                            <button class="type-card" type="button" data-type="perdido">
+                                <span class="type-icon"><i class="fas fa-magnifying-glass"></i></span>
+                                <span>
+                                    <strong>Itens perdidos</strong>
+                                    <small>Veja itens que foram perdidos</small>
+                                </span>
+                            </button>
+                        </div>
+
+                        <div class="section-head">
+                            <h2 id="lostFoundSectionTitle">Itens encontrados</h2>
+                            <span class="muted" id="lostFoundCount">0 resultados</span>
+                        </div>
+
+                        <div class="items-grid" id="lostFoundGrid"></div>
+                    </section>
+
+                    <aside class="lost-found-sidebar">
+                        <div class="card-shell info-card">
+                            <h3>Como funciona?</h3>
+                            <div class="info-list">
+                                <div class="info-item">
+                                    <span class="info-badge"><i class="fas fa-box-open"></i></span>
+                                    <div>
+                                        <strong>Encontrou algo?</strong>
+                                        <p>Registre o item encontrado com o máximo de detalhes possível.</p>
+                                    </div>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-badge"><i class="fas fa-bullhorn"></i></span>
+                                    <div>
+                                        <strong>Publicamos para todos</strong>
+                                        <p>Seu registro ajuda o proprietário a localizar o objeto mais rápido.</p>
+                                    </div>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-badge"><i class="fas fa-handshake"></i></span>
+                                    <div>
+                                        <strong>Devolução segura</strong>
+                                        <p>Combine a entrega pela portaria ou com a administração.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-shell match-card" id="lostFoundMatchesPanel" hidden>
+                            <h3>Possíveis correspondências</h3>
+                            <div class="match-list" id="lostFoundMatchesList"></div>
+                        </div>
+
+                        <div class="card-shell tips-card">
+                            <h3>Dicas importantes</h3>
+                            <ul>
+                                <li>Verifique sempre fotos e local do item antes do contato.</li>
+                                <li>Combine a devolução na portaria sempre que possível.</li>
+                                <li>Em caso de dúvida, fale com o síndico ou administração.</li>
+                            </ul>
+                        </div>
+
+                        <div class="card-shell support-card">
+                            <div class="support-icon"><i class="fas fa-headset"></i></div>
+                            <div>
+                                <h3>Precisa de ajuda?</h3>
+                                <p>Fale com o apoio do condomínio.</p>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="lostFoundModal" aria-hidden="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h3>Novo registro</h3>
+                    <p>Cadastre um item perdido ou encontrado.</p>
+                </div>
+                <button class="modal-close" id="closeLostFoundModal" type="button" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form class="modal-form" id="lostFoundForm">
+                <label>
+                    Tipo
+                    <select id="lostFoundTypeInput" required>
+                        <option value="encontrado">Encontrado</option>
+                        <option value="perdido">Perdido</option>
+                    </select>
+                </label>
+                <label>
+                    Nome do item
+                    <input id="lostFoundTitle" type="text" maxlength="80" required>
+                </label>
+                <label>
+                    Local
+                    <input id="lostFoundLocation" type="text" maxlength="80" required>
+                </label>
+                <label>
+                    Data
+                    <input id="lostFoundDate" type="date" required>
+                </label>
+                <label>
+                    Descrição
+                    <textarea id="lostFoundDescription" rows="4" maxlength="300" required></textarea>
+                </label>
+                <label>
+                    Imagem do item
+                    <input id="lostFoundImage" type="file" accept="image/*">
+                </label>
+                <div class="image-preview-card" id="lostFoundPreviewCard">
+                    <div class="image-preview-placeholder">
+                        <i class="fas fa-image"></i>
+                        <span>Adicione uma imagem para identificar o item.</span>
+                    </div>
+                    <img id="lostFoundPreviewImage" alt="Pré-visualização do item">
+                </div>
+                <div class="modal-actions">
+                    <button class="ghost-btn" id="cancelLostFoundModal" type="button">Cancelar</button>
+                    <button class="primary-action" type="submit">Salvar registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="lostFoundDetailsModal" aria-hidden="true">
+        <div class="modal-card lost-found-details-card" role="dialog" aria-modal="true" aria-labelledby="lostFoundDetailsTitle">
+            <div class="modal-header">
+                <div>
+                    <h3 id="lostFoundDetailsTitle">Detalhes do item</h3>
+                    <p>Informações completas do registro.</p>
+                </div>
+                <button class="modal-close" id="closeLostFoundDetailsModal" type="button" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="lostFoundDetailsBody" class="lost-found-details-body"></div>
+            <div class="modal-actions">
+                <button class="ghost-btn" id="closeLostFoundDetailsAction" type="button">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/platform-config.js?v=035"></script>
+
+
+    <script src="../scripts/supabase-client.js?v=0710"></script>
+    <script
+  type="module"
+  src="../scripts/supabase-auth.js?v=036"
+></script>
+    <script src="../scripts/community-hub.js?v=053"></script>
+    <script src="../scripts/sidebar-links.js?v=0720"></script>
+    <script src="../scripts/achados-perdidos.js?v=0711"></script>
+    <script src="../scripts/topbar-actions.js?v=035"></script>
+    <script src="../scripts/condomit-alerts.js?v=014"></script>
+    <script src="../scripts/responsive-nav.js?v=025"></script>
+    <script src="../scripts/advanced-global.js?v=053"></script>
+</body>
+</html>

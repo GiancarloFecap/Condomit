@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Condomit - Marketplace</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css?v=053">
+    <link rel="stylesheet" href="../styles/theme.css?v=044">
+    <link rel="stylesheet" href="../styles/marketplace.css?v=035">
+    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
+</head>
+<body class="condomit-app-page">
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-lado.png" alt="Condomit Icon" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Marketplace</h1>
+                    <p>Compre, venda ou doe itens com segurança entre vizinhos.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Morador</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="marketplace-page">
+                <div class="marketplace-head">
+                    <div>
+                        <h2>MarketPlace do condomínio</h2>
+                        <p>Encontre boas oportunidades sem sair da sua comunidade.</p>
+                    </div>
+                    <button class="primary-action" id="createItemBtn" type="button">
+                        <i class="fas fa-plus"></i>
+                        Anunciar item
+                    </button>
+                </div>
+
+                <div class="marketplace-toolbar card-shell">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input id="marketplaceSearch" type="search" placeholder="Buscar por itens, categorias ou vendedor...">
+                    </div>
+                    <div class="toolbar-actions">
+                        <select id="marketplaceCategory">
+                            <option value="todos">Todas as categorias</option>
+                            <option value="moveis">Móveis</option>
+                            <option value="eletrodomesticos">Eletrodomésticos</option>
+                            <option value="eletronicos">Eletrônicos</option>
+                            <option value="infantil">Infantil</option>
+                            <option value="esportes">Esportes</option>
+                            <option value="livros">Livros</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                        <button class="ghost-btn" id="toggleFavoritesBtn" type="button">
+                            <i class="far fa-heart"></i>
+                            Favoritos
+                        </button>
+                        <button class="ghost-btn" id="toggleMyAdsBtn" type="button" aria-pressed="false">
+                            <i class="fas fa-user-tag"></i>
+                            Meus anúncios
+                        </button>
+                    </div>
+                </div>
+
+                <div class="category-shortcuts" id="categoryShortcuts"></div>
+
+                <div class="marketplace-layout">
+                    <section class="marketplace-grid card-shell">
+                        <div class="section-head">
+                            <h3>Itens disponíveis</h3>
+                            <span class="muted" id="marketplaceCounter">0 resultados</span>
+                        </div>
+                        <div class="products-grid" id="marketplaceGrid"></div>
+                    </section>
+
+                    <aside class="marketplace-detail card-shell" id="marketplaceDetail"></aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="marketplace-modal-backdrop" id="marketplaceModal" aria-hidden="true">
+        <div class="marketplace-modal-card">
+            <div class="marketplace-modal-header">
+                <div>
+                    <h3>Novo anúncio</h3>
+                    <p>Publique um item para vender, doar ou negociar.</p>
+                </div>
+                <button class="marketplace-modal-close" id="closeMarketplaceModal" type="button" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form class="modal-form" id="marketplaceForm">
+                <label>
+                    Título
+                    <input id="itemTitle" type="text" maxlength="80" required>
+                </label>
+                <label>
+                    Categoria
+                    <select id="itemCategory" required>
+                        <option value="moveis">Móveis</option>
+                        <option value="eletrodomesticos">Eletrodomésticos</option>
+                        <option value="eletronicos">Eletrônicos</option>
+                        <option value="infantil">Infantil</option>
+                        <option value="esportes">Esportes</option>
+                        <option value="livros">Livros</option>
+                        <option value="outros">Outros</option>
+                    </select>
+                </label>
+                <label>
+                    Preço
+                    <input id="itemPrice" type="number" min="0" step="0.01" required>
+                </label>
+                <label>
+                    Descrição
+                    <textarea id="itemDescription" rows="5" maxlength="400" required></textarea>
+                </label>
+                <label>
+                    Imagem do item
+                    <input id="itemImage" type="file" accept="image/*">
+                </label>
+                <div class="image-preview-card" id="itemImagePreviewCard">
+                    <div class="image-preview-placeholder" id="itemImagePlaceholder">
+                        <i class="fas fa-image"></i>
+                        <span>Selecione uma imagem para pré-visualizar o anúncio.</span>
+                    </div>
+                    <img id="itemImagePreview" alt="Pré-visualização do item">
+                </div>
+                <div class="marketplace-modal-actions">
+                    <button class="ghost-btn" id="cancelMarketplaceModal" type="button">Cancelar</button>
+                    <button class="primary-action" type="submit">Publicar anúncio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="../scripts/platform-config.js?v=035"></script>
+
+
+    <script src="../scripts/supabase-client.js?v=0710"></script>
+    <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
+    <script src="../scripts/community-hub.js?v=053"></script>
+    <script src="../scripts/sidebar-links.js?v=0720"></script>
+    <script src="../scripts/marketplace.js?v=035"></script>
+    <script src="../scripts/topbar-actions.js?v=035"></script>
+    <script src="../scripts/condomit-alerts.js?v=014"></script>
+    <script src="../scripts/responsive-nav.js?v=025"></script>
+    <script src="../scripts/advanced-global.js?v=053"></script>
+</body>
+</html>

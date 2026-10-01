@@ -1,0 +1,1302 @@
+(function () {
+    'use strict';
+
+    const state = {
+        id: null,
+        assembly: null,
+        user: null,
+        attendance: [],
+        chat: [],
+        polls: [],
+        options: [],
+        results: [],
+        agenda: [],
+        hands: [],
+        events: [],
+        comments: [],
+        transcripts: [],
+        recordings: [],
+        speechActivities: [],
+        condominium: null,
+        signature: null,
+        commentProfiles: new Map(),
+        commentVotes: [],
+        replyComposerFor: null,
+        expandedReplyIds: new Set(),
+        signaturePad: { drawing: false, lastX: 0, lastY: 0, hasInk: false }
+    };
+
+    document.addEventListener('DOMContentLoaded', init);
+
+    async function init() {
+        state.id = Number.parseInt(new URLSearchParams(location.search).get('id') || '', 10);
+        if (!Number.isInteger(state.id) || state.id <= 0) {
+            renderFatal('ID da assembleia inválido.');
+            return;
+        }
+
+        state.user = getStoredUser();
+        if (!state.user) {
+            location.href = 'entrar.html';
+            return;
+        }
+
+        syncUserHeader();
+        bindTabs();
+        bindCommentForm();
+        bindCommentActions();
+        setupSignatureModal();
+
+        try {
+            await waitForAuthSession();
+            await loadAll();
+            renderAll();
+        } catch (error) {
+            console.error('[ASSEMBLY SUMMARY]', error);
+            renderFatal(error?.message || 'Não foi possível carregar a ata da assembleia.');
+        }
+    }
+
+    function getStoredUser() {
+        const sources = [];
+        try { sources.push(sessionStorage.getItem('condominiumUser')); } catch (_) {}
+        try { sources.push(localStorage.getItem('condominiumPersistentUser')); } catch (_) {}
+        for (const raw of sources) {
+            if (!raw) continue;
+            try {
+                const user = JSON.parse(raw);
+                if (user && typeof user === 'object') return user;
+            } catch (_) {}
+        }
+        return null;
+    }
+
+    function currentUserRole() {
+        const role = String(state.user?.type || state.user?.user_type || 'morador').toLowerCase();
+        if (role.startsWith('sind')) return 'sindico';
+        if (role.startsWith('porteir')) return 'porteiro';
+        return 'morador';
+    }
+
+    async function waitForAuthSession() {
+        if (typeof window.resolveSupabaseAccessToken !== 'function') return;
+        for (let i = 0; i < 20; i += 1) {
+            const token = await window.resolveSupabaseAccessToken().catch(() => null);
+            if (token) return;
+            await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+    }
+
+    function syncUserHeader() {
+        const name = state.user?.name || 'Usuário';
+        setText('profileNameTop', name);
+        setText('profileTypeTop', currentUserRole() === 'sindico' ? 'Síndico' : currentUserRole() === 'porteiro' ? 'Porteiro' : 'Morador');
+        setText('profileAvatarTop', initials(name));
+        window.syncAllAvatars?.(state.user);
+    }
+
+    async function loadAll() {
+        if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase não inicializado.');
+
+        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings, speechActivities, signatures, commentVotes] = await Promise.all([
+            fetchRows(`/scheduled_assemblies?select=*&id=eq.${state.id}&limit=1`),
+            fetchRows(`/assembly_attendance?select=*&assembly_id=eq.${state.id}&order=joined_at.asc`),
+            fetchRows(`/assembly_chat_messages?select=*&assembly_id=eq.${state.id}&order=created_at.asc`),
+            fetchRows(`/assembly_polls?select=*&assembly_id=eq.${state.id}&order=created_at.asc`),
+            fetchRows(`/assembly_agenda_items?select=*&assembly_id=eq.${state.id}&order=display_order.asc`),
+            fetchRows(`/assembly_speaking_requests?select=*&assembly_id=eq.${state.id}&order=requested_at.asc`),
+            fetchRows(`/assembly_event_logs?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
+            fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
+            fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => []),
+            fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
+            fetchRows(`/assembly_speech_activity?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
+            fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code,signature_data&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
+            fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => [])
+        ]);
+
+        state.assembly = assemblyRows[0] || null;
+        if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
+        const playableRecordings = (recordings || []).filter((row) => String(row?.recording_url || '').trim());
+        Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings: playableRecordings, speechActivities, commentVotes });
+        state.signature = signatures[0] || null;
+
+        // Dados institucionais usados somente como texto na ata. A ata não inclui
+        // a logo do condomínio nem qualquer imagem do modelo de referência.
+        state.condominium = (await fetchRows(
+            `/condominiums?select=cep,condominium_name,address,address_number,complement,neighborhood,city,state&cep=eq.${encodeURIComponent(state.assembly.cep || '')}&limit=1`
+        ).catch(() => []))[0] || null;
+
+        const pollIds = polls.map((poll) => poll.id).filter(Boolean);
+        state.options = pollIds.length
+            ? await fetchRows(`/assembly_poll_options?select=*&poll_id=in.(${pollIds.join(',')})&order=display_order.asc`)
+            : [];
+        await Promise.all([loadPollResults(), loadCommentProfiles()]);
+    }
+
+    async function loadCommentProfiles() {
+        state.commentProfiles = new Map();
+        try {
+            const rows = await window.supabaseFetch('/rpc/condomit_assembly_comment_profiles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_assembly_id: state.id })
+            });
+            (Array.isArray(rows) ? rows : []).forEach((profile) => {
+                const email = String(profile?.email || '').trim().toLowerCase();
+                if (email) state.commentProfiles.set(email, profile);
+            });
+        } catch (error) {
+            console.warn('Fotos dos autores dos comentários indisponíveis:', error);
+        }
+    }
+
+    async function loadPollResults() {
+        try {
+            const rpc = await window.supabaseFetch('/rpc/condomit_assembly_poll_results', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_assembly_id: state.id })
+            });
+            state.results = Array.isArray(rpc) ? rpc : [];
+        } catch (error) {
+            console.warn('Resultados agregados indisponíveis:', error);
+            state.results = [];
+        }
+    }
+
+    async function fetchRows(path) {
+        const data = await window.supabaseFetch(path);
+        return Array.isArray(data) ? data : (data ? [data] : []);
+    }
+
+    function renderAll() {
+        renderHero();
+        renderMinutes();
+        renderPolls();
+        renderRecordings();
+        renderComments();
+    }
+
+    function renderHero() {
+        const a = state.assembly;
+        const hero = document.getElementById('assemblySummaryHero');
+        if (!hero) return;
+        const uniqueParticipants = new Set(state.attendance.map((row) => String(row.user_email || row.participant_name || row.id))).size;
+        hero.innerHTML = `
+            <div><span class="summary-chip"><i class="fas fa-file-signature"></i> Assembleia realizada</span></div>
+            <h2>${esc(a.title || 'Assembleia')}</h2>
+            <div class="summary-hero-meta">
+                <span><i class="far fa-calendar"></i> ${formatDate(a.date)}</span>
+                <span><i class="far fa-clock"></i> ${esc(String(a.start_time || '--:--').slice(0, 5))}${a.end_time ? ` – ${esc(String(a.end_time).slice(0, 5))}` : ''}</span>
+                <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
+                <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
+                <span><i class="fas fa-video"></i> ${state.recordings.length} ${state.recordings.length === 1 ? 'gravação' : 'gravações'}</span>
+                <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.length ? `${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} transcrito${state.transcripts.length === 1 ? '' : 's'}` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
+            </div>
+            <div class="summary-hero-actions">
+                ${currentUserRole() === 'sindico' ? '<button type="button" id="generateAssemblyTasks027" class="summary-secondary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button>' : ''}
+                ${currentUserRole() === 'sindico' ? `<button type="button" id="signAssemblyMinutes049" class="summary-primary"><i class="fas fa-signature"></i> ${state.signature ? 'Corrigir assinatura' : 'Assinar ata'}</button>` : ''}
+                ${state.signature ? `<span class="summary-signed-chip"><i class="fas fa-circle-check"></i> Ata assinada por ${esc(state.signature.signer_name || state.signature.signer_email || 'Síndico')}</span>` : ''}
+                <button type="button" id="printAssemblyMinutes049" class="summary-secondary"><i class="fas fa-print"></i> Imprimir ata</button>
+            </div>`;
+        hero.querySelector('#generateAssemblyTasks027')?.addEventListener('click', generateAssemblyDecisionTasks);
+        hero.querySelector('#signAssemblyMinutes049')?.addEventListener('click', signAssemblyMinutes);
+        hero.querySelector('#printAssemblyMinutes049')?.addEventListener('click', printAssemblyMinutes);
+    }
+
+    function renderMinutes() {
+        const container = document.getElementById('assemblyMinutes');
+        if (!container) return;
+
+        const a = state.assembly;
+        const condo = state.condominium || {};
+        const participants = uniqueParticipants();
+        const chair = resolveAssemblyChair(participants);
+        const year = String(a.date || new Date().toISOString()).slice(0, 4);
+        const condoName = String(
+            condo.condominium_name ||
+            state.user?.condominium?.condominium_name ||
+            state.user?.condominium?.name ||
+            'Condomínio'
+        ).trim();
+        const address = formatCondominiumAddress(condo);
+        const assemblyType = formalAssemblyType(a.assembly_type);
+        const startTime = String(a.start_time || '').slice(0, 5) || '--:--';
+        const closingTime = resolveClosingTime();
+        const title = String(a.title || 'Assembleia').trim();
+
+        const paragraphs = [];
+        const opening = `${formalDateWords(a.date)}, às ${formatClockFormal(startTime)}, nas dependências do ${condoName}${address ? `, situado em ${address}` : ''}, realizou-se a ${assemblyType} intitulada “${title}”${chair ? `, sob a presidência de ${chair.name}` : ''}${participants.length ? `, com a presença dos participantes ${participants.map((item) => `${item.name} (${roleLabel(item.role)})`).join(', ')}, conforme registro eletrônico de frequência mantido pelo Condomit.` : ', não havendo participantes identificados nos registros eletrônicos de frequência disponíveis.'}`;
+        paragraphs.push(opening);
+
+        if (a.description || a.rules) {
+            const institutional = [];
+            if (a.description) institutional.push(`A convocação teve por finalidade ${sentenceFragment(a.description)}`);
+            if (a.rules) institutional.push(`Foram observadas as seguintes orientações registradas para a reunião: ${sentenceFragment(a.rules)}`);
+            paragraphs.push(`${institutional.join('. ')}.`);
+        }
+
+        if (state.agenda.length) {
+            const agendaText = state.agenda.map((item, index) => {
+                const base = `${romanNumeral(index + 1)} – ${cleanFormalText(item.title || 'Item de pauta')}`;
+                return item.description ? `${base}: ${cleanFormalText(item.description)}` : base;
+            }).join('; ');
+            paragraphs.push(`Aberta a sessão, foi apresentada a Ordem do Dia, composta pelos seguintes assuntos: ${agendaText}. Na sequência, os itens foram submetidos à apreciação dos presentes, observando-se a ordem registrada no sistema.`);
+        } else if (a.agenda_summary) {
+            paragraphs.push(`Aberta a sessão, passou-se à apreciação da Ordem do Dia, registrada nos seguintes termos: ${sentenceFragment(a.agenda_summary)}.`);
+        } else {
+            paragraphs.push('Aberta a sessão, iniciou-se a apreciação dos assuntos constantes da convocação, não havendo pauta detalhada adicional registrada no sistema.');
+        }
+
+        paragraphs.push(...buildFormalDiscussionParagraphs());
+        const pollParagraphs = state.polls.map(buildFormalPollParagraph).filter(Boolean);
+        paragraphs.push(...(pollParagraphs.length ? pollParagraphs : ['Não foram identificadas votações eletrônicas vinculadas a esta assembleia nos registros disponíveis.']));
+
+        paragraphs.push(closingTime
+            ? `Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, a assembleia foi encerrada às ${formatClockFormal(closingTime)}.`
+            : 'Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, deu-se por encerrada a assembleia, sem horário final específico informado no cadastro.');
+        paragraphs.push('Para constar, lavrou-se a presente ata com base nos registros eletrônicos de presença, pautas, transcrições e votações armazenados pelo Condomit, ficando o documento disponível para ciência dos participantes e assinatura eletrônica do síndico responsável pelo condomínio.');
+
+        const chairSignature = chair?.name || 'Síndico / Presidente da Assembleia';
+        container.innerHTML = `
+            <article class="formal-minutes-document" aria-label="Ata formal da assembleia">
+                <header class="formal-minutes-heading">
+                    <div class="formal-condo-name">${esc(condoName)}</div>
+                    ${address ? `<div class="formal-condo-address">${esc(address)}</div>` : ''}
+                    <h3>ATA Nº ${esc(String(state.id))}/${esc(year)}</h3>
+                    <div class="formal-minutes-subtitle">${esc(title)} · ${esc(assemblyType)}</div>
+                </header>
+                <div class="formal-minutes-body">${paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}</div>
+                <footer class="formal-minutes-signatures">
+                    ${state.signature ? `
+                    <div class="formal-signature formal-signature-electronic">
+                        ${isSafeSignatureData(state.signature.signature_data) ? `<img class="assembly-signature-image" src="${esc(state.signature.signature_data)}" alt="Assinatura de ${esc(state.signature.signer_name || chairSignature)}">` : `<i class="fas fa-circle-check signature-verified-icon"></i>`}
+                        <strong>${esc(state.signature.signer_name || chairSignature)}</strong>
+                        <small>Assinado eletronicamente pelo Síndico em ${esc(formatDateTime(state.signature.signed_at))}</small>
+                        <small class="signature-code">Código de verificação: ${esc(String(state.signature.signature_code || '').slice(0, 18))}</small>
+                    </div>` : `
+                    <div class="formal-signature"><span class="signature-line"></span><strong>${esc(chairSignature)}</strong><small>Assinatura do Síndico / Presidência da Assembleia</small></div>`}
+                </footer>
+                <div class="formal-minutes-note"><i class="fas fa-shield-halved"></i> Documento gerado a partir dos registros persistidos da assembleia. Nenhuma informação não registrada foi presumida pelo sistema.</div>
+            </article>`;
+    }
+    function uniqueParticipants() {
+        const seen = new Map();
+        state.attendance.forEach((row) => {
+            const key = String(row.user_email || row.participant_name || row.id || '').trim().toLowerCase();
+            if (!key || seen.has(key)) return;
+            seen.set(key, {
+                email: String(row.user_email || '').trim().toLowerCase(),
+                name: cleanFormalText(row.participant_name || row.user_email || 'Participante'),
+                role: row.participant_role || 'morador'
+            });
+        });
+        return Array.from(seen.values());
+    }
+
+    function resolveAssemblyChair(participants) {
+        const creator = String(state.assembly?.created_by || '').trim().toLowerCase();
+        if (creator) {
+            const exact = participants.find((participant) => participant.email === creator);
+            if (exact) return exact;
+        }
+        return participants.find((participant) => String(participant.role || '').toLowerCase().startsWith('sind')) || null;
+    }
+
+    function buildFormalDiscussionParagraphs() {
+        const paragraphs = [];
+        const agendaNotes = state.agenda.map((item) => ({
+            title: cleanFormalText(item.title || 'Item de pauta'),
+            notes: cleanFormalText(item.discussion_notes || '')
+        })).filter((item) => item.notes);
+
+        agendaNotes.forEach((item) => {
+            paragraphs.push(`Quanto ao item “${item.title}”, ficou registrado em ata o seguinte teor de discussão: ${sentenceFragment(item.notes)}.`);
+        });
+
+        const recordingTranscripts = [...state.transcripts].filter((row) => {
+            const source = String(row.transcript_source || row.source || '').trim().toLowerCase();
+            return source === 'recording_video_whisper' || source === 'recording_whisper_local';
+        });
+        const transcriptSourceRows = recordingTranscripts.length ? recordingTranscripts : [...state.transcripts];
+        const isInferredTranscript = (row) => String(row.participant_identity || '').startsWith('__condomit_inferred__:');
+        const confidentTranscripts = transcriptSourceRows
+            .filter((row) => cleanFormalText(row.transcript || '') && !isInferredTranscript(row))
+            .sort((a, b) => new Date(a.spoken_at || a.created_at || 0) - new Date(b.spoken_at || b.created_at || 0));
+        const inferredTranscripts = transcriptSourceRows
+            .filter((row) => cleanFormalText(row.transcript || '') && isInferredTranscript(row))
+            .sort((a, b) => new Date(a.spoken_at || a.created_at || 0) - new Date(b.spoken_at || b.created_at || 0));
+
+        if (confidentTranscripts.length) {
+            confidentTranscripts.forEach((row) => {
+                const name = cleanFormalText(row.participant_name || row.participant_email || 'Participante');
+                const text = ensureTerminalPunctuation(row.transcript || '');
+                const time = row.spoken_at ? new Date(row.spoken_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+                paragraphs.push(`${time ? `Às ${time}, ` : ''}${name} declarou: “${text}”`);
+            });
+
+            const transcribedKeys = new Set(confidentTranscripts.map((row) => String(row.participant_email || row.participant_name || '').trim().toLowerCase()).filter(Boolean));
+            const untranscribedSpeakers = uniqueSpeechParticipants().filter((speaker) => {
+                const key = String(speaker.email || speaker.name || '').trim().toLowerCase();
+                return key && !transcribedKeys.has(key);
+            });
+            if (untranscribedSpeakers.length && !inferredTranscripts.length) {
+                paragraphs.push(`Também foram detectadas manifestações orais de ${formatHumanList(untranscribedSpeakers.map((speaker) => speaker.name))}, sem transcrição textual automática disponível. Consulte a gravação audiovisual da assembleia para conferência do conteúdo.`);
+            }
+        }
+
+        if (inferredTranscripts.length) {
+            paragraphs.push('Como parte do conteúdo não pôde ser reconhecida com segurança suficiente, o sistema apresenta abaixo uma interpretação provável do que foi dito. Consulte a gravação audiovisual disponível nesta Ata para confirmar o conteúdo e obter maior clareza sobre o que foi discutido.');
+            inferredTranscripts.forEach((row) => {
+                const text = ensureTerminalPunctuation(row.transcript || '');
+                const time = row.spoken_at ? new Date(row.spoken_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+                paragraphs.push(`${time ? `Por volta das ${time}, ` : ''}conteúdo presumido da gravação: “${text}”`);
+            });
+        } else if (!confidentTranscripts.length && !agendaNotes.length) {
+            const speakers = uniqueSpeechParticipants();
+            if (speakers.length) {
+                const names = speakers.map((speaker) => speaker.name).filter(Boolean);
+                paragraphs.push(`Foram detectadas manifestações orais de ${formatHumanList(names)}. O sistema tentou reconstruir o conteúdo a partir da gravação, mas não obteve texto utilizável. Consulte a gravação audiovisual disponível nesta Ata para verificar o que foi discutido.`);
+            } else {
+                paragraphs.push('Não foram localizadas transcrições textuais, anotações formais de discussão ou registros técnicos de atividade de fala vinculados a esta assembleia.');
+            }
+        }
+        return paragraphs;
+    }
+
+    function uniqueSpeechParticipants() {
+        const map = new Map();
+        state.speechActivities.forEach((row) => {
+            const key = String(row.participant_email || row.participant_identity || row.participant_name || '').trim().toLowerCase();
+            if (!key) return;
+            if (!map.has(key)) {
+                map.set(key, {
+                    name: cleanFormalText(row.participant_name || row.participant_email || 'Participante'),
+                    email: String(row.participant_email || '').trim().toLowerCase()
+                });
+            }
+        });
+        return Array.from(map.values());
+    }
+
+    function formatHumanList(items) {
+        const list = items.filter(Boolean);
+        if (!list.length) return 'participantes da reunião';
+        if (list.length === 1) return list[0];
+        if (list.length === 2) return `${list[0]} e ${list[1]}`;
+        return `${list.slice(0, -1).join(', ')} e ${list[list.length - 1]}`;
+    }
+
+    function formatDurationFormal(totalSeconds) {
+        const seconds = Math.max(0, Math.round(Number(totalSeconds || 0)));
+        const minutes = Math.floor(seconds / 60);
+        const remainder = seconds % 60;
+        if (minutes && remainder) return `${minutes} minuto${minutes === 1 ? '' : 's'} e ${remainder} segundo${remainder === 1 ? '' : 's'}`;
+        if (minutes) return `${minutes} minuto${minutes === 1 ? '' : 's'}`;
+        return `${remainder} segundo${remainder === 1 ? '' : 's'}`;
+    }
+
+    function buildFormalPollParagraph(poll) {
+        const title = cleanFormalText(poll.title || 'Votação');
+        const description = cleanFormalText(poll.description || '');
+        const options = state.options.filter((option) => String(option.poll_id) === String(poll.id));
+        if (!options.length) {
+            return `Em relação à matéria “${title}”, consta registro de votação, porém sem opções de voto armazenadas para consolidação do resultado.`;
+        }
+
+        const ranked = options.map((option) => ({
+            text: cleanFormalText(option.option_text || 'Opção'),
+            votes: getVoteCount(poll.id, option.id)
+        })).sort((left, right) => right.votes - left.votes);
+        const total = ranked.reduce((sum, item) => sum + item.votes, 0);
+        const distribution = ranked.map((item) => `${item.text}: ${item.votes} voto${item.votes === 1 ? '' : 's'}`).join('; ');
+
+        if (!total) {
+            return `A matéria “${title}”${description ? `, referente a ${sentenceFragment(description)}` : ''}, foi disponibilizada para votação, não havendo votos registrados no sistema.`;
+        }
+
+        const topVotes = ranked[0]?.votes || 0;
+        const leaders = ranked.filter((item) => item.votes === topVotes);
+        const resultText = leaders.length === 1
+            ? `A opção mais votada foi “${leaders[0].text}”, com ${leaders[0].votes} voto${leaders[0].votes === 1 ? '' : 's'}`
+            : `Houve empate entre ${leaders.map((item) => `“${item.text}”`).join(' e ')}, com ${topVotes} voto${topVotes === 1 ? '' : 's'} para cada opção`;
+        return `Submetida à votação a matéria “${title}”${description ? `, referente a ${sentenceFragment(description)}` : ''}, foram contabilizados ${total} voto${total === 1 ? '' : 's'}, assim distribuídos: ${distribution}. ${resultText}.`;
+    }
+    function formatCondominiumAddress(condo) {
+        const street = cleanFormalText(condo?.address || '');
+        const number = cleanFormalText(condo?.address_number || '');
+        const complement = cleanFormalText(condo?.complement || '');
+        const neighborhood = cleanFormalText(condo?.neighborhood || '');
+        const city = cleanFormalText(condo?.city || '');
+        const stateCode = cleanFormalText(condo?.state || '');
+        const cep = cleanFormalText(condo?.cep || state.assembly?.cep || '');
+        if (!street && !city && !cep) return '';
+        const first = [street, number].filter(Boolean).join(', ');
+        return [first, complement, neighborhood, [city, stateCode].filter(Boolean).join('/'), cep ? `CEP ${cep}` : ''].filter(Boolean).join(' – ');
+    }
+
+    function resolveClosingTime() {
+        const direct = String(state.assembly?.end_time || '').trim();
+        if (direct) return direct.slice(0, 5);
+        const candidates = [];
+        state.attendance.forEach((row) => { if (row.left_at) candidates.push(row.left_at); });
+        state.events.forEach((row) => { if (row.created_at) candidates.push(row.created_at); });
+        state.transcripts.forEach((row) => { if (row.spoken_at || row.created_at) candidates.push(row.spoken_at || row.created_at); });
+        state.speechActivities.forEach((row) => { if (row.ended_at || row.started_at) candidates.push(row.ended_at || row.started_at); });
+        if (!candidates.length) return '';
+        const latest = candidates.sort((left, right) => safeTime(right) - safeTime(left))[0];
+        return formatTime(latest);
+    }
+
+    function formalAssemblyType(type) {
+        const normalized = String(type || 'ordinaria').trim().toLowerCase();
+        if (normalized === 'extraordinaria') return 'Assembleia Geral Extraordinária';
+        if (normalized === 'especial') return 'Assembleia Especial';
+        return 'Assembleia Geral Ordinária';
+    }
+    function formalDateWords(value) {
+        if (!value) return 'Data não informada';
+        const raw = String(value).slice(0, 10);
+        const [year, month, day] = raw.split('-').map(Number);
+        if (!year || !month || !day) return formatDate(value);
+        const ordinalDays = {
+            1:'primeiro',2:'segundo',3:'terceiro',4:'quarto',5:'quinto',6:'sexto',7:'sétimo',8:'oitavo',9:'nono',10:'décimo',
+            11:'décimo primeiro',12:'décimo segundo',13:'décimo terceiro',14:'décimo quarto',15:'décimo quinto',16:'décimo sexto',17:'décimo sétimo',18:'décimo oitavo',19:'décimo nono',20:'vigésimo',
+            21:'vigésimo primeiro',22:'vigésimo segundo',23:'vigésimo terceiro',24:'vigésimo quarto',25:'vigésimo quinto',26:'vigésimo sexto',27:'vigésimo sétimo',28:'vigésimo oitavo',29:'vigésimo nono',30:'trigésimo',31:'trigésimo primeiro'
+        };
+        const monthNames = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+        return `Ao ${ordinalDays[day] || day} dia do mês de ${monthNames[month] || month} de ${year}`;
+    }
+
+    function formatClockFormal(value) {
+        const raw = String(value || '').slice(0, 5);
+        const match = raw.match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return raw || 'horário não informado';
+        const hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        return `${String(hours).padStart(2, '0')}h${String(minutes).padStart(2, '0')}`;
+    }
+
+    function cleanFormalText(value) {
+        return String(value || '')
+            .replace(/\*\*/g, '')
+            .replace(/\bimage\b/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function sentenceFragment(value) {
+        return cleanFormalText(value).replace(/[.!?]+$/g, '');
+    }
+
+    function ensureTerminalPunctuation(value) {
+        const text = cleanFormalText(value);
+        if (!text) return '';
+        return /[.!?]$/.test(text) ? text : `${text}.`;
+    }
+
+    function romanNumeral(value) {
+        const numerals = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX'];
+        return numerals[value - 1] || String(value);
+    }
+    function pollCurrentUserVoted(pollId) {
+        return state.results.some((row) => String(row.poll_id) === String(pollId) && row.current_user_voted === true);
+    }
+
+    function canVoteFromSummary(poll) {
+        return String(state.assembly?.status || '').toLowerCase() === 'encerrada'
+            && String(poll?.status || '').toLowerCase() !== 'cancelada'
+            && currentUserRole() !== 'porteiro'
+            && !pollCurrentUserVoted(poll.id);
+    }
+
+    function renderPolls() {
+        const container = document.getElementById('assemblyPollResults');
+        if (!container) return;
+        if (!state.polls.length) {
+            container.innerHTML = '<div class="summary-empty">Nenhuma votação foi criada nesta assembleia.</div>';
+            return;
+        }
+
+        container.innerHTML = state.polls.map((poll) => {
+            const options = state.options.filter((option) => String(option.poll_id) === String(poll.id));
+            const total = options.reduce((sum, option) => sum + getVoteCount(poll.id, option.id), 0);
+            const canVote = canVoteFromSummary(poll);
+            const voted = pollCurrentUserVoted(poll.id);
+
+            const optionHtml = options.length ? options.map((option) => {
+                const count = getVoteCount(poll.id, option.id);
+                const pct = total ? Math.round((count / total) * 100) : 0;
+                return `
+                    <div class="poll-option-result ${canVote ? 'can-vote' : ''}">
+                        <div class="poll-option-main">
+                            <span class="poll-option-label">${esc(option.option_text || 'Opção')}</span>
+                            ${canVote ? `<button type="button" class="post-assembly-vote-btn" data-post-vote data-poll-id="${poll.id}" data-option-id="${option.id}"><i class="fas fa-check"></i> Votar nesta opção</button>` : ''}
+                        </div>
+                        <div class="poll-result-bar"><div class="poll-result-fill" style="width:${pct}%"></div></div>
+                        <span class="poll-count">${count} voto${count === 1 ? '' : 's'} · ${pct}%</span>
+                    </div>`;
+            }).join('') : '<div class="summary-empty">Sem opções registradas.</div>';
+
+            const voteStatus = voted
+                ? '<div class="poll-user-status success"><i class="fas fa-circle-check"></i> Seu voto já está registrado nesta votação.</div>'
+                : canVote
+                    ? '<div class="poll-user-status pending"><i class="fas fa-hand-pointer"></i> Você ainda não votou. Escolha uma opção acima.</div>'
+                    : currentUserRole() === 'porteiro'
+                        ? '<div class="poll-user-status neutral"><i class="fas fa-lock"></i> Porteiros não participam das votações.</div>'
+                        : '';
+
+            return `<article class="poll-result-card">
+                <h3>${esc(poll.title || 'Votação')}</h3>
+                <p class="poll-description">${esc(poll.description || 'Sem descrição.')}</p>
+                ${optionHtml}
+                <div class="poll-total">Total de votos registrados: ${total}</div>
+                ${voteStatus}
+            </article>`;
+        }).join('');
+
+        container.querySelectorAll('[data-post-vote]').forEach((button) => {
+            button.addEventListener('click', () => castPostAssemblyVote(button));
+        });
+    }
+
+    async function castPostAssemblyVote(button) {
+        const pollId = Number(button.dataset.pollId);
+        const optionId = Number(button.dataset.optionId);
+        if (!pollId || !optionId) return;
+
+        const poll = state.polls.find((item) => Number(item.id) === pollId);
+        const option = state.options.find((item) => Number(item.id) === optionId && Number(item.poll_id) === pollId);
+        if (!poll || !option) return;
+
+        const execute = async () => {
+            const card = button.closest('.poll-result-card');
+            card?.querySelectorAll('[data-post-vote]').forEach((item) => { item.disabled = true; });
+            try {
+                await window.supabaseFetch('/rpc/condomit_cast_post_assembly_vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target_poll_id: pollId, target_option_id: optionId })
+                });
+                await loadPollResults();
+                renderPolls();
+                renderMinutes();
+                window.showToast?.('Voto registrado com sucesso.', 'success');
+            } catch (error) {
+                console.error('Erro ao votar pela ata:', error);
+                window.showToast?.(error?.message || 'Não foi possível registrar o voto.', 'error');
+                card?.querySelectorAll('[data-post-vote]').forEach((item) => { item.disabled = false; });
+            }
+        };
+
+        if (typeof window.showModal === 'function') {
+            window.showModal({
+                title: 'Confirmar voto',
+                message: `Confirmar seu voto em “${option.option_text || 'Opção'}” na votação “${poll.title || 'Votação'}”? O voto não poderá ser alterado depois.`,
+                type: 'warning',
+                confirmText: 'Confirmar voto',
+                cancelText: 'Cancelar',
+                onConfirm: execute
+            });
+        } else if (window.confirm('Confirmar este voto?')) {
+            await execute();
+        }
+    }
+
+    function normalizeSignedStorageUrl(value) {
+        const signed = String(value || '').trim();
+        if (!signed) return null;
+        if (/^https?:\/\//i.test(signed)) return signed;
+        const base = String(window.SUPABASE_URL || '').replace(/\/$/, '');
+        if (!base) return null;
+        if (signed.startsWith('/storage/v1/')) return `${base}${signed}`;
+        if (signed.startsWith('/object/')) return `${base}/storage/v1${signed}`;
+        if (signed.startsWith('storage/v1/')) return `${base}/${signed}`;
+        if (signed.startsWith('object/')) return `${base}/storage/v1/${signed}`;
+        return `${base}/storage/v1/${signed.replace(/^\/+/, '')}`;
+    }
+
+    function recordingMimeType(recordingRow) {
+        const raw = String(recordingRow?.recording_url || '').toLowerCase();
+        if (raw.includes('.mp4')) return 'video/mp4';
+        if (raw.includes('.webm')) return 'video/webm';
+        return 'video/webm';
+    }
+
+    async function createSignedRecordingUrl(recordingRow) {
+        const raw = String(recordingRow?.recording_url || '').trim();
+        if (!raw) throw new Error('A gravação não possui endereço de armazenamento.');
+        if (!raw.startsWith('storage://')) return raw;
+        const match = raw.match(/^storage:\/\/([^/]+)\/(.+)$/);
+        if (!match) throw new Error('Endereço interno da gravação inválido.');
+        const [, bucket, objectPath] = match;
+        const token = await window.resolveSupabaseAccessToken?.().catch(() => null);
+        if (!token) throw new Error('Sua sessão expirou. Entre novamente para reproduzir a gravação.');
+        const endpoint = `${window.SUPABASE_URL}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${objectPath.split('/').map(encodeURIComponent).join('/')}`;
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                apikey: window.SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ expiresIn: 3600 }),
+            cache: 'no-store'
+        });
+        if (!response.ok) {
+            const detail = await response.text().catch(() => '');
+            throw new Error(detail || `Não foi possível autorizar a reprodução (${response.status}).`);
+        }
+        const data = await response.json();
+        const signed = data?.signedURL || data?.signedUrl || data?.signed_url;
+        const normalized = normalizeSignedStorageUrl(signed);
+        if (!normalized) throw new Error('O Storage não retornou uma URL de reprodução válida.');
+        return normalized;
+    }
+
+    function renderRecordingPlayer(card, row, url) {
+        const holder = card.querySelector('.recording-player-loading, .recording-player-wrap');
+        if (!holder) return;
+        holder.className = 'recording-player-wrap';
+        holder.innerHTML = '';
+
+        const video = document.createElement('video');
+        video.className = 'assembly-recording-player';
+        video.controls = true;
+        video.preload = 'metadata';
+        video.playsInline = true;
+        video.disablePictureInPicture = true;
+        video.setAttribute('controlsList', 'nodownload noremoteplayback');
+        video.setAttribute('oncontextmenu', 'return false;');
+
+        video.src = url;
+
+        const note = document.createElement('small');
+        note.className = 'recording-access-note';
+        note.innerHTML = '<i class="fas fa-shield-halved"></i> Reprodução disponível somente nesta Ata para usuários autorizados.';
+
+        const errorBox = document.createElement('div');
+        errorBox.className = 'recording-playback-error';
+        errorBox.hidden = true;
+
+        const retryButton = document.createElement('button');
+        retryButton.type = 'button';
+        retryButton.className = 'summary-secondary recording-retry-btn';
+        retryButton.innerHTML = '<i class="fas fa-rotate-right"></i> Tentar reproduzir novamente';
+        retryButton.hidden = true;
+
+        let retrying = false;
+        let blobFallbackTried = false;
+        let blobObjectUrl = '';
+
+        const loadRecordingAsBlob = async () => {
+            if (blobFallbackTried) return false;
+            blobFallbackTried = true;
+            const response = await fetch(video.src, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`Não foi possível carregar os dados da gravação (${response.status}).`);
+            const blob = await response.blob();
+            if (!blob?.size) throw new Error('A gravação armazenada está vazia.');
+            if (blobObjectUrl) URL.revokeObjectURL(blobObjectUrl);
+            blobObjectUrl = URL.createObjectURL(blob);
+            video.src = blobObjectUrl;
+            video.load();
+            return true;
+        };
+
+        const retryPlayback = async () => {
+            if (retrying) return;
+            retrying = true;
+            retryButton.disabled = true;
+            errorBox.hidden = true;
+            try {
+                const freshUrl = await createSignedRecordingUrl(row);
+                blobFallbackTried = false;
+                if (blobObjectUrl) { URL.revokeObjectURL(blobObjectUrl); blobObjectUrl = ''; }
+                video.src = freshUrl;
+                video.load();
+                // play() pode ser bloqueado por autoplay; como esta chamada vem de
+                // clique do usuário, navegadores normalmente permitem a reprodução.
+                await video.play().catch(() => {});
+            } catch (error) {
+                errorBox.textContent = error?.message || 'Não foi possível renovar o acesso à gravação.';
+                errorBox.hidden = false;
+                retryButton.hidden = false;
+            } finally {
+                retrying = false;
+                retryButton.disabled = false;
+            }
+        };
+
+        video.addEventListener('error', async () => {
+            const mediaError = video.error;
+            // URLs assinadas podem não responder a Range da mesma forma em todos
+            // os WebViews. Tenta uma vez carregar o arquivo em memória como Blob,
+            // sem salvar/baixar no dispositivo do usuário.
+            if (!blobFallbackTried && !String(video.src || '').startsWith('blob:')) {
+                try {
+                    errorBox.textContent = 'Preparando modo de reprodução compatível...';
+                    errorBox.hidden = false;
+                    if (await loadRecordingAsBlob()) return;
+                } catch (fallbackError) {
+                    console.warn('[Ata] Fallback Blob da gravação falhou:', fallbackError);
+                }
+            }
+            const messages = {
+                1: 'A reprodução foi interrompida.',
+                2: 'Falha de rede ao carregar a gravação.',
+                3: 'O navegador não conseguiu decodificar esta gravação.',
+                4: 'O formato desta gravação não é compatível com este navegador.'
+            };
+            errorBox.textContent = messages[mediaError?.code] || 'Não foi possível reproduzir esta gravação.';
+            errorBox.hidden = false;
+            retryButton.hidden = false;
+        });
+        video.addEventListener('loadedmetadata', () => {
+            errorBox.hidden = true;
+            retryButton.hidden = true;
+            if (!Number.isFinite(video.duration) || video.duration === Infinity || video.duration === 0) {
+                const restore = () => { try { video.currentTime = 0; } catch (_) {} };
+                video.addEventListener('timeupdate', restore, { once: true });
+                try { video.currentTime = 1e10; } catch (_) {}
+            }
+        });
+        retryButton.addEventListener('click', retryPlayback);
+
+        holder.append(video, note, errorBox, retryButton);
+        window.addEventListener('beforeunload', () => { if (blobObjectUrl) URL.revokeObjectURL(blobObjectUrl); }, { once: true });
+        video.load();
+    }
+
+    function formatBytes(bytes) {
+        const n = Number(bytes || 0);
+        if (!n) return 'Tamanho não informado';
+        if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
+        return `${(n / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
+    }
+
+    function formatDuration(seconds) {
+        const n = Math.max(0, Number(seconds || 0));
+        const h = Math.floor(n / 3600), m = Math.floor((n % 3600) / 60), sec = Math.floor(n % 60);
+        return h ? `${h}h ${String(m).padStart(2, '0')}min` : `${m}min ${String(sec).padStart(2, '0')}s`;
+    }
+
+    function renderRecordings() {
+        const container = document.getElementById('assemblyRecordings');
+        if (!container) return;
+        if (!state.recordings.length) {
+            container.innerHTML = '<div class="summary-empty">Nenhuma gravação concluída foi vinculada a esta assembleia.</div>';
+            return;
+        }
+        container.innerHTML = state.recordings.map((row, index) => `
+            <article class="recording-card" data-recording-index="${index}">
+                <div class="recording-card-head"><div><strong><i class="fas fa-video"></i> Gravação ${index + 1}</strong><small>${row.started_at ? new Date(row.started_at).toLocaleString('pt-BR') : 'Horário não informado'} • ${formatDuration(row.duration_seconds)} • ${formatBytes(row.file_size_bytes)}</small></div></div>
+                <div class="recording-player-loading"><i class="fas fa-spinner fa-spin"></i> Preparando reprodução segura...</div>
+            </article>`).join('');
+        state.recordings.forEach(async (row, index) => {
+            const card = container.querySelector(`[data-recording-index="${index}"]`);
+            if (!card) return;
+            const holder = card.querySelector('.recording-player-loading');
+            if (!holder) return;
+            try {
+                const url = await createSignedRecordingUrl(row);
+                renderRecordingPlayer(card, row, url);
+            } catch (error) {
+                holder.className = 'recording-player-wrap';
+                holder.innerHTML = `<div class="summary-empty">${esc(error?.message || 'Não foi possível gerar o acesso temporário a esta gravação.')}</div>`;
+            }
+        });
+    }
+
+    function renderComments() {
+        const container = document.getElementById('assemblyPostComments');
+        if (!container) return;
+        const roots = state.comments
+            .filter((comment) => !comment?.parent_comment_id)
+            .sort((left, right) => safeTime(left.created_at) - safeTime(right.created_at));
+        container.innerHTML = roots.length
+            ? roots.map((comment) => renderCommentCard(comment, 0)).join('')
+            : '<div class="summary-empty">Nenhum comentário publicado.</div>';
+    }
+
+    function getCommentChildren(parentId) {
+        return state.comments
+            .filter((comment) => String(comment?.parent_comment_id || '') === String(parentId))
+            .sort((left, right) => safeTime(left.created_at) - safeTime(right.created_at));
+    }
+
+    function getCommentProfile(comment) {
+        const email = String(comment?.user_email || '').trim().toLowerCase();
+        return state.commentProfiles.get(email) || {};
+    }
+
+    function getCommentAuthor(comment) {
+        const profile = getCommentProfile(comment);
+        return profile.name || comment?.participant_name || comment?.user_email || 'Usuário';
+    }
+
+    function getCommentPhoto(comment) {
+        const profile = getCommentProfile(comment);
+        return String(profile.profile_photo || '').trim();
+    }
+
+    function getCommentVotes(commentId) {
+        const rows = (Array.isArray(state.commentVotes) ? state.commentVotes : []).filter((vote) => String(vote.comment_id) === String(commentId));
+        const currentEmail = String(state.user?.email || '').trim().toLowerCase();
+        return {
+            likes: rows.filter((vote) => vote.vote_type === 'like').length,
+            dislikes: rows.filter((vote) => vote.vote_type === 'dislike').length,
+            currentVote: (rows.find((vote) => String(vote.user_email || '').trim().toLowerCase() === currentEmail) || {}).vote_type || ''
+        };
+    }
+
+    function renderCommentCard(comment, depth) {
+        const commentId = String(comment?.id || '');
+        const author = getCommentAuthor(comment);
+        const photo = getCommentPhoto(comment);
+        const avatar = photo
+            ? `<img src="${esc(photo)}" alt="Foto de ${esc(author)}" loading="lazy">`
+            : `<span>${esc(initials(author))}</span>`;
+        const children = getCommentChildren(comment.id);
+        const expanded = state.expandedReplyIds.has(commentId);
+        const votes = getCommentVotes(comment.id);
+        const replyForm = state.replyComposerFor === commentId
+            ? `<div class="comment-reply-form" data-parent-id="${esc(commentId)}">
+                    <textarea maxlength="1000" rows="3" placeholder="Escreva uma resposta..."></textarea>
+                    <div class="comment-reply-actions">
+                        <button type="button" class="ghost-btn compact-btn" data-comment-action="cancel-reply" data-comment-id="${esc(commentId)}">Cancelar</button>
+                        <button type="button" class="summary-primary compact-btn" data-comment-action="submit-reply" data-comment-id="${esc(commentId)}"><i class="fas fa-paper-plane"></i> Responder</button>
+                    </div>
+                </div>`
+            : '';
+        const toggleReplies = children.length
+            ? `<button type="button" class="comment-action-btn comment-replies-toggle" data-comment-action="toggle-replies" data-comment-id="${esc(commentId)}">${expanded ? 'Ocultar respostas' : `View all ${children.length} replies`}</button>`
+            : '';
+        const repliesHtml = children.length && expanded
+            ? `<div class="comment-replies">${children.map((child) => renderCommentCard(child, depth + 1)).join('')}</div>`
+            : '';
+        return `<article class="comment-card${depth ? ' is-reply' : ''}" data-comment-id="${esc(commentId)}">
+            <div class="comment-head">
+                <div class="comment-author">
+                    <div class="comment-avatar">${avatar}</div>
+                    <div class="comment-author-meta">
+                        <strong>${esc(author)}</strong>
+                        <span class="comment-date">${formatDateTime(comment.created_at)}</span>
+                    </div>
+                </div>
+            </div>
+            <p class="comment-text">${esc(comment.comment || '')}</p>
+            <div class="comment-actions">
+                <button type="button" class="comment-action-btn${votes.currentVote === 'like' ? ' active' : ''}" data-comment-action="like" data-comment-id="${esc(commentId)}" aria-label="Curtir comentário"><i class="far fa-thumbs-up"></i><span>${votes.likes}</span></button>
+                <button type="button" class="comment-action-btn${votes.currentVote === 'dislike' ? ' active dislike' : ''}" data-comment-action="dislike" data-comment-id="${esc(commentId)}" aria-label="Não curtir comentário"><i class="far fa-thumbs-down"></i><span>${votes.dislikes}</span></button>
+                <button type="button" class="comment-action-btn textual" data-comment-action="reply" data-comment-id="${esc(commentId)}"><i class="fas fa-reply"></i>Responder</button>
+                ${toggleReplies}
+            </div>
+            ${replyForm}
+            ${repliesHtml}
+        </article>`;
+    }
+
+    function bindTabs() {
+        document.querySelectorAll('[data-summary-tab]').forEach((button) => button.addEventListener('click', () => {
+            const target = button.dataset.summaryTab;
+            document.querySelectorAll('[data-summary-tab]').forEach((tab) => tab.classList.toggle('active', tab === button));
+            document.querySelectorAll('[data-summary-panel]').forEach((panel) => panel.classList.toggle('active', panel.dataset.summaryPanel === target));
+        }));
+    }
+
+    function bindCommentForm() {
+        document.getElementById('postAssemblyCommentForm')?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const textarea = document.getElementById('postAssemblyComment');
+            const comment = String(textarea?.value || '').trim();
+            if (!comment || !state.assembly) return;
+            const submit = event.currentTarget.querySelector('button[type="submit"]');
+            if (submit) submit.disabled = true;
+            try {
+                await createAssemblyComment(comment);
+                if (textarea) textarea.value = '';
+                renderComments();
+                renderMinutes();
+                window.showToast?.('Comentário publicado.', 'success');
+            } catch (error) {
+                window.showToast?.(error?.message || 'Erro ao publicar comentário.', 'error');
+            } finally {
+                if (submit) submit.disabled = false;
+            }
+        });
+    }
+
+    function bindCommentActions() {
+        document.getElementById('assemblyPostComments')?.addEventListener('click', async (event) => {
+            const button = event.target.closest('[data-comment-action]');
+            if (!button) return;
+            const action = button.dataset.commentAction;
+            const commentId = button.dataset.commentId;
+            if (!action || !commentId) return;
+            if (action === 'reply') {
+                state.replyComposerFor = state.replyComposerFor === commentId ? null : commentId;
+                state.expandedReplyIds.add(commentId);
+                renderComments();
+                return;
+            }
+            if (action === 'cancel-reply') {
+                state.replyComposerFor = null;
+                renderComments();
+                return;
+            }
+            if (action === 'toggle-replies') {
+                if (state.expandedReplyIds.has(commentId)) state.expandedReplyIds.delete(commentId);
+                else state.expandedReplyIds.add(commentId);
+                renderComments();
+                return;
+            }
+            if (action === 'submit-reply') {
+                const form = document.querySelector(`.comment-reply-form[data-parent-id="${CSS.escape(commentId)}"]`);
+                const textarea = form?.querySelector('textarea');
+                const replyText = String(textarea?.value || '').trim();
+                if (!replyText) return;
+                button.disabled = true;
+                try {
+                    await createAssemblyComment(replyText, commentId);
+                    state.replyComposerFor = null;
+                    state.expandedReplyIds.add(commentId);
+                    renderComments();
+                    window.showToast?.('Resposta publicada.', 'success');
+                } catch (error) {
+                    window.showToast?.(error?.message || 'Erro ao responder comentário.', 'error');
+                } finally {
+                    button.disabled = false;
+                }
+                return;
+            }
+            if (action === 'like' || action === 'dislike') {
+                button.disabled = true;
+                try {
+                    await voteAssemblyComment(commentId, action);
+                    renderComments();
+                } catch (error) {
+                    window.showToast?.(error?.message || 'Erro ao registrar sua reação.', 'error');
+                } finally {
+                    button.disabled = false;
+                }
+            }
+        });
+    }
+
+    async function createAssemblyComment(comment, parentCommentId = null) {
+        const email = String(state.user?.email || '').trim().toLowerCase();
+        const rows = await window.supabaseFetch('/assembly_post_comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+            body: JSON.stringify({
+                assembly_id: state.id,
+                cep: state.assembly.cep,
+                user_email: email,
+                participant_name: state.user?.name || email,
+                comment,
+                parent_comment_id: parentCommentId ? Number(parentCommentId) : null
+            })
+        });
+        const saved = Array.isArray(rows) ? rows[0] : rows;
+        if (!saved) throw new Error('O comentário não foi confirmado pelo banco.');
+        state.comments.push(saved);
+        if (email) {
+            state.commentProfiles.set(email, {
+                email,
+                name: state.user?.name || email,
+                profile_photo: state.user?.profilePhoto || state.user?.profile_photo || null
+            });
+        }
+        return saved;
+    }
+
+    async function voteAssemblyComment(commentId, voteType) {
+        await window.supabaseFetch('/rpc/condomit_vote_assembly_post_comment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target_comment_id: Number(commentId), target_vote: voteType })
+        });
+        state.commentVotes = await fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => []);
+    }
+
+    function setupSignatureModal() {
+        closeAssemblySignatureModal();
+        document.getElementById('closeAssemblySignatureModal')?.addEventListener('click', closeAssemblySignatureModal);
+        document.getElementById('cancelAssemblySignatureBtn')?.addEventListener('click', closeAssemblySignatureModal);
+        document.getElementById('clearAssemblySignatureBtn')?.addEventListener('click', clearAssemblySignature);
+        document.getElementById('confirmAssemblySignatureBtn')?.addEventListener('click', submitAssemblySignature);
+        document.getElementById('assemblySignatureModal')?.addEventListener('click', (event) => {
+            if (event.target?.id === 'assemblySignatureModal') closeAssemblySignatureModal();
+        });
+        setupSignatureCanvasEvents();
+        window.addEventListener('resize', debounce(resizeAssemblySignatureCanvas, 120));
+    }
+
+    function setupSignatureCanvasEvents() {
+        const canvas = document.getElementById('assemblySignatureCanvas');
+        if (!canvas || canvas.dataset.signatureBound === '1') return;
+        canvas.dataset.signatureBound = '1';
+        canvas.tabIndex = 0;
+
+        const start = (event) => {
+            if (event.button != null && event.button !== 0) return;
+            const point = getCanvasPoint(canvas, event);
+            state.signaturePad.drawing = true;
+            state.signaturePad.lastX = point.x;
+            state.signaturePad.lastY = point.y;
+            try { canvas.setPointerCapture?.(event.pointerId); } catch (_) {}
+            event.preventDefault();
+        };
+        const move = (event) => {
+            if (!state.signaturePad.drawing) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            const point = getCanvasPoint(canvas, event);
+            ctx.beginPath();
+            ctx.moveTo(state.signaturePad.lastX, state.signaturePad.lastY);
+            ctx.lineTo(point.x, point.y);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 2.4;
+            ctx.strokeStyle = '#111827';
+            ctx.stroke();
+            state.signaturePad.lastX = point.x;
+            state.signaturePad.lastY = point.y;
+            state.signaturePad.hasInk = true;
+            document.getElementById('assemblySignatureCanvasWrap')?.classList.add('has-signature');
+            const errorEl = document.getElementById('assemblySignatureError');
+            if (errorEl) errorEl.hidden = true;
+            event.preventDefault();
+        };
+        const stop = (event) => {
+            state.signaturePad.drawing = false;
+            try { canvas.releasePointerCapture?.(event?.pointerId); } catch (_) {}
+        };
+
+        if ('PointerEvent' in window) {
+            canvas.addEventListener('pointerdown', start);
+            canvas.addEventListener('pointermove', move);
+            canvas.addEventListener('pointerup', stop);
+            canvas.addEventListener('pointercancel', stop);
+            canvas.addEventListener('pointerleave', (event) => {
+                if (!canvas.hasPointerCapture?.(event.pointerId)) stop(event);
+            });
+        } else {
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', stop);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', move, { passive: false });
+            window.addEventListener('touchend', stop);
+        }
+    }
+
+    function openAssemblySignatureModal() {
+        const modal = document.getElementById('assemblySignatureModal');
+        if (!modal) return;
+        const title = modal.querySelector('.modal-header h3');
+        const subtitle = modal.querySelector('.modal-header p');
+        const confirm = document.getElementById('confirmAssemblySignatureBtn');
+        if (title) title.textContent = state.signature ? 'Corrigir assinatura da ata' : 'Assinar ata';
+        if (subtitle) subtitle.textContent = state.signature ? 'Desenhe a nova assinatura. Ao salvar, ela substituirá a assinatura anterior.' : 'Desenhe sua assinatura abaixo, como no livro de ocorrências.';
+        if (confirm) confirm.innerHTML = `<i class="fas fa-signature"></i> ${state.signature ? 'Salvar nova assinatura' : 'Assinar ata'}`;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('signature-modal-open');
+        state.signaturePad.drawing = false;
+        state.signaturePad.hasInk = false;
+        window.requestAnimationFrame(() => {
+            resizeAssemblySignatureCanvas();
+            clearAssemblySignature();
+            document.getElementById('assemblySignatureCanvas')?.focus?.();
+        });
+    }
+
+    function closeAssemblySignatureModal() {
+        const modal = document.getElementById('assemblySignatureModal');
+        if (modal) {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        document.body.classList.remove('signature-modal-open');
+        state.signaturePad.drawing = false;
+        clearAssemblySignature();
+    }
+
+    function resizeAssemblySignatureCanvas() {
+        const canvas = document.getElementById('assemblySignatureCanvas');
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const snapshot = state.signaturePad.hasInk ? canvas.toDataURL('image/png') : null;
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = Math.max(1, Math.round(rect.width * ratio));
+        canvas.height = Math.max(1, Math.round(rect.height * ratio));
+        canvas.dataset.cssWidth = String(rect.width);
+        canvas.dataset.cssHeight = String(rect.height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        if (snapshot) {
+            const image = new Image();
+            image.onload = () => {
+                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+                ctx.drawImage(image, 0, 0, rect.width, rect.height);
+            };
+            image.src = snapshot;
+        }
+    }
+
+    function clearAssemblySignature() {
+        const canvas = document.getElementById('assemblySignatureCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        state.signaturePad.drawing = false;
+        state.signaturePad.hasInk = false;
+        document.getElementById('assemblySignatureCanvasWrap')?.classList.remove('has-signature');
+        const errorEl = document.getElementById('assemblySignatureError');
+        if (errorEl) errorEl.hidden = true;
+    }
+
+    function getCanvasPoint(canvas, event) {
+        const source = event.touches?.[0] || event.changedTouches?.[0] || event;
+        const rect = canvas.getBoundingClientRect();
+        const cssWidth = Number(canvas.dataset.cssWidth || rect.width || 1);
+        const cssHeight = Number(canvas.dataset.cssHeight || rect.height || 1);
+        return {
+            x: ((Number(source.clientX) - rect.left) / Math.max(rect.width, 1)) * cssWidth,
+            y: ((Number(source.clientY) - rect.top) / Math.max(rect.height, 1)) * cssHeight
+        };
+    }
+
+    async function submitAssemblySignature() {
+        if (!state.signaturePad.hasInk) {
+            const errorEl = document.getElementById('assemblySignatureError');
+            if (errorEl) errorEl.hidden = false;
+            window.showToast?.('Faça sua assinatura antes de concluir.', 'warning');
+            return;
+        }
+        const button = document.getElementById('confirmAssemblySignatureBtn');
+        const canvas = document.getElementById('assemblySignatureCanvas');
+        if (!button || !canvas) return;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assinando...';
+        try {
+            const result = await window.supabaseFetch('/rpc/condomit_sign_assembly_minutes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    target_assembly_id: state.id,
+                    target_signature_data: canvas.toDataURL('image/png')
+                })
+            });
+            state.signature = Array.isArray(result) ? result[0] : result;
+            closeAssemblySignatureModal();
+            renderHero();
+            renderMinutes();
+            window.showToast?.(state.signature ? 'Assinatura da ata salva com sucesso.' : 'Ata assinada eletronicamente com sucesso.', 'success');
+        } catch (error) {
+            window.showToast?.(error?.message || 'Não foi possível assinar a ata.', 'error');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = `<i class="fas fa-signature"></i> ${state.signature ? 'Corrigir assinatura' : 'Assinar ata'}`;
+        }
+    }
+
+    async function signAssemblyMinutes() {
+        if (currentUserRole() !== 'sindico') return;
+        openAssemblySignatureModal();
+    }
+
+    function printAssemblyMinutes() {
+        document.body.classList.add('printing-assembly-minutes');
+        const cleanup = () => document.body.classList.remove('printing-assembly-minutes');
+        window.addEventListener('afterprint', cleanup, { once: true });
+        window.print();
+        window.setTimeout(cleanup, 1200);
+    }
+
+    async function logout() {
+        if (typeof window.performFullLogout === 'function') {
+            await window.performFullLogout();
+            return;
+        }
+        try { await window.supabase?.auth?.signOut?.(); } catch (_) {}
+        try {
+            sessionStorage.clear();
+            localStorage.removeItem('condominiumPersistentUser');
+            localStorage.removeItem('condominiumPersistentSession');
+        } catch (_) {}
+        window.location.href = '../inicio.html';
+    }
+
+    window.logout = logout;
+
+    async function generateAssemblyDecisionTasks() {
+        if (currentUserRole() !== 'sindico') return;
+        const button = document.getElementById('generateAssemblyTasks027');
+        if (button) button.disabled = true;
+        try {
+            const cepResult = await window.supabaseFetch('/rpc/condomit_current_user_cep', { method:'POST', body:'{}' });
+            const cep = typeof cepResult === 'string' ? cepResult : String(cepResult?.cep || '');
+            if (!cep) throw new Error('Não foi possível identificar o condomínio.');
+            const existing = await fetchRows(`/assembly_tasks?select=id,title&assembly_id=eq.${state.id}`).catch(()=>[]);
+            const existingTitles = new Set(existing.map(row => String(row.title || '').toLowerCase()));
+            const tasks = [];
+            state.polls.forEach(poll => {
+                const options = state.options.filter(option => String(option.poll_id) === String(poll.id));
+                if (!options.length) return;
+                const ranked = options.map(option => ({option,votes:getVoteCount(poll.id,option.id)})).sort((a,b)=>b.votes-a.votes);
+                const winner = ranked[0];
+                if (!winner) return;
+                const title = `Executar decisão: ${poll.title || 'Votação'} — ${winner.option.option_text || 'Opção vencedora'}`;
+                if (!existingTitles.has(title.toLowerCase())) tasks.push({cep,assembly_id:state.id,title,description:`Gerada automaticamente a partir da votação. Resultado vencedor: ${winner.option.option_text || 'Opção'} com ${winner.votes} voto(s).`,status:'pendente',created_by:state.user.email});
+            });
+            if (!tasks.length) { window.showToast?.('Nenhuma nova tarefa foi gerada. As decisões já possuem tarefas ou não há votações.', 'info'); return; }
+            await window.supabaseFetch('/assembly_tasks', {method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(tasks)});
+            window.showToast?.(`${tasks.length} tarefa(s) criada(s) na Gestão Avançada.`, 'success');
+        } catch(error) { window.showToast?.(error?.message || 'Não foi possível gerar as tarefas.', 'error'); }
+        finally { if (button) button.disabled = false; }
+    }
+
+    function getVoteCount(pollId, optionId) {
+        const row = state.results.find((result) => String(result.poll_id) === String(pollId) && String(result.option_id) === String(optionId));
+        return Number(row?.vote_count || 0);
+    }
+
+
+
+    function debounce(fn, wait) {
+        let timer = null;
+        return function debounced(...args) {
+            clearTimeout(timer);
+            timer = window.setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
+    function isSafeSignatureData(value) {
+        return /^data:image\/(png|jpeg|jpg|webp);base64,[a-z0-9+/=\s]+$/i.test(String(value || '').trim());
+    }
+
+    function renderFatal(message) {
+        const hero = document.getElementById('assemblySummaryHero');
+        if (hero) hero.innerHTML = `<div class="summary-empty"><i class="fas fa-circle-exclamation"></i><br>${esc(message)}</div>`;
+    }
+
+    function setText(id, value) { const element = document.getElementById(id); if (element) element.textContent = value; }
+    function initials(name) { return String(name || 'US').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').toUpperCase().slice(0, 2) || 'US'; }
+    function esc(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); }
+    function safeTime(value) { const time = new Date(value || 0).getTime(); return Number.isFinite(time) ? time : 0; }
+    function formatDate(value) { if (!value) return '--'; const date = new Date(`${String(value).slice(0, 10)}T12:00:00`); return date.toLocaleDateString('pt-BR'); }
+    function formatTime(value) { if (!value) return '--:--'; const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value).slice(0, 5) : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+    function formatDateTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? '--' : date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }); }
+    function combineDateTime(date, time) { return date ? `${date}T${String(time || '00:00').slice(0, 8)}` : null; }
+    function roleLabel(role) { const normalized = String(role || 'morador').toLowerCase(); return normalized.startsWith('sind') ? 'Síndico' : normalized.startsWith('porteir') ? 'Porteiro' : 'Morador'; }
+    function statusLabel(status) { const normalized = String(status || '').toLowerCase(); return normalized === 'encerrada' ? 'Encerrada' : normalized === 'cancelada' ? 'Cancelada' : normalized === 'em_andamento' ? 'Em andamento' : 'Agendada'; }
+})();

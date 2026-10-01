@@ -1,0 +1,117 @@
+[build]
+  publish = "."
+  command = ""
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@getbrevo/brevo", "web-push"]
+
+[[redirects]]
+  from = "/esqueceu-senha"
+  to = "/.netlify/functions/api-proxy/esqueceu-senha"
+  status = 200
+  force = true
+
+
+[[redirects]]
+  from = "/api/push/public-key"
+  to = "/.netlify/functions/push-config"
+  status = 200
+  force = true
+
+
+[[redirects]]
+  from = "/api/assembly/transcribe"
+  to = "/.netlify/functions/assembly-transcribe"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api-proxy/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/pages/redefinir-senha.html"
+  to = "/pages/redefinir-senha.html"
+  status = 200
+
+[[redirects]]
+  from = "/desktop-download"
+  to = "/pages/download-desktop.html"
+  status = 200
+
+[[redirects]]
+  from = "/pages/*"
+  to = "/pages/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/scripts/*"
+  to = "/scripts/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/styles/*"
+  to = "/styles/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/netlify/*"
+  to = "/netlify/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/inicio.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(self), camera=(self), display-capture=(self)"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://esm.sh https://sdk.mercadopago.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' data: https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self' https://*.mercadopago.com https://mercadopago.com; upgrade-insecure-requests"
+
+
+# A função desperta a cada 5 minutos; a RPC controla individualmente o intervalo de 30 minutos por assembleia.
+[functions."auto-end-assemblies"]
+  schedule = "*/5 * * * *"
+
+[[headers]]
+  for = "/privacidade.html"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/excluir-conta.html"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/suporte.html"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/pages/checkout.html"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
+
+[[headers]]
+  for = "/pages/pagamento-*.html"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
+
+[functions."push-dispatch"]
+  schedule = "* * * * *"

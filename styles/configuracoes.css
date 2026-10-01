@@ -1,0 +1,2070 @@
+/* Dark Theme variables and styles */
+:root {
+    --bg-color: #f3f4f6;
+    --card-bg: white;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --sidebar-gradient: linear-gradient(180deg, #294FD8 0%, #183B86 100%);
+    --topbar-bg: white;
+    --form-group-color: #374151;
+}
+
+[data-theme="dark"] {
+    --bg-color: #111827;
+    --card-bg: #1f2937;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+    --sidebar-gradient: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+    --topbar-bg: #1f2937;
+    --form-group-color: #d1d5db;
+}
+
+/* Apply variables */
+body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+}
+
+.config-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.config-card h3 {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.profile-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.profile-type, .profile-email {
+    color: var(--text-secondary);
+}
+
+.config-card .form-group {
+    color: var(--form-group-color);
+}
+
+.top-bar {
+    background: var(--topbar-bg) !important;
+}
+
+.top-bar-left h1 {
+    color: var(--text-primary) !important;
+}
+
+/* Font Size styles */
+html {
+    font-size: 16px;
+    transition: none !important;
+}
+
+html[data-font="small"] { font-size: 14px; }
+html[data-font="medium"] { font-size: 16px; }
+html[data-font="large"] { font-size: 18px; }
+
+html *, html *::before, html *::after {
+    transition-property: background-color, color, border-color, box-shadow, opacity, transform;
+}
+
+html[data-font] * {
+    transition-duration: 0s !important;
+}
+
+html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
+.profile-preview, .profile-info, .config-grid, .config-content,
+.detail-item, .profile-card-actions, .form-group,
+.theme-selector, .font-size-selector, .language-selector {
+    transition: none !important;
+    animation: none !important;
+}
+
+.config-content {
+    padding: 30px 40px;
+    overflow-y: auto;
+}
+
+.config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.config-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.config-card h3 {
+    font-size: 1.1rem;
+    color: #1f2937;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.profile-preview {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.profile-avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3D6DD4 0%, #294FD8 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+}
+
+.profile-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    color: #374151;
+}
+
+.detail-item i {
+    color: #294FD8;
+    width: 18px;
+}
+
+.profile-card-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.profile-card .profile-avatar.has-image img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.profile-type {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.profile-email {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.config-card .form-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: #374151;
+}
+
+.config-card .form-group i:first-of-type {
+    color: #294FD8;
+    font-size: 1rem;
+    width: 20px;
+}
+
+.config-card .form-group i:last-of-type {
+    margin-left: auto;
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+.config-card .form-group span {
+    flex: 1;
+}
+
+.btn-edit-profile {
+    margin-top: 12px;
+    margin-bottom: 8px;
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    color: #1f2937;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-edit-profile:hover {
+    border-color: #294FD8;
+    background: #eff6ff;
+    color: #294FD8;
+}
+
+.btn-logout {
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 2px solid rgba(220, 38, 38, 0.2);
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    color: #dc2626;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.btn-logout:hover {
+    border-color: rgba(220, 38, 38, 0.5);
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.15);
+}
+
+.btn-logout:active {
+    transform: translateY(0);
+}
+
+.btn-delete-account {
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 2px solid #dc2626;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+}
+
+.btn-delete-account:hover {
+    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+    border-color: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.35);
+}
+
+.btn-delete-account:active {
+    transform: translateY(0);
+}
+
+/* Modal de confirmação de exclusão */
+.delete-account-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(10px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.delete-account-modal.open { display: flex; }
+
+.delete-account-box {
+    position: relative;
+    background: #fff;
+    border-radius: 18px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+}
+
+[data-theme="dark"] .delete-account-box {
+    background: var(--card-bg);
+}
+
+.dam-header {
+    padding: 24px 24px 14px 24px;
+    text-align: center;
+}
+
+.dam-icon-circle {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 14px auto;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fecaca, #fee2e2);
+    color: #dc2626;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+.dam-header h3 {
+    margin: 0 0 6px 0;
+    font-size: 1.25rem;
+    color: #111827;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .dam-header h3 {
+    color: var(--text-primary);
+}
+
+.dam-header p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.92rem;
+}
+
+[data-theme="dark"] .dam-header p {
+    color: var(--text-secondary);
+}
+
+.dam-body {
+    padding: 4px 24px 20px 24px;
+}
+
+.dam-warning-list {
+    background: #fef2f2;
+    border: 1px solid rgba(220, 38, 38, 0.15);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+
+.dam-warning-list li {
+    color: #991b1b;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    list-style: none;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.dam-warning-list li:last-child { margin-bottom: 0; }
+.dam-warning-list li i { color: #dc2626; margin-top: 3px; font-size: 0.85rem; }
+
+.dam-confirm-input {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.dam-confirm-input label {
+    font-size: 0.88rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .dam-confirm-input label {
+    color: var(--text-primary);
+}
+
+.dam-confirm-input input {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 2px solid #e5e7eb;
+    font-size: 0.95rem;
+    outline: none;
+    background: #fff;
+    color: #111827;
+    transition: border-color 0.2s;
+}
+
+[data-theme="dark"] .dam-confirm-input input {
+    background: var(--bg-color);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.dam-confirm-input input:focus {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.dam-message {
+    min-height: 20px;
+    font-size: 0.86rem;
+    margin-top: 4px;
+    color: #dc2626;
+}
+
+.dam-footer {
+    padding: 14px 24px 20px 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dam-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-size: 0.95rem;
+}
+
+.dam-btn-cancel {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+[data-theme="dark"] .dam-btn-cancel {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+.dam-btn-cancel:hover { background: #e5e7eb; }
+
+.dam-btn-confirm {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+}
+
+.dam-btn-confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.dam-btn-confirm:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(220, 38, 38, 0.35);
+}
+
+/* Loader no botão */
+.dam-btn-confirm.loading {
+    position: relative;
+    color: transparent !important;
+}
+.dam-btn-confirm.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: dam-spin 0.7s linear infinite;
+}
+@keyframes dam-spin { to { transform: rotate(360deg); } }
+
+.theme-selector,
+.font-size-selector,
+.language-selector {
+    margin-bottom: 20px;
+}
+
+.theme-selector label,
+.font-size-selector label,
+.language-selector label {
+    display: block;
+    color: #1f2937;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.theme-buttons,
+.font-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.theme-btn,
+.font-btn {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    color: #374151;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.theme-btn:hover,
+.font-btn:hover {
+    border-color: #9ca3af;
+}
+
+.theme-btn.active, .font-btn.active {
+    background: #294FD8;
+    color: white;
+    border-color: #294FD8;
+}
+
+[data-theme="dark"] .theme-btn.active, [data-theme="dark"] .font-btn.active {
+    background: #3D6DD4;
+    border-color: #3D6DD4;
+}
+
+.theme-btn, .font-btn {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.language-select {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px;
+    border-radius: 6px;
+    width: 100%;
+}
+
+.config-footer {
+    color: var(--text-secondary);
+}
+
+.sidebar {
+    background: var(--sidebar-gradient) !important;
+}
+
+.config-card .form-group i:last-of-type {
+    color: var(--text-secondary);
+}
+
+.btn-edit-profile {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.profile-avatar {
+    background: linear-gradient(135deg, #3D6DD4 0%, #294FD8 100%);
+}
+
+.theme-selector label, .font-size-selector label, .language-selector label {
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.config-card h3 {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.language-select {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 1rem;
+    min-height: 48px;
+    outline: none;
+}
+
+.language-select option {
+    color: #1f2937;
+    background: white;
+}
+
+.language-select:focus {
+    border-color: #294FD8;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
+.language-select-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 54px;
+    border: 2px solid var(--border-color);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+}
+
+[data-theme="dark"] .language-select-wrap {
+    background: linear-gradient(180deg, rgba(31,41,55,0.98) 0%, rgba(17,24,39,0.98) 100%);
+}
+
+.language-select-wrap > .fa-globe {
+    padding-left: 16px;
+    color: #294FD8;
+    font-size: 1rem;
+}
+
+.language-select-wrap .language-select-arrow {
+    padding-right: 16px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.language-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 14px 16px 14px 12px;
+    min-height: 54px;
+    font-weight: 600;
+}
+
+.language-select:focus {
+    border: none;
+    box-shadow: none;
+}
+
+.language-select-wrap:focus-within {
+    border-color: #294FD8;
+    box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.12);
+}
+
+.reservas-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.reservas-modal-overlay.open {
+    display: flex;
+}
+
+.reservas-modal-card {
+    width: min(100%, 760px);
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--card-bg);
+    border-radius: 22px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+    overflow: hidden;
+}
+
+.reservas-modal-header,
+.reservas-modal-footer {
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.reservas-modal-header h3 {
+    margin: 0 0 6px;
+    color: var(--text-primary);
+}
+
+.reservas-modal-header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.reservas-modal-footer {
+    border-top: 1px solid var(--border-color);
+    border-bottom: none;
+    justify-content: flex-end;
+}
+
+.reservas-modal-close {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.reservas-modal-body {
+    padding: 22px 24px;
+    overflow-y: auto;
+    display: grid;
+    gap: 14px;
+}
+
+.condo-modal-card {
+    width: min(100%, 820px);
+}
+
+.condominio-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.condominio-info-item {
+    padding: 18px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+[data-theme="dark"] .condominio-info-item {
+    background: linear-gradient(180deg, rgba(31,41,55,0.98) 0%, rgba(17,24,39,0.98) 100%);
+}
+
+.condominio-info-item span {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.condominio-info-item strong {
+    color: var(--text-primary);
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.visitor-access-form {
+    display: grid;
+    gap: 18px;
+}
+
+.visitor-access-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.visitor-access-grid label {
+    display: grid;
+    gap: 8px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.visitor-access-grid label span {
+    color: var(--text-primary);
+}
+
+.visitor-access-grid input {
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font: inherit;
+    color: var(--text-primary);
+    background: var(--card-bg);
+}
+
+.visitor-access-email {
+    grid-column: 1 / -1;
+}
+
+.visitor-access-footer {
+    padding: 0;
+    border: none;
+    justify-content: flex-end;
+}
+
+.visitor-submit-btn {
+    background: #294FD8 !important;
+    color: #fff !important;
+    border-color: #294FD8 !important;
+}
+
+.visitor-feedback {
+    display: none;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.visitor-feedback[data-state="info"] {
+    display: block;
+    background: #eff6ff;
+    color: #294FD8;
+}
+
+.visitor-feedback[data-state="success"] {
+    display: block;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.visitor-feedback[data-state="error"] {
+    display: block;
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.reserva-item-card {
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+[data-theme="dark"] .reserva-item-card {
+    background: linear-gradient(180deg, rgba(31,41,55,0.98) 0%, rgba(17,24,39,0.98) 100%);
+}
+
+.reserva-item-top,
+.reserva-item-meta,
+.reserva-status-badge,
+.reservas-empty-state {
+    display: flex;
+    align-items: center;
+}
+
+.reserva-item-top {
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.reserva-item-top h4 {
+    margin: 0 0 4px;
+    color: var(--text-primary);
+}
+
+.reserva-item-top p,
+.reserva-item-meta span {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+.reserva-item-meta {
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.reserva-item-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.12);
+    font-size: 0.88rem;
+}
+
+.reserva-status-badge {
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.reserva-status-badge.disponivel {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.reserva-status-badge.indisponivel {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.reservas-empty-state {
+    min-height: 220px;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.reservas-empty-state i {
+    font-size: 2rem;
+    color: #94a3b8;
+}
+
+.config-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .config-content {
+        padding: 20px;
+    }
+    
+    .config-footer {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+
+    .reservas-modal-header,
+    .reservas-modal-footer,
+    .reservas-modal-body {
+        padding: 18px;
+    }
+
+    .reserva-item-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .condominio-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .visitor-access-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================
+   Ajustes 011 - seletor de Controle de acesso
+============================================================ */
+.access-registration-modal { max-width: 760px; }
+.access-kind-selector {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+.access-kind-card {
+    min-height: 180px;
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    padding: 22px 18px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 10px;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.access-kind-card:hover { transform: translateY(-2px); border-color: #3360F2; box-shadow: 0 12px 24px rgba(37, 99, 235, .10); }
+.access-kind-card i { font-size: 2rem; color: #3360F2; }
+.access-kind-card strong { font-size: 1rem; }
+.access-kind-card span { color: var(--text-secondary); font-size: .88rem; line-height: 1.45; }
+.access-registration-form[hidden], .access-kind-selector[hidden] { display: none !important; }
+.access-back-btn { width: max-content; border: 0; background: transparent; color: #3360F2; font-weight: 700; cursor: pointer; padding: 0 0 6px; }
+@media (max-width: 720px) { .access-kind-selector { grid-template-columns: 1fr; } .access-kind-card { min-height: 130px; } }
+
+/* ============================================================
+   014 - Modais de conteúdo das Configurações
+============================================================ */
+.settings-modal-open {
+    overflow: hidden;
+}
+
+.settings-content-overlay {
+    z-index: 35000;
+}
+
+.settings-content-card {
+    width: min(920px, calc(100vw - 32px));
+    max-height: min(88vh, 860px);
+}
+
+.settings-content-body {
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+}
+
+.settings-document-intro {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 18px;
+    border-radius: 16px;
+    background: #eff6ff;
+    color: #183B86;
+    margin-bottom: 18px;
+}
+
+.settings-document-intro strong {
+    font-size: 1.05rem;
+}
+
+.settings-document-intro span {
+    color: #64748b;
+    font-size: .88rem;
+}
+
+.settings-document-section {
+    padding: 18px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.settings-document-section:last-child {
+    border-bottom: 0;
+}
+
+.settings-document-section h4 {
+    margin: 0 0 10px;
+    color: #0f172a;
+    font-size: 1rem;
+}
+
+.settings-document-section p,
+.settings-document-section li {
+    color: #475569;
+    line-height: 1.72;
+}
+
+.settings-document-section p {
+    margin: 0 0 9px;
+}
+
+.settings-document-section ul {
+    margin: 0;
+    padding-left: 22px;
+    display: grid;
+    gap: 7px;
+}
+
+.settings-document-section a,
+.settings-contact-card {
+    color: #294FD8;
+}
+
+.settings-company-hero {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 20px;
+    border: 1px solid #dbeafe;
+    background: linear-gradient(135deg, #eff6ff, #f0fdfa);
+    border-radius: 18px;
+    margin-bottom: 8px;
+}
+
+.settings-company-hero img {
+    width: 82px;
+    height: 82px;
+    object-fit: contain;
+    flex: 0 0 auto;
+}
+
+.settings-company-hero h4 {
+    margin: 0 0 5px;
+    color: #0f172a;
+    font-size: 1.3rem;
+}
+
+.settings-company-hero p {
+    margin: 0;
+    color: #64748b;
+}
+
+.settings-contact-grid,
+.settings-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.settings-contact-card,
+.settings-choice-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #fff;
+    padding: 18px;
+    text-decoration: none;
+}
+
+.settings-contact-card {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    align-items: center;
+    gap: 14px;
+}
+
+.settings-contact-card > i,
+.settings-choice-card > i {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    color: #294FD8;
+    background: #eff6ff;
+}
+
+.settings-contact-card div {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.settings-contact-card span {
+    color: #64748b;
+    font-size: .82rem;
+}
+
+.settings-contact-card strong {
+    color: #0f172a;
+    overflow-wrap: anywhere;
+}
+
+.settings-contact-note {
+    color: #64748b;
+    font-size: .9rem;
+    margin: 18px 0 0;
+    line-height: 1.6;
+}
+
+.settings-choice-card {
+    text-align: left;
+    cursor: pointer;
+    display: grid;
+    gap: 10px;
+    transition: .2s ease;
+    color: inherit;
+}
+
+.settings-choice-card:hover:not(:disabled) {
+    transform: translateY(-2px);
+    border-color: #93c5fd;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, .08);
+}
+
+.settings-choice-card:disabled {
+    opacity: .58;
+    cursor: not-allowed;
+}
+
+.settings-choice-card strong {
+    color: #0f172a;
+    font-size: 1rem;
+}
+
+.settings-choice-card span {
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.settings-provider-list {
+    display: grid;
+    gap: 12px;
+}
+
+.settings-provider-card {
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.settings-provider-avatar {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #eff6ff;
+    color: #294FD8;
+}
+
+.settings-provider-card > div:nth-child(2) {
+    display: grid;
+    gap: 3px;
+}
+
+.settings-provider-card strong {
+    color: #0f172a;
+}
+
+.settings-provider-card span,
+.settings-provider-card small {
+    color: #64748b;
+}
+
+.settings-provider-status {
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #047857 !important;
+    font-size: .78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.settings-provider-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.settings-provider-form label {
+    display: grid;
+    gap: 7px;
+    color: #334155;
+    font-size: .9rem;
+    font-weight: 600;
+}
+
+.settings-provider-form input,
+.settings-provider-form select {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid #dbe2f0;
+    border-radius: 11px;
+    padding: 10px 12px;
+    background: #fff;
+    color: #0f172a;
+    font: inherit;
+}
+
+.settings-provider-form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+html[data-theme="dark"] .settings-content-card,
+html[data-theme="dark"] .settings-contact-card,
+html[data-theme="dark"] .settings-choice-card,
+html[data-theme="dark"] .settings-provider-card,
+html[data-theme="dark"] .settings-provider-form input,
+html[data-theme="dark"] .settings-provider-form select {
+    background: #111827;
+    border-color: #334155;
+}
+
+html[data-theme="dark"] .settings-document-section h4,
+html[data-theme="dark"] .settings-company-hero h4,
+html[data-theme="dark"] .settings-contact-card strong,
+html[data-theme="dark"] .settings-choice-card strong,
+html[data-theme="dark"] .settings-provider-card strong {
+    color: #f8fafc;
+}
+
+html[data-theme="dark"] .settings-document-section {
+    border-color: #334155;
+}
+
+@media (max-width: 720px) {
+    .settings-contact-grid,
+    .settings-choice-grid,
+    .settings-provider-form {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-provider-card {
+        grid-template-columns: 42px 1fr;
+    }
+
+    .settings-provider-status {
+        grid-column: 2;
+        justify-self: start;
+    }
+}
+
+
+/* ============================================================
+   016 - Autenticação de dois fatores
+============================================================ */
+.two-factor-settings-card {
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    gap: 18px;
+    align-items: start;
+    padding: 8px 2px;
+}
+.two-factor-settings-icon {
+    width: 66px;
+    height: 66px;
+    display: grid;
+    place-items: center;
+    border-radius: 20px;
+    background: #eef3ff;
+    color: #2347b7;
+    font-size: 1.55rem;
+}
+.two-factor-settings-icon.active {
+    background: #eaf8ef;
+    color: #16a34a;
+}
+.two-factor-settings-copy h4,
+.two-factor-confirmation-sent h4 {
+    margin: 8px 0 8px;
+    color: var(--text-primary);
+}
+.two-factor-settings-copy p,
+.two-factor-confirmation-sent p {
+    margin: 0 0 10px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+.two-factor-status {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: .78rem;
+    font-weight: 800;
+}
+.two-factor-status.active {
+    background: #dcfce7;
+    color: #15803d;
+}
+.two-factor-settings-note {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+.two-factor-action-btn.danger {
+    background: #fff1f2 !important;
+    color: #be123c !important;
+    border: 1px solid #fecdd3 !important;
+}
+.two-factor-confirmation-sent {
+    text-align: center;
+    padding: 18px 8px 8px;
+}
+.two-factor-confirmation-sent .two-factor-settings-icon {
+    margin: 0 auto 14px;
+}
+@media (max-width: 620px) {
+    .two-factor-settings-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    .two-factor-settings-icon { margin-inline: auto; }
+}
+
+/* 022 - Botão de saída compacto */
+.profile-card-actions .btn-logout {
+    width: auto;
+    min-width: 0;
+    min-height: 38px;
+    padding: 8px 13px;
+    border-radius: 9px;
+    gap: 7px;
+    font-size: 0.86rem;
+    line-height: 1.1;
+    flex: 0 0 auto;
+}
+.profile-card-actions .btn-logout i { font-size: 0.88rem; }
+
+
+/* ============================================================
+   044 - Contenção de texto + contraste consistente no modo escuro
+============================================================ */
+.config-content,
+.config-grid,
+.config-card,
+.config-card *,
+.profile-preview,
+.profile-info,
+.profile-details,
+.detail-item,
+.config-card .form-group,
+.theme-buttons,
+.font-buttons,
+.language-select-wrap {
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.config-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+.config-card {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
+.config-card h3,
+.profile-name {
+    color: var(--text-primary);
+}
+
+.profile-info,
+.profile-details {
+    flex: 1 1 auto;
+    max-width: 100%;
+}
+
+.profile-name,
+.profile-type,
+.profile-email,
+.detail-item span,
+.config-card .form-group span,
+.config-card p,
+.config-card label,
+.settings-content-card,
+.settings-content-card p,
+.settings-content-card li {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+}
+
+.detail-item,
+.config-card .form-group {
+    width: 100%;
+    max-width: 100%;
+}
+
+.detail-item span,
+.config-card .form-group span {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.config-card .form-group i:first-of-type,
+.config-card .form-group i:last-of-type,
+.detail-item i {
+    flex: 0 0 auto;
+}
+
+.theme-buttons,
+.font-buttons,
+.profile-card-actions,
+.dam-footer {
+    flex-wrap: wrap;
+}
+
+.theme-btn,
+.font-btn,
+.btn-edit-profile,
+.btn-logout,
+.btn-delete-account,
+.dam-btn {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Cores que antes estavam fixas para o tema claro agora acompanham o tema. */
+.config-card .form-group,
+.detail-item,
+.dam-confirm-input label,
+.theme-selector label,
+.font-size-selector label,
+.language-selector label {
+    color: var(--text-secondary);
+}
+
+.profile-type,
+.profile-email,
+.config-footer {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .config-content {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .config-card,
+[data-theme="dark"] .delete-account-box,
+[data-theme="dark"] .reservas-modal-card,
+[data-theme="dark"] .settings-content-card {
+    background: #111827 !important;
+    color: #F8FAFC !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] .config-card h1,
+[data-theme="dark"] .config-card h2,
+[data-theme="dark"] .config-card h3,
+[data-theme="dark"] .config-card h4,
+[data-theme="dark"] .config-card strong,
+[data-theme="dark"] .profile-name,
+[data-theme="dark"] .detail-item,
+[data-theme="dark"] .config-card .form-group,
+[data-theme="dark"] .theme-selector label,
+[data-theme="dark"] .font-size-selector label,
+[data-theme="dark"] .language-selector label,
+[data-theme="dark"] .dam-confirm-input label,
+[data-theme="dark"] .settings-content-card h1,
+[data-theme="dark"] .settings-content-card h2,
+[data-theme="dark"] .settings-content-card h3,
+[data-theme="dark"] .settings-content-card h4 {
+    color: #F8FAFC !important;
+}
+
+[data-theme="dark"] .profile-type,
+[data-theme="dark"] .profile-email,
+[data-theme="dark"] .config-card p,
+[data-theme="dark"] .config-card small,
+[data-theme="dark"] .config-footer,
+[data-theme="dark"] .reservas-modal-header p,
+[data-theme="dark"] .settings-content-card p,
+[data-theme="dark"] .settings-content-card li {
+    color: #CBD5E1 !important;
+}
+
+[data-theme="dark"] .theme-btn,
+[data-theme="dark"] .font-btn,
+[data-theme="dark"] .btn-edit-profile,
+[data-theme="dark"] .language-select,
+[data-theme="dark"] .language-select-wrap {
+    background: #182235 !important;
+    color: #F8FAFC !important;
+    border-color: #475569 !important;
+}
+
+[data-theme="dark"] .language-select option {
+    background: #111827;
+    color: #F8FAFC;
+}
+
+[data-theme="dark"] .dam-warning-list {
+    background: #3F1218;
+    border-color: rgba(248, 113, 113, .35);
+}
+
+[data-theme="dark"] .dam-warning-list li {
+    color: #FCA5A5;
+}
+
+@media (max-width: 640px) {
+    .config-content {
+        padding: 16px 12px !important;
+    }
+
+    .config-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 14px;
+    }
+
+    .config-card {
+        padding: 18px 16px;
+    }
+
+    .profile-preview {
+        align-items: flex-start;
+    }
+
+    .profile-avatar {
+        width: 58px;
+        height: 58px;
+        flex-basis: 58px;
+    }
+}
+
+/* 044.1 - Contraste dos modais internos de Configurações */
+.settings-document-intro,
+.settings-company-hero,
+.settings-contact-card,
+.settings-choice-card,
+.settings-provider-card,
+.settings-provider-card > div:nth-child(2),
+.settings-provider-form,
+.settings-provider-form label,
+.two-factor-settings-copy {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.settings-document-intro span,
+.settings-document-section p,
+.settings-document-section li,
+.settings-company-hero p,
+.settings-contact-card span,
+.settings-contact-card strong,
+.settings-contact-note,
+.settings-choice-card strong,
+.settings-choice-card span,
+.settings-provider-card strong,
+.settings-provider-card span,
+.settings-provider-card small,
+.settings-provider-form label,
+.two-factor-settings-copy p,
+.two-factor-settings-copy h4 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+html[data-theme="dark"] .settings-document-intro {
+    background: #172554;
+    color: #DBEAFE;
+}
+
+html[data-theme="dark"] .settings-document-intro span,
+html[data-theme="dark"] .settings-document-section p,
+html[data-theme="dark"] .settings-document-section li,
+html[data-theme="dark"] .settings-company-hero p,
+html[data-theme="dark"] .settings-contact-card span,
+html[data-theme="dark"] .settings-contact-note,
+html[data-theme="dark"] .settings-choice-card span,
+html[data-theme="dark"] .settings-provider-card span,
+html[data-theme="dark"] .settings-provider-card small,
+html[data-theme="dark"] .settings-provider-form label,
+html[data-theme="dark"] .two-factor-settings-copy p,
+html[data-theme="dark"] .two-factor-confirmation-sent p {
+    color: #CBD5E1 !important;
+}
+
+html[data-theme="dark"] .settings-company-hero {
+    background: linear-gradient(135deg, #172554, #134E4A);
+    border-color: #334155;
+}
+
+html[data-theme="dark"] .settings-provider-form input,
+html[data-theme="dark"] .settings-provider-form select {
+    color: #F8FAFC !important;
+}
+
+html[data-theme="dark"] .two-factor-settings-note {
+    background: #182235;
+    color: #CBD5E1;
+}
+
+html[data-theme="dark"] .two-factor-settings-icon {
+    background: #172554;
+    color: #93C5FD;
+}
+
+
+/* ============================================================
+   046 - Seletor de idioma: uma única superfície visual
+============================================================ */
+.condomit-app-page .language-selector {
+    display: grid;
+    gap: 9px;
+}
+
+.condomit-app-page .language-select-wrap {
+    min-height: 50px;
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 38px;
+    align-items: center;
+    border: 1px solid #d9e1eb !important;
+    border-radius: 14px !important;
+    background: #f8fafc !important;
+    box-shadow: none !important;
+    overflow: hidden;
+    transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.condomit-app-page .language-select-wrap:hover {
+    background: #f4f7fa !important;
+    border-color: #c9d5e2 !important;
+}
+
+.condomit-app-page .language-select-wrap:focus-within {
+    background: #ffffff !important;
+    border-color: #8ea9c6 !important;
+    box-shadow: 0 0 0 3px rgba(74,111,152,.10) !important;
+}
+
+.condomit-app-page .language-select-wrap > .fa-globe {
+    padding: 0 !important;
+    text-align: center;
+    color: #55789d !important;
+    font-size: 1rem;
+}
+
+.condomit-app-page .language-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px !important;
+    height: 48px !important;
+    padding: 0 8px !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    outline: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #25364a !important;
+    font-weight: 650;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.condomit-app-page .language-select:focus {
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+}
+
+.condomit-app-page .language-select-wrap .language-select-arrow {
+    padding: 0 !important;
+    text-align: center;
+    color: #7b8798 !important;
+    pointer-events: none;
+}
+
+html[data-theme="dark"] .condomit-app-page .language-select-wrap,
+html[data-theme="dark"] .condomit-app-page .language-select-wrap:hover,
+html[data-theme="dark"] .condomit-app-page .language-select-wrap:focus-within {
+    background: #162131 !important;
+    border-color: #334257 !important;
+}
+
+html[data-theme="dark"] .condomit-app-page .language-select {
+    background: transparent !important;
+    color: #eef3f8 !important;
+}
+
+
+/* 047 - Ícones de Configurações na paleta Condomit */
+.config-card .form-group i:first-of-type,
+.detail-item i,
+.access-kind-card i,
+.section-icon,
+.config-section-icon,
+.setting-icon,
+.profile-details i {
+    color: #3360F2 !important;
+}
+.config-card .form-group:hover i:first-of-type { color: #183E92 !important; }
+html[data-theme="dark"] .config-card .form-group i:first-of-type,
+html[data-theme="dark"] .detail-item i,
+html[data-theme="dark"] .access-kind-card i,
+html[data-theme="dark"] .section-icon,
+html[data-theme="dark"] .config-section-icon,
+html[data-theme="dark"] .setting-icon,
+html[data-theme="dark"] .profile-details i {
+    color: #8CAAF0 !important;
+}
+
+
+/* ============================================================
+   048 - Perfil do usuário: mais espaço e ações alinhadas
+============================================================ */
+@media (min-width: 980px) {
+    .config-grid .profile-card {
+        grid-column: span 2;
+        min-width: 0;
+    }
+    .profile-card .profile-details {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 14px;
+    }
+    .profile-card .detail-item { margin-bottom: 0; }
+}
+.profile-card {
+    min-width: 0;
+}
+.profile-card .profile-info,
+.profile-card .profile-details,
+.profile-card .detail-item,
+.profile-card .detail-item span {
+    min-width: 0;
+}
+.profile-card .profile-name,
+.profile-card .profile-email,
+.profile-card .detail-item span {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.profile-card-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 12px !important;
+    margin-top: 20px;
+}
+.profile-card-actions > button {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px !important;
+    margin: 0 !important;
+    padding: 11px 14px !important;
+    border-radius: 11px !important;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.2;
+}
+.btn-edit-profile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #C9D6EA !important;
+    color: #294FD8 !important;
+    background: #F7F9FD !important;
+}
+.btn-edit-profile:hover {
+    border-color: #91A9DF !important;
+    color: #2E56B0 !important;
+    background: #EEF3FD !important;
+}
+.btn-logout,
+.btn-delete-account {
+    min-height: 48px !important;
+    padding: 11px 14px !important;
+    border-radius: 11px !important;
+    font-size: .93rem !important;
+    font-weight: 700 !important;
+}
+.btn-logout {
+    border: 1.5px solid #E4A0A0 !important;
+    background: #FFF7F7 !important;
+    color: #C92B2B !important;
+    box-shadow: none !important;
+}
+.btn-logout:hover {
+    border-color: #D97777 !important;
+    background: #FDECEC !important;
+    color: #B42323 !important;
+}
+.btn-delete-account {
+    border: 1.5px solid #D92D2D !important;
+    background: #D92D2D !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+.btn-delete-account:hover {
+    border-color: #BB2424 !important;
+    background: #BB2424 !important;
+    box-shadow: 0 6px 14px rgba(187,36,36,.18) !important;
+}
+.config-card .form-group i:first-of-type,
+.detail-item i {
+    color: #3360F2 !important;
+}
+html[data-theme="dark"] .btn-edit-profile {
+    background: #18243A !important;
+    border-color: #3D5375 !important;
+    color: #9DBAF5 !important;
+}
+html[data-theme="dark"] .btn-logout {
+    background: rgba(248,113,113,.08) !important;
+    border-color: rgba(248,113,113,.35) !important;
+    color: #FCA5A5 !important;
+}
+@media (max-width: 760px) {
+    .profile-card-actions { grid-template-columns: 1fr !important; }
+    .profile-card .profile-details { display: block; }
+    .profile-card .detail-item { margin-bottom: 10px; }
+}
+
+
+/* ============================================================
+   053 - Preferências de notificação e privacidade
+============================================================ */
+.notification-settings-hint{margin:-8px 0 14px;color:var(--text-secondary,#64748b);font-size:.88rem;line-height:1.5}
+.notification-preference-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--border-color,#e5e7eb)}
+.notification-preference-row:last-of-type{border-bottom:0}
+.notification-preference-copy{display:flex;align-items:center;gap:12px;min-width:0}
+.notification-preference-copy>i{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;color:#2252BD;background:#eef4ff}
+.notification-preference-copy div{min-width:0;display:grid;gap:3px}
+.notification-preference-copy strong{color:var(--text-primary,#1f2937);font-size:.94rem;line-height:1.3}
+.notification-preference-copy small{color:var(--text-secondary,#64748b);font-size:.8rem;line-height:1.35}
+.notification-switch{position:relative;display:inline-flex;align-items:center;flex:0 0 auto;cursor:pointer}
+.notification-switch input{position:absolute;opacity:0;pointer-events:none}
+.notification-switch-track{width:42px;height:24px;padding:3px;border-radius:999px;background:#cbd5e1;display:flex;align-items:center;transition:background .18s ease,box-shadow .18s ease}
+.notification-switch-thumb{width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(15,23,42,.22);transform:translateX(0);transition:transform .18s ease}
+.notification-switch input:checked+.notification-switch-track{background:#16a765}
+.notification-switch input:checked+.notification-switch-track .notification-switch-thumb{transform:translateX(18px)}
+.notification-switch input:focus-visible+.notification-switch-track{box-shadow:0 0 0 3px rgba(34,82,189,.18)}
+.notification-switch input:disabled+.notification-switch-track{opacity:.55;cursor:wait}
+.device-notification-status{display:flex;align-items:flex-start;gap:8px;margin-top:14px;padding:10px 12px;border-radius:11px;background:#f8fafc;color:#64748b;font-size:.8rem;line-height:1.4}
+.device-notification-status.success{background:#ecfdf5;color:#047857}
+.device-notification-status.warning{background:#fffbeb;color:#92400e}
+.device-notification-status.error{background:#fef2f2;color:#b91c1c}
+.privacy-session-action{width:100%;display:flex;align-items:center;gap:12px;padding:13px 0;border:0;border-top:1px solid var(--border-color,#e5e7eb);background:transparent;text-align:left;cursor:pointer;color:var(--text-primary,#1f2937)}
+.privacy-session-action-icon{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;background:#fef2f2;color:#dc2626}
+.privacy-session-action-copy{flex:1;display:grid;gap:3px;min-width:0}
+.privacy-session-action-copy strong{font-size:.94rem;color:var(--text-primary,#1f2937)}
+.privacy-session-action-copy small{font-size:.8rem;color:var(--text-secondary,#64748b);line-height:1.35}
+.privacy-session-action>i{color:#94a3b8}
+.privacy-session-action:hover .privacy-session-action-copy strong{color:#b91c1c}
+html[data-theme="dark"] .notification-preference-copy>i{background:#172554;color:#93c5fd}
+html[data-theme="dark"] .notification-switch-track{background:#475569}
+html[data-theme="dark"] .device-notification-status{background:#162235;color:#cbd5e1}
+html[data-theme="dark"] .device-notification-status.success{background:#052e2b;color:#6ee7b7}
+html[data-theme="dark"] .device-notification-status.warning{background:#422006;color:#fbbf24}
+html[data-theme="dark"] .device-notification-status.error{background:#450a0a;color:#fca5a5}
+@media(max-width:560px){.notification-preference-row{align-items:flex-start}.notification-switch{margin-top:4px}.notification-preference-copy small{font-size:.78rem}}
+
+/* ============================================================
+   0.56.0 - Configurações: contraste, condomínio e reservas
+============================================================ */
+html[data-theme="dark"] .privacy-session-action-icon{
+    background:#5b1018;
+    color:#fecaca;
+    border:1px solid #991b1b;
+    box-shadow:0 0 0 1px rgba(248,113,113,.08),0 5px 14px rgba(0,0,0,.2);
+}
+html[data-theme="dark"] .privacy-session-action-icon i{color:#fecaca!important}
+html[data-theme="dark"] .privacy-session-action>i{color:#cbd5e1}
+
+.condominio-modal-actions{justify-content:flex-end;gap:10px}
+.btn-secondary-config{background:var(--card-bg,#fff)!important;color:var(--text-primary,#1f2937)!important;border:1px solid var(--border-color,#dbe2f0)!important}
+.btn-config-danger{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 15px;border-radius:12px;border:1px solid #fecaca;background:#fff1f2;color:#b91c1c;font-weight:800;cursor:pointer}
+.btn-config-danger:hover{background:#ffe4e6;border-color:#fda4af}
+
+.condominio-profile-head{display:flex;align-items:center;gap:16px;padding:4px 0 18px;margin-bottom:18px;border-bottom:1px solid var(--border-color,#e5e7eb)}
+.condominio-profile-head>div:last-child{min-width:0}
+.condominio-profile-head span{display:block;color:var(--text-secondary,#64748b);font-size:.78rem;font-weight:750;text-transform:uppercase;letter-spacing:.05em}
+.condominio-profile-head h4{margin:4px 0 2px;color:var(--text-primary,#1f2937);font-size:1.15rem;overflow-wrap:anywhere}
+.condominio-profile-head p{margin:0;color:var(--text-secondary,#64748b);font-size:.88rem}
+.condominio-logo-preview{width:82px;height:82px;flex:0 0 82px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:#f8fafc;border:1px solid var(--border-color,#dbe2f0)}
+.condominio-logo-preview img{width:100%;height:100%;object-fit:cover;padding:0;background:#fff}
+
+.condominium-edit-form,.space-editor-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.condominium-edit-form label,.space-editor-form label{display:grid;gap:7px;color:var(--text-primary,#1f2937);font-size:.84rem;font-weight:750}
+.condominium-edit-form label.full,.space-editor-form label.full,.condo-logo-editor.full{grid-column:1/-1}
+.condominium-edit-form input,.space-editor-form input,.space-editor-form textarea{width:100%;border:1px solid var(--border-color,#dbe2f0);border-radius:12px;background:var(--card-bg,#fff);color:var(--text-primary,#1f2937);padding:11px 12px;font:inherit;min-height:44px}
+.condominium-edit-form input:focus,.space-editor-form input:focus,.space-editor-form textarea:focus{outline:0;border-color:#2252BD;box-shadow:0 0 0 3px rgba(34,82,189,.1)}
+.condo-logo-editor{display:flex;align-items:center;gap:16px;padding:14px;border:1px solid var(--border-color,#dbe2f0);border-radius:16px;background:var(--surface-soft,#f8fafc)}
+.condo-logo-upload{display:inline-flex!important;align-items:center;justify-content:center;gap:9px;padding:11px 14px;border-radius:12px;border:1px solid #c9d8f4;background:#eef4ff;color:#2252BD!important;cursor:pointer;font-weight:800!important}
+
+.reservation-management-card{width:min(960px,calc(100vw - 32px));max-height:min(88vh,820px)}
+.reservation-management-tabs{display:flex;gap:8px;padding:12px 22px;border-bottom:1px solid var(--border-color,#e5e7eb);background:var(--surface-soft,#f8fafc)}
+.management-tab{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border:1px solid transparent;border-radius:11px;background:transparent;color:var(--text-secondary,#64748b);font-weight:800;cursor:pointer}
+.management-tab.active{background:#fff;border-color:#dbe2f0;color:#2252BD;box-shadow:0 4px 12px rgba(15,23,42,.06)}
+.reservation-management-body{overflow:auto}
+.config-reservation-list{display:grid;gap:10px}
+.config-reservation-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:14px;border:1px solid var(--border-color,#e5e7eb);border-radius:15px;background:var(--card-bg,#fff)}
+.config-reservation-icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#eef4ff;color:#2252BD}
+.config-reservation-main{display:grid;gap:3px;min-width:0}
+.config-reservation-main strong{color:var(--text-primary,#1f2937)}
+.config-reservation-main span,.config-reservation-main small{color:var(--text-secondary,#64748b)}
+.config-reservation-status{padding:6px 9px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:.76rem;font-weight:800}
+.managed-space-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.managed-space-card{position:relative;display:grid;text-align:left;gap:6px;padding:16px;border:1px solid var(--border-color,#dbe2f0);border-radius:16px;background:var(--card-bg,#fff);color:var(--text-primary,#1f2937);cursor:pointer}
+.managed-space-card:disabled{cursor:default;opacity:1}
+.managed-space-card.selected{border-color:#2252BD;box-shadow:0 0 0 3px rgba(34,82,189,.09)}
+.managed-space-icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#eef4ff;color:#2252BD;margin-bottom:3px}
+.managed-space-card small,.managed-space-card p{margin:0;color:var(--text-secondary,#64748b);font-size:.83rem;line-height:1.4}
+.managed-space-check{position:absolute;top:12px;right:12px;width:24px;height:24px;border:1px solid #cbd5e1;border-radius:8px;display:grid;place-items:center;color:transparent;background:#fff}
+.managed-space-card.selected .managed-space-check{background:#2252BD;border-color:#2252BD;color:#fff}
+.reservation-management-footer{min-height:68px;gap:10px;justify-content:flex-end}
+
+.current-version-banner{padding:18px;border-radius:16px;background:linear-gradient(135deg,#eef4ff,#f8fbff);border:1px solid #d7e3f8;display:grid;gap:4px;margin-bottom:16px}
+.current-version-banner span{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;font-weight:800}
+.current-version-banner strong{font-size:1.7rem;color:#2252BD}
+.current-version-banner small{color:#64748b}
+.release-history{display:grid;gap:10px}
+.release-item{display:grid;grid-template-columns:72px 1fr;gap:12px;padding:13px 0;border-bottom:1px solid var(--border-color,#e5e7eb)}
+.release-item:last-child{border-bottom:0}
+.release-item>span{display:inline-flex;height:30px;align-items:center;justify-content:center;border-radius:9px;background:#eef4ff;color:#2252BD;font-size:.8rem;font-weight:850}
+.release-item strong{display:block;color:var(--text-primary,#1f2937);margin-bottom:3px}
+.release-item p{margin:0;color:var(--text-secondary,#64748b);line-height:1.45;font-size:.86rem}
+
+html[data-theme="dark"] .btn-secondary-config{background:#162235!important;border-color:#334155!important;color:#f8fafc!important}
+html[data-theme="dark"] .btn-config-danger{background:#450a0a;border-color:#7f1d1d;color:#fecaca}
+html[data-theme="dark"] .condominio-logo-preview{background:#162235;border-color:#334155}
+html[data-theme="dark"] .condominium-edit-form input,html[data-theme="dark"] .space-editor-form input,html[data-theme="dark"] .space-editor-form textarea{background:#0f172a;border-color:#334155;color:#f8fafc}
+html[data-theme="dark"] .condo-logo-editor{background:#101826;border-color:#334155}
+html[data-theme="dark"] .condo-logo-upload{background:#172554;border-color:#1e40af;color:#bfdbfe!important}
+html[data-theme="dark"] .reservation-management-tabs{background:#101826;border-color:#334155}
+html[data-theme="dark"] .management-tab.active{background:#162235;border-color:#334155;color:#bfdbfe}
+html[data-theme="dark"] .config-reservation-card,html[data-theme="dark"] .managed-space-card{background:#101826;border-color:#334155}
+html[data-theme="dark"] .config-reservation-icon,html[data-theme="dark"] .managed-space-icon{background:#172554;color:#bfdbfe}
+html[data-theme="dark"] .managed-space-check{background:#0f172a;border-color:#475569}
+html[data-theme="dark"] .current-version-banner{background:linear-gradient(135deg,#172554,#101826);border-color:#1e40af}
+html[data-theme="dark"] .current-version-banner strong,html[data-theme="dark"] .release-item>span{color:#bfdbfe}
+html[data-theme="dark"] .release-item>span{background:#172554}
+
+@media(max-width:720px){
+ .condominium-edit-form,.space-editor-form,.managed-space-grid{grid-template-columns:1fr}
+ .config-reservation-card{grid-template-columns:auto 1fr}.config-reservation-status{grid-column:2;justify-self:start}
+ .condo-logo-editor{align-items:flex-start;flex-direction:column}
+ .reservation-management-tabs{overflow-x:auto}
+ .reservation-management-footer>*{flex:1 1 100%}
+}
+
+/* 0.71.0 */
+.reserva-status-badge.confirmada{background:#dcfce7;color:#166534}
+.settings-content-footer .visitor-submit-btn i{margin-right:8px}
+.settings-resident-list{display:grid;gap:12px}
+.settings-resident-card{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid var(--border-color,#dbe2f0);border-radius:14px;background:var(--card-bg,#fff)}
+.settings-resident-avatar{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#e8efff;color:#2252bd;font-weight:800;flex:0 0 auto}
+.settings-resident-copy{display:grid;gap:3px;min-width:0}.settings-resident-copy strong{color:var(--text-primary,#172033)}.settings-resident-copy span,.settings-resident-copy small{color:var(--text-secondary,#64748b)}
+.consent-management-list{display:grid;gap:12px}.consent-management-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px;border:1px solid var(--border-color,#dbe2f0);border-radius:14px}.consent-management-row>div{display:grid;gap:5px}.consent-management-row small{color:var(--text-secondary,#64748b);line-height:1.45}.consent-management-row.required{background:rgba(34,82,189,.05)}.consent-legal-note{display:flex;gap:9px;align-items:flex-start;padding:12px;border-radius:12px;background:rgba(34,82,189,.06);color:var(--text-secondary,#64748b)}
+
+
+/* Condomit Desktop - atualização do aplicativo */
+#desktopUpdateSettingsItem[hidden] { display: none !important; }
+.desktop-update-card { display:flex; flex-direction:column; gap:18px; }
+.desktop-update-version-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; border:1px solid #dbe4f0; border-radius:14px; background:#f8fafc; }
+.desktop-update-version-row span { color:#64748b; font-size:.92rem; }
+.desktop-update-version-row strong { color:#0f172a; font-size:1.08rem; }
+.desktop-update-status { display:flex; gap:14px; align-items:flex-start; padding:18px; border-radius:16px; border:1px solid #dbe4f0; background:#fff; }
+.desktop-update-status-icon { width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center; background:#edf3ff; color:#2454c4; flex:0 0 42px; }
+.desktop-update-status strong { display:block; color:#172033; margin:1px 0 5px; }
+.desktop-update-status p { margin:0; color:#64748b; line-height:1.55; }
+.desktop-update-status--success { border-color:#bbebcd; background:#f3fbf6; }
+.desktop-update-status--success .desktop-update-status-icon { background:#dcf7e6; color:#0b8b45; }
+.desktop-update-status--available { border-color:#bfd0ff; background:#f5f8ff; }
+.desktop-update-status--available .desktop-update-status-icon { background:#e5edff; color:#1d4ed8; }
+.desktop-update-status--error { border-color:#ffd2d2; background:#fff7f7; }
+.desktop-update-status--error .desktop-update-status-icon { background:#ffe7e7; color:#c62828; }
+.desktop-update-progress { padding:4px 2px 0; }
+.desktop-update-progress-track { height:9px; background:#e8edf5; border-radius:999px; overflow:hidden; margin-bottom:8px; }
+.desktop-update-progress-track span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,#2252bd,#3d73ea); transition:width .22s ease; }
+.desktop-update-progress small { color:#64748b; }
+.btn-secondary-settings { border:1px solid #cdd8e8; background:#fff; color:#315078; border-radius:12px; padding:11px 18px; font-weight:700; cursor:pointer; }
