@@ -1,10 +1,10 @@
-import { state } from './state.js?v=0723';
-import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0723';
-import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=0723';
-import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=0723';
-import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0723';
-import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0723';
-import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=0723';
+import { state } from './state.js?v=0724';
+import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0724';
+import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=0724';
+import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=0724';
+import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0724';
+import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
+import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=0724';
 
 function $(id) {
   return document.getElementById(id);

@@ -96,8 +96,17 @@ Esse comando valida JavaScript, referências locais de HTML e arquivos obrigató
 - `MERCADO_PAGO_PUBLIC_KEY`
 - `BREVO_API_KEY`
 - `BREVO_SENDER_EMAIL`
-- `APP_BASE_URL=https://condomit.netlify.app`
+- `APP_BASE_URL=https://condomit.com.br`
 - `CONDOMIT_DESKTOP_GITHUB_REPO=GiancarloFecap/Condomit`
+
+
+## Domínio oficial
+
+A URL pública de produção da Condomit é **https://condomit.com.br**. O domínio `condomit.netlify.app` deve ser tratado apenas como endereço técnico/legado da hospedagem, não como URL pública principal.
+
+A troca para o domínio próprio também é usada pelo aplicativo Desktop, pelo backend das funções Netlify, pelos retornos do Mercado Pago e pelos links transacionais gerados pelo backend. No Netlify, mantenha a variável de ambiente `APP_BASE_URL` definida como `https://condomit.com.br`.
+
+Para concluir a configuração fora do código, consulte `DOMAIN_SETUP.md`.
 
 ## Páginas públicas
 

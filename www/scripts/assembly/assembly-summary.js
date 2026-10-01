@@ -319,31 +319,44 @@
             return source === 'recording_video_whisper' || source === 'recording_whisper_local';
         });
         const transcriptSourceRows = recordingTranscripts.length ? recordingTranscripts : [...state.transcripts];
-        const orderedTranscripts = transcriptSourceRows
-            .filter((row) => cleanFormalText(row.transcript || ''))
+        const isInferredTranscript = (row) => String(row.participant_identity || '').startsWith('__condomit_inferred__:');
+        const confidentTranscripts = transcriptSourceRows
+            .filter((row) => cleanFormalText(row.transcript || '') && !isInferredTranscript(row))
+            .sort((a, b) => new Date(a.spoken_at || a.created_at || 0) - new Date(b.spoken_at || b.created_at || 0));
+        const inferredTranscripts = transcriptSourceRows
+            .filter((row) => cleanFormalText(row.transcript || '') && isInferredTranscript(row))
             .sort((a, b) => new Date(a.spoken_at || a.created_at || 0) - new Date(b.spoken_at || b.created_at || 0));
 
-        if (orderedTranscripts.length) {
-            orderedTranscripts.forEach((row) => {
+        if (confidentTranscripts.length) {
+            confidentTranscripts.forEach((row) => {
                 const name = cleanFormalText(row.participant_name || row.participant_email || 'Participante');
                 const text = ensureTerminalPunctuation(row.transcript || '');
                 const time = row.spoken_at ? new Date(row.spoken_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
                 paragraphs.push(`${time ? `Às ${time}, ` : ''}${name} declarou: “${text}”`);
             });
 
-            const transcribedKeys = new Set(orderedTranscripts.map((row) => String(row.participant_email || row.participant_name || '').trim().toLowerCase()).filter(Boolean));
+            const transcribedKeys = new Set(confidentTranscripts.map((row) => String(row.participant_email || row.participant_name || '').trim().toLowerCase()).filter(Boolean));
             const untranscribedSpeakers = uniqueSpeechParticipants().filter((speaker) => {
                 const key = String(speaker.email || speaker.name || '').trim().toLowerCase();
                 return key && !transcribedKeys.has(key);
             });
-            if (untranscribedSpeakers.length) {
+            if (untranscribedSpeakers.length && !inferredTranscripts.length) {
                 paragraphs.push(`Também foram detectadas manifestações orais de ${formatHumanList(untranscribedSpeakers.map((speaker) => speaker.name))}, sem transcrição textual automática disponível. Consulte a gravação audiovisual da assembleia para conferência do conteúdo.`);
             }
-        } else if (!agendaNotes.length) {
+        }
+
+        if (inferredTranscripts.length) {
+            paragraphs.push('Como parte do conteúdo não pôde ser reconhecida com segurança suficiente, o sistema apresenta abaixo uma interpretação provável do que foi dito. Consulte a gravação audiovisual disponível nesta Ata para confirmar o conteúdo e obter maior clareza sobre o que foi discutido.');
+            inferredTranscripts.forEach((row) => {
+                const text = ensureTerminalPunctuation(row.transcript || '');
+                const time = row.spoken_at ? new Date(row.spoken_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+                paragraphs.push(`${time ? `Por volta das ${time}, ` : ''}conteúdo presumido da gravação: “${text}”`);
+            });
+        } else if (!confidentTranscripts.length && !agendaNotes.length) {
             const speakers = uniqueSpeechParticipants();
             if (speakers.length) {
                 const names = speakers.map((speaker) => speaker.name).filter(Boolean);
-                paragraphs.push(`Foram detectadas manifestações orais de ${formatHumanList(names)}. Como não há texto reconhecido com segurança suficiente, o sistema não presume o conteúdo; consulte a gravação audiovisual disponível nesta Ata.`);
+                paragraphs.push(`Foram detectadas manifestações orais de ${formatHumanList(names)}. O sistema tentou reconstruir o conteúdo a partir da gravação, mas não obteve texto utilizável. Consulte a gravação audiovisual disponível nesta Ata para verificar o que foi discutido.`);
             } else {
                 paragraphs.push('Não foram localizadas transcrições textuais, anotações formais de discussão ou registros técnicos de atividade de fala vinculados a esta assembleia.');
             }

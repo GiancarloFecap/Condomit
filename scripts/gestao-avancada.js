@@ -270,7 +270,7 @@
     });
     document.querySelectorAll('[data-close-modal]').forEach(btn=>btn.addEventListener('click',()=>$(btn.dataset.closeModal).hidden=true));
     $('copyApiExampleBtn')?.addEventListener('click', async () => {
-      const txt = `curl -H "x-condomit-api-key: SUA_CHAVE" "https://SEU-SITE.netlify.app/.netlify/functions/public-api?resource=metrics&cep=${state.cep}"`;
+      const txt = `curl -H "x-condomit-api-key: SUA_CHAVE" "https://condomit.com.br/.netlify/functions/public-api?resource=metrics&cep=${state.cep}"`;
       try { await navigator.clipboard.writeText(txt); toast('Exemplo da API copiado.','success'); } catch (_) { toast(txt); }
     });
   }

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const BACKEND_ORIGIN = 'https://condomit.netlify.app';
+  const BACKEND_ORIGIN = 'https://condomit.com.br';
 
   function isNativeApp() {
     try {

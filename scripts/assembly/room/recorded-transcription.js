@@ -1,11 +1,12 @@
-// Condomit v0.72.2
+// Condomit v0.72.5
 // Transcrição pós-reunião feita exclusivamente a partir do áudio do vídeo já salvo na Ata.
 // O processamento roda no navegador com Whisper/Transformers.js, sem API GPT.
 //
-// Para evitar que conversas paralelas virem texto oficial, cada palavra só é
-// aceita quando a linha do tempo do LiveKit indica um único participante como
-// falante ativo naquele instante. Sons não verbais e trechos sem falante
-// inequívoco são descartados.
+// Trechos com associação segura a um falante continuam sendo salvos como
+// transcrição oficial. Quando o reconhecimento textual existe, mas a associação
+// de falante não é segura o bastante, a Condomit preserva uma versão presumida
+// claramente identificada e manda o usuário conferir a gravação audiovisual.
+// Sons não verbais continuam sendo descartados.
 
 let transcriberPromise = null;
 
@@ -105,6 +106,138 @@ function resolveCleanSpeaker(start, end, timeline) {
   if (!winner || winnerOverlap / total < 0.42) return null;
   if (covered / total < 0.35) return null;
   return winner;
+}
+
+
+function resolveLikelySpeaker(start, end, timeline, participantDirectory) {
+  const safeStart = Math.max(0, Number(start) || 0);
+  const safeEnd = Math.max(safeStart + 0.08, Number(end) || safeStart + 0.3);
+  const paddedStart = Math.max(0, safeStart - 0.35);
+  const paddedEnd = safeEnd + 0.35;
+  const scores = new Map();
+
+  for (const segment of Array.isArray(timeline) ? timeline : []) {
+    const overlap = overlapSeconds(
+      paddedStart,
+      paddedEnd,
+      Number(segment?.start) || 0,
+      Number(segment?.end) || 0
+    );
+    if (!overlap) continue;
+
+    const identities = Array.from(new Set(
+      (Array.isArray(segment?.identities) ? segment.identities : [])
+        .map((value) => cleanText(value))
+        .filter(Boolean)
+    ));
+    if (!identities.length) continue;
+
+    // Quando há mais de um falante simultâneo, divide o peso entre eles em vez
+    // de fingir certeza. Isso serve apenas para escolher uma referência técnica
+    // para persistir o trecho presumido; a Ata não atribui essa fala à pessoa.
+    const weight = overlap / identities.length;
+    identities.forEach((identity) => {
+      scores.set(identity, (scores.get(identity) || 0) + weight);
+    });
+  }
+
+  let winner = '';
+  let winnerScore = 0;
+  for (const [identity, score] of scores.entries()) {
+    const email = normalizeEmail(participantDirectory?.[identity]?.email);
+    if (!email) continue;
+    if (score > winnerScore) {
+      winner = identity;
+      winnerScore = score;
+    }
+  }
+
+  if (winner) return winner;
+
+  // Sem linha do tempo útil, usa apenas um e-mail válido do diretório para
+  // satisfazer a persistência. A interface trata o trecho como conteúdo geral
+  // presumido da gravação e nunca o exibe como declaração desse participante.
+  return Object.keys(participantDirectory || {}).find((identity) =>
+    normalizeEmail(participantDirectory?.[identity]?.email)
+  ) || '';
+}
+
+function buildInferredEntries(output, startedAt, timeline, participantDirectory, confidentEntries) {
+  const chunks = Array.isArray(output?.chunks) ? output.chunks : [];
+  if (!chunks.length) return [];
+
+  const confidentWindows = (Array.isArray(confidentEntries) ? confidentEntries : [])
+    .map((entry) => ({
+      text: cleanText(entry?.transcript).toLowerCase(),
+      at: new Date(entry?.spoken_at || 0).getTime()
+    }))
+    .filter((item) => item.text);
+
+  const baseTime = startedAt instanceof Date ? startedAt : new Date(startedAt || Date.now());
+  const inferred = [];
+
+  for (const chunk of chunks) {
+    const text = cleanText(chunk?.text);
+    if (!text || text.length < 2 || isNonSpeechOnly(text)) continue;
+
+    const ts = Array.isArray(chunk?.timestamp) ? chunk.timestamp : [];
+    const start = Number(ts[0]);
+    const end = Number(ts[1]);
+    if (!Number.isFinite(start)) continue;
+    const safeEnd = Number.isFinite(end) && end > start ? end : start + 0.6;
+
+    // Se este mesmo trecho já tem associação suficientemente segura a um
+    // participante, ele pertence à transcrição oficial, não à parte presumida.
+    if (resolveCleanSpeaker(start, safeEnd, timeline)) continue;
+
+    // Se o trecho já foi aproveitado com segurança, ele não precisa aparecer
+    // novamente como presunção.
+    const normalizedText = text.toLowerCase();
+    const absoluteTime = baseTime.getTime() + Math.max(0, start) * 1000;
+    const alreadyConfident = confidentWindows.some((item) => {
+      const nearTime = Number.isFinite(item.at) && Math.abs(item.at - absoluteTime) <= 4500;
+      const similarText = item.text.includes(normalizedText) || normalizedText.includes(item.text);
+      return nearTime && similarText;
+    });
+    if (alreadyConfident) continue;
+
+    const identity = resolveLikelySpeaker(start, safeEnd, timeline, participantDirectory || {});
+    if (!identity) continue;
+    const person = participantDirectory?.[identity] || {};
+    const email = normalizeEmail(person?.email);
+    if (!email) continue;
+
+    inferred.push({
+      participant_identity: `__condomit_inferred__:${identity}`,
+      participant_email: email,
+      participant_name: cleanText(person?.name || email),
+      participant_role: cleanText(person?.role || 'morador').toLowerCase(),
+      transcript: text,
+      spoken_at: new Date(absoluteTime).toISOString(),
+      inferred: true
+    });
+  }
+
+  // Junta fragmentos próximos para produzir uma leitura compreensível sem
+  // transformar pequenos tokens do Whisper em dezenas de parágrafos da Ata.
+  const merged = [];
+  for (const entry of inferred) {
+    const last = merged[merged.length - 1];
+    const lastTime = last ? new Date(last.spoken_at).getTime() : 0;
+    const currentTime = new Date(entry.spoken_at).getTime();
+    if (
+      last &&
+      Number.isFinite(lastTime) && Number.isFinite(currentTime) &&
+      currentTime - lastTime <= 9000 &&
+      String(last.transcript || '').length + String(entry.transcript || '').length < 700
+    ) {
+      last.transcript = joinTranscriptTokens(last.transcript, entry.transcript);
+      continue;
+    }
+    merged.push({ ...entry });
+  }
+
+  return merged.slice(0, 30);
 }
 
 function joinTranscriptTokens(current, token) {
@@ -301,13 +434,11 @@ export async function transcribeRecordedAssembly({
 }) {
   if (!blob?.size || !assemblyId) return [];
 
-  // Sem timeline não é seguro atribuir falas; não inventamos autor.
+  // A linha do tempo continua sendo usada para distinguir transcrição segura
+  // de conteúdo presumido. Se ela estiver incompleta, ainda tentamos recuperar
+  // o conteúdo textual da gravação, mas ele será marcado como estimativa.
   const cleanTimeline = (Array.isArray(speakerTimeline) ? speakerTimeline : [])
     .filter((segment) => Number(segment?.end) > Number(segment?.start));
-
-  if (!cleanTimeline.length) {
-    throw new Error('Não há linha do tempo de falantes suficiente para gerar uma transcrição confiável.');
-  }
 
   statusText('Preparando o vídeo salvo na Ata para transcrição…');
   const objectUrl = URL.createObjectURL(blob);
@@ -324,21 +455,33 @@ export async function transcribeRecordedAssembly({
       stride_length_s: 5
     });
 
-    const rawEntries = buildEntries(
+    const rawConfidentEntries = buildEntries(
       output,
       startedAt,
       cleanTimeline,
       participantDirectory || {}
     );
-    const entries = compactEntriesForPayload(rawEntries);
+    const confidentEntries = compactEntriesForPayload(rawConfidentEntries);
+    const inferredEntries = compactEntriesForPayload(buildInferredEntries(
+      output,
+      startedAt,
+      cleanTimeline,
+      participantDirectory || {},
+      confidentEntries
+    ));
+    const entries = compactEntriesForPayload([...confidentEntries, ...inferredEntries]);
 
-    statusText('Salvando transcrição na Ata…');
+    statusText(inferredEntries.length
+      ? 'Salvando transcrição e conteúdo presumido na Ata…'
+      : 'Salvando transcrição na Ata…');
     await persistEntries(assemblyId, entries);
 
     statusText(
       entries.length
-        ? `Gravação e transcrição salvas na Ata (${entries.length} trecho${entries.length === 1 ? '' : 's'}).`
-        : 'Gravação salva. Nenhuma fala inequívoca foi adicionada à Ata.'
+        ? (inferredEntries.length
+          ? `Gravação salva. Foram registrados ${confidentEntries.length} trecho${confidentEntries.length === 1 ? '' : 's'} reconhecido${confidentEntries.length === 1 ? '' : 's'} e ${inferredEntries.length} trecho${inferredEntries.length === 1 ? '' : 's'} presumido${inferredEntries.length === 1 ? '' : 's'} para conferência na gravação.`
+          : `Gravação e transcrição salvas na Ata (${entries.length} trecho${entries.length === 1 ? '' : 's'}).`)
+        : 'Gravação salva. O reconhecimento não produziu texto utilizável; consulte a gravação audiovisual da Ata.'
     );
     return entries;
   } finally {

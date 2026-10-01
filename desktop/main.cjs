@@ -7,8 +7,14 @@ const { spawn } = require('child_process');
 const { Readable } = require('stream');
 const { pipeline } = require('stream/promises');
 
-const APP_URL = process.env.CONDOMIT_DESKTOP_URL || 'https://condomit.netlify.app/inicio.html';
+const APP_URL = process.env.CONDOMIT_DESKTOP_URL || 'https://condomit.com.br/inicio.html';
 const APP_ORIGIN = new URL(APP_URL).origin;
+const TRUSTED_APP_ORIGINS = new Set([
+  APP_ORIGIN,
+  'https://condomit.com.br',
+  'https://www.condomit.com.br',
+  'https://condomit.netlify.app'
+]);
 const GITHUB_REPOSITORY = 'GiancarloFecap/Condomit';
 const GITHUB_API = `https://api.github.com/repos/${GITHUB_REPOSITORY}`;
 let mainWindow = null;
@@ -17,7 +23,7 @@ let updateDownloadInProgress = false;
 
 function isTrustedUrl(value) {
   try {
-    return new URL(value).origin === APP_ORIGIN;
+    return TRUSTED_APP_ORIGINS.has(new URL(value).origin);
   } catch (_) {
     return false;
   }
@@ -281,7 +287,7 @@ registerDesktopIpc();
 
 app.whenReady().then(() => {
   session.defaultSession.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
-    if (requestingOrigin !== APP_ORIGIN) return false;
+    if (!TRUSTED_APP_ORIGINS.has(requestingOrigin)) return false;
     return ['media', 'notifications', 'fullscreen', 'display-capture'].includes(permission);
   });
 

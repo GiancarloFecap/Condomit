@@ -12,7 +12,7 @@ Não existe um único executável que rode em todos os sistemas operacionais. O 
 
 ## Como funciona
 
-O Electron abre a versão HTTPS da Condomit (`https://condomit.netlify.app/inicio.html`) em uma janela desktop segura. Isso mantém Netlify Functions, Supabase, LiveKit, Mercado Pago e demais serviços funcionando no mesmo domínio da versão web, sem duplicar o backend.
+O Electron abre a versão HTTPS da Condomit (`https://condomit.com.br/inicio.html`) em uma janela desktop segura. Isso mantém Netlify Functions, Supabase, LiveKit, Mercado Pago e demais serviços funcionando no mesmo domínio da versão web, sem duplicar o backend.
 
 `desktop/main.cjs` é o processo principal do Electron. Ele cria a janela, restringe navegação a Condomit, abre links externos no navegador padrão e concede câmera/microfone/compartilhamento de tela apenas ao domínio oficial.
 
@@ -40,8 +40,8 @@ O arquivo `.github/workflows/desktop-release.yml` cria os três instaladores aut
 3. Faça push de uma tag, por exemplo:
 
 ```bash
-git tag v0.71.7
-git push origin v0.71.7
+git tag v0.72.5
+git push origin v0.72.5
 ```
 
 O GitHub Actions executará três builds e publicará os arquivos em **GitHub Releases**. A página `pages/download-desktop.html` consulta a função Netlify `desktop-downloads` e mostra os links da release mais recente.

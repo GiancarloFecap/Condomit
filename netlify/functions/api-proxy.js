@@ -3,7 +3,7 @@ const { Brevo, BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const APP_BASE_URL = process.env.APP_BASE_URL || 'https://condomit.netlify.app';
+const APP_BASE_URL = (process.env.APP_BASE_URL || 'https://condomit.com.br').replace(/\/$/, '');
 const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
 const MERCADO_PAGO_PUBLIC_KEY = process.env.MERCADO_PAGO_PUBLIC_KEY || '';
 const MERCADO_PAGO_ENV = normalizeMercadoPagoEnvironment(process.env.MERCADO_PAGO_ENV || 'test');
@@ -107,7 +107,7 @@ function getRequestOrigin(event) {
   const forwardedProto = headers['x-forwarded-proto'];
   const forwardedHost = headers['x-forwarded-host'];
   const protocol = forwardedProto || 'https';
-  const host = forwardedHost || headers.host || 'condomit.netlify.app';
+  const host = forwardedHost || headers.host || 'condomit.com.br';
   return `${protocol}://${host}`;
 }
 
@@ -1033,10 +1033,24 @@ async function applicationUserBelongsToCep(profile, cep) {
 
 function allowedCorsOrigin(event) {
   const origin = String(event?.headers?.origin || event?.headers?.Origin || '').trim();
-  if (!origin) return 'https://condomit.netlify.app';
-  if (origin === 'https://condomit.netlify.app' || origin === 'https://localhost' || origin === 'http://localhost' || origin === 'capacitor://localhost') return origin;
+  const productionOrigin = 'https://condomit.com.br';
+  const allowedOrigins = new Set([
+    productionOrigin,
+    'https://www.condomit.com.br',
+    'https://condomit.netlify.app', // compatibilidade temporária com links/deploys antigos
+    'https://localhost',
+    'http://localhost',
+    'capacitor://localhost'
+  ]);
+
+  try {
+    allowedOrigins.add(new URL(APP_BASE_URL).origin);
+  } catch (_) {}
+
+  if (!origin) return productionOrigin;
+  if (allowedOrigins.has(origin)) return origin;
   if (/^https:\/\/[a-z0-9-]+--condomit\.netlify\.app$/i.test(origin)) return origin;
-  return 'https://condomit.netlify.app';
+  return productionOrigin;
 }
 
 
