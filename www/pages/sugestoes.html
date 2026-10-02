@@ -44,13 +44,9 @@
                         <span>Indicações</span>
                     </a>
                     <div class="nav-section-title">Comunicação e Relacionamento</div>
-                    <a href="#" class="nav-item">
+                    <a href="chat.html" class="nav-item">
                         <i class="fas fa-comments"></i>
-                        <span>Chat com Moradores</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-door-open"></i>
-                        <span>Chat com Porteiro</span>
+                        <span>Chat</span>
                     </a>
                     <a href="#" class="nav-item">
                         <i class="fas fa-search"></i>
@@ -102,10 +98,6 @@
                     <a href="ai-condomit.html" class="nav-item">
                         <i class="fas fa-robot"></i>
                         <span>IA - Dúvidas do Condomínio</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-bell"></i>
-                        <span>IA - Comunicados Automáticos</span>
                     </a>
                 </div>
                 
@@ -214,20 +206,24 @@
         </main>
     </div>
 
-    <div class="modal-overlay" id="modalNovaSugestao">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Nova Sugestão</h3>
-                <button class="modal-close" id="modalClose">&times;</button>
+    <div class="modal-overlay" id="modalNovaSugestao" aria-hidden="true">
+        <div class="modal-content suggestion-compose-modal" role="dialog" aria-modal="true" aria-labelledby="novaSugestaoTitulo">
+            <div class="modal-header suggestion-compose-head">
+                <div>
+                    <span class="suggestion-modal-kicker">PARTICIPAÇÃO</span>
+                    <h3 id="novaSugestaoTitulo">Nova sugestão</h3>
+                    <p>Compartilhe uma ideia de melhoria para o condomínio.</p>
+                </div>
+                <button class="modal-close" id="modalClose" type="button" aria-label="Fechar"><i class="fas fa-xmark"></i></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body suggestion-compose-body">
                 <div class="form-group">
-                    <label for="sugestaoTitulo">Título da sugestão</label>
-                    <input type="text" id="sugestaoTitulo" class="form-input" placeholder="Digite o título da sua sugestão">
+                    <label for="sugestaoTitulo">Título</label>
+                    <input type="text" id="sugestaoTitulo" class="form-input" maxlength="120" placeholder="Ex.: Melhorar a iluminação da garagem">
                 </div>
                 <div class="form-group">
                     <label for="sugestaoCategoria">Categoria</label>
-                    <select id="sugestaoCategoria" class="form-input">
+                    <select id="sugestaoCategoria" class="form-input form-select">
                         <option value="">Selecione uma categoria</option>
                         <option value="areas-comuns">Áreas Comuns</option>
                         <option value="seguranca">Segurança</option>
@@ -239,12 +235,13 @@
                 </div>
                 <div class="form-group">
                     <label for="sugestaoDescricao">Descrição</label>
-                    <textarea id="sugestaoDescricao" class="form-input form-textarea" placeholder="Descreva detalhadamente a sua sugestão..."></textarea>
+                    <textarea id="sugestaoDescricao" class="form-input form-textarea" maxlength="1500" placeholder="Explique a sugestão, o problema que ela resolve e, se quiser, como poderia ser aplicada."></textarea>
+                    <small class="suggestion-helper">Seja objetivo e inclua detalhes que ajudem a administração a avaliar a ideia.</small>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-cancelar-modal" id="btnCancelarSugestao">Cancelar</button>
-                <button class="btn-enviar-sugestao" id="btnEnviarSugestao">Enviar Sugestão</button>
+            <div class="modal-footer suggestion-compose-footer">
+                <button class="btn-cancelar-modal" id="btnCancelarSugestao" type="button">Cancelar</button>
+                <button class="btn-enviar-sugestao" id="btnEnviarSugestao" type="button"><i class="fas fa-paper-plane"></i> Enviar sugestão</button>
             </div>
         </div>
     </div>

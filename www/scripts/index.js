@@ -340,6 +340,9 @@ async function loadMonthlyFinancialSummary(currentUser) {
     const incomeEl = document.getElementById('monthly-income');
     const expenseMetaEl = document.getElementById('monthly-expenses-meta');
     const incomeMetaEl = document.getElementById('monthly-income-meta');
+    const expenseBarEl = document.getElementById('monthly-expenses-bar');
+    const incomeBarEl = document.getElementById('monthly-income-bar');
+    const periodEl = document.getElementById('monthly-summary-period');
     if (!expenseEl || !incomeEl) return;
 
     const money = (value) => new Intl.NumberFormat('pt-BR', {
@@ -358,8 +361,19 @@ async function loadMonthlyFinancialSummary(currentUser) {
     const renderSummary = (summary) => {
         expenseEl.dataset.state = 'ready';
         incomeEl.dataset.state = 'ready';
-        expenseEl.textContent = money(summary?.expenses_total);
-        incomeEl.textContent = money(summary?.income_total);
+        const expensesTotal = Number(summary?.expenses_total || 0);
+        const incomeTotal = Number(summary?.income_total || 0);
+        expenseEl.textContent = money(expensesTotal);
+        incomeEl.textContent = money(incomeTotal);
+
+        const maxValue = Math.max(expensesTotal, incomeTotal, 1);
+        if (expenseBarEl) expenseBarEl.style.width = `${Math.max(expensesTotal > 0 ? 8 : 0, (expensesTotal / maxValue) * 100)}%`;
+        if (incomeBarEl) incomeBarEl.style.width = `${Math.max(incomeTotal > 0 ? 8 : 0, (incomeTotal / maxValue) * 100)}%`;
+        if (periodEl) {
+            periodEl.textContent = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
+                .format(new Date())
+                .replace(/^./, (letter) => letter.toUpperCase());
+        }
 
         const expenseCount = Number(summary?.expense_entries_count || 0);
         const incomeCount = Number(summary?.income_entries_count || 0);
@@ -511,10 +525,10 @@ function openQuickChatChooser() {
             if (event.target === modal) close();
         });
         modal.querySelector('[data-chat-target="residents"]')?.addEventListener('click', () => {
-            window.location.href = 'chat-moradores.html';
+            window.location.href = 'chat.html';
         });
         modal.querySelector('[data-chat-target="porter"]')?.addEventListener('click', () => {
-            window.location.href = 'chat-porteiro.html';
+            window.location.href = 'chat.html';
         });
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && modal.classList.contains('open')) close();

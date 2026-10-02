@@ -4262,7 +4262,6 @@ const CONDOMIT_PLAN_LABELS = Object.freeze({
 
 const CONDOMIT_PORTER_FULL_ACCESS_PAGES = Object.freeze(new Set([
   'index-porteiro.html',
-  'notificacoes.html',
   'ocorrencias.html',
   'liberacao-visitantes.html',
   'registrar-visitantes.html',
@@ -4270,16 +4269,13 @@ const CONDOMIT_PORTER_FULL_ACCESS_PAGES = Object.freeze(new Set([
   'visitantes-liberados.html',
   'autorizacao-entregas.html',
   'controle-prestadores.html',
-  'chat-sindico.html',
-  'chat-moradores.html',
+  'chat.html',
   'configuracoes.html',
   'ai-condomit.html'
 ]));
 
 const CONDOMIT_PAGE_MIN_PLAN = Object.freeze({
-  'chat-sindico.html': 2,
-  'chat-moradores.html': 2,
-  'chat-porteiro.html': 2,
+  'chat.html': 2,
   'achados-perdidos.html': 2,
   'assembleia.html': 2,
   'assembleia-detalhes.html': 2,
@@ -4297,7 +4293,6 @@ const CONDOMIT_PAGE_MIN_PLAN = Object.freeze({
   'ocorrencias.html': 3,
   'marketplace.html': 3,
   'gestao-avancada.html': 3,
-  'ai-comunicados.html': 3
 });
 
 let condomitPlanCatalogCache = {
@@ -4357,8 +4352,15 @@ async function fetchCondomitPlanCatalog(force = false) {
 }
 
 async function getCondomitPlanAccess(billing = null, force = false) {
-  const currentBilling = billing || await getCondomitBillingStatus(force);
   const user = getStoredCondominiumUser();
+  if (user?.demo_access === true) {
+    const demoAccess = { resolved: true, plan_id: null, plan_name: 'Premium', level: 3, billing: { status: 'demo', can_use: true, plan_name: 'Premium', demo_access: true } };
+    user.plan_name = 'Premium';
+    user.plan_level = 3;
+    try { sessionStorage.setItem('condominiumUser', JSON.stringify(user)); } catch (_) {}
+    return demoAccess;
+  }
+  const currentBilling = billing || await getCondomitBillingStatus(force);
   const candidates = [];
   const add = (name,id=null) => {
     const normalized = normalizeCondomitPlanName(name);
@@ -4405,14 +4407,14 @@ function canCondomitUseRoute(routeKeyOrPage, access = null) {
     inicio: 'index.html',
     mural: 'mural-avisos.html',
     sugestoes: 'sugestoes.html',
-    notificacoes: 'notificacoes.html',
     'gestao-moradores': 'gestao-moradores.html',
     'ia-duvidas': 'ai-condomit.html',
     configuracoes: 'configuracoes.html',
-    'chat-sindico': 'chat-sindico.html',
-    'chat-moradores': 'chat-moradores.html',
-    'chat-porteiro': 'chat-porteiro.html',
-    'chat-portaria': 'chat-porteiro.html',
+    chat: 'chat.html',
+    'chat-sindico': 'chat.html',
+    'chat-moradores': 'chat.html',
+    'chat-porteiro': 'chat.html',
+    'chat-portaria': 'chat.html',
     'achados-perdidos': 'achados-perdidos.html',
     assembleias: 'assembleia.html',
     reservas: 'reservas.html',
@@ -4427,7 +4429,7 @@ function canCondomitUseRoute(routeKeyOrPage, access = null) {
     ocorrencias: 'ocorrencias.html',
     marketplace: 'marketplace.html',
     'gestao-avancada': 'gestao-avancada.html',
-    comunicados: 'ai-comunicados.html'
+    comunicados: 'mural-avisos.html'
   };
 
   const page = routeToPage[routeKeyOrPage] || String(routeKeyOrPage || '').split('?')[0].split('#')[0];
@@ -4776,8 +4778,11 @@ async function fetchCondomitBillingFallback() {
 async function getCondomitBillingStatus(
   force = false
 ) {
-  const now =
-    Date.now();
+  const now = Date.now();
+  const storedUser = getStoredCondominiumUser();
+  if (storedUser?.demo_access === true) {
+    return { status: 'demo', can_use: true, plan_id: null, plan_name: 'Premium', demo_access: true, cep: storedUser?.condominium?.cep || storedUser?.condominium?.condominium_id || null };
+  }
 
   if (
     !force &&

@@ -2067,6 +2067,115 @@ function parseQuery(event) {
   return {};
 }
 
+
+async function handleCreateDemoAccount(body = {}) {
+  if (!hasSupabaseAdminConfig()) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'Supabase administrativo indisponível.' }) };
+  }
+
+  const roleLabels = { morador: 'Morador', sindico: 'Síndico', porteiro: 'Porteiro' };
+  const requestedRole = String(body?.role || body?.user_type || 'morador').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const role = requestedRole === 'sindico' ? 'sindico' : requestedRole;
+  if (!Object.prototype.hasOwnProperty.call(roleLabels, role)) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Tipo de usuário de demonstração inválido.' }) };
+  }
+
+  const demoCep = '99999-999';
+  const demoCondominium = {
+    cep: demoCep,
+    condominium_name: 'Condomit Demo',
+    address: 'Ambiente de demonstração',
+    address_number: '100',
+    complement: null,
+    neighborhood: 'Demonstração',
+    city: 'São Paulo',
+    state: 'SP',
+    total_apartments: 100,
+    total_blocks: 2,
+    block_names: ['A', 'B'],
+    condominium_spaces: ['Salão de festas', 'Academia']
+  };
+
+  const existingCondo = await proxySupabaseRequest(null, `/condominiums?select=cep&cep=eq.${encodeURIComponent(demoCep)}&limit=1`, 'GET');
+  if (existingCondo.status >= 400) {
+    return { statusCode: existingCondo.status, body: JSON.stringify({ error: 'Não foi possível preparar o condomínio de demonstração.' }) };
+  }
+  if (!Array.isArray(existingCondo.data) || !existingCondo.data.length) {
+    const createCondo = await proxySupabaseRequest(demoCondominium, '/condominiums', 'POST');
+    if (createCondo.status >= 400 && createCondo.status !== 409) {
+      return { statusCode: createCondo.status, body: JSON.stringify({ error: 'Não foi possível criar o condomínio de demonstração.', detail: createCondo.data }) };
+    }
+  }
+
+  const token = crypto.randomBytes(12).toString('hex');
+  const email = `demo-${Date.now()}-${token.slice(0, 8)}@demo.condomit.app`;
+  const password = `Cd!${crypto.randomBytes(18).toString('base64url')}9a`;
+  const name = `Demo ${roleLabels[role]}`;
+
+  const authResult = await createAuthAdminUser({
+    email,
+    password,
+    emailConfirm: true,
+    autoConfirm: true,
+    userMetadata: { name, user_type: role, type: role, demo_access: true }
+  });
+
+  if (!authResult.created) {
+    return { statusCode: authResult.status || 502, body: JSON.stringify({ error: authResult.error || 'Não foi possível criar a conta de demonstração.' }) };
+  }
+
+  const condominiumSnapshot = {
+    name: demoCondominium.condominium_name,
+    condominium_name: demoCondominium.condominium_name,
+    cep: demoCep,
+    condominium_id: demoCep,
+    totalApartments: demoCondominium.total_apartments,
+    total_apartments: demoCondominium.total_apartments,
+    totalBlocks: demoCondominium.total_blocks,
+    total_blocks: demoCondominium.total_blocks,
+    blockNames: demoCondominium.block_names,
+    block_names: demoCondominium.block_names
+  };
+
+  const profilePatch = await proxySupabaseRequest({
+    name,
+    user_type: role,
+    condominium: condominiumSnapshot,
+    demo_access: true
+  }, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
+
+  if (profilePatch.status >= 400) {
+    await deleteAuthAdminUserById(authResult.user?.id).catch(() => null);
+    return { statusCode: profilePatch.status, body: JSON.stringify({ error: 'Não foi possível preparar o perfil de demonstração.', detail: profilePatch.data }) };
+  }
+
+  const membership = await proxySupabaseRequest({
+    user_email: email,
+    condominium_id: demoCep,
+    apartment: '101',
+    block: 'A'
+  }, '/user_condominiums', 'POST');
+
+  if (membership.status >= 400 && membership.status !== 409) {
+    await deleteAuthAdminUserById(authResult.user?.id).catch(() => null);
+    return { statusCode: membership.status, body: JSON.stringify({ error: 'Não foi possível vincular a conta ao condomínio de demonstração.', detail: membership.data }) };
+  }
+
+  return {
+    statusCode: 201,
+    body: JSON.stringify({
+      ok: true,
+      email,
+      password,
+      user_type: role,
+      name,
+      demo_access: true,
+      condominium: condominiumSnapshot
+    })
+  };
+}
+
 exports.handler = async (event, context) => {
   const headers = {
     'Content-Type': 'application/json',
@@ -2095,6 +2204,10 @@ exports.handler = async (event, context) => {
 
   try {
     console.log('[api-proxy] method=', rawMethod, 'pathname=', pathname, 'query=', JSON.stringify(query));
+    if (pathname === '/demo/account' && rawMethod === 'POST') {
+      const result = await handleCreateDemoAccount(body || {});
+      return { ...result, headers: { ...headers, ...(result.headers || {}) } };
+    }
     if (pathname === '/dashboard/financial-summary' && rawMethod === 'GET') {
       const result = await handleDashboardFinancialSummary(event, query);
       return { ...result, headers: { ...headers, ...(result.headers || {}) } };
@@ -2128,7 +2241,7 @@ exports.handler = async (event, context) => {
     if (pathname === '/users' && rawMethod === 'GET') {
       const authUser = await getAuthenticatedSupabaseUser(event);
       if (!authUser) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Autenticação necessária.' }) };
-      let pathSuffix = '/users?select=email,name,phone,cpf,user_type,condominium,profile_photo,two_factor_enabled,two_factor_enabled_at';
+      let pathSuffix = '/users?select=email,name,phone,cpf,user_type,condominium,profile_photo,two_factor_enabled,two_factor_enabled_at,demo_access';
       if (query.email) {
         const value = String(query.email).replace(/^eq\./, '');
         pathSuffix += `&email=eq.${encodeURIComponent(value)}`;

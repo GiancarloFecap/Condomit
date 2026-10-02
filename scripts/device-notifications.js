@@ -14,7 +14,8 @@
   }
 
   function notificationsUrl() {
-    return inPages() ? 'notificacoes.html' : 'pages/notificacoes.html';
+    const base = `${location.pathname || '/pages/index.html'}${location.search || ''}`;
+    return `${base}#notificacoes`;
   }
 
   function readUser() {

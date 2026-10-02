@@ -91,7 +91,11 @@ async function deliverToSubscription(subscription, notifications, preference, ac
       body: row.description || '',
       tag: `condomit-${id}`,
       notificationId: id,
-      url: '/pages/notificacoes.html'
+      url: normalizeRole(subscription.user_role) === 'morador'
+        ? '/pages/index-morador.html#notificacoes'
+        : normalizeRole(subscription.user_role) === 'porteiro'
+          ? '/pages/index-porteiro.html#notificacoes'
+          : '/pages/index.html#notificacoes'
     });
 
     try {

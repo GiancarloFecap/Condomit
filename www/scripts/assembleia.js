@@ -1481,18 +1481,9 @@ function extractUserCep(user) {
 function renderScheduleAssemblyInfo() {
     const info = $('schedule-info');
     if (!info) return;
-
-    const cep = extractUserCep(assemblyState.currentUser);
-
-    if (cep) {
-        info.innerHTML = `<i class="fas fa-map-marker-alt"></i> Essa assembleia sera associada ao condominio CEP <strong>${escapeHtml(cep)}</strong>.`;
-        info.style.display = 'flex';
-        info.classList.remove('warning');
-    } else {
-        info.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Nao foi possivel identificar o CEP do condominio deste usuario.';
-        info.style.display = 'flex';
-        info.classList.add('warning');
-    }
+    info.innerHTML = '';
+    info.style.display = 'none';
+    info.classList.remove('warning');
 }
 
 function updateUserProfile() {

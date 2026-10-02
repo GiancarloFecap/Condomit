@@ -2,7 +2,8 @@ const wallState = {
     currentUser: null,
     activeCategory: 'Todas',
     notices: [],
-    selectedNoticeId: null
+    selectedNoticeId: null,
+    aiDraft: null
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -48,7 +49,20 @@ function setupWallShell(currentUser) {
 }
 
 function setupWallActions() {
-    document.getElementById('createWallNoticeBtn')?.addEventListener('click', openWallCreateModal);
+
+    document.getElementById('closeWallPublishChoice')?.addEventListener('click', closeWallPublishChoiceModal);
+    document.getElementById('wallPublishChoiceModal')?.addEventListener('click', (event) => { if (event.target.id === 'wallPublishChoiceModal') closeWallPublishChoiceModal(); });
+    document.getElementById('chooseManualWallNotice')?.addEventListener('click', () => { closeWallPublishChoiceModal(); openWallCreateModal(); });
+    document.getElementById('chooseAiWallNotice')?.addEventListener('click', () => { closeWallPublishChoiceModal(); openWallAiPromptModal(); });
+    document.getElementById('closeWallAiPrompt')?.addEventListener('click', closeWallAiPromptModal);
+    document.getElementById('wallAiPromptModal')?.addEventListener('click', (event) => { if (event.target.id === 'wallAiPromptModal') closeWallAiPromptModal(); });
+    document.getElementById('backFromWallAiPrompt')?.addEventListener('click', () => { closeWallAiPromptModal(); openWallPublishChoiceModal(); });
+    document.getElementById('generateWallAiDraftBtn')?.addEventListener('click', generateWallAiDraft);
+    document.getElementById('closeWallAiDraft')?.addEventListener('click', closeWallAiDraftModal);
+    document.getElementById('wallAiDraftModal')?.addEventListener('click', (event) => { if (event.target.id === 'wallAiDraftModal') closeWallAiDraftModal(); });
+    document.getElementById('editWallAiPromptBtn')?.addEventListener('click', () => { closeWallAiDraftModal(); openWallAiPromptModal(); });
+    document.getElementById('publishWallAiDraftBtn')?.addEventListener('click', publishWallAiDraft);
+    document.getElementById('createWallNoticeBtn')?.addEventListener('click', openWallPublishChoiceModal);
     document.getElementById('closeWallCreateModal')?.addEventListener('click', closeWallCreateModal);
     document.getElementById('cancelWallCreateModal')?.addEventListener('click', closeWallCreateModal);
     document.getElementById('wallCreateModal')?.addEventListener('click', (event) => {
@@ -133,7 +147,6 @@ async function renderWallPage() {
 
     renderWallCategoryTabs(wallState.notices);
     renderWallNotices(filtered);
-    renderWallSummary(wallState.notices);
 }
 
 function renderWallCategoryTabs(notices) {
@@ -231,6 +244,117 @@ function renderWallSummary(notices) {
 function syncWallModalBodyLock() {
     const hasOpenModal = Boolean(document.querySelector('.modal-backdrop.open'));
     document.body.classList.toggle('condomit-modal-open', hasOpenModal);
+}
+
+
+function openNamedWallModal(id) {
+    const modal = document.getElementById(id);
+    modal?.classList.add('open');
+    modal?.setAttribute('aria-hidden', 'false');
+    syncWallModalBodyLock();
+}
+function closeNamedWallModal(id) {
+    const modal = document.getElementById(id);
+    modal?.classList.remove('open');
+    modal?.setAttribute('aria-hidden', 'true');
+    syncWallModalBodyLock();
+}
+function openWallPublishChoiceModal() { openNamedWallModal('wallPublishChoiceModal'); }
+function closeWallPublishChoiceModal() { closeNamedWallModal('wallPublishChoiceModal'); }
+function openWallAiPromptModal() { openNamedWallModal('wallAiPromptModal'); setTimeout(() => document.getElementById('wallAiPrompt')?.focus(), 30); }
+function closeWallAiPromptModal() { closeNamedWallModal('wallAiPromptModal'); }
+function openWallAiDraftModal() { openNamedWallModal('wallAiDraftModal'); }
+function closeWallAiDraftModal() { closeNamedWallModal('wallAiDraftModal'); }
+
+function classifyWallAiPrompt(text) {
+    const value = String(text || '').toLowerCase();
+    if (/urgente|emerg[eê]ncia|imediat/.test(value)) return 'urgente';
+    if (/manuten|elevador|obra|reforma|[aá]gua|energia|luz|g[aá]s/.test(value)) return 'manutencao';
+    if (/festa|evento|confratern|churrasco|anivers/.test(value)) return 'evento';
+    if (/regra|norma|regulamento|sil[eê]ncio|multa/.test(value)) return 'regra';
+    if (/reserva|sal[aã]o|quadra|piscina/.test(value)) return 'reserva';
+    if (/assembleia|reuni[aã]o geral|vota[cç][aã]o/.test(value)) return 'assembleia';
+    if (/entrega|encomenda|portaria/.test(value)) return 'entrega';
+    return 'geral';
+}
+
+function wallAiCategory(kind) {
+    if (kind === 'reserva') return 'Reservas';
+    if (kind === 'assembleia') return 'Assembleias';
+    if (kind === 'entrega') return 'Entregas';
+    return 'Avisos';
+}
+
+function extractWallPromptData(text) {
+    const date = String(text).match(/\b\d{1,2}[\/\-.]\d{1,2}(?:[\/\-.]\d{2,4})?\b/)?.[0] || '';
+    const interval = String(text).match(/\b(\d{1,2}(?::\d{2}|h(?:\d{2})?))\s*(?:[aà]s|ate|até|[-–—])\s*(\d{1,2}(?::\d{2}|h(?:\d{2})?))\b/i);
+    const time = interval ? `${interval[1]} às ${interval[2]}` : (String(text).match(/\b\d{1,2}(?::\d{2}|h(?:\d{2})?)\b/i)?.[0] || '');
+    return { date, time };
+}
+
+function buildWallAiDraft(prompt) {
+    const kind = classifyWallAiPrompt(prompt);
+    const data = extractWallPromptData(prompt);
+    const context = String(prompt || '').trim();
+    const signatures = '\n\nAtenciosamente,\nAdministração do Condomínio.';
+    const templates = {
+        manutencao: { title: 'Aviso de Manutenção Programada', body: `Prezados(as) moradores(as),\n\nInformamos que será realizada uma manutenção programada no condomínio${data.date ? ` em ${data.date}` : ''}${data.time ? `, no período das ${data.time}` : ''}.\n\n${context}\n\nDurante o serviço, poderão ocorrer alterações temporárias na rotina da área afetada. Pedimos que todos sigam as orientações informadas e se programem com antecedência.${signatures}` },
+        evento: { title: 'Comunicado sobre Evento no Condomínio', body: `Olá, moradores!\n\nTemos um comunicado sobre um evento do condomínio${data.date ? ` no dia ${data.date}` : ''}${data.time ? `, a partir das ${data.time}` : ''}.\n\n${context}\n\nContamos com a colaboração e participação de todos.${signatures}` },
+        regra: { title: 'Atualização de Regras do Condomínio', body: `Prezados(as) moradores(as),\n\nInformamos uma atualização importante relacionada às normas e à convivência no condomínio.\n\n${context}\n\nPedimos a leitura atenta e a colaboração de todos para o cumprimento das orientações.${signatures}` },
+        urgente: { title: 'Aviso Urgente do Condomínio', body: `Prezados(as) moradores(as),\n\nATENÇÃO: este é um comunicado urgente.\n\n${context}\n\nPedimos que todos observem as orientações acima e, em caso de dúvida, entrem em contato com a administração ou portaria.${signatures}` },
+        reserva: { title: 'Aviso sobre Reservas e Áreas Comuns', body: `Prezados(as) moradores(as),\n\nCompartilhamos a seguinte informação sobre reservas e uso das áreas comuns:\n\n${context}\n\nVerifique os horários e orientações antes de utilizar o espaço.${signatures}` },
+        assembleia: { title: 'Comunicado de Assembleia', body: `Prezados(as) moradores(as),\n\nInformamos o seguinte sobre a assembleia do condomínio:\n\n${context}\n\nA participação dos moradores é importante para as decisões do condomínio.${signatures}` },
+        entrega: { title: 'Aviso da Portaria e Entregas', body: `Prezados(as) moradores(as),\n\nAtenção para a seguinte orientação da portaria:\n\n${context}\n\nPedimos a colaboração de todos para manter o fluxo de entregas organizado e seguro.${signatures}` },
+        geral: { title: 'Comunicado do Condomínio', body: `Prezados(as) moradores(as),\n\n${context}\n\nPedimos a atenção e a colaboração de todos. Em caso de dúvida, a administração permanece à disposição.${signatures}` }
+    };
+    const chosen = templates[kind] || templates.geral;
+    return { title: chosen.title, message: chosen.body, category: wallAiCategory(kind), prompt: context };
+}
+
+function generateWallAiDraft() {
+    const prompt = document.getElementById('wallAiPrompt')?.value.trim() || '';
+    if (prompt.length < 8) {
+        window.showToast?.('Descreva com um pouco mais de detalhes o aviso que deseja gerar.', 'warning');
+        return;
+    }
+    wallState.aiDraft = buildWallAiDraft(prompt);
+    const title = document.getElementById('wallAiDraftTitle');
+    const message = document.getElementById('wallAiDraftMessage');
+    if (title) title.value = wallState.aiDraft.title;
+    if (message) message.value = wallState.aiDraft.message;
+    closeWallAiPromptModal();
+    openWallAiDraftModal();
+}
+
+async function publishWallAiDraft() {
+    const button = document.getElementById('publishWallAiDraftBtn');
+    const title = document.getElementById('wallAiDraftTitle')?.value.trim() || '';
+    const message = document.getElementById('wallAiDraftMessage')?.value.trim() || '';
+    if (!title || !message) {
+        window.showToast?.('Revise o título e o conteúdo antes de publicar.', 'warning');
+        return;
+    }
+    if (button) button.disabled = true;
+    try {
+        await window.communityHub.createWallNotice({
+            category: wallState.aiDraft?.category || 'Avisos',
+            title,
+            message,
+            details: message,
+            source: 'mural-ai'
+        }, wallState.currentUser);
+        closeWallAiDraftModal();
+        document.getElementById('wallAiPrompt').value = '';
+        wallState.aiDraft = null;
+        wallState.activeCategory = 'Todas';
+        await renderWallPage();
+        window.showToast?.('Rascunho publicado no Mural de Avisos.', 'success');
+    } catch (error) {
+        console.error('Erro ao publicar rascunho com IA:', error);
+        window.showToast?.(error?.message || 'Não foi possível publicar o comunicado.', 'error');
+    } finally {
+        if (button) button.disabled = false;
+    }
 }
 
 function openWallCreateModal() {
@@ -380,7 +504,7 @@ function iconForWallCategory(category) {
 }
 
 function labelForWallSource(source) {
-    if (source === 'ai-comunicados') return 'Comunicado criado com IA';
+    if (source === 'ai-comunicados' || source === 'mural-ai') return 'Comunicado criado com IA';
     if (source === 'role_transfer') return 'Alteração de síndico';
     if (source === 'legacy') return 'Aviso anterior';
     return 'Publicado pelo síndico';

@@ -18,7 +18,7 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <img src="../assets/logo-lado.png" alt="Condomit Icon" class="sidebar-logo">
-                <h2 class="condo-name">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
             </div>
             
             <nav class="sidebar-nav">
@@ -39,22 +39,14 @@
                         <i class="fas fa-lightbulb"></i>
                         <span>Canal de Sugestões</span>
                     </a>
-                    <a href="notificacoes.html" class="nav-item">
-                        <i class="fas fa-bell"></i>
-                        <span>Notificações</span>
-                    </a>
                     <a href="#" class="nav-item">
                         <i class="fas fa-flag"></i>
                         <span>Indicações</span>
                     </a>
                     <div class="nav-section-title">Comunicação e Relacionamento</div>
-                    <a href="#" class="nav-item">
+                    <a href="chat.html" class="nav-item">
                         <i class="fas fa-comments"></i>
-                        <span>Chat com Moradores</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-door-open"></i>
-                        <span>Chat com Porteiro</span>
+                        <span>Chat</span>
                     </a>
                     <a href="#" class="nav-item">
                         <i class="fas fa-search"></i>
@@ -107,10 +99,6 @@
                         <i class="fas fa-robot"></i>
                         <span>IA - Dúvidas do Condomínio</span>
                     </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-bell"></i>
-                        <span>IA - Comunicados Automáticos</span>
-                    </a>
                 </div>
                 
                 <div class="nav-section">
@@ -161,6 +149,28 @@
 
             <!-- Dashboard Content -->
             <div class="dashboard-grid">
+                <!-- Quick Actions -->
+                <div class="card quick-actions-card">
+                    <h3>Acesso rápido</h3>
+                    <div class="quick-actions-grid">
+                        <button class="quick-action-btn">
+                            <i class="fas fa-bullhorn"></i>
+                            Enviar Aviso
+                        </button>
+                        <button class="quick-action-btn" data-min-plan="Pro">
+                            <i class="fas fa-calendar-plus"></i>
+                            Agendar Reunião
+                        </button>
+                        <button class="quick-action-btn">
+                            <i class="fas fa-file-contract"></i>
+                            Gerar Boleto
+                        </button>
+                        <button class="quick-action-btn" data-min-plan="Pro">
+                            <i class="fas fa-comments"></i>
+                            Chat
+                        </button>
+                    </div>
+                </div>
                 <!-- Status Cards -->
                 <div class="card status-card">
                     <h3>Status do Condomínio</h3>
@@ -187,30 +197,16 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Quick Actions -->
-                <div class="card quick-actions-card">
-                    <h3>Acesso rápido</h3>
-                    <div class="quick-actions-grid">
-                        <button class="quick-action-btn">
-                            <i class="fas fa-bullhorn"></i>
-                            Enviar Aviso
-                        </button>
-                        <button class="quick-action-btn" data-min-plan="Pro">
-                            <i class="fas fa-calendar-plus"></i>
-                            Agendar Reunião
-                        </button>
-                        <button class="quick-action-btn">
-                            <i class="fas fa-file-contract"></i>
-                            Gerar Boleto
-                        </button>
-                        <button class="quick-action-btn" data-min-plan="Pro">
-                            <i class="fas fa-comments"></i>
-                            Chat
-                        </button>
+                <!-- Maintenance -->
+                <div class="card maintenance-card" data-min-plan="Pro">
+                    <h3>Manutenção</h3>
+                    <div class="maintenance-list" id="dashboardMaintenanceList">
+                        <div class="maintenance-item">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Carregando manutenções programadas...</span>
+                        </div>
                     </div>
                 </div>
-
                 <!-- Residents List -->
                 <div class="card residents-card">
                     <h3>Lista de Condomínio</h3>
@@ -231,47 +227,36 @@
                         </table>
                     </div>
                 </div>
-
-                <!-- Maintenance -->
-                <div class="card maintenance-card" data-min-plan="Pro">
-                    <h3>Manutenção</h3>
-                    <div class="maintenance-list" id="dashboardMaintenanceList">
-                        <div class="maintenance-item">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <span>Carregando manutenções programadas...</span>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Summary -->
                 <div class="card summary-card">
-                    <h3>Resumo do Mês</h3>
-                    <div class="summary-stats">
-                        <div class="stat">
-                            <div class="stat-label">Despesas do mês</div>
-                            <div class="stat-value" id="monthly-expenses">Carregando...</div>
-                            <div class="stat-meta" id="monthly-expenses-meta">Lançamentos reais do condomínio</div>
+                    <div class="summary-card-head">
+                        <div>
+                            <h3>Resumo do Mês</h3>
+                            <p>Comparativo financeiro do condomínio no mês atual.</p>
                         </div>
-                        <div class="stat">
-                            <div class="stat-label">Receitas do mês</div>
-                            <div class="stat-value" id="monthly-income">Carregando...</div>
-                            <div class="stat-meta" id="monthly-income-meta">Lançamentos reais do condomínio</div>
-                        </div>
+                        <span class="summary-period" id="monthly-summary-period">Mês atual</span>
                     </div>
-                </div>
-
-                <!-- Communication -->
-                <div class="card communication-card">
-                    <h3>Comunicação</h3>
-                    <div class="communication-actions">
-                        <button class="comm-btn">
-                            <i class="fab fa-whatsapp"></i>
-                            WhatsApp
-                        </button>
-                        <button class="comm-btn">
-                            <i class="fas fa-envelope"></i>
-                            E-mail
-                        </button>
+                    <div class="monthly-chart" id="monthlyFinanceChart" aria-label="Gráfico de receitas e despesas do mês">
+                        <div class="monthly-chart-row">
+                            <div class="monthly-chart-label">
+                                <span>Receitas</span>
+                                <strong id="monthly-income">Carregando...</strong>
+                            </div>
+                            <div class="monthly-chart-track">
+                                <div class="monthly-chart-bar income" id="monthly-income-bar" style="width:0%"></div>
+                            </div>
+                            <small id="monthly-income-meta">Calculando lançamentos do mês</small>
+                        </div>
+                        <div class="monthly-chart-row">
+                            <div class="monthly-chart-label">
+                                <span>Despesas</span>
+                                <strong id="monthly-expenses">Carregando...</strong>
+                            </div>
+                            <div class="monthly-chart-track">
+                                <div class="monthly-chart-bar expenses" id="monthly-expenses-bar" style="width:0%"></div>
+                            </div>
+                            <small id="monthly-expenses-meta">Calculando lançamentos do mês</small>
+                        </div>
                     </div>
                 </div>
             </div>

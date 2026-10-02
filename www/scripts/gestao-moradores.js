@@ -375,7 +375,6 @@ function openResidentActionsMenu(button, resident) {
     menu.id = 'residentActionsMenu';
     menu.className = 'resident-actions-menu';
     menu.innerHTML = `
-        <button type="button" data-action="promote"><i class="fas fa-user-tie"></i><span>Tornar o usuário síndico</span></button>
         <button type="button" class="danger" data-action="expel"><i class="fas fa-user-slash"></i><span>Expulsar do condomínio</span></button>`;
     document.body.appendChild(menu);
 
@@ -384,11 +383,6 @@ function openResidentActionsMenu(button, resident) {
     const left = Math.min(window.innerWidth - width - 12, Math.max(12, rect.right - width));
     menu.style.left = `${left}px`;
     menu.style.top = `${Math.min(window.innerHeight - menu.offsetHeight - 12, rect.bottom + 8)}px`;
-
-    menu.querySelector('[data-action="promote"]')?.addEventListener('click', () => {
-        closeResidentActionsMenu();
-        confirmPromoteResident(resident);
-    });
     menu.querySelector('[data-action="expel"]')?.addEventListener('click', () => {
         closeResidentActionsMenu();
         confirmExpelResident(resident);
@@ -403,40 +397,6 @@ function askConfirmation(options) {
     if (window.confirm(options.message || options.title || 'Confirmar ação?')) {
         Promise.resolve(options.onConfirm?.()).catch(console.error);
     }
-}
-
-function persistCurrentUserRole(role) {
-    const current = { ...(residentsState.currentUser || {}) };
-    current.type = role;
-    current.user_type = role;
-    residentsState.currentUser = current;
-    try { sessionStorage.setItem('condominiumUser', JSON.stringify(current)); } catch (_) {}
-    try { localStorage.setItem('condominiumPersistentUser', JSON.stringify(current)); } catch (_) {}
-}
-
-function confirmPromoteResident(resident) {
-    askConfirmation({
-        title: 'Transferir função de síndico',
-        message: `Ao promover ${resident.name} a síndico, sua própria conta passará a ser morador. Deseja continuar?`,
-        type: 'warning',
-        confirmText: 'Sim, transferir função',
-        cancelText: 'Cancelar',
-        onConfirm: async () => {
-            try {
-                await window.supabaseFetch('/rpc/condomit_promote_resident_to_sindico', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ target_email: resident.email })
-                });
-                persistCurrentUserRole('morador');
-                window.showToast?.(`${resident.name} agora é o síndico do condomínio. Sua conta passou a ser morador e a mudança foi publicada no Mural de Avisos.`, 'success');
-                window.setTimeout(() => { window.location.href = 'index-morador.html'; }, 900);
-            } catch (error) {
-                console.error('Erro ao promover morador:', error);
-                window.showToast?.(error?.message || 'Não foi possível transferir a função de síndico.', 'error');
-            }
-        }
-    });
 }
 
 function confirmExpelResident(resident) {

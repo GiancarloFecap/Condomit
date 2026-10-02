@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0A2A6B">
+  <title>Condomit • Acesso de demonstração</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../styles/acesso-demonstracao.css?v=0725">
+</head>
+<body>
+  <main class="demo-shell">
+    <header class="demo-topbar">
+      <a href="tipo-usuario.html" class="demo-back"><i class="fas fa-arrow-left"></i> Voltar</a>
+      <img src="../assets/logo-condomit-auth-hq.png" alt="Condomit" class="demo-logo">
+      <a href="entrar.html" class="demo-login">Entrar em uma conta real</a>
+    </header>
+
+    <section class="demo-hero">
+      <span class="demo-kicker">AMBIENTE DE DEMONSTRAÇÃO</span>
+      <h1>Teste a Condomit por qualquer perfil</h1>
+      <p>Escolha morador, síndico ou porteiro. A Condomit cria automaticamente uma conta de demonstração no Supabase e libera os recursos do ambiente sem exigir pagamento.</p>
+      <div class="demo-note"><i class="fas fa-flask"></i><span>Este acesso é separado das contas reais e serve apenas para testar os fluxos da plataforma.</span></div>
+    </section>
+
+    <section class="demo-role-grid" aria-label="Perfis de demonstração">
+      <button class="demo-role-card" type="button" data-demo-role="morador">
+        <span class="demo-role-icon"><i class="fas fa-house-user"></i></span>
+        <span class="demo-role-copy"><strong>Morador</strong><small>Avisos, reservas, marketplace, sugestões e comunicação.</small></span>
+        <i class="fas fa-arrow-right"></i>
+      </button>
+      <button class="demo-role-card" type="button" data-demo-role="sindico">
+        <span class="demo-role-icon"><i class="fas fa-user-tie"></i></span>
+        <span class="demo-role-copy"><strong>Síndico</strong><small>Gestão do condomínio, moradores, assembleias e ferramentas administrativas.</small></span>
+        <i class="fas fa-arrow-right"></i>
+      </button>
+      <button class="demo-role-card" type="button" data-demo-role="porteiro">
+        <span class="demo-role-icon"><i class="fas fa-user-shield"></i></span>
+        <span class="demo-role-copy"><strong>Porteiro</strong><small>Portaria, acessos, visitantes, encomendas e comunicação.</small></span>
+        <i class="fas fa-arrow-right"></i>
+      </button>
+    </section>
+
+    <div class="demo-status" id="demoStatus" role="status" aria-live="polite"></div>
+  </main>
+
+  <script src="../scripts/platform-config.js?v=035"></script>
+  <script src="../scripts/supabase-client.js?v=0710"></script>
+  <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
+  <script src="../scripts/condomit-alerts.js?v=014"></script>
+  <script src="../scripts/acesso-demonstracao.js?v=0725"></script>
+</body>
+</html>

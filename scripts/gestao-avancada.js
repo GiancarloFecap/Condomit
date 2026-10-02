@@ -28,7 +28,6 @@
     bindNavigation();
     bindForms();
     bindDelegatedActions();
-    setupPwaControls();
     await loadAll();
     await openAssetFromQuery();
   }
@@ -152,9 +151,7 @@
       mobility: 'Vagas, empréstimos e carregadores elétricos',
       community: 'Emergências, satisfação, calendário e participação',
       governance: 'Tarefas, permissões e auditoria administrativa',
-      admin: 'Gestão de múltiplos condomínios',
-      integrations: 'PWA, API, segurança e integrações'
-    };
+      admin: 'Gestão de múltiplos condomínios',};
     $('pageTitle').textContent = label;
     if ($('pageSubtitle')) $('pageSubtitle').textContent = subtitles[name] || 'Indicadores e operações do condomínio';
     window.scrollTo({top:0,behavior:'smooth'});

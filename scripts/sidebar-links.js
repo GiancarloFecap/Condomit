@@ -29,6 +29,7 @@ const sidebarI18n = {
         suggestions: 'Canal de Sugestões',
         suggestions_long: 'Canal de Sugestões',
         indications: 'Indicações',
+        chat: 'Chat',
         chat_residents: 'Chat com Moradores',
         chat_syndic: 'Chat com Síndico',
         chat_porter: 'Chat com Porteiro',
@@ -79,6 +80,7 @@ const sidebarI18n = {
         suggestions: 'Suggestions Channel',
         suggestions_long: 'Suggestions Channel',
         indications: 'Recommendations',
+        chat: 'Chat',
         chat_residents: 'Chat with Residents',
         chat_syndic: 'Chat with Manager',
         chat_porter: 'Chat with Porter',
@@ -997,6 +999,14 @@ document.addEventListener('DOMContentLoaded', () => {
     sidebarRuntime.currentUserType = getSidebarUserType(sidebarRuntime.currentUser);
 
     window.navigateTo = function navigateTo(routeKey) {
+        if (String(routeKey || '').toLowerCase() === 'notificacoes') {
+            if (typeof window.openCondomitNotifications === 'function') {
+                window.openCondomitNotifications();
+            } else {
+                window.location.hash = 'notificacoes';
+            }
+            return;
+        }
         const target = getTargetForRoute(routeKey, sidebarRuntime.currentUserType);
         if (!target) return;
 
@@ -1107,13 +1117,11 @@ function getTargetForRoute(routeKey, userType) {
         inicio: getHomePage(userType),
         mural: 'mural-avisos.html',
         sugestoes: 'sugestoes.html',
-        notificacoes: 'notificacoes.html',
-        correio: 'notificacoes.html',
-        indicacoes: 'notificacoes.html',
-        'chat-sindico': 'chat-sindico.html',
-        'chat-moradores': 'chat-moradores.html',
-        'chat-porteiro': 'chat-porteiro.html',
-        'chat-portaria': 'chat-porteiro.html',
+        chat: 'chat.html',
+        'chat-sindico': 'chat.html',
+        'chat-moradores': 'chat.html',
+        'chat-porteiro': 'chat.html',
+        'chat-portaria': 'chat.html',
         'achados-perdidos': 'achados-perdidos.html',
         marketplace: 'marketplace.html',
         assembleias: 'assembleia.html',
@@ -1122,7 +1130,7 @@ function getTargetForRoute(routeKey, userType) {
         reservas: 'reservas.html',
         manutencao: 'manutencao-preventiva.html',
         'ia-duvidas': 'ai-condomit.html',
-        comunicados: 'ai-comunicados.html',
+        comunicados: 'mural-avisos.html',
         configuracoes: 'configuracoes.html',
         'porteiro-liberacao': 'liberacao-visitantes.html',
         'porteiro-registrar': 'registrar-visitantes.html',
@@ -1140,14 +1148,14 @@ function getTargetForRoute(routeKey, userType) {
 
 function getSidebarRouteMinPlanLevel(routeKey) {
     const proRoutes = new Set([
-        'chat-sindico', 'chat-moradores', 'chat-porteiro', 'chat-portaria',
+        'chat', 'chat-sindico', 'chat-moradores', 'chat-porteiro', 'chat-portaria',
         'achados-perdidos', 'assembleias', 'reservas', 'manutencao',
         'porteiro-liberacao', 'porteiro-registrar', 'porteiro-registro',
         'porteiro-visitantes', 'porteiro-historico', 'porteiro-entregas',
         'porteiro-prestadores', 'porteiro-emergencia'
     ]);
     const premiumRoutes = new Set([
-        'ocorrencias', 'marketplace', 'gestao-avancada', 'comunicados'
+        'ocorrencias', 'marketplace', 'gestao-avancada'
     ]);
     if (premiumRoutes.has(routeKey)) return 3;
     if (proRoutes.has(routeKey)) return 2;
@@ -1370,7 +1378,6 @@ function getSidebarConfig(userType) {
             {
                 items: [
                     { labelKey: 'home', icon: 'fas fa-home', route: 'inicio' },
-                    { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' },
                     { labelKey: 'occurrences', icon: 'fas fa-clipboard-list', route: 'ocorrencias' }
                 ]
             },
@@ -1394,8 +1401,7 @@ function getSidebarConfig(userType) {
             {
                 titleKey: 'relationships',
                 items: [
-                    { labelKey: 'chat_syndic', icon: 'fas fa-comments', route: 'chat-sindico' },
-                    { labelKey: 'chat_residents', icon: 'fas fa-comments', route: 'chat-moradores' }
+                    { labelKey: 'chat', icon: 'fas fa-comments', route: 'chat' }
                 ]
             },
             {
@@ -1413,15 +1419,13 @@ function getSidebarConfig(userType) {
                 items: [
                     { labelKey: 'mural', icon: 'fas fa-bullhorn', route: 'mural' },
                     { labelKey: 'suggestions', icon: 'fas fa-lightbulb', route: 'sugestoes' },
-                    { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' },
                     { labelKey: 'occurrences', icon: 'fas fa-clipboard-list', route: 'ocorrencias' }
                 ]
             },
             {
                 titleKey: 'relationships',
                 items: [
-                    { labelKey: 'chat_syndic', icon: 'fas fa-comments', route: 'chat-sindico' },
-                    { labelKey: 'chat_gatehouse', icon: 'fas fa-door-open', route: 'chat-portaria' },
+                    { labelKey: 'chat', icon: 'fas fa-comments', route: 'chat' },
                     { labelKey: 'lost_found', icon: 'fas fa-search', route: 'achados-perdidos' },
                     { labelKey: 'marketplace', icon: 'fas fa-shopping-bag', route: 'marketplace' }
                 ]
@@ -1443,7 +1447,6 @@ function getSidebarConfig(userType) {
                 titleKey: 'ai_automation',
                 items: [
                     { labelKey: 'ai_questions', icon: 'fas fa-robot', route: 'ia-duvidas' },
-                    { labelKey: 'ai_notices', icon: 'fas fa-bell', route: 'comunicados' }
                 ]
             },
             {
@@ -1460,15 +1463,13 @@ function getSidebarConfig(userType) {
             items: [
                 { labelKey: 'mural', icon: 'fas fa-bullhorn', route: 'mural' },
                 { labelKey: 'suggestions_long', icon: 'fas fa-lightbulb', route: 'sugestoes' },
-                { labelKey: 'notifications', icon: 'fas fa-bell', route: 'notificacoes' },
                 { labelKey: 'occurrences', icon: 'fas fa-clipboard-list', route: 'ocorrencias' }
             ]
         },
         {
             titleKey: 'relationships',
             items: [
-                { labelKey: 'chat_residents', icon: 'fas fa-comments', route: 'chat-moradores' },
-                { labelKey: 'chat_porter', icon: 'fas fa-door-open', route: 'chat-porteiro' },
+                { labelKey: 'chat', icon: 'fas fa-comments', route: 'chat' },
                 { labelKey: 'lost_found', icon: 'fas fa-search', route: 'achados-perdidos' },
                 { labelKey: 'marketplace', icon: 'fas fa-shopping-bag', route: 'marketplace' }
             ]
@@ -1497,7 +1498,6 @@ function getSidebarConfig(userType) {
             titleKey: 'ai_automation',
             items: [
                 { labelKey: 'ai_questions', icon: 'fas fa-robot', route: 'ia-duvidas' },
-                { labelKey: 'ai_notices', icon: 'fas fa-magic', route: 'comunicados' }
             ]
         },
         {

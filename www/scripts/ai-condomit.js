@@ -1,7 +1,7 @@
 (() => {
     'use strict';
 
-    const state = { user: null, history: [] };
+    const state = { user: null, history: [], conversations: [], conversationId: null, restoring: false };
     const $ = (id) => document.getElementById(id);
     const appLanguage = () => { try { return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt'; } catch (_) { return 'pt'; } };
     const isEnglish = () => appLanguage() === 'en';
@@ -20,7 +20,7 @@
         ['Na página Mural de Avisos o síndico pode publicar comunicados permanentes para os moradores e acompanhar todo o histórico.', 'On the Notice Board, the property manager can publish permanent announcements for residents and review the full history.'],
         ['Na página Mural de Avisos você encontra todos os avisos permanentes publicados para o seu condomínio.', 'On the Notice Board you can find all permanent notices published for your condominium.'],
         ['Use o Chat com Síndico para enviar mensagens diretamente ao síndico vinculado ao mesmo CEP do seu condomínio.', 'Use Property Manager Chat to send messages directly to the property manager linked to your condominium.'],
-        ['O Chat com Porteiro conecta você aos porteiros vinculados ao mesmo condomínio. Quando houver telefone cadastrado, o botão de ligação do chat também pode iniciar uma chamada telefônica.', 'Doorman Chat connects you to the doormen linked to the same condominium. When a phone number is available, the call button can also start a phone call.'],
+        ['O Chat conecta você às pessoas do seu condomínio que podem conversar com o seu perfil. Salve um contato para que ele apareça na barra lateral e continue a conversa quando quiser.', 'Doorman Chat connects you to the doormen linked to the same condominium. When a phone number is available, the call button can also start a phone call.'],
         ['Em Configurações, na área Segurança e acesso, você pode registrar uma encomenda para a própria conta. As encomendas registradas ficam disponíveis na área de autorização de entregas.', 'In Settings, under Security and access, you can register a package for your own account. Registered packages become available in the delivery authorization area.'],
         ['Abra Configurações e selecione Foto de perfil. Você pode enviar uma imagem, reposicioná-la e também resetar a foto para voltar ao avatar padrão.', 'Open Settings and select Profile photo. You can upload an image, reposition it and reset it to return to the default avatar.'],
         ['A Condomit possui uma área para controle de prestadores, com consulta e cadastro dos serviços vinculados ao condomínio.', 'Condomit has a service-provider management area where authorized users can view and register services linked to the condominium.'],
@@ -28,7 +28,7 @@
         ['O Marketplace mostra anúncios dos moradores do mesmo condomínio. Você pode publicar itens, favoritar anúncios e gerenciar os seus próprios anúncios.', 'Marketplace shows listings from residents of the same condominium. You can publish items, favorite listings and manage your own listings.'],
         ['Na Condomit, as reservas dos espaços cadastrados em ', 'In Condomit, reservations for common areas registered in '],
         [' ficam na página Reserva de Locais. Você pode escolher o local, a data e um horário disponível. Também é possível consultar suas próprias reservas.', ' are available on the Reservations page. You can choose the location, date and an available time, and you can also review your own reservations.'],
-        ['Você está usando uma conta de síndico. Para conversar com moradores ou com a portaria, use as páginas de chat correspondentes.', 'You are using a property-manager account. To talk to residents or the front desk, use the corresponding chat pages.'],
+        ['Você está usando uma conta de síndico. No Chat, você pode conversar com moradores e porteiros do seu condomínio.', 'You are using a property-manager account. To talk to residents or the front desk, use the corresponding chat pages.'],
         ['Abrir Reserva de Locais', 'Open Reservations'],
         ['Liberação de visitantes', 'Visitor authorization'],
         ['Registro de entrada e saída', 'Entry and exit log'],
@@ -87,6 +87,8 @@
         if (identity) identity.textContent = 'Condomit Assistant';
         const newChat = $('newAiConversationBtn');
         if (newChat) newChat.innerHTML = '<i class="fas fa-pen-to-square"></i> New conversation';
+        const historyChat = $('aiConversationHistoryBtn');
+        if (historyChat) historyChat.innerHTML = '<i class="fas fa-clock-rotate-left"></i> Previous chats';
         const kicker = document.querySelector('.welcome-kicker');
         if (kicker) kicker.innerHTML = '<i class="fas fa-shield-heart"></i> Questions about your condominium';
         const title = document.querySelector('.welcome-title');
@@ -135,7 +137,8 @@
         setupShell();
         applyAiPageLanguage();
         bindEvents();
-        resetConversation(false);
+        loadConversationStore();
+        resetConversation(false, false);
     }
 
     function getStoredUser() {
@@ -183,6 +186,14 @@
         const input = $('chatInput');
         $('sendBtn')?.addEventListener('click', sendMessage);
         $('newAiConversationBtn')?.addEventListener('click', () => resetConversation(true));
+        $('aiConversationHistoryBtn')?.addEventListener('click', openConversationHistory);
+        $('closeAiConversationHistory')?.addEventListener('click', closeConversationHistory);
+        $('aiConversationHistoryModal')?.addEventListener('click', (event) => {
+            if (event.target === $('aiConversationHistoryModal')) closeConversationHistory();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && $('aiConversationHistoryModal')?.classList.contains('open')) closeConversationHistory();
+        });
 
         input?.addEventListener('input', () => {
             updateCharCount();
@@ -206,7 +217,9 @@
         });
     }
 
-    function resetConversation(showNotice) {
+    function resetConversation(showNotice, persistPrevious = true) {
+        if (persistPrevious) persistCurrentConversation();
+        state.conversationId = createConversationId();
         state.history = [];
         const messages = $('chatMessages');
         const welcome = $('welcomeCard');
@@ -219,6 +232,142 @@
         }
         updateCharCount();
         if (showNotice) window.showToast?.(isEnglish() ? 'New conversation started.' : 'Nova conversa iniciada.', 'success');
+    }
+
+    function createConversationId() {
+        try { return crypto.randomUUID(); }
+        catch (_) { return `ai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`; }
+    }
+
+    function conversationStorageKey() {
+        const owner = String(state.user?.email || 'anon').trim().toLowerCase();
+        return `condomit:ai-conversations:${owner}`;
+    }
+
+    function loadConversationStore() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(conversationStorageKey()) || '[]');
+            state.conversations = Array.isArray(parsed) ? parsed.filter((item) => item && item.id && Array.isArray(item.messages)) : [];
+        } catch (_) {
+            state.conversations = [];
+        }
+    }
+
+    function deriveConversationTitle(messages) {
+        const firstUser = (messages || []).find((item) => item?.type === 'user' && String(item?.text || '').trim());
+        const raw = String(firstUser?.text || (isEnglish() ? 'New conversation' : 'Nova conversa')).replace(/\s+/g, ' ').trim();
+        return raw.length > 58 ? `${raw.slice(0, 57)}…` : raw;
+    }
+
+    function persistConversationStore() {
+        try { localStorage.setItem(conversationStorageKey(), JSON.stringify(state.conversations.slice(0, 50))); }
+        catch (error) { console.warn('Não foi possível salvar o histórico da IA.', error); }
+    }
+
+    function persistCurrentConversation() {
+        if (state.restoring || !state.conversationId || !state.history.length) return;
+        const now = new Date().toISOString();
+        const conversation = {
+            id: state.conversationId,
+            title: deriveConversationTitle(state.history),
+            updatedAt: now,
+            messages: state.history.map((item) => ({
+                type: item.type,
+                text: String(item.text || ''),
+                actions: Array.isArray(item.actions) ? item.actions : []
+            }))
+        };
+        const index = state.conversations.findIndex((item) => item.id === state.conversationId);
+        if (index >= 0) state.conversations.splice(index, 1);
+        state.conversations.unshift(conversation);
+        state.conversations = state.conversations.slice(0, 50);
+        persistConversationStore();
+    }
+
+    function formatConversationDate(value) {
+        const date = new Date(value || 0);
+        if (Number.isNaN(date.getTime())) return '--';
+        return date.toLocaleDateString(isEnglish() ? 'en-US' : 'pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function openConversationHistory() {
+        persistCurrentConversation();
+        renderConversationHistory();
+        const modal = $('aiConversationHistoryModal');
+        if (!modal) return;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeConversationHistory() {
+        const modal = $('aiConversationHistoryModal');
+        modal?.classList.remove('open');
+        modal?.setAttribute('aria-hidden', 'true');
+        document.querySelectorAll('.ai-history-item.menu-open').forEach((item) => item.classList.remove('menu-open'));
+    }
+
+    function renderConversationHistory() {
+        const list = $('aiConversationHistoryList');
+        if (!list) return;
+        const conversations = [...state.conversations].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+        if (!conversations.length) {
+            list.innerHTML = `<div class="ai-history-empty"><i class="fas fa-comments"></i><strong>${isEnglish() ? 'No saved conversations yet' : 'Nenhuma conversa salva ainda'}</strong><span>${isEnglish() ? 'Your conversations will appear here after you send a message.' : 'Seus chats aparecerão aqui depois que você enviar uma mensagem.'}</span></div>`;
+            return;
+        }
+        list.innerHTML = conversations.map((conversation) => `
+            <article class="ai-history-item" data-conversation-id="${escapeHtml(conversation.id)}">
+                <button type="button" class="ai-history-open" data-open-conversation="${escapeHtml(conversation.id)}">
+                    <span class="ai-history-icon"><i class="fas fa-message"></i></span>
+                    <span class="ai-history-copy">
+                        <strong>${escapeHtml(conversation.title || (isEnglish() ? 'Conversation' : 'Conversa'))}</strong>
+                        <small>${isEnglish() ? 'Last message' : 'Última mensagem'}: ${escapeHtml(formatConversationDate(conversation.updatedAt))}</small>
+                    </span>
+                </button>
+                <button type="button" class="ai-history-more" data-history-menu="${escapeHtml(conversation.id)}" aria-label="${isEnglish() ? 'Conversation options' : 'Opções da conversa'}"><i class="fas fa-ellipsis-vertical"></i></button>
+                <div class="ai-history-menu">
+                    <button type="button" data-delete-conversation="${escapeHtml(conversation.id)}"><i class="fas fa-trash"></i>${isEnglish() ? 'Delete chat' : 'Excluir chat'}</button>
+                </div>
+            </article>`).join('');
+
+        list.querySelectorAll('[data-open-conversation]').forEach((button) => button.addEventListener('click', () => restoreConversation(button.dataset.openConversation)));
+        list.querySelectorAll('[data-history-menu]').forEach((button) => button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const row = button.closest('.ai-history-item');
+            list.querySelectorAll('.ai-history-item.menu-open').forEach((item) => { if (item !== row) item.classList.remove('menu-open'); });
+            row?.classList.toggle('menu-open');
+        }));
+        list.querySelectorAll('[data-delete-conversation]').forEach((button) => button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            deleteConversation(button.dataset.deleteConversation);
+        }));
+    }
+
+    function restoreConversation(id) {
+        const conversation = state.conversations.find((item) => item.id === id);
+        if (!conversation) return;
+        persistCurrentConversation();
+        state.conversationId = conversation.id;
+        state.history = [];
+        const messages = $('chatMessages');
+        if (messages) messages.innerHTML = '';
+        $('welcomeCard')?.style.setProperty('display', 'none');
+        state.restoring = true;
+        conversation.messages.forEach((message) => addMessage(message.type, message.text, message.actions || []));
+        state.restoring = false;
+        closeConversationHistory();
+        $('chatInput')?.focus();
+    }
+
+    function deleteConversation(id) {
+        const conversation = state.conversations.find((item) => item.id === id);
+        if (!conversation) return;
+        const confirmed = window.confirm(isEnglish() ? 'Delete this chat history?' : 'Excluir este chat do histórico?');
+        if (!confirmed) return;
+        state.conversations = state.conversations.filter((item) => item.id !== id);
+        persistConversationStore();
+        if (state.conversationId === id) resetConversation(false, false);
+        renderConversationHistory();
+        window.showToast?.(isEnglish() ? 'Chat deleted.' : 'Chat excluído.', 'success');
     }
 
     function updateCharCount() {
@@ -308,7 +457,6 @@
             return {
                 text: `Sugestão de comunicado:\n\nPrezados moradores,\n\nInformamos ${topic}. Pedimos que acompanhem as orientações publicadas no Condomit e, em caso de dúvidas, entrem em contato com a administração.\n\nAtenciosamente,\nAdministração do condomínio.`,
                 actions: [
-                    { label: 'Abrir IA de Comunicados', href: 'ai-comunicados.html', icon: 'fa-wand-magic-sparkles' },
                     { label: 'Abrir Mural de Avisos', href: 'mural-avisos.html', icon: 'fa-bullhorn' }
                 ]
             };
@@ -357,15 +505,15 @@
 
         if (includesAny(q, ['sindico', 'falar com sindico', 'contato sindico', 'property manager', 'manager', 'contact the property manager'])) {
             return {
-                text: isSindico ? 'Você está usando uma conta de síndico. Para conversar com moradores ou com a portaria, use as páginas de chat correspondentes.' : 'Use o Chat com Síndico para enviar mensagens diretamente ao síndico vinculado ao mesmo CEP do seu condomínio.',
-                actions: [{ label: isSindico ? 'Chat com Moradores' : 'Chat com Síndico', href: isSindico ? 'chat-moradores.html' : 'chat-sindico.html', icon: 'fa-comments' }]
+                text: isSindico ? 'Você está usando uma conta de síndico. No Chat, você pode conversar com moradores e porteiros do seu condomínio.' : 'Use o Chat com Síndico para enviar mensagens diretamente ao síndico vinculado ao mesmo CEP do seu condomínio.',
+                actions: [{ label: isSindico ? 'Chat com Moradores' : 'Chat com Síndico', href: isSindico ? 'chat.html' : 'chat.html', icon: 'fa-comments' }]
             };
         }
 
         if (includesAny(q, ['porteiro', 'portaria', 'doorman', 'front desk', 'concierge'])) {
             return {
-                text: 'O Chat com Porteiro conecta você aos porteiros vinculados ao mesmo condomínio. Quando houver telefone cadastrado, o botão de ligação do chat também pode iniciar uma chamada telefônica.',
-                actions: [{ label: 'Chat com Porteiro', href: 'chat-porteiro.html', icon: 'fa-door-open' }]
+                text: 'O Chat conecta você às pessoas do seu condomínio que podem conversar com o seu perfil. Salve um contato para que ele apareça na barra lateral e continue a conversa quando quiser.',
+                actions: [{ label: 'Chat com Porteiro', href: 'chat.html', icon: 'fa-door-open' }]
             };
         }
 
@@ -378,8 +526,8 @@
 
         if (includesAny(q, ['foto', 'perfil', 'avatar', 'photo', 'profile', 'profile picture'])) {
             return {
-                text: 'Abra Configurações e selecione Foto de perfil. Você pode enviar uma imagem, reposicioná-la e também resetar a foto para voltar ao avatar padrão.',
-                actions: [{ label: 'Abrir Configurações', href: 'configuracoes.html', icon: 'fa-user-pen' }]
+                text: 'Abra Meu perfil para atualizar seus dados e sua foto de perfil.',
+                actions: [{ label: 'Abrir Meu perfil', href: 'perfil.html', icon: 'fa-user-pen' }]
             };
         }
 
@@ -663,6 +811,7 @@
             });
         });
         state.history.push({ type, text, actions });
+        if (!state.restoring) persistCurrentConversation();
         messages.scrollTop = messages.scrollHeight;
     }
 

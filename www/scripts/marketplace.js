@@ -816,18 +816,6 @@ async function renderMarketplacePage() {
         );
 
     if (
-        !marketplaceState
-            .selectedItemId &&
-        filteredItems.length
-    ) {
-        marketplaceState
-            .selectedItemId =
-            normalizeItemId(
-                filteredItems[0].id
-            );
-    }
-
-    if (
         marketplaceState
             .selectedItemId &&
         !filteredItems.some(
@@ -841,13 +829,7 @@ async function renderMarketplacePage() {
                 )
         )
     ) {
-        marketplaceState
-            .selectedItemId =
-            filteredItems[0]
-                ? normalizeItemId(
-                    filteredItems[0].id
-                )
-                : null;
+        marketplaceState.selectedItemId = null;
     }
 
     renderMarketplaceShortcuts();
@@ -1274,22 +1256,19 @@ function renderMarketplaceDetail(
                     marketplaceState
                         .selectedItemId
                 )
-        ) ||
-        items[0];
+        );
+
+    const layout = detail.closest('.marketplace-layout');
 
     if (!selected) {
-        detail.innerHTML =
-            `
-                <div class="empty-state">
-                    <i class="fas fa-image"></i>
-                    <p>
-                        Selecione um item para ver os detalhes.
-                    </p>
-                </div>
-            `;
-
+        detail.innerHTML = '';
+        detail.hidden = true;
+        layout?.classList.remove('detail-open');
         return;
     }
+
+    detail.hidden = false;
+    layout?.classList.add('detail-open');
 
     marketplaceState
         .selectedItemId =
@@ -1469,7 +1448,7 @@ function renderMarketplaceDetail(
         if(!email){window.showToast?.('O anunciante não possui e-mail disponível.','warning');return;}
         sessionStorage.setItem('condomitChatTargetEmail',email);
         sessionStorage.setItem('condomitChatReturnUrl','marketplace.html');
-        window.location.href='chat-moradores.html';
+        window.location.href='chat.html';
     });
 
     detail.querySelector('#whatsappMarketplaceSeller')?.addEventListener('click', async () => {

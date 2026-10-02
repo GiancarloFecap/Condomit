@@ -1101,3 +1101,28 @@ html[data-theme="dark"] .detalhes-status-sindico select {
     padding: 14px 20px;
     gap: 10px;
 }
+
+
+/* Ajustes de composição da nova sugestão */
+.filters-bar .search-wrapper { position: relative; }
+.filters-bar .search-wrapper .search-icon {
+  left: 16px !important; z-index: 3; pointer-events: none; width: 18px; text-align: center;
+}
+.filters-bar .search-wrapper .search-input { padding-left: 48px !important; }
+.suggestion-compose-modal { max-width: 650px; border-radius: 24px; overflow: hidden; }
+.suggestion-compose-head { align-items: flex-start; padding: 24px 26px 18px; }
+.suggestion-compose-head > div { display: grid; gap: 5px; }
+.suggestion-compose-head h3 { margin: 0; font-size: 1.35rem; }
+.suggestion-compose-head p { margin: 0; color: #64748b; font-size: .9rem; }
+.suggestion-modal-kicker { color: #0f766e; font-size: .7rem; font-weight: 800; letter-spacing: .12em; }
+.suggestion-compose-body { display: grid; gap: 16px; padding: 22px 26px; }
+.suggestion-compose-body .form-group { margin: 0; display: grid; gap: 7px; }
+.suggestion-compose-body .form-group label { font-size: .86rem; font-weight: 750; color: #334155; }
+.suggestion-compose-body .form-input { border-radius: 12px; min-height: 46px; }
+.suggestion-compose-body .form-textarea { min-height: 150px; resize: vertical; }
+.suggestion-helper { color: #94a3b8; line-height: 1.45; }
+.suggestion-compose-footer { padding: 16px 26px 22px; gap: 10px; }
+.suggestion-compose-footer .btn-enviar-sugestao { display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+html[data-theme="dark"] .suggestion-compose-head p,
+html[data-theme="dark"] .suggestion-helper { color: #94a3b8; }
+html[data-theme="dark"] .suggestion-compose-body .form-group label { color: #cbd5e1; }

@@ -54,7 +54,6 @@
         <div class="advanced-nav-title">Governança e sistema</div>
         <button class="advanced-nav-item management-only" type="button" data-view="governance"><i class="fas fa-shield-halved"></i><span>Governança</span></button>
         <button class="advanced-nav-item management-only" type="button" data-view="admin"><i class="fas fa-city"></i><span>Administradora</span></button>
-        <button class="advanced-nav-item" type="button" data-view="integrations"><i class="fas fa-plug"></i><span>Integrações</span></button>
       </div>
     </nav>
 
@@ -107,7 +106,6 @@
         <button class="advanced-shortcut" data-jump="mobility"><i class="fas fa-car-side"></i><span><strong>Mobilidade</strong><small>Vagas e carregadores</small></span></button>
         <button class="advanced-shortcut" data-jump="community"><i class="fas fa-people-group"></i><span><strong>Comunidade</strong><small>Alertas, pesquisas e participação</small></span></button>
         <button class="advanced-shortcut management-only" data-jump="governance"><i class="fas fa-shield-halved"></i><span><strong>Governança</strong><small>Tarefas, permissões e auditoria</small></span></button>
-        <button class="advanced-shortcut" data-jump="integrations"><i class="fas fa-plug"></i><span><strong>Integrações</strong><small>PWA, API e segurança</small></span></button>
       </div>
       <div class="advanced-block-heading advanced-block-heading--metrics"><div><strong>Indicadores principais</strong><small>Resumo atualizado das operações do condomínio.</small></div></div>
       <div class="metric-grid" id="advancedMetrics">
@@ -207,16 +205,6 @@
         <article class="panel-card"><h3>Condomínios gerenciados</h3><div id="managedCondosList" class="stack-list"></div></article>
         <article class="panel-card"><h3>Como habilitar</h3><ol class="steps"><li>Cadastre a empresa em <code>management_companies</code>.</li><li>Vincule o usuário em <code>management_company_users</code>.</li><li>Vincule CEPs em <code>managed_condominiums</code>.</li><li>Defina <code>users.user_type = 'administradora'</code> para usar o painel dedicado.</li></ol></article>
       </div>
-    </section>
-
-    <section class="advanced-view" data-view-panel="integrations">
-      <div class="section-heading"><div><span class="eyebrow">ECOSSISTEMA</span><h2>PWA, API e integrações</h2><p>Instale o Condomit no celular e exponha uma API protegida para integrações futuras.</p></div></div>
-      <div class="three-col-grid">
-        <article class="panel-card"><i class="big-feature-icon fas fa-mobile-screen-button"></i><h3>PWA instalável</h3><p>Manifesto, service worker e cache do shell principal estão configurados.</p><button id="installPwaBtn" class="primary-btn">Instalar Condomit</button><small id="pwaStatus" class="muted">A disponibilidade depende do navegador.</small></article>
-        <article class="panel-card"><i class="big-feature-icon fas fa-code"></i><h3>API de integrações protegida</h3><p>Endpoint Netlify: <code>/.netlify/functions/public-api</code>. Ele pode ser chamado por sistemas externos, mas só responde quando a requisição envia a chave secreta configurada em <code>CONDOMIT_API_KEY</code>. Nunca coloque essa chave no JavaScript do navegador.</p><button id="copyApiExampleBtn" class="secondary-btn">Copiar exemplo</button></article>
-        <article class="panel-card"><i class="big-feature-icon fas fa-store"></i><h3>Marketplace e achados</h3><p>Marketplace recebe status/expiração e favoritos persistentes. Achados e perdidos recebe arquivamento e correspondências sugeridas.</p><div class="button-row"><a href="marketplace.html" class="secondary-btn">Marketplace</a><a href="achados-perdidos.html" class="secondary-btn">Achados</a></div></article>
-      </div>
-      <article class="panel-card" style="margin-top:20px"><div class="panel-heading"><div><h3>Segurança e sessões</h3><p>Dispositivos que acessaram a conta, autenticação em duas etapas e encerramento global de sessão.</p></div><div class="button-row"><a class="secondary-btn" href="configuracoes.html"><i class="fas fa-key"></i> Gerenciar 2FA</a><button id="signOutAllDevicesBtn" class="danger-btn"><i class="fas fa-shield-halved"></i> Sair de todos os dispositivos</button></div></div><div id="sessionsList" class="stack-list"></div></article>
     </section>
   </main>
 </div>

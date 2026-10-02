@@ -45,13 +45,9 @@
                         <span>Indicações</span>
                     </a>
                     <div class="nav-section-title">Comunicação e Relacionamento</div>
-                    <a href="#" class="nav-item">
+                    <a href="chat.html" class="nav-item">
                         <i class="fas fa-comments"></i>
-                        <span>Chat com Moradores</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-door-open"></i>
-                        <span>Chat com Porteiro</span>
+                        <span>Chat</span>
                     </a>
                     <a href="#" class="nav-item">
                         <i class="fas fa-search"></i>
@@ -104,10 +100,6 @@
                         <i class="fas fa-robot"></i>
                         <span>IA - Dúvidas do Condomínio</span>
                     </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-bell"></i>
-                        <span>IA - Comunicados Automáticos</span>
-                    </a>
                 </div>
                 
                 <div class="nav-section">
@@ -138,21 +130,13 @@
                         <span>Canal de Sugestões</span>
                     </a>
                     <a href="#" class="nav-item">
-                        <i class="fas fa-bell"></i>
-                        <span>Notificações</span>
-                    </a>
-                    <a href="#" class="nav-item">
                         <i class="fas fa-envelope"></i>
                         <span>Correio</span>
                     </a>
                     <div class="nav-section-title">Comunicação e Relacionamento</div>
-                    <a href="#" class="nav-item">
+                    <a href="chat.html" class="nav-item">
                         <i class="fas fa-comments"></i>
-                        <span>Chat com Síndico</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-door-open"></i>
-                        <span>Chat com Portaria</span>
+                        <span>Chat</span>
                     </a>
                     <a href="#" class="nav-item">
                         <i class="fas fa-search"></i>
@@ -197,10 +181,6 @@
                     <a href="ai-condomit.html" class="nav-item active">
                         <i class="fas fa-robot"></i>
                         <span>IA - Dúvidas do Condomínio</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-bell"></i>
-                        <span>IA - Comunicados Automáticos</span>
                     </a>
                 </div>
                 
@@ -260,9 +240,14 @@
                             <span id="aiCondoContext">Conectando ao seu condomínio...</span>
                         </div>
                     </div>
-                    <button type="button" class="ai-new-chat" id="newAiConversationBtn">
-                        <i class="fas fa-pen-to-square"></i> Nova conversa
-                    </button>
+                    <div class="ai-toolbar-actions">
+                        <button type="button" class="ai-new-chat ai-history-btn" id="aiConversationHistoryBtn">
+                            <i class="fas fa-clock-rotate-left"></i> Conversas anteriores
+                        </button>
+                        <button type="button" class="ai-new-chat" id="newAiConversationBtn">
+                            <i class="fas fa-pen-to-square"></i> Nova conversa
+                        </button>
+                    </div>
                 </div>
 
                 <div class="chat-content-wrapper">
@@ -321,6 +306,22 @@
             </div>
         </main>
     </div>
+    <div class="ai-history-backdrop" id="aiConversationHistoryModal" aria-hidden="true">
+        <section class="ai-history-dialog" role="dialog" aria-modal="true" aria-labelledby="aiHistoryTitle">
+            <header class="ai-history-header">
+                <div>
+                    <span class="ai-history-kicker">Histórico da IA</span>
+                    <h2 id="aiHistoryTitle">Conversas anteriores</h2>
+                    <p>Retome uma conversa ou exclua um histórico que não precisa mais.</p>
+                </div>
+                <button type="button" class="ai-history-close" id="closeAiConversationHistory" aria-label="Fechar">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </header>
+            <div class="ai-history-list" id="aiConversationHistoryList"></div>
+        </section>
+    </div>
+
     <script src="../scripts/platform-config.js?v=035"></script>
 
 

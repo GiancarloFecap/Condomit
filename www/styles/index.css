@@ -765,3 +765,123 @@ html[data-theme="dark"] .summary-card .stat-value { color: #9CB3FF; }
 }
 
 .full-report-overlay{position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.62);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}.full-report-overlay.open{display:flex}.full-report-card{width:min(980px,100%);max-height:92vh;overflow:hidden;background:var(--card-bg,#fff);border-radius:22px;box-shadow:0 24px 70px rgba(15,23,42,.28);display:flex;flex-direction:column}.full-report-card>header,.full-report-card>footer{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid var(--border-color,#e2e8f0)}.full-report-card>footer{border-top:1px solid var(--border-color,#e2e8f0);border-bottom:0;justify-content:flex-end}.full-report-card>header h2{margin:0;color:var(--text-primary,#172033)}.full-report-card>header p{margin:4px 0 0;color:var(--text-secondary,#64748b)}.full-report-card>header button{width:42px;height:42px;border:1px solid #dbe2f0;border-radius:12px;background:transparent}.full-report-body{overflow:auto;padding:22px}.full-report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.full-report-grid section{padding:16px;border:1px solid var(--border-color,#dbe2f0);border-radius:16px}.full-report-grid h3{margin:0 0 12px}.full-report-grid p{margin:7px 0;color:var(--text-secondary,#475569)}.full-report-grid .report-wide{grid-column:1/-1}.report-loading{padding:60px;text-align:center;color:#64748b}@media(max-width:720px){.full-report-grid{grid-template-columns:1fr}.full-report-grid .report-wide{grid-column:auto}}@media print{body>*:not(#fullCondoReportModal){display:none!important}.full-report-overlay{position:static!important;display:block!important;background:#fff!important;padding:0!important}.full-report-card{max-height:none!important;box-shadow:none!important;width:100%!important}.full-report-card>header button,.full-report-card>footer{display:none!important}.full-report-body{overflow:visible!important}}
+
+
+/* ===== Dashboard V0.72.5 — layout horizontal e resumo gráfico ===== */
+.dashboard-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+}
+.dashboard-grid > .card {
+    min-width: 0;
+}
+.quick-actions-card,
+.status-card,
+.maintenance-card,
+.residents-card {
+    min-height: 320px;
+}
+.summary-card {
+    grid-column: 1 / -1;
+}
+.summary-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 24px;
+}
+.summary-card-head h3 {
+    margin-bottom: 5px;
+}
+.summary-card-head p {
+    margin: 0;
+    color: var(--text-secondary, #64748b);
+    font-size: .9rem;
+}
+.summary-period {
+    flex: 0 0 auto;
+    padding: 7px 11px;
+    border-radius: 999px;
+    background: #eef3ff;
+    color: #294FD8;
+    font-size: .78rem;
+    font-weight: 700;
+}
+.monthly-chart {
+    display: grid;
+    gap: 24px;
+}
+.monthly-chart-row {
+    display: grid;
+    grid-template-columns: minmax(170px, 220px) 1fr minmax(180px, auto);
+    align-items: center;
+    gap: 18px;
+}
+.monthly-chart-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.monthly-chart-label span {
+    color: var(--text-secondary, #64748b);
+    font-size: .82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.monthly-chart-label strong {
+    color: var(--text-primary, #172033);
+    font-size: 1.35rem;
+}
+.monthly-chart-track {
+    height: 18px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #edf1f7;
+}
+.monthly-chart-bar {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    transition: width .45s ease;
+}
+.monthly-chart-bar.income {
+    background: linear-gradient(90deg, #2563eb, #22c55e);
+}
+.monthly-chart-bar.expenses {
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+.monthly-chart-row > small {
+    color: var(--text-secondary, #64748b);
+    line-height: 1.35;
+}
+html[data-theme="dark"] .summary-period {
+    background: rgba(61,109,212,.18);
+    color: #aebfff;
+}
+html[data-theme="dark"] .monthly-chart-track {
+    background: rgba(148,163,184,.16);
+}
+@media (max-width: 1380px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 780px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+    .summary-card {
+        grid-column: auto;
+    }
+    .monthly-chart-row {
+        grid-template-columns: 1fr;
+        gap: 9px;
+    }
+    .monthly-chart-row > small {
+        margin-top: -2px;
+    }
+}

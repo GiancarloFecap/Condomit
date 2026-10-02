@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Condomit - Chat</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../styles/index.css?v=053">
+  <link rel="stylesheet" href="../styles/theme.css?v=044">
+  <link rel="stylesheet" href="../styles/chat.css?v=0725">
+  <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
+  <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
+  <link rel="manifest" href="../manifest.webmanifest">
+</head>
+<body class="condomit-app-page">
+<div class="dashboard-sindico">
+  <aside class="sidebar"><div class="sidebar-header"><img src="../assets/logo-lado.png" alt="Condomit Icon" class="sidebar-logo"><h2 class="condo-name" id="sidebarApartment"></h2></div></aside>
+  <main class="main-content">
+    <header class="top-bar">
+      <div class="top-bar-left"><h1>Chat do condomínio</h1><p>Converse com as pessoas do seu condomínio em um só lugar.</p></div>
+      <div class="top-bar-right">
+        <div class="top-icons"><button class="icon-btn" type="button" aria-label="Notificações"><i class="fas fa-bell"></i></button><button class="icon-btn" type="button" id="topUserBtn" aria-label="Perfil"><i class="fas fa-user"></i></button></div>
+        <div class="user-profile-small" id="topProfileBlock"><div class="user-info-small"><div class="name" id="profileNameTop">Usuário</div><div class="type" id="profileTypeTop">Usuário</div></div><div class="avatar" id="profileAvatarTop">US</div></div>
+      </div>
+    </header>
+
+    <section class="chat-page">
+      <div class="chat-layout">
+        <div class="chat-panel conversations">
+          <div class="conversations-list">
+            <div class="conversations-header">
+              <div class="conversations-title-row"><h3>Conversas</h3><button class="new-chat-btn" id="newChatBtn" type="button" title="Adicionar pessoa" aria-label="Adicionar pessoa"><i class="fas fa-plus"></i></button></div>
+              <div class="search-input-wrapper"><i class="fas fa-search"></i><input type="text" class="search-input" id="searchConversations" placeholder="Buscar conversa..."></div>
+            </div>
+            <div class="conversations-scroll chat-groups" id="conversationsList"></div>
+          </div>
+        </div>
+
+        <div class="chat-panel chat-main">
+          <div class="chat-header">
+            <div class="chat-header-left" id="activeChatHeader">
+              <div class="chat-avatar-lg" id="activeChatAvatar">--</div>
+              <div class="chat-header-info"><h3 class="chat-header-name" id="activeChatName">Selecione uma conversa</h3><p class="chat-header-detail" id="activeChatDetail"><span class="status-indicator">Escolha um contato salvo para começar</span></p></div>
+            </div>
+            <div class="chat-header-actions chat-options-wrap">
+              <button class="icon-chat-btn" id="chatOptionsBtn" type="button" title="Mais opções" aria-label="Mais opções"><i class="fas fa-ellipsis-v"></i></button>
+              <div class="chat-options-menu" id="chatOptionsMenu" hidden>
+                <button type="button" data-chat-action="clear"><i class="fas fa-broom"></i> Limpar conversa</button>
+                <button type="button" class="danger" data-chat-action="delete"><i class="fas fa-trash"></i> Excluir conversa</button>
+              </div>
+            </div>
+          </div>
+          <div class="messages-container" id="messagesContainer"><div class="chat-start-empty"><i class="fas fa-comments"></i><strong>Nenhuma conversa selecionada</strong><span>Adicione uma pessoa pelo botão + ou selecione uma conversa salva.</span></div></div>
+          <div class="chat-input-area">
+            <div class="chat-input-wrapper"><button class="chat-tool-btn" id="attachFileBtn" type="button" title="Anexar arquivo"><i class="fas fa-paperclip"></i></button><textarea class="chat-textarea" id="chatInput" placeholder="Digite sua mensagem..." rows="1" disabled></textarea><button class="chat-tool-btn chat-emoji-btn" id="emojiBtn" type="button" title="Emoji"><i class="fas fa-face-smile"></i></button><button class="chat-send-btn" id="sendBtn" type="button" title="Enviar" disabled><i class="fas fa-paper-plane"></i></button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="chat-contact-modal" id="chatContactModal" aria-hidden="true">
+  <div class="chat-contact-card" role="dialog" aria-modal="true" aria-labelledby="chatContactTitle">
+    <div class="chat-contact-head"><div><span>Nova conversa</span><h2 id="chatContactTitle">Adicionar pessoa</h2><p>Escolha quem deverá aparecer na sua barra lateral.</p></div><button type="button" id="closeChatContactModal" aria-label="Fechar"><i class="fas fa-xmark"></i></button></div>
+    <div class="chat-contact-search"><i class="fas fa-search"></i><input id="chatContactSearch" type="search" placeholder="Buscar pessoa..."></div>
+    <div class="chat-contact-list" id="chatContactList"></div>
+  </div>
+</div>
+
+<script src="../scripts/platform-config.js?v=035"></script>
+<script src="../scripts/supabase-client.js?v=0710"></script>
+<script type="module" src="../scripts/supabase-auth.js?v=036"></script>
+<script src="../scripts/sidebar-links.js?v=0725"></script>
+<script src="../scripts/chat-core.js?v=0725"></script>
+<script src="../scripts/topbar-actions.js?v=0725"></script>
+<script src="../scripts/condomit-alerts.js?v=014"></script>
+<script src="../scripts/responsive-nav.js?v=025"></script>
+<script src="../scripts/advanced-global.js?v=053"></script>
+</body>
+</html>

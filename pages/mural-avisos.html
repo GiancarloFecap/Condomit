@@ -73,37 +73,58 @@
                         </div>
                         <div class="notifications-list" id="wallNoticesList"></div>
                     </section>
-
-                    <aside class="notifications-sidebar">
-                        <div class="card-shell summary-card">
-                            <h3>Resumo do mural</h3>
-                            <div class="summary-stats">
-                                <div class="summary-stat">
-                                    <span>Total de avisos</span>
-                                    <strong id="totalWallNotices">0</strong>
-                                </div>
-                                <div class="summary-stat">
-                                    <span>Publicados neste mês</span>
-                                    <strong id="monthWallNotices">0</strong>
-                                </div>
-                                <div class="summary-stat wall-latest-row">
-                                    <span>Última atualização</span>
-                                    <strong id="latestWallNotice">--</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-shell help-card wall-info-card">
-                            <div class="help-icon"><i class="fas fa-bell"></i></div>
-                            <div>
-                                <h3>Notificações automáticas</h3>
-                                <p>Quando um novo aviso for adicionado, os usuários do condomínio recebem uma atualização na página de Notificações.</p>
-                            </div>
-                        </div>
-                    </aside>
                 </div>
             </section>
         </main>
+    </div>
+
+
+    <div class="modal-backdrop" id="wallPublishChoiceModal" aria-hidden="true">
+        <div class="modal-card wall-choice-modal">
+            <div class="modal-header">
+                <div><h3>Publicar aviso</h3><p>Escolha como deseja criar o comunicado.</p></div>
+                <button class="modal-close" id="closeWallPublishChoice" type="button" aria-label="Fechar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="wall-publish-choices">
+                <button type="button" class="wall-publish-choice" id="chooseManualWallNotice">
+                    <span class="wall-choice-icon"><i class="fas fa-pen-to-square"></i></span>
+                    <span><strong>Publicar novo aviso</strong><small>Escreva o título e o conteúdo manualmente.</small></span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button type="button" class="wall-publish-choice ai" id="chooseAiWallNotice">
+                    <span class="wall-choice-icon"><i class="fas fa-wand-magic-sparkles"></i></span>
+                    <span><strong>Gerar aviso com IA</strong><small>Descreva o que precisa comunicar e gere um rascunho.</small></span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="wallAiPromptModal" aria-hidden="true">
+        <div class="modal-card wall-ai-modal">
+            <div class="modal-header">
+                <div><span class="wall-ai-kicker">ASSISTENTE DE COMUNICADOS</span><h3>O que você quer comunicar hoje?</h3><p>Informe o assunto, datas, horários, locais e orientações importantes.</p></div>
+                <button class="modal-close" id="closeWallAiPrompt" type="button" aria-label="Fechar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-form">
+                <label>Requisito do aviso<textarea id="wallAiPrompt" rows="8" maxlength="1000" placeholder="Ex.: Avisar que haverá manutenção no elevador do bloco A amanhã, das 9h às 12h..."></textarea></label>
+                <div class="modal-actions"><button class="ghost-btn" id="backFromWallAiPrompt" type="button">Voltar</button><button class="primary-action" id="generateWallAiDraftBtn" type="button"><i class="fas fa-wand-magic-sparkles"></i> Gerar rascunho com IA</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="wallAiDraftModal" aria-hidden="true">
+        <div class="modal-card wall-ai-modal">
+            <div class="modal-header">
+                <div><span class="wall-ai-kicker">RASCUNHO GERADO</span><h3>Revise o comunicado</h3><p>Você pode ajustar o texto antes de publicar no mural.</p></div>
+                <button class="modal-close" id="closeWallAiDraft" type="button" aria-label="Fechar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-form">
+                <label>Título<input id="wallAiDraftTitle" type="text" maxlength="160"></label>
+                <label>Comunicado<textarea id="wallAiDraftMessage" rows="11" maxlength="4000"></textarea></label>
+                <div class="modal-actions"><button class="ghost-btn" id="editWallAiPromptBtn" type="button">Editar requisito</button><button class="primary-action" id="publishWallAiDraftBtn" type="button"><i class="fas fa-bullhorn"></i> Publicar no mural</button></div>
+            </div>
+        </div>
     </div>
 
     <div class="modal-backdrop" id="wallCreateModal" aria-hidden="true">

@@ -253,3 +253,24 @@ html[data-theme="dark"] .condomit-app-page .message.user .message-bubble{color:#
 html[data-theme="dark"] .condomit-app-page .message-time{color:#7f8ca3 !important}
 html[data-theme="dark"] .condomit-app-page .ai-action-link{background:transparent !important;color:#9db8ff !important;border-color:#334155 !important}
 html[data-theme="dark"] .condomit-app-page .disclaimer{color:#94a3b8 !important}
+
+
+/* 0.72.5 - histórico de conversas da IA */
+.ai-toolbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.ai-history-btn{background:#f8fafc}
+.ai-history-backdrop{position:fixed;inset:0;z-index:2300;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.48);backdrop-filter:blur(4px)}
+.ai-history-backdrop.open{display:flex}
+.ai-history-dialog{width:min(680px,100%);max-height:min(720px,88vh);display:flex;flex-direction:column;background:#fff;border:1px solid #e2e8f0;border-radius:22px;box-shadow:0 24px 70px rgba(15,23,42,.24);overflow:hidden}
+.ai-history-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:22px 24px 18px;border-bottom:1px solid #e2e8f0}
+.ai-history-header h2{margin:4px 0 5px;color:#172033;font-size:22px}.ai-history-header p{margin:0;color:#64748b;font-size:14px}.ai-history-kicker{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#3360f2}
+.ai-history-close{width:38px;height:38px;border:1px solid #e2e8f0;border-radius:11px;background:#fff;color:#475569;cursor:pointer;flex:0 0 auto}
+.ai-history-list{padding:10px;overflow:auto;min-height:180px}
+.ai-history-empty{display:grid;place-items:center;text-align:center;gap:8px;min-height:220px;color:#64748b;padding:30px}.ai-history-empty i{font-size:28px;color:#94a3b8}.ai-history-empty strong{color:#334155}
+.ai-history-item{position:relative;display:flex;align-items:center;gap:12px;padding:13px 12px;border-radius:14px;border:1px solid transparent;transition:.18s ease}.ai-history-item:hover{background:#f8fafc;border-color:#e2e8f0}
+.ai-history-open{min-width:0;flex:1;display:flex;align-items:center;gap:12px;border:0;background:transparent;text-align:left;cursor:pointer;padding:0}
+.ai-history-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#eef2ff;color:#3360f2;flex:0 0 auto}
+.ai-history-copy{min-width:0;display:grid;gap:4px}.ai-history-copy strong{color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}.ai-history-copy small{color:#64748b;font-size:12px}
+.ai-history-more{width:36px;height:36px;border:0;border-radius:10px;background:transparent;color:#64748b;cursor:pointer}.ai-history-more:hover{background:#e2e8f0;color:#1e293b}
+.ai-history-menu{position:absolute;right:12px;top:48px;z-index:5;display:none;min-width:150px;padding:6px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,.15)}.ai-history-item.menu-open .ai-history-menu{display:block}.ai-history-menu button{width:100%;border:0;background:transparent;border-radius:8px;padding:9px 10px;display:flex;align-items:center;gap:8px;color:#b42318;font-weight:700;cursor:pointer;text-align:left}.ai-history-menu button:hover{background:#fff1f2}
+html[data-theme="dark"] .ai-history-dialog,html[data-theme="dark"] .ai-history-menu{background:#111827;border-color:#334155}html[data-theme="dark"] .ai-history-header{border-color:#334155}html[data-theme="dark"] .ai-history-header h2,html[data-theme="dark"] .ai-history-copy strong,html[data-theme="dark"] .ai-history-empty strong{color:#f8fafc}html[data-theme="dark"] .ai-history-header p,html[data-theme="dark"] .ai-history-copy small,html[data-theme="dark"] .ai-history-empty{color:#94a3b8}html[data-theme="dark"] .ai-history-item:hover{background:#162235;border-color:#334155}html[data-theme="dark"] .ai-history-close{background:#162235;border-color:#334155;color:#e2e8f0}
+@media(max-width:720px){.ai-assistant-toolbar{align-items:flex-start}.ai-toolbar-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.ai-toolbar-actions .ai-new-chat{justify-content:center;padding:0 9px;font-size:12px}.ai-history-backdrop{padding:12px}.ai-history-dialog{max-height:88vh;border-radius:18px}.ai-history-header{padding:18px}.ai-history-list{padding:7px}}

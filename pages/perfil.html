@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Condomit - Meu Perfil</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../styles/index.css?v=053">
+    <link rel="stylesheet" href="../styles/theme.css?v=044">
+    <link rel="stylesheet" href="../styles/perfil.css?v=0725">
+    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
+    <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
+</head>
+<body class="condomit-app-page profile-page-body">
+    <div class="dashboard-sindico">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="../assets/logo-lado.png" alt="Condomit" class="sidebar-logo">
+                <h2 class="condo-name" id="sidebarApartment"></h2>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <h1>Meu perfil</h1>
+                    <p>Consulte e atualize suas informações pessoais.</p>
+                </div>
+                <div class="top-bar-right">
+                    <div class="top-icons">
+                        <button class="icon-btn" type="button" aria-label="Chat"><i class="fas fa-comments"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Assembleias"><i class="fas fa-video"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Notificações"><i class="fas fa-bell"></i></button>
+                        <button class="icon-btn" type="button" aria-label="Perfil"><i class="fas fa-user-circle"></i></button>
+                    </div>
+                    <div class="user-profile-small" id="topProfileBlock">
+                        <div class="user-info-small">
+                            <div class="name" id="profileNameTop">Usuário</div>
+                            <div class="type" id="profileTypeTop">Perfil</div>
+                        </div>
+                        <div class="avatar" id="profileAvatarTop">US</div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="profile-shell">
+                <article class="profile-hero">
+                    <div class="profile-photo-wrap">
+                        <button type="button" class="profile-photo" id="profilePhotoButton" aria-label="Alterar foto de perfil">
+                            <img id="profilePhotoImage" alt="Foto de perfil" hidden>
+                            <span id="profilePhotoInitials">US</span>
+                            <span class="profile-photo-edit"><i class="fas fa-camera"></i></span>
+                        </button>
+                        <input type="file" id="profilePhotoInput" accept="image/png,image/jpeg,image/webp" hidden>
+                    </div>
+                    <div class="profile-hero-copy">
+                        <span class="profile-eyebrow">Conta Condomit</span>
+                        <h2 id="profileHeroName">Usuário</h2>
+                        <div class="profile-badges">
+                            <span id="profileRoleBadge"><i class="fas fa-id-badge"></i> Perfil</span>
+                            <span id="profileCondoBadge"><i class="fas fa-building"></i> Condomínio</span>
+                            <span class="demo-badge" id="profileDemoBadge" hidden><i class="fas fa-flask"></i> Acesso de demonstração</span>
+                        </div>
+                    </div>
+                    <a href="acesso-demonstracao.html" class="profile-switch-role" id="profileSwitchRole" hidden>
+                        <i class="fas fa-repeat"></i> Trocar tipo de usuário
+                    </a>
+                </article>
+
+                <div class="profile-grid">
+                    <article class="profile-card profile-edit-card">
+                        <div class="profile-card-head">
+                            <div>
+                                <span class="profile-card-kicker">Informações pessoais</span>
+                                <h3>Seus dados</h3>
+                            </div>
+                            <i class="fas fa-user-pen"></i>
+                        </div>
+                        <form id="profileForm" class="profile-form">
+                            <label>
+                                <span>Nome completo</span>
+                                <input type="text" id="profileNameInput" maxlength="120" autocomplete="name" required>
+                            </label>
+                            <label>
+                                <span>Telefone</span>
+                                <input type="tel" id="profilePhoneInput" maxlength="24" autocomplete="tel" placeholder="(11) 90000-0000">
+                            </label>
+                            <label>
+                                <span>E-mail</span>
+                                <input type="email" id="profileEmailInput" readonly>
+                                <small>O e-mail da conta não é alterado nesta página.</small>
+                            </label>
+                            <button type="submit" class="profile-save-btn" id="profileSaveBtn">
+                                <i class="fas fa-check"></i> Salvar alterações
+                            </button>
+                        </form>
+                    </article>
+
+                    <aside class="profile-side-stack">
+                        <article class="profile-card profile-info-card">
+                            <div class="profile-card-head">
+                                <div>
+                                    <span class="profile-card-kicker">Vínculo</span>
+                                    <h3>Condomínio</h3>
+                                </div>
+                                <i class="fas fa-building-shield"></i>
+                            </div>
+                            <dl class="profile-detail-list">
+                                <div><dt>Condomínio</dt><dd id="profileCondoName">—</dd></div>
+                                <div><dt>CEP</dt><dd id="profileCondoCep">—</dd></div>
+                                <div><dt>Tipo de usuário</dt><dd id="profileRoleText">—</dd></div>
+                            </dl>
+                        </article>
+                        <article class="profile-card profile-security-card">
+                            <div class="profile-security-icon"><i class="fas fa-shield-halved"></i></div>
+                            <div>
+                                <strong>Conta protegida</strong>
+                                <p>As alterações são vinculadas à sua sessão autenticada e à sua conta na Condomit.</p>
+                            </div>
+                        </article>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../scripts/platform-config.js?v=035"></script>
+    <script src="../scripts/supabase-client.js?v=0710"></script>
+    <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
+    <script src="../scripts/sidebar-links.js?v=0720"></script>
+    <script src="../scripts/perfil.js?v=0725"></script>
+    <script src="../scripts/topbar-actions.js?v=0725"></script>
+    <script src="../scripts/condomit-alerts.js?v=014"></script>
+    <script src="../scripts/responsive-nav.js?v=025"></script>
+    <script src="../scripts/advanced-global.js?v=053"></script>
+</body>
+</html>

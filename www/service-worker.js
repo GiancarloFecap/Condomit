@@ -40,7 +40,7 @@ self.addEventListener('push', event => {
     tag: String(payload.tag || `condomit-${payload.notificationId || Date.now()}`),
     renotify: false,
     data: {
-      url: String(payload.url || '/pages/notificacoes.html'),
+      url: String(payload.url || '/pages/index.html#notificacoes'),
       notificationId: payload.notificationId || null
     }
   };
@@ -49,7 +49,7 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const targetUrl = new URL(event.notification?.data?.url || '/pages/notificacoes.html', self.location.origin).href;
+  const targetUrl = new URL(event.notification?.data?.url || '/pages/index.html#notificacoes', self.location.origin).href;
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of windows) {

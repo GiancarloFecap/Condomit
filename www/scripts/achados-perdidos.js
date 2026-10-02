@@ -360,7 +360,6 @@ async function renderLostFoundPage() {
 
     const allItems = await getLostFoundItems();
     lostFoundState.cachedItems = allItems;
-    renderLostFoundHighlights(allItems);
     renderLostFoundMatchesPanel(allItems);
 
     const currentEmail = String(lostFoundState.currentUser?.email || '').trim().toLowerCase();
@@ -720,37 +719,6 @@ function clearLostFoundFilters() {
     syncMineFilter();
     syncStatusFilters();
     renderLostFoundPage();
-}
-
-function renderLostFoundHighlights(allItems) {
-    const container = document.getElementById('lostFoundHighlights');
-    if (!container) return;
-    const found = allItems.filter((item) => item.type === 'encontrado').length;
-    const lost = allItems.filter((item) => item.type === 'perdido').length;
-    const returned = allItems.filter((item) => item.status === 'devolvido').length;
-    const matches = Array.isArray(lostFoundState.matches) ? lostFoundState.matches.length : 0;
-    container.innerHTML = `
-        <article class="highlight-card">
-            <span>Total de registros</span>
-            <strong>${allItems.length}</strong>
-            <small>Itens cadastrados neste condomínio</small>
-        </article>
-        <article class="highlight-card">
-            <span>Encontrados</span>
-            <strong>${found}</strong>
-            <small>Itens aguardando identificação</small>
-        </article>
-        <article class="highlight-card">
-            <span>Perdidos</span>
-            <strong>${lost}</strong>
-            <small>Objetos que ainda precisam ser localizados</small>
-        </article>
-        <article class="highlight-card">
-            <span>Correspondências</span>
-            <strong>${matches}</strong>
-            <small>${returned} item(ns) já marcado(s) como devolvido(s)</small>
-        </article>
-    `;
 }
 
 function renderLostFoundMatchesPanel(allItems) {
