@@ -606,8 +606,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             adminProvision?.ok === false
         ) {
             console.error('[ADMIN ACCOUNT] Login recusado após falha de provisionamento:', adminProvision);
+            const provisionMessage = String(
+                adminProvision?.error || 'Não foi possível preparar a conta administrativa.'
+            ).trim();
             showToast(
-                'A conta administrativa ainda não pôde ser preparada no servidor. Publique esta versão e aplique a migration 048 no Supabase.',
+                `Conta ADM não preparada: ${provisionMessage}`,
                 'error'
             );
             return;

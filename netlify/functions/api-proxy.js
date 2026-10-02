@@ -1,8 +1,11 @@
 const crypto = require('crypto');
 const { Brevo, BrevoClient, BrevoEnvironment } = require('@getbrevo/brevo');
+const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zoplefkruidaxeapnrjp.supabase.co';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY || '';
+const SUPABASE_ADMIN_KEY = SUPABASE_SECRET_KEY || SUPABASE_SERVICE_ROLE_KEY;
 const APP_BASE_URL = (process.env.APP_BASE_URL || 'https://condomit.com.br').replace(/\/$/, '');
 const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
 const MERCADO_PAGO_PUBLIC_KEY = process.env.MERCADO_PAGO_PUBLIC_KEY || '';
@@ -40,7 +43,7 @@ function normalizeCepForDatabase(value) {
 function hasSupabaseAdminConfig() {
   return Boolean(
     SUPABASE_URL &&
-    SUPABASE_SERVICE_ROLE_KEY
+    SUPABASE_ADMIN_KEY
   );
 }
 
@@ -2069,151 +2072,144 @@ function parseQuery(event) {
 
 async function handleCreateDemoAccount() {
   if (!hasSupabaseAdminConfig()) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Supabase administrativo indisponível.' }) };
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: 'Supabase administrativo indisponível.',
+        details: 'Configure SUPABASE_SECRET_KEY ou SUPABASE_SERVICE_ROLE_KEY nas variáveis de ambiente do Netlify.'
+      })
+    };
   }
 
-  // Conta administrativa fixa. A senha fica somente no ambiente server-side;
-  // o navegador apenas solicita o provisionamento antes de autenticar.
   const email = 'contato.condomit@gmail.com';
   const password = 'Aluno2019@';
   const role = 'sindico';
   const name = 'Administrador Condomit';
-  const demoCep = '99999-999';
-  const demoCondominium = {
-    cep: demoCep,
-    condominium_name: 'Condomit',
-    address: 'Ambiente administrativo',
-    address_number: '100',
-    complement: null,
-    neighborhood: 'Administração',
-    city: 'São Paulo',
-    state: 'SP',
-    total_apartments: 100,
-    total_blocks: 2,
-    block_names: ['A', 'B'],
-    condominium_spaces: []
+  const metadata = {
+    name,
+    user_type: role,
+    type: role,
+    demo_access: true,
+    admin_profile_switch: true
   };
 
-  const existingCondo = await proxySupabaseRequest(null, `/condominiums?select=cep&cep=eq.${encodeURIComponent(demoCep)}&limit=1`, 'GET');
-  if (existingCondo.status >= 400) {
-    return { statusCode: existingCondo.status, body: JSON.stringify({ error: 'Não foi possível preparar o ambiente administrativo.' }) };
-  }
-  if (!Array.isArray(existingCondo.data) || !existingCondo.data.length) {
-    const createCondo = await proxySupabaseRequest(demoCondominium, '/condominiums', 'POST');
-    if (createCondo.status >= 400 && createCondo.status !== 409) {
-      return { statusCode: createCondo.status, body: JSON.stringify({ error: 'Não foi possível preparar o ambiente administrativo.' }) };
+  // O SDK oficial lida corretamente tanto com a chave secreta nova
+  // (sb_secret_...) quanto com a service_role legada. A conta de Auth e a
+  // senha são a única etapa obrigatória para permitir o login.
+  const admin = createClient(SUPABASE_URL, SUPABASE_ADMIN_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
     }
-  }
+  });
 
-  let authUser = await fetchAuthAdminUserByEmail(email).catch(() => null);
-  if (authUser?.deleted_at) {
-    await reactivateSoftDeletedAuthUser({ uid: authUser.id, email });
-  }
-
-  const metadata = { name, user_type: role, type: role, demo_access: true, admin_profile_switch: true };
-  if (!authUser) {
-    const created = await createAuthAdminUser({
-      email,
-      password,
-      emailConfirm: true,
-      autoConfirm: true,
-      userMetadata: metadata
-    });
-    if (!created.created) {
-      return { statusCode: created.status || 502, body: JSON.stringify({ error: created.error || 'Não foi possível preparar a conta administrativa.' }) };
+  let authUser = null;
+  try {
+    const perPage = 200;
+    for (let page = 1; page <= 50; page += 1) {
+      const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+      if (error) throw error;
+      const users = Array.isArray(data?.users) ? data.users : [];
+      authUser = users.find(
+        (user) => String(user?.email || '').trim().toLowerCase() === email
+      ) || null;
+      if (authUser || users.length < perPage) break;
     }
-    authUser = created.user;
-  } else {
-    const updateResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(authUser.id)}`, {
-      method: 'PUT',
-      headers: {
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json'
-      },
+  } catch (error) {
+    console.error('[ADMIN ACCOUNT] Falha ao consultar Auth:', error);
+    return {
+      statusCode: Number(error?.status) || 502,
       body: JSON.stringify({
+        error: 'Não foi possível consultar a conta administrativa no Supabase Auth.',
+        details: error?.message || String(error)
+      })
+    };
+  }
+
+  try {
+    if (!authUser) {
+      const { data, error } = await admin.auth.admin.createUser({
+        email,
         password,
         email_confirm: true,
-        user_metadata: { ...(authUser.user_metadata || {}), ...metadata }
-      })
-    });
-    if (!updateResponse.ok) {
-      const authErrorText = await updateResponse.text().catch(() => '');
-      console.error('[ADMIN ACCOUNT] Falha ao atualizar Auth:', updateResponse.status, authErrorText);
-      return {
-        statusCode: updateResponse.status,
-        body: JSON.stringify({
-          error: 'Não foi possível atualizar a conta administrativa no Supabase Auth.',
-          details: authErrorText || null
-        })
-      };
+        user_metadata: metadata
+      });
+      if (error) throw error;
+      authUser = data?.user || null;
+    } else {
+      const { data, error } = await admin.auth.admin.updateUserById(authUser.id, {
+        password,
+        email_confirm: true,
+        user_metadata: {
+          ...(authUser.user_metadata || {}),
+          ...metadata
+        }
+      });
+      if (error) throw error;
+      authUser = data?.user || authUser;
     }
+  } catch (error) {
+    console.error('[ADMIN ACCOUNT] Falha ao criar/atualizar Auth:', error);
+    return {
+      statusCode: Number(error?.status) || 502,
+      body: JSON.stringify({
+        error: 'Não foi possível criar ou atualizar a conta administrativa no Supabase Auth.',
+        details: error?.message || String(error)
+      })
+    };
   }
 
+  // O registro em public.users é útil para o restante da plataforma, mas uma
+  // diferença de schema nessa tabela NÃO deve impedir uma conta válida do Auth
+  // de entrar. Tentamos o perfil completo e depois um perfil mínimo.
+  let profileWarning = null;
   const condominiumSnapshot = {
-    name: demoCondominium.condominium_name,
-    condominium_name: demoCondominium.condominium_name,
-    cep: demoCep,
-    condominium_id: demoCep,
-    totalApartments: demoCondominium.total_apartments,
-    total_apartments: demoCondominium.total_apartments,
-    totalBlocks: demoCondominium.total_blocks,
-    total_blocks: demoCondominium.total_blocks,
-    blockNames: demoCondominium.block_names,
-    block_names: demoCondominium.block_names
+    name: 'Condomit',
+    condominium_name: 'Condomit',
+    cep: '99999-999',
+    condominium_id: '99999-999'
   };
 
-  const existingProfile = await proxySupabaseRequest(null, `/users?select=email,user_type&email=eq.${encodeURIComponent(email)}&limit=1`, 'GET');
-  if (existingProfile.status >= 400) {
-    return { statusCode: existingProfile.status, body: JSON.stringify({ error: 'Não foi possível consultar o perfil administrativo.' }) };
-  }
-  const existingRole = Array.isArray(existingProfile.data) && existingProfile.data.length
-    ? String(existingProfile.data[0]?.user_type || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    : '';
-  const profileRole = ['morador', 'sindico', 'porteiro'].includes(existingRole) ? existingRole : role;
-  const profilePayload = {
+  const fullProfile = {
     email,
     name,
-    user_type: profileRole,
+    user_type: role,
     condominium: condominiumSnapshot,
     demo_access: true,
     two_factor_enabled: false,
     two_factor_enabled_at: null
   };
-  let profileResult;
-  if (Array.isArray(existingProfile.data) && existingProfile.data.length) {
-    const { email: _email, ...patch } = profilePayload;
-    profileResult = await proxySupabaseRequest(patch, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
-  } else {
-    profileResult = await proxySupabaseRequest(profilePayload, '/users', 'POST');
-  }
-  if (profileResult.status >= 400) {
-    return { statusCode: profileResult.status, body: JSON.stringify({ error: 'Não foi possível preparar o perfil administrativo.' }) };
-  }
 
-  const existingMembership = await proxySupabaseRequest(
-    null,
-    `/user_condominiums?select=user_email&user_email=eq.${encodeURIComponent(email)}&condominium_id=eq.${encodeURIComponent(demoCep)}&limit=1`,
-    'GET'
-  );
-  if (existingMembership.status >= 400) {
-    return { statusCode: existingMembership.status, body: JSON.stringify({ error: 'Não foi possível consultar o vínculo administrativo.' }) };
-  }
-  if (!Array.isArray(existingMembership.data) || !existingMembership.data.length) {
-    const membership = await proxySupabaseRequest({
-      user_email: email,
-      condominium_id: demoCep,
-      apartment: '101',
-      block: 'A'
-    }, '/user_condominiums', 'POST');
-    if (membership.status >= 400 && membership.status !== 409) {
-      return { statusCode: membership.status, body: JSON.stringify({ error: 'Não foi possível preparar o vínculo administrativo.' }) };
+  try {
+    const { error: fullError } = await admin
+      .from('users')
+      .upsert(fullProfile, { onConflict: 'email' });
+
+    if (fullError) {
+      const { error: minimalError } = await admin
+        .from('users')
+        .upsert({ email, name, user_type: role }, { onConflict: 'email' });
+
+      if (minimalError) {
+        profileWarning = minimalError.message || fullError.message || 'Falha ao sincronizar public.users.';
+        console.warn('[ADMIN ACCOUNT] Auth preparado, mas public.users não pôde ser sincronizado:', profileWarning);
+      }
     }
+  } catch (error) {
+    profileWarning = error?.message || String(error);
+    console.warn('[ADMIN ACCOUNT] Auth preparado, mas public.users gerou aviso:', profileWarning);
   }
 
   return {
     statusCode: 200,
-    body: JSON.stringify({ ok: true, email, user_type: profileRole, demo_access: true, condominium: condominiumSnapshot })
+    body: JSON.stringify({
+      ok: true,
+      email,
+      user_type: role,
+      auth_user_id: authUser?.id || null,
+      profile_warning: profileWarning
+    })
   };
 }
 

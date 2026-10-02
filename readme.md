@@ -88,7 +88,8 @@ Esse comando valida JavaScript, referências locais de HTML e arquivos obrigató
 ## Variáveis de ambiente principais
 
 - `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_SECRET_KEY` (recomendado nos projetos Supabase atuais)
+- `SUPABASE_SERVICE_ROLE_KEY` (legado; ainda aceito como fallback)
 - `LIVEKIT_URL`
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
