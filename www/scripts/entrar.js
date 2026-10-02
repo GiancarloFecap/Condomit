@@ -281,6 +281,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     const passwordInput = document.getElementById('password');
     const submitBtn = loginForm?.querySelector('button[type="submit"]');
     const emailInput = document.getElementById('email');
+    const ADMIN_PROFILE_SWITCH_EMAIL = 'contato.condomit@gmail.com';
+
+    async function ensureFixedAdminAccount(email) {
+        if (String(email || '').trim().toLowerCase() !== ADMIN_PROFILE_SWITCH_EMAIL) return;
+        const response = await fetch('/api/demo/account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.error || 'Não foi possível preparar a conta administrativa.');
+        }
+    }
 
     togglePassword.addEventListener('click', function() {
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
@@ -408,6 +422,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
 
             setLoginSubmitting(true);
+            await ensureFixedAdminAccount(email);
 
             let authData = null;
             let authError = null;

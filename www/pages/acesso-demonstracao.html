@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0A2A6B">
-  <title>Condomit • Acesso de demonstração</title>
+  <title>Condomit • Trocar tipo de usuário</title>
   <link rel="icon" type="image/png" href="../assets/favicon.png">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../styles/acesso-demonstracao.css?v=0725">
@@ -12,19 +12,19 @@
 <body>
   <main class="demo-shell">
     <header class="demo-topbar">
-      <a href="tipo-usuario.html" class="demo-back"><i class="fas fa-arrow-left"></i> Voltar</a>
+      <a href="perfil.html" class="demo-back"><i class="fas fa-arrow-left"></i> Voltar ao perfil</a>
       <img src="../assets/logo-condomit-auth-hq.png" alt="Condomit" class="demo-logo">
-      <a href="entrar.html" class="demo-login">Entrar em uma conta real</a>
+      <span class="demo-login">Conta administrativa</span>
     </header>
 
     <section class="demo-hero">
-      <span class="demo-kicker">AMBIENTE DE DEMONSTRAÇÃO</span>
-      <h1>Teste a Condomit por qualquer perfil</h1>
-      <p>Escolha morador, síndico ou porteiro. A Condomit cria automaticamente uma conta de demonstração no Supabase e libera os recursos do ambiente sem exigir pagamento.</p>
-      <div class="demo-note"><i class="fas fa-flask"></i><span>Este acesso é separado das contas reais e serve apenas para testar os fluxos da plataforma.</span></div>
+      <span class="demo-kicker">CONTA ADMINISTRATIVA</span>
+      <h1>Trocar tipo de usuário</h1>
+      <p>Escolha Morador, Síndico ou Porteiro para visualizar a Condomit com as permissões desse perfil.</p>
+      <div class="demo-note"><i class="fas fa-shield-halved"></i><span>Esta opção é exclusiva da conta administrativa autorizada.</span></div>
     </section>
 
-    <section class="demo-role-grid" aria-label="Perfis de demonstração">
+    <section class="demo-role-grid" aria-label="Tipos de usuário">
       <button class="demo-role-card" type="button" data-demo-role="morador">
         <span class="demo-role-icon"><i class="fas fa-house-user"></i></span>
         <span class="demo-role-copy"><strong>Morador</strong><small>Avisos, reservas, marketplace, sugestões e comunicação.</small></span>
@@ -49,6 +49,6 @@
   <script src="../scripts/supabase-client.js?v=0710"></script>
   <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
   <script src="../scripts/condomit-alerts.js?v=014"></script>
-  <script src="../scripts/acesso-demonstracao.js?v=0725"></script>
+  <script src="../scripts/acesso-demonstracao.js?v=073"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@
     const $ = (id) => document.getElementById(id);
     let currentUser = null;
     let pendingPhoto = null;
+    const ADMIN_SWITCH_EMAIL = 'contato.condomit@gmail.com';
 
     document.addEventListener('DOMContentLoaded', init);
 
@@ -74,9 +75,8 @@
         $('profilePhotoInitials').textContent = initials(name);
         $('profileAvatarTop').textContent = initials(name);
 
-        const demo = Boolean(currentUser?.demo_access || currentUser?.demoAccess);
-        $('profileDemoBadge').hidden = !demo;
-        $('profileSwitchRole').hidden = !demo;
+        const canSwitchRole = String(currentUser?.email || '').trim().toLowerCase() === ADMIN_SWITCH_EMAIL;
+        $('profileSwitchRole').hidden = !canSwitchRole;
         setPhoto(photo);
         window.syncAllAvatars?.(currentUser);
     }

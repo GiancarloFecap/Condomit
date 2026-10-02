@@ -6,7 +6,8 @@
     <title>Condomit - Painel do Síndico</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/index.css?v=050">
+    <link rel="stylesheet" href="../styles/index.css?v=073">
+    <link rel="stylesheet" href="../styles/index-reference-dashboard.css?v=0731">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
@@ -148,130 +149,141 @@
             </header>
 
             <!-- Dashboard Content -->
-            <div class="dashboard-grid">
-                <!-- Quick Actions -->
-                <div class="card quick-actions-card">
-                    <h3>Acesso rápido</h3>
-                    <div class="quick-actions-grid">
-                        <button class="quick-action-btn">
-                            <i class="fas fa-bullhorn"></i>
-                            Enviar Aviso
-                        </button>
-                        <button class="quick-action-btn" data-min-plan="Pro">
-                            <i class="fas fa-calendar-plus"></i>
-                            Agendar Reunião
-                        </button>
-                        <button class="quick-action-btn">
-                            <i class="fas fa-file-contract"></i>
-                            Gerar Boleto
-                        </button>
-                        <button class="quick-action-btn" data-min-plan="Pro">
-                            <i class="fas fa-comments"></i>
-                            Chat
-                        </button>
-                    </div>
-                </div>
-                <!-- Status Cards -->
-                <div class="card status-card">
-                    <h3>Status do Condomínio</h3>
-                    <div class="status-list">
-                        <div class="status-item">
-                            <i class="fas fa-building"></i>
-                            <span>Nome do Condomínio</span>
+            <section class="reference-dashboard" id="referenceDashboard" aria-label="Visão geral do condomínio">
+                <div class="reference-kpi-grid">
+                    <article class="reference-kpi-card">
+                        <div class="reference-kpi-icon residents"><i class="fas fa-users"></i></div>
+                        <div class="reference-kpi-main">
+                            <span>Moradores ativos</span>
+                            <strong id="refResidentsValue">—</strong>
+                            <small id="refResidentsTrend"><i class="fas fa-minus"></i> aguardando dados</small>
                         </div>
-                        <div class="status-item">
-                            <i class="fas fa-home"></i>
-                            <span>Total de Apartamentos</span>
-                        </div>
-                        <div class="status-item">
-                            <i class="fas fa-users"></i>
-                            <span>Moradores Ativos</span>
-                        </div>
-                        <div class="status-item">
-                            <i class="fas fa-calendar-day"></i>
-                            <span>Próxima Assembleia</span>
-                        </div>
-                        <div class="status-item">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <span>Avisos Pendentes</span>
-                        </div>
-                    </div>
-                </div>
-                <!-- Maintenance -->
-                <div class="card maintenance-card" data-min-plan="Pro">
-                    <h3>Manutenção</h3>
-                    <div class="maintenance-list" id="dashboardMaintenanceList">
-                        <div class="maintenance-item">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <span>Carregando manutenções programadas...</span>
-                        </div>
-                    </div>
-                </div>
-                <!-- Residents List -->
-                <div class="card residents-card">
-                    <h3>Lista de Condomínio</h3>
-                    <div class="residents-table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Apartamento</th>
-                                    <th>Bloco</th>
-                                    <th>Proprietário</th>
-                                </tr>
-                            </thead>
-                            <tbody id="residentsTableBody">
-                                <tr>
-                                    <td colspan="3">Carregando moradores...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <!-- Summary -->
-                <div class="card summary-card">
-                    <div class="summary-card-head">
-                        <div>
-                            <h3>Resumo do Mês</h3>
-                            <p>Comparativo financeiro do condomínio no mês atual.</p>
-                        </div>
-                        <span class="summary-period" id="monthly-summary-period">Mês atual</span>
-                    </div>
-                    <div class="monthly-chart" id="monthlyFinanceChart" aria-label="Gráfico de receitas e despesas do mês">
-                        <div class="monthly-chart-row">
-                            <div class="monthly-chart-label">
-                                <span>Receitas</span>
-                                <strong id="monthly-income">Carregando...</strong>
-                            </div>
-                            <div class="monthly-chart-track">
-                                <div class="monthly-chart-bar income" id="monthly-income-bar" style="width:0%"></div>
-                            </div>
-                            <small id="monthly-income-meta">Calculando lançamentos do mês</small>
-                        </div>
-                        <div class="monthly-chart-row">
-                            <div class="monthly-chart-label">
-                                <span>Despesas</span>
-                                <strong id="monthly-expenses">Carregando...</strong>
-                            </div>
-                            <div class="monthly-chart-track">
-                                <div class="monthly-chart-bar expenses" id="monthly-expenses-bar" style="width:0%"></div>
-                            </div>
-                            <small id="monthly-expenses-meta">Calculando lançamentos do mês</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                        <a href="gestao-moradores.html" class="reference-kpi-arrow" aria-label="Abrir moradores"><i class="fas fa-chevron-right"></i></a>
+                    </article>
 
-            <!-- Footer Actions -->
-            <div class="bottom-actions">
-                <button class="btn-primary-large" id="viewFullCondoReportBtn">
-                    <i class="fas fa-file-alt"></i>
-                    Ver Relatório Completo
-                </button>
-                <button class="btn-secondary-large" id="btn-resident-management-dashboard">
-                    <i class="fas fa-users"></i>
-                    Ir para Painel Morador/Comunidade Digital
-                </button>
-            </div>
+                    <article class="reference-kpi-card">
+                        <div class="reference-kpi-icon billing"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="reference-kpi-main">
+                            <span>Boletos pagos</span>
+                            <strong id="refBillingValue">—</strong>
+                            <small id="refBillingTrend"><i class="fas fa-minus"></i> situação do condomínio</small>
+                        </div>
+                        <a href="configuracoes.html" class="reference-kpi-arrow" aria-label="Abrir financeiro"><i class="fas fa-chevron-right"></i></a>
+                    </article>
+
+                    <article class="reference-kpi-card">
+                        <div class="reference-kpi-icon reservations"><i class="fas fa-calendar-days"></i></div>
+                        <div class="reference-kpi-main">
+                            <span>Reservas do salão</span>
+                            <strong id="refReservationsValue">—</strong>
+                            <small id="refReservationsTrend"><i class="fas fa-minus"></i> vs. mês anterior</small>
+                        </div>
+                        <a href="reservas.html" class="reference-kpi-arrow" aria-label="Abrir reservas"><i class="fas fa-chevron-right"></i></a>
+                    </article>
+
+                    <article class="reference-kpi-card">
+                        <div class="reference-kpi-icon calls"><i class="fas fa-headset"></i></div>
+                        <div class="reference-kpi-main">
+                            <span>Chamados abertos</span>
+                            <strong id="refCallsValue">—</strong>
+                            <small id="refCallsTrend"><i class="fas fa-minus"></i> vs. mês anterior</small>
+                        </div>
+                        <a href="ocorrencias.html" class="reference-kpi-arrow" aria-label="Abrir ocorrências"><i class="fas fa-chevron-right"></i></a>
+                    </article>
+                </div>
+
+                <article class="reference-panel reference-movement-card">
+                    <header class="reference-panel-header movement-header">
+                        <div>
+                            <h2>Movimentação do condomínio</h2>
+                            <p>Comparativo entre os últimos meses</p>
+                        </div>
+                        <label class="reference-period-select">
+                            <i class="far fa-calendar"></i>
+                            <select id="refMovementPeriod" aria-label="Período do gráfico">
+                                <option value="2">Últimos 2 meses</option>
+                                <option value="6" selected>Últimos 6 meses</option>
+                            </select>
+                            <i class="fas fa-chevron-down"></i>
+                        </label>
+                    </header>
+
+                    <div class="reference-chart-shell">
+                        <div class="reference-y-axis" aria-hidden="true">
+                            <span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0</span>
+                        </div>
+                        <div class="reference-chart-area">
+                            <div class="reference-grid-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                            <div class="reference-bar-groups" id="refBarGroups">
+                                <div class="reference-bar-group" data-chart-category="finance">
+                                    <div class="reference-bars">
+                                        <div class="reference-bar previous"><span id="refFinancePreviousLabel">0</span><b id="refFinancePrevious"></b></div>
+                                        <div class="reference-bar current"><span id="refFinanceCurrentLabel">0</span><b id="refFinanceCurrent"></b></div>
+                                    </div>
+                                    <strong>Financeiro</strong><small>(R$)</small>
+                                </div>
+                                <div class="reference-bar-group" data-chart-category="reservations">
+                                    <div class="reference-bars">
+                                        <div class="reference-bar previous"><span id="refReservationsPreviousLabel">0</span><b id="refReservationsPrevious"></b></div>
+                                        <div class="reference-bar current"><span id="refReservationsCurrentLabel">0</span><b id="refReservationsCurrent"></b></div>
+                                    </div>
+                                    <strong>Reservas</strong><small>(uso)</small>
+                                </div>
+                                <div class="reference-bar-group" data-chart-category="occurrences">
+                                    <div class="reference-bars">
+                                        <div class="reference-bar previous"><span id="refOccurrencesPreviousLabel">0</span><b id="refOccurrencesPrevious"></b></div>
+                                        <div class="reference-bar current"><span id="refOccurrencesCurrentLabel">0</span><b id="refOccurrencesCurrent"></b></div>
+                                    </div>
+                                    <strong>Ocorrências</strong><small>(quantidade)</small>
+                                </div>
+                                <div class="reference-bar-group" data-chart-category="notices">
+                                    <div class="reference-bars">
+                                        <div class="reference-bar previous"><span id="refNoticesPreviousLabel">0</span><b id="refNoticesPrevious"></b></div>
+                                        <div class="reference-bar current"><span id="refNoticesCurrentLabel">0</span><b id="refNoticesCurrent"></b></div>
+                                    </div>
+                                    <strong>Comunicados</strong><small>(publicações)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="reference-chart-legend" aria-label="Legenda do gráfico">
+                            <span><i class="legend-square previous"></i><b id="refPreviousMonthLegend">Mês anterior</b></span>
+                            <span><i class="legend-square current"></i><b id="refCurrentMonthLegend">Mês atual</b></span>
+                        </div>
+                    </div>
+                </article>
+
+                <div class="reference-bottom-grid">
+                    <article class="reference-panel reference-list-card">
+                        <header class="reference-list-header">
+                            <h3>Próximas assembleias</h3>
+                            <a href="assembleia.html" aria-label="Ver assembleias"><i class="fas fa-chevron-right"></i></a>
+                        </header>
+                        <div class="reference-list" id="refAssembliesList">
+                            <div class="reference-list-empty">Carregando assembleias...</div>
+                        </div>
+                    </article>
+
+                    <article class="reference-panel reference-list-card">
+                        <header class="reference-list-header">
+                            <h3>Avisos recentes</h3>
+                            <a href="mural-avisos.html">Ver todos <i class="fas fa-chevron-right"></i></a>
+                        </header>
+                        <div class="reference-list" id="refNoticesList">
+                            <div class="reference-list-empty">Carregando avisos...</div>
+                        </div>
+                    </article>
+
+                    <article class="reference-panel reference-list-card">
+                        <header class="reference-list-header">
+                            <h3>Atividades recentes</h3>
+                            <span class="reference-muted-link">Atualizado agora</span>
+                        </header>
+                        <div class="reference-list" id="refActivitiesList">
+                            <div class="reference-list-empty">Carregando atividades...</div>
+                        </div>
+                    </article>
+                </div>
+            </section>
         </main>
     </div>
     <script src="../scripts/platform-config.js?v=035"></script>
@@ -280,7 +292,8 @@
     <script src="../scripts/supabase-client.js?v=0710"></script>
     <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
     <script src="../scripts/sidebar-links.js?v=0720"></script>
-    <script src="../scripts/index.js?v=071"></script>
+    <script src="../scripts/index.js?v=073"></script>
+    <script src="../scripts/index-reference-dashboard.js?v=0731"></script>
     <script src="../scripts/topbar-actions.js?v=035"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>

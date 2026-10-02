@@ -2068,61 +2068,81 @@ function parseQuery(event) {
 }
 
 
-async function handleCreateDemoAccount(body = {}) {
+async function handleCreateDemoAccount() {
   if (!hasSupabaseAdminConfig()) {
     return { statusCode: 500, body: JSON.stringify({ error: 'Supabase administrativo indisponível.' }) };
   }
 
-  const roleLabels = { morador: 'Morador', sindico: 'Síndico', porteiro: 'Porteiro' };
-  const requestedRole = String(body?.role || body?.user_type || 'morador').trim().toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const role = requestedRole === 'sindico' ? 'sindico' : requestedRole;
-  if (!Object.prototype.hasOwnProperty.call(roleLabels, role)) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Tipo de usuário de demonstração inválido.' }) };
-  }
-
+  // Conta administrativa fixa. A senha fica somente no ambiente server-side;
+  // o navegador apenas solicita o provisionamento antes de autenticar.
+  const email = 'contato.condomit@gmail.com';
+  const password = 'Aluno2019@';
+  const role = 'sindico';
+  const name = 'Administrador Condomit';
   const demoCep = '99999-999';
   const demoCondominium = {
     cep: demoCep,
-    condominium_name: 'Condomit Demo',
-    address: 'Ambiente de demonstração',
+    condominium_name: 'Condomit',
+    address: 'Ambiente administrativo',
     address_number: '100',
     complement: null,
-    neighborhood: 'Demonstração',
+    neighborhood: 'Administração',
     city: 'São Paulo',
     state: 'SP',
     total_apartments: 100,
     total_blocks: 2,
     block_names: ['A', 'B'],
-    condominium_spaces: ['Salão de festas', 'Academia']
+    condominium_spaces: []
   };
 
   const existingCondo = await proxySupabaseRequest(null, `/condominiums?select=cep&cep=eq.${encodeURIComponent(demoCep)}&limit=1`, 'GET');
   if (existingCondo.status >= 400) {
-    return { statusCode: existingCondo.status, body: JSON.stringify({ error: 'Não foi possível preparar o condomínio de demonstração.' }) };
+    return { statusCode: existingCondo.status, body: JSON.stringify({ error: 'Não foi possível preparar o ambiente administrativo.' }) };
   }
   if (!Array.isArray(existingCondo.data) || !existingCondo.data.length) {
     const createCondo = await proxySupabaseRequest(demoCondominium, '/condominiums', 'POST');
     if (createCondo.status >= 400 && createCondo.status !== 409) {
-      return { statusCode: createCondo.status, body: JSON.stringify({ error: 'Não foi possível criar o condomínio de demonstração.', detail: createCondo.data }) };
+      return { statusCode: createCondo.status, body: JSON.stringify({ error: 'Não foi possível preparar o ambiente administrativo.' }) };
     }
   }
 
-  const token = crypto.randomBytes(12).toString('hex');
-  const email = `demo-${Date.now()}-${token.slice(0, 8)}@demo.condomit.app`;
-  const password = `Cd!${crypto.randomBytes(18).toString('base64url')}9a`;
-  const name = `Demo ${roleLabels[role]}`;
+  let authUser = await fetchAuthAdminUserByEmail(email).catch(() => null);
+  if (authUser?.deleted_at) {
+    await reactivateSoftDeletedAuthUser({ uid: authUser.id, email });
+  }
 
-  const authResult = await createAuthAdminUser({
-    email,
-    password,
-    emailConfirm: true,
-    autoConfirm: true,
-    userMetadata: { name, user_type: role, type: role, demo_access: true }
-  });
-
-  if (!authResult.created) {
-    return { statusCode: authResult.status || 502, body: JSON.stringify({ error: authResult.error || 'Não foi possível criar a conta de demonstração.' }) };
+  const metadata = { name, user_type: role, type: role, demo_access: true, admin_profile_switch: true };
+  if (!authUser) {
+    const created = await createAuthAdminUser({
+      email,
+      password,
+      emailConfirm: true,
+      autoConfirm: true,
+      userMetadata: metadata
+    });
+    if (!created.created) {
+      return { statusCode: created.status || 502, body: JSON.stringify({ error: created.error || 'Não foi possível preparar a conta administrativa.' }) };
+    }
+    authUser = created.user;
+  } else {
+    const updateResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(authUser.id)}`, {
+      method: 'PUT',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        password,
+        email_confirm: true,
+        confirm: true,
+        banned_until: null,
+        user_metadata: { ...(authUser.user_metadata || {}), ...metadata }
+      })
+    });
+    if (!updateResponse.ok) {
+      return { statusCode: updateResponse.status, body: JSON.stringify({ error: 'Não foi possível atualizar a conta administrativa.' }) };
+    }
   }
 
   const condominiumSnapshot = {
@@ -2138,41 +2158,57 @@ async function handleCreateDemoAccount(body = {}) {
     block_names: demoCondominium.block_names
   };
 
-  const profilePatch = await proxySupabaseRequest({
+  const existingProfile = await proxySupabaseRequest(null, `/users?select=email,user_type&email=eq.${encodeURIComponent(email)}&limit=1`, 'GET');
+  if (existingProfile.status >= 400) {
+    return { statusCode: existingProfile.status, body: JSON.stringify({ error: 'Não foi possível consultar o perfil administrativo.' }) };
+  }
+  const existingRole = Array.isArray(existingProfile.data) && existingProfile.data.length
+    ? String(existingProfile.data[0]?.user_type || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    : '';
+  const profileRole = ['morador', 'sindico', 'porteiro'].includes(existingRole) ? existingRole : role;
+  const profilePayload = {
+    email,
     name,
-    user_type: role,
+    user_type: profileRole,
     condominium: condominiumSnapshot,
-    demo_access: true
-  }, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
-
-  if (profilePatch.status >= 400) {
-    await deleteAuthAdminUserById(authResult.user?.id).catch(() => null);
-    return { statusCode: profilePatch.status, body: JSON.stringify({ error: 'Não foi possível preparar o perfil de demonstração.', detail: profilePatch.data }) };
+    demo_access: true,
+    two_factor_enabled: false,
+    two_factor_enabled_at: null
+  };
+  let profileResult;
+  if (Array.isArray(existingProfile.data) && existingProfile.data.length) {
+    const { email: _email, ...patch } = profilePayload;
+    profileResult = await proxySupabaseRequest(patch, `/users?email=eq.${encodeURIComponent(email)}`, 'PATCH');
+  } else {
+    profileResult = await proxySupabaseRequest(profilePayload, '/users', 'POST');
+  }
+  if (profileResult.status >= 400) {
+    return { statusCode: profileResult.status, body: JSON.stringify({ error: 'Não foi possível preparar o perfil administrativo.' }) };
   }
 
-  const membership = await proxySupabaseRequest({
-    user_email: email,
-    condominium_id: demoCep,
-    apartment: '101',
-    block: 'A'
-  }, '/user_condominiums', 'POST');
-
-  if (membership.status >= 400 && membership.status !== 409) {
-    await deleteAuthAdminUserById(authResult.user?.id).catch(() => null);
-    return { statusCode: membership.status, body: JSON.stringify({ error: 'Não foi possível vincular a conta ao condomínio de demonstração.', detail: membership.data }) };
+  const existingMembership = await proxySupabaseRequest(
+    null,
+    `/user_condominiums?select=user_email&user_email=eq.${encodeURIComponent(email)}&condominium_id=eq.${encodeURIComponent(demoCep)}&limit=1`,
+    'GET'
+  );
+  if (existingMembership.status >= 400) {
+    return { statusCode: existingMembership.status, body: JSON.stringify({ error: 'Não foi possível consultar o vínculo administrativo.' }) };
+  }
+  if (!Array.isArray(existingMembership.data) || !existingMembership.data.length) {
+    const membership = await proxySupabaseRequest({
+      user_email: email,
+      condominium_id: demoCep,
+      apartment: '101',
+      block: 'A'
+    }, '/user_condominiums', 'POST');
+    if (membership.status >= 400 && membership.status !== 409) {
+      return { statusCode: membership.status, body: JSON.stringify({ error: 'Não foi possível preparar o vínculo administrativo.' }) };
+    }
   }
 
   return {
-    statusCode: 201,
-    body: JSON.stringify({
-      ok: true,
-      email,
-      password,
-      user_type: role,
-      name,
-      demo_access: true,
-      condominium: condominiumSnapshot
-    })
+    statusCode: 200,
+    body: JSON.stringify({ ok: true, email, user_type: profileRole, demo_access: true, condominium: condominiumSnapshot })
   };
 }
 

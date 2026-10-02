@@ -131,11 +131,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             pendingNoticesEl.textContent = 'Avisos Pendentes: carregando...';
         }
 
-        loadResidents(currentUser.condominium.cep);
-        loadUpcomingAssembly(currentUser.condominium.cep);
-        loadPendingNotices(currentUser.condominium.cep);
-        loadDashboardMaintenance(currentUser.condominium.cep);
-        loadMonthlyFinancialSummary(currentUser);
+        if (!document.getElementById('referenceDashboard')) {
+            loadUnitsOverview(currentUser);
+            loadAnnualFinancialOverview(currentUser);
+            loadRecentActivity();
+        }
     }
 
     const residentManagementButton = document.getElementById('btn-resident-management-dashboard');
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (userProfileSmall) {
         userProfileSmall.style.cursor = 'pointer';
         userProfileSmall.addEventListener('click', () => {
-            window.location.href = 'configuracoes.html';
+            window.location.href = 'perfil.html';
         });
     }
 
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const lastIconBtn = iconBtns[iconBtns.length - 1];
         if (lastIconBtn) {
             lastIconBtn.addEventListener('click', () => {
-                window.location.href = 'configuracoes.html#editar-perfil';
+                window.location.href = 'perfil.html';
             });
         }
     }
@@ -468,6 +468,238 @@ async function loadMonthlyFinancialSummary(currentUser) {
         incomeEl.textContent = 'Não carregado';
         if (expenseMetaEl) expenseMetaEl.textContent = 'Não foi possível consultar as despesas agora. Tente atualizar.';
         if (incomeMetaEl) incomeMetaEl.textContent = 'Não foi possível consultar as receitas agora. Tente atualizar.';
+    }
+}
+
+
+const OVERVIEW_MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+let overviewActivities = [];
+
+function overviewMoney(value) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
+}
+
+function overviewAxisMoney(value) {
+    const n = Number(value || 0);
+    if (n >= 1000000) return `R$${(n / 1000000).toFixed(n >= 10000000 ? 0 : 1).replace('.', ',')} mi`;
+    if (n >= 1000) return `R$${Math.round(n / 1000)}k`;
+    return `R$${Math.round(n)}`;
+}
+
+function overviewNiceMax(value) {
+    const n = Math.max(Number(value || 0), 1);
+    const magnitude = Math.pow(10, Math.floor(Math.log10(n)));
+    const normalized = n / magnitude;
+    const nice = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+    return nice * magnitude;
+}
+
+async function fetchOverviewFinancialMonth(date, cep) {
+    if (typeof window.supabaseFetch !== 'function') throw new Error('Conexão com o banco indisponível.');
+    const data = await window.supabaseFetch('/rpc/condomit_monthly_financial_summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_month: date, target_cep: cep || null })
+    });
+    const summary = Array.isArray(data) ? data[0] : data;
+    return {
+        income: Number(summary?.income_total || 0),
+        expense: Number(summary?.expenses_total || 0)
+    };
+}
+
+function renderOverviewTrend(element, currentValue, comparisonValue, positiveWhenUp = true) {
+    if (!element) return;
+    const current = Number(currentValue || 0);
+    const previous = Number(comparisonValue || 0);
+    let delta = 0;
+    if (previous > 0) delta = ((current - previous) / Math.abs(previous)) * 100;
+    else if (current > 0) delta = 100;
+    const direction = Math.abs(delta) < .05 ? 0 : delta > 0 ? 1 : -1;
+    const isPositive = direction === 0 ? null : (positiveWhenUp ? direction > 0 : direction < 0);
+    element.hidden = false;
+    element.classList.toggle('negative', isPositive === false);
+    element.classList.toggle('neutral', isPositive === null);
+    const icon = element.querySelector('i');
+    const value = element.querySelector('b');
+    if (icon) icon.className = direction > 0 ? 'fas fa-arrow-up' : direction < 0 ? 'fas fa-arrow-down' : 'fas fa-minus';
+    if (value) value.textContent = `${Math.abs(delta).toFixed(Math.abs(delta) >= 10 ? 0 : 1).replace('.', ',')}%`;
+}
+
+function renderAnnualFinanceChart(incomes, expenses, visibleMonths) {
+    const svg = document.getElementById('annualFinanceChart');
+    const grid = document.getElementById('financeGrid');
+    const incomePath = document.getElementById('financeIncomePath');
+    const expensePath = document.getElementById('financeExpensePath');
+    const incomePoints = document.getElementById('financeIncomePoints');
+    const expensePoints = document.getElementById('financeExpensePoints');
+    const yAxis = document.getElementById('financeYAxis');
+    const monthLabels = document.getElementById('financeMonthLabels');
+    if (!svg || !grid || !incomePath || !expensePath || !incomePoints || !expensePoints || !yAxis || !monthLabels) return;
+
+    const width = 760;
+    const height = 260;
+    const values = [...incomes.slice(0, visibleMonths), ...expenses.slice(0, visibleMonths)];
+    const max = overviewNiceMax(Math.max(...values, 1) * 1.05);
+    const steps = 4;
+    grid.innerHTML = Array.from({ length: steps + 1 }, (_, index) => {
+        const y = (height / steps) * index;
+        return `<line class="finance-grid-line" x1="0" y1="${y}" x2="${width}" y2="${y}"></line>`;
+    }).join('');
+    yAxis.innerHTML = Array.from({ length: steps + 1 }, (_, index) => `<span>${overviewAxisMoney(max - (max / steps) * index)}</span>`).join('');
+    monthLabels.innerHTML = OVERVIEW_MONTHS.map((month) => `<span>${month}</span>`).join('');
+
+    const pointFor = (value, index) => {
+        const x = visibleMonths <= 1 ? 0 : (index / 11) * width;
+        const y = height - (Math.max(0, Number(value || 0)) / max) * height;
+        return [x, y];
+    };
+    const makePath = (series) => series.slice(0, visibleMonths).map((value, index) => {
+        const [x, y] = pointFor(value, index);
+        return `${index ? 'L' : 'M'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    }).join(' ');
+    incomePath.setAttribute('d', makePath(incomes));
+    expensePath.setAttribute('d', makePath(expenses));
+    incomePoints.innerHTML = incomes.slice(0, visibleMonths).map((value, index) => {
+        const [x, y] = pointFor(value, index);
+        return `<circle class="finance-point-income" cx="${x}" cy="${y}" r="4"><title>${OVERVIEW_MONTHS[index]}: ${overviewMoney(value)}</title></circle>`;
+    }).join('');
+    expensePoints.innerHTML = expenses.slice(0, visibleMonths).map((value, index) => {
+        const [x, y] = pointFor(value, index);
+        return `<circle class="finance-point-expense" cx="${x}" cy="${y}" r="4"><title>${OVERVIEW_MONTHS[index]}: ${overviewMoney(value)}</title></circle>`;
+    }).join('');
+}
+
+async function loadAnnualFinancialOverview(currentUser) {
+    const expenseEl = document.getElementById('overviewMonthlyExpense');
+    const incomeEl = document.getElementById('overviewAccumulatedIncome');
+    if (!expenseEl || !incomeEl) return;
+    const now = new Date();
+    const year = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const cep = currentUser?.condominium?.cep || currentUser?.condominium?.condominium_id || null;
+
+    try {
+        const currentRequests = Array.from({ length: currentMonth + 1 }, (_, month) =>
+            fetchOverviewFinancialMonth(`${year}-${String(month + 1).padStart(2, '0')}-01`, cep)
+        );
+        const previousYearRequests = Array.from({ length: currentMonth + 1 }, (_, month) =>
+            fetchOverviewFinancialMonth(`${year - 1}-${String(month + 1).padStart(2, '0')}-01`, cep)
+        );
+        const [currentRows, previousYearRows] = await Promise.all([
+            Promise.all(currentRequests),
+            Promise.all(previousYearRequests)
+        ]);
+
+        const incomes = Array(12).fill(0);
+        const expenses = Array(12).fill(0);
+        currentRows.forEach((row, index) => { incomes[index] = row.income; expenses[index] = row.expense; });
+        const currentExpense = expenses[currentMonth] || 0;
+        let previousMonthExpense = currentMonth > 0 ? expenses[currentMonth - 1] : 0;
+        if (currentMonth === 0) {
+            const previousDecember = await fetchOverviewFinancialMonth(`${year - 1}-12-01`, cep);
+            previousMonthExpense = previousDecember.expense;
+        }
+        const accumulatedIncome = incomes.slice(0, currentMonth + 1).reduce((sum, value) => sum + value, 0);
+        const previousYearIncome = previousYearRows.reduce((sum, row) => sum + Number(row.income || 0), 0);
+
+        expenseEl.textContent = overviewMoney(currentExpense);
+        incomeEl.textContent = overviewMoney(accumulatedIncome);
+        renderOverviewTrend(document.getElementById('overviewExpenseTrend'), currentExpense, previousMonthExpense, false);
+        renderOverviewTrend(document.getElementById('overviewIncomeTrend'), accumulatedIncome, previousYearIncome, true);
+        renderAnnualFinanceChart(incomes, expenses, currentMonth + 1);
+    } catch (error) {
+        console.warn('[Dashboard] Não foi possível montar o financeiro anual:', error);
+        expenseEl.textContent = 'Não carregado';
+        incomeEl.textContent = 'Não carregado';
+        renderAnnualFinanceChart(Array(12).fill(0), Array(12).fill(0), currentMonth + 1);
+    }
+}
+
+async function loadUnitsOverview(currentUser) {
+    const totalEl = document.getElementById('unitsTotal');
+    const occupiedEl = document.getElementById('unitsOccupied');
+    const availableEl = document.getElementById('unitsAvailable');
+    const donut = document.getElementById('unitsDonut');
+    if (!totalEl || !occupiedEl || !availableEl || !donut) return;
+    try {
+        const rows = await window.supabaseFetch('/rpc/condomit_list_condo_residents', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+        });
+        const residents = Array.isArray(rows) ? rows : [];
+        const units = new Set(residents.map((resident) => {
+            const apartment = String(resident?.apartment || '').trim().toLowerCase();
+            const block = String(resident?.block || '').trim().toLowerCase();
+            return apartment ? `${block}::${apartment}` : '';
+        }).filter(Boolean));
+        const configuredTotal = Number(
+            currentUser?.condominium?.totalApartments ||
+            currentUser?.condominium?.total_apartments ||
+            currentUser?.condominium?.total_apartamentos || 0
+        );
+        const occupied = units.size;
+        const total = Math.max(configuredTotal, occupied);
+        const available = Math.max(total - occupied, 0);
+        const angle = total > 0 ? (occupied / total) * 360 : 0;
+        totalEl.textContent = String(total);
+        occupiedEl.textContent = String(occupied);
+        availableEl.textContent = String(available);
+        donut.style.setProperty('--occupied-angle', `${angle.toFixed(2)}deg`);
+        donut.setAttribute('aria-label', `${occupied} unidades ocupadas e ${available} disponíveis de ${total}`);
+    } catch (error) {
+        console.warn('[Dashboard] Não foi possível carregar as unidades:', error);
+        totalEl.textContent = '0'; occupiedEl.textContent = '0'; availableEl.textContent = '0';
+        donut.style.setProperty('--occupied-angle', '0deg');
+    }
+}
+
+function formatOverviewActivityDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+}
+
+function renderRecentActivity() {
+    const tbody = document.getElementById('recentActivityBody');
+    const select = document.getElementById('activityLimit');
+    if (!tbody) return;
+    const limit = Math.max(1, Number(select?.value || 5));
+    const rows = overviewActivities.slice(0, limit);
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="activity-empty">Nenhuma atividade recente registrada.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map((item) => `
+        <tr>
+            <td>${escapeDashboardHtml(formatOverviewActivityDate(item.date))}</td>
+            <td>${escapeDashboardHtml(item.activity)}</td>
+            <td>${escapeDashboardHtml(item.responsible || 'Condomit')}</td>
+        </tr>`).join('');
+}
+
+async function loadRecentActivity() {
+    try {
+        const notices = await window.supabaseFetch('/rpc/condomit_list_wall_notices', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+        });
+        overviewActivities = (Array.isArray(notices) ? notices : []).map((row) => {
+            const notice = row && typeof row === 'object' ? row : {};
+            return {
+                date: notice.created_at || notice.updated_at || null,
+                activity: notice.title ? `Aviso publicado: ${notice.title}` : 'Aviso publicado no mural',
+                responsible: notice.created_by_name || notice.created_by || 'Síndico'
+            };
+        }).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+        renderRecentActivity();
+    } catch (error) {
+        console.warn('[Dashboard] Não foi possível carregar a atividade recente:', error);
+        overviewActivities = [];
+        renderRecentActivity();
+    }
+    const select = document.getElementById('activityLimit');
+    if (select && !select.dataset.bound) {
+        select.dataset.bound = '1';
+        select.addEventListener('change', renderRecentActivity);
     }
 }
 

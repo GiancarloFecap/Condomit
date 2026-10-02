@@ -4353,7 +4353,7 @@ async function fetchCondomitPlanCatalog(force = false) {
 
 async function getCondomitPlanAccess(billing = null, force = false) {
   const user = getStoredCondominiumUser();
-  if (user?.demo_access === true) {
+  if (user?.demo_access === true && String(user?.email || '').trim().toLowerCase() === 'contato.condomit@gmail.com') {
     const demoAccess = { resolved: true, plan_id: null, plan_name: 'Premium', level: 3, billing: { status: 'demo', can_use: true, plan_name: 'Premium', demo_access: true } };
     user.plan_name = 'Premium';
     user.plan_level = 3;
@@ -4780,7 +4780,7 @@ async function getCondomitBillingStatus(
 ) {
   const now = Date.now();
   const storedUser = getStoredCondominiumUser();
-  if (storedUser?.demo_access === true) {
+  if (storedUser?.demo_access === true && String(storedUser?.email || '').trim().toLowerCase() === 'contato.condomit@gmail.com') {
     return { status: 'demo', can_use: true, plan_id: null, plan_name: 'Premium', demo_access: true, cep: storedUser?.condominium?.cep || storedUser?.condominium?.condominium_id || null };
   }
 
