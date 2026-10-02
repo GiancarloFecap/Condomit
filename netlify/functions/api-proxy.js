@@ -2150,12 +2150,24 @@ async function handleCreateDemoAccount() {
       authUser = data?.user || authUser;
     }
   } catch (error) {
-    console.error('[ADMIN ACCOUNT] Falha ao criar/atualizar Auth:', error);
+    const details = String(error?.message || error || '').trim();
+    const code = error?.code || error?.name || null;
+    const status = Number(error?.status || error?.statusCode) || 502;
+    console.error('[ADMIN ACCOUNT] Falha ao criar/atualizar Auth:', {
+      status,
+      code,
+      message: details,
+      error
+    });
     return {
-      statusCode: Number(error?.status) || 502,
+      statusCode: status,
       body: JSON.stringify({
         error: 'Não foi possível criar ou atualizar a conta administrativa no Supabase Auth.',
-        details: error?.message || String(error)
+        details: details || 'O Supabase Auth recusou a operação sem informar detalhes.',
+        code,
+        hint: details.toLowerCase().includes('database')
+          ? 'Aplique a migration 049_auth_profile_trigger_resilience.sql. Ela impede triggers de perfil de bloquearem o Supabase Auth.'
+          : null
       })
     };
   }

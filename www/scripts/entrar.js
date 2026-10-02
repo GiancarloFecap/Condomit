@@ -305,11 +305,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // O provisionamento é uma etapa de reparo/conveniência.
                 // Se a conta já existir no Supabase Auth, o login normal deve
                 // continuar mesmo quando essa chamada auxiliar falhar.
+                const detailParts = [
+                    payload?.error,
+                    payload?.details,
+                    payload?.code ? `Código: ${payload.code}` : null,
+                    payload?.hint
+                ].filter(Boolean);
                 return {
                     attempted: true,
                     ok: false,
                     status: response.status,
-                    error: payload?.error || 'Não foi possível preparar a conta administrativa.'
+                    error: detailParts.join(' — ') || 'Não foi possível preparar a conta administrativa.',
+                    details: payload?.details || null,
+                    code: payload?.code || null
                 };
             }
 
