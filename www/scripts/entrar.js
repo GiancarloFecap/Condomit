@@ -284,15 +284,44 @@ document.addEventListener('DOMContentLoaded', async function() {
     const ADMIN_PROFILE_SWITCH_EMAIL = 'contato.condomit@gmail.com';
 
     async function ensureFixedAdminAccount(email) {
-        if (String(email || '').trim().toLowerCase() !== ADMIN_PROFILE_SWITCH_EMAIL) return;
-        const response = await fetch('/api/demo/account', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: '{}'
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            throw new Error(payload?.error || 'Não foi possível preparar a conta administrativa.');
+        if (String(email || '').trim().toLowerCase() !== ADMIN_PROFILE_SWITCH_EMAIL) {
+            return { attempted: false, ok: true };
+        }
+
+        try {
+            const response = await fetch('/api/demo/account', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}'
+            });
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                console.error('[ADMIN ACCOUNT] Provisionamento falhou:', {
+                    status: response.status,
+                    error: payload?.error || null,
+                    details: payload?.details || null
+                });
+                // O provisionamento é uma etapa de reparo/conveniência.
+                // Se a conta já existir no Supabase Auth, o login normal deve
+                // continuar mesmo quando essa chamada auxiliar falhar.
+                return {
+                    attempted: true,
+                    ok: false,
+                    status: response.status,
+                    error: payload?.error || 'Não foi possível preparar a conta administrativa.'
+                };
+            }
+
+            return { attempted: true, ok: true, data: payload };
+        } catch (error) {
+            console.error('[ADMIN ACCOUNT] Endpoint de provisionamento indisponível:', error);
+            return {
+                attempted: true,
+                ok: false,
+                status: 0,
+                error: error?.message || 'Endpoint administrativo indisponível.'
+            };
         }
     }
 
@@ -422,7 +451,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
 
             setLoginSubmitting(true);
-            await ensureFixedAdminAccount(email);
+            const adminProvision = await ensureFixedAdminAccount(email);
 
             let authData = null;
             let authError = null;
@@ -571,6 +600,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         );
 
     if (invalidCredentials) {
+        if (
+            email === ADMIN_PROFILE_SWITCH_EMAIL &&
+            adminProvision?.attempted &&
+            adminProvision?.ok === false
+        ) {
+            console.error('[ADMIN ACCOUNT] Login recusado após falha de provisionamento:', adminProvision);
+            showToast(
+                'A conta administrativa ainda não pôde ser preparada no servidor. Publique esta versão e aplique a migration 048 no Supabase.',
+                'error'
+            );
+            return;
+        }
+
         const probeResult =
             await checkDeletedUserOfferReactivate(
                 email

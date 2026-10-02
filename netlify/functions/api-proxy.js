@@ -1536,8 +1536,7 @@ async function createAuthAdminUser({ email, password, userMetadata, emailConfirm
   if (!email) return { created: false, reason: 'missing-email' };
   const payload = {
     email: String(email).trim().toLowerCase(),
-    email_confirm: Boolean(emailConfirm || autoConfirm),
-    confirm: Boolean(emailConfirm || autoConfirm)
+    email_confirm: Boolean(emailConfirm || autoConfirm)
   };
   if (password) payload.password = String(password);
   if (userMetadata && typeof userMetadata === 'object') payload.user_metadata = userMetadata;
@@ -2135,13 +2134,19 @@ async function handleCreateDemoAccount() {
       body: JSON.stringify({
         password,
         email_confirm: true,
-        confirm: true,
-        banned_until: null,
         user_metadata: { ...(authUser.user_metadata || {}), ...metadata }
       })
     });
     if (!updateResponse.ok) {
-      return { statusCode: updateResponse.status, body: JSON.stringify({ error: 'Não foi possível atualizar a conta administrativa.' }) };
+      const authErrorText = await updateResponse.text().catch(() => '');
+      console.error('[ADMIN ACCOUNT] Falha ao atualizar Auth:', updateResponse.status, authErrorText);
+      return {
+        statusCode: updateResponse.status,
+        body: JSON.stringify({
+          error: 'Não foi possível atualizar a conta administrativa no Supabase Auth.',
+          details: authErrorText || null
+        })
+      };
     }
   }
 
