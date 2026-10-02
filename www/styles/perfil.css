@@ -12,3 +12,16 @@
 html[data-theme="dark"] .profile-page-body .main-content{background:#0b1120}html[data-theme="dark"] .profile-hero,html[data-theme="dark"] .profile-card{background:#111827;border-color:#27364b;box-shadow:none}html[data-theme="dark"] .profile-hero h2,html[data-theme="dark"] .profile-card-head h3,html[data-theme="dark"] .profile-detail-list dd{color:#f1f5f9}html[data-theme="dark"] .profile-badges span,html[data-theme="dark"] .profile-switch-role{background:#162235;border-color:#334155;color:#cbd5e1}html[data-theme="dark"] .profile-form input{background:#162235;border-color:#334155;color:#f1f5f9}html[data-theme="dark"] .profile-form input[readonly]{background:#0f172a;color:#94a3b8}html[data-theme="dark"] .profile-security-card{background:#10251f}
 @media(max-width:900px){.profile-grid{grid-template-columns:1fr}.profile-hero{align-items:flex-start;flex-wrap:wrap}.profile-switch-role{margin-left:130px}}
 @media(max-width:620px){.profile-shell{padding:16px 14px 30px}.profile-hero{padding:20px;gap:15px}.profile-photo{width:82px;height:82px;border-radius:23px}.profile-photo img{border-radius:19px}.profile-hero h2{font-size:21px}.profile-switch-role{width:100%;margin-left:0;justify-content:center}.profile-grid{gap:14px}.profile-edit-card,.profile-info-card{padding:18px}.profile-detail-list>div{grid-template-columns:1fr;gap:4px}.profile-detail-list dd{text-align:left}}
+
+/* Perfil 0.72.6 - ações de conta */
+.profile-form-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:2px}
+.profile-form-actions .profile-save-btn{justify-self:auto}
+.profile-action-btn{border:1px solid #d7dfeb;border-radius:11px;background:#fff;color:#334155;padding:12px 17px;font-weight:800;display:inline-flex;align-items:center;gap:8px;cursor:pointer;font:inherit}
+.profile-action-btn:hover{background:#f8fafc}
+.profile-action-btn:disabled{opacity:.65;cursor:wait}
+.profile-logout-btn{color:#334155}
+.profile-delete-btn{border-color:#fecaca;color:#b91c1c;background:#fff7f7}
+.profile-delete-btn:hover{background:#fee2e2}
+html[data-theme="dark"] .profile-action-btn{background:#162235;border-color:#334155;color:#e2e8f0}
+html[data-theme="dark"] .profile-delete-btn{background:#2b1518;border-color:#7f1d1d;color:#fecaca}
+@media(max-width:620px){.profile-form-actions{display:grid;grid-template-columns:1fr}.profile-form-actions button{width:100%;justify-content:center}}

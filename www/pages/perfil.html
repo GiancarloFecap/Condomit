@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/perfil.css?v=0725">
+    <link rel="stylesheet" href="../styles/perfil.css?v=0726">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
 </head>
@@ -62,9 +62,6 @@
                             <span id="profileCondoBadge"><i class="fas fa-building"></i> Condomínio</span>
                         </div>
                     </div>
-                    <a href="acesso-demonstracao.html" class="profile-switch-role" id="profileSwitchRole" hidden>
-                        <i class="fas fa-repeat"></i> Trocar tipo de usuário
-                    </a>
                 </article>
 
                 <div class="profile-grid">
@@ -90,9 +87,17 @@
                                 <input type="email" id="profileEmailInput" readonly>
                                 <small>O e-mail da conta não é alterado nesta página.</small>
                             </label>
-                            <button type="submit" class="profile-save-btn" id="profileSaveBtn">
-                                <i class="fas fa-check"></i> Salvar alterações
-                            </button>
+                            <div class="profile-form-actions">
+                                <button type="submit" class="profile-save-btn" id="profileSaveBtn">
+                                    <i class="fas fa-check"></i> Salvar informações
+                                </button>
+                                <button type="button" class="profile-action-btn profile-logout-btn" id="profileLogoutBtn">
+                                    <i class="fas fa-right-from-bracket"></i> Sair da conta
+                                </button>
+                                <button type="button" class="profile-action-btn profile-delete-btn" id="profileDeleteBtn">
+                                    <i class="fas fa-trash-can"></i> Excluir conta
+                                </button>
+                            </div>
                         </form>
                     </article>
 
@@ -111,13 +116,6 @@
                                 <div><dt>Tipo de usuário</dt><dd id="profileRoleText">—</dd></div>
                             </dl>
                         </article>
-                        <article class="profile-card profile-security-card">
-                            <div class="profile-security-icon"><i class="fas fa-shield-halved"></i></div>
-                            <div>
-                                <strong>Conta protegida</strong>
-                                <p>As alterações são vinculadas à sua sessão autenticada e à sua conta na Condomit.</p>
-                            </div>
-                        </article>
                     </aside>
                 </div>
             </section>
@@ -128,7 +126,7 @@
     <script src="../scripts/supabase-client.js?v=0710"></script>
     <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
     <script src="../scripts/sidebar-links.js?v=0720"></script>
-    <script src="../scripts/perfil.js?v=073"></script>
+    <script src="../scripts/perfil.js?v=074"></script>
     <script src="../scripts/topbar-actions.js?v=0725"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>

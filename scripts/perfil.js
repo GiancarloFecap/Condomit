@@ -4,6 +4,7 @@
     const $ = (id) => document.getElementById(id);
     let currentUser = null;
     let pendingPhoto = null;
+    let verifiedAdminSwitch = false;
     const ADMIN_SWITCH_EMAIL = 'contato.condomit@gmail.com';
 
     document.addEventListener('DOMContentLoaded', init);
@@ -21,6 +22,7 @@
         } catch (error) {
             console.warn('Não foi possível atualizar o perfil antes de exibi-lo.', error);
         }
+        verifiedAdminSwitch = await verifyAdminSwitchIdentity();
         render();
         bindEvents();
     }
@@ -75,16 +77,57 @@
         $('profilePhotoInitials').textContent = initials(name);
         $('profileAvatarTop').textContent = initials(name);
 
-        const canSwitchRole = String(currentUser?.email || '').trim().toLowerCase() === ADMIN_SWITCH_EMAIL;
-        $('profileSwitchRole').hidden = !canSwitchRole;
+        const currentEmail = String(currentUser?.email || '').trim().toLowerCase();
+        renderRoleSwitchButton(verifiedAdminSwitch && currentEmail === ADMIN_SWITCH_EMAIL);
         setPhoto(photo);
         window.syncAllAvatars?.(currentUser);
+    }
+
+    function renderRoleSwitchButton(canSwitch) {
+        const hero = document.querySelector('.profile-hero');
+        if (!hero) return;
+        let button = $('profileSwitchRole');
+        if (!canSwitch) {
+            button?.remove();
+            return;
+        }
+        if (button) return;
+        button = document.createElement('a');
+        button.href = 'acesso-demonstracao.html';
+        button.className = 'profile-switch-role';
+        button.id = 'profileSwitchRole';
+        button.innerHTML = '<i class="fas fa-repeat"></i> Trocar tipo de usuário';
+        hero.appendChild(button);
+    }
+
+    async function verifyAdminSwitchIdentity() {
+        try {
+            const auth = window.supabase?.auth;
+            if (!auth) return false;
+
+            if (typeof auth.getUser === 'function') {
+                const { data, error } = await auth.getUser();
+                if (error) throw error;
+                return String(data?.user?.email || '').trim().toLowerCase() === ADMIN_SWITCH_EMAIL;
+            }
+
+            if (typeof auth.getSession === 'function') {
+                const { data, error } = await auth.getSession();
+                if (error) throw error;
+                return String(data?.session?.user?.email || '').trim().toLowerCase() === ADMIN_SWITCH_EMAIL;
+            }
+        } catch (error) {
+            console.warn('Não foi possível validar a permissão administrativa do perfil.', error);
+        }
+        return false;
     }
 
     function bindEvents() {
         $('profilePhotoButton')?.addEventListener('click', () => $('profilePhotoInput')?.click());
         $('profilePhotoInput')?.addEventListener('change', handlePhotoChange);
         $('profileForm')?.addEventListener('submit', saveProfile);
+        $('profileLogoutBtn')?.addEventListener('click', logoutAccount);
+        $('profileDeleteBtn')?.addEventListener('click', deleteAccount);
     }
 
     function setPhoto(src) {
@@ -156,7 +199,95 @@
             window.showToast?.(error?.message || 'Não foi possível atualizar o perfil.', 'error');
         } finally {
             button.disabled = false;
-            button.innerHTML = '<i class="fas fa-check"></i> Salvar alterações';
+            button.innerHTML = '<i class="fas fa-check"></i> Salvar informações';
+        }
+    }
+
+    async function logoutAccount() {
+        const confirmed = window.confirm('Deseja sair da sua conta?');
+        if (!confirmed) return;
+
+        const button = $('profileLogoutBtn');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saindo...';
+        }
+
+        try {
+            if (typeof window.performFullLogout === 'function') {
+                await window.performFullLogout('entrar.html');
+                return;
+            }
+            try { await window.supabase?.auth?.signOut?.({ scope: 'global' }); } catch (_) {}
+            try { sessionStorage.clear(); } catch (_) {}
+            try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
+            window.location.replace('entrar.html');
+        } catch (error) {
+            console.error(error);
+            window.showToast?.('Não foi possível sair da conta.', 'error');
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-right-from-bracket"></i> Sair da conta';
+            }
+        }
+    }
+
+    async function deleteAccount() {
+        const email = String(currentUser?.email || '').trim().toLowerCase();
+        if (!email) {
+            window.showToast?.('Não foi possível identificar a conta autenticada.', 'error');
+            return;
+        }
+
+        const confirmed = window.confirm(
+            'Excluir sua conta permanentemente?\n\nEsta ação remove sua conta e não pode ser desfeita.'
+        );
+        if (!confirmed) return;
+
+        const finalConfirmation = window.confirm(
+            `Confirme novamente a exclusão da conta ${email}.`
+        );
+        if (!finalConfirmation) return;
+
+        const button = $('profileDeleteBtn');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Excluindo...';
+        }
+
+        try {
+            const accessToken = typeof window.resolveSupabaseAccessToken === 'function'
+                ? await window.resolveSupabaseAccessToken()
+                : (typeof window.getSupabaseAccessToken === 'function' ? window.getSupabaseAccessToken() : null);
+
+            if (!accessToken) {
+                throw new Error('Sua sessão expirou. Entre novamente antes de excluir a conta.');
+            }
+
+            const response = await fetch(`/api/users?email=${encodeURIComponent(email)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload?.error || payload?.message || 'Não foi possível excluir a conta.');
+            }
+
+            try { sessionStorage.clear(); } catch (_) {}
+            try { window.clearPersistedCondomitUser?.(); } catch (_) {}
+            try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
+            try { localStorage.setItem('authExplicitLogoutAt', String(Date.now())); } catch (_) {}
+            window.location.replace('entrar.html?deleted=1');
+        } catch (error) {
+            console.error(error);
+            window.showToast?.(error?.message || 'Não foi possível excluir a conta.', 'error');
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-trash-can"></i> Excluir conta';
+            }
         }
     }
 
