@@ -28,6 +28,9 @@ const brevoClient = BREVO_API_KEY ? new BrevoClient({
 const RESET_TOKEN_SECRET = process.env.RESET_TOKEN_SECRET || SUPABASE_SERVICE_ROLE_KEY;
 const RESET_TOKEN_TTL_MS = 5 * 60 * 1000;
 const SUPPORT_PAYMENT_MAILTO = 'mailto:contato.condomit@gmail.com?subject=Suporte%20Condomit%20-%20Pagamento';
+const FIXED_ADMIN_EMAIL = 'contato.condomit@gmail.com';
+const FIXED_ADMIN_PHONE = '11999999990';
+const FIXED_ADMIN_CPF = '99999999050';
 const paymentConfirmationEmailAttempts = new Map();
 
 function normalizeCepForDatabase(value) {
@@ -995,7 +998,7 @@ async function getAuthenticatedSupabaseUser(event) {
   try {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: {
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        apikey: SUPABASE_ADMIN_KEY,
         Authorization: `Bearer ${token}`
       }
     });
@@ -1009,11 +1012,28 @@ async function getAuthenticatedSupabaseUser(event) {
 
 async function getApplicationUserByEmail(email) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email,user_type,condominium&email=eq.${encodeURIComponent(String(email || '').trim().toLowerCase())}&limit=1`, {
-    headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` }
+    headers: { apikey: SUPABASE_ADMIN_KEY, Authorization: `Bearer ${SUPABASE_ADMIN_KEY}` }
   });
-  if (!response.ok) return null;
+  if (!response.ok) {
+    if (String(email || '').trim().toLowerCase() === FIXED_ADMIN_EMAIL) {
+      return {
+        email: FIXED_ADMIN_EMAIL,
+        user_type: 'sindico',
+        condominium: { name: 'Condomit', condominium_name: 'Condomit', cep: '99999-999', condominium_id: '99999-999' }
+      };
+    }
+    return null;
+  }
   const rows = await response.json().catch(() => []);
-  return Array.isArray(rows) ? rows[0] || null : null;
+  if (Array.isArray(rows) && rows.length) return rows[0];
+  if (String(email || '').trim().toLowerCase() === FIXED_ADMIN_EMAIL) {
+    return {
+      email: FIXED_ADMIN_EMAIL,
+      user_type: 'sindico',
+      condominium: { name: 'Condomit', condominium_name: 'Condomit', cep: '99999-999', condominium_id: '99999-999' }
+    };
+  }
+  return null;
 }
 
 function normalizedCep(value) {
@@ -1239,8 +1259,8 @@ async function proxySupabaseRequest(body, pathSuffix, method) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1${pathSuffix}`, {
     method,
     headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: SUPABASE_ADMIN_KEY,
+      Authorization: `Bearer ${SUPABASE_ADMIN_KEY}`,
       'Content-Type': 'application/json',
       Prefer: 'return=representation'
     },
@@ -2087,6 +2107,8 @@ async function handleCreateDemoAccount() {
   const name = 'Administrador Condomit';
   const metadata = {
     name,
+    phone: FIXED_ADMIN_PHONE,
+    cpf: FIXED_ADMIN_CPF,
     user_type: role,
     type: role,
     demo_access: true,
@@ -2172,9 +2194,10 @@ async function handleCreateDemoAccount() {
     };
   }
 
-  // O registro em public.users é útil para o restante da plataforma, mas uma
-  // diferença de schema nessa tabela NÃO deve impedir uma conta válida do Auth
-  // de entrar. Tentamos o perfil completo e depois um perfil mínimo.
+  // O registro em public.users é útil para o restante da plataforma. Bancos
+  // antigos da Condomit podem exigir phone/cpf; por isso usamos valores técnicos
+  // exclusivos da conta administrativa. Não usamos upsert(onConflict=email), pois
+  // instalações legadas podem não ter a mesma constraint UNIQUE em email.
   let profileWarning = null;
   const condominiumSnapshot = {
     name: 'Condomit',
@@ -2186,6 +2209,8 @@ async function handleCreateDemoAccount() {
   const fullProfile = {
     email,
     name,
+    phone: FIXED_ADMIN_PHONE,
+    cpf: FIXED_ADMIN_CPF,
     user_type: role,
     condominium: condominiumSnapshot,
     demo_access: true,
@@ -2194,18 +2219,39 @@ async function handleCreateDemoAccount() {
   };
 
   try {
-    const { error: fullError } = await admin
+    const { data: existingRows, error: lookupError } = await admin
       .from('users')
-      .upsert(fullProfile, { onConflict: 'email' });
+      .select('email')
+      .eq('email', email)
+      .limit(1);
 
-    if (fullError) {
-      const { error: minimalError } = await admin
+    if (lookupError) throw lookupError;
+
+    if (Array.isArray(existingRows) && existingRows.length) {
+      const { error: updateError } = await admin
         .from('users')
-        .upsert({ email, name, user_type: role }, { onConflict: 'email' });
-
-      if (minimalError) {
-        profileWarning = minimalError.message || fullError.message || 'Falha ao sincronizar public.users.';
-        console.warn('[ADMIN ACCOUNT] Auth preparado, mas public.users não pôde ser sincronizado:', profileWarning);
+        .update(fullProfile)
+        .eq('email', email);
+      if (updateError) throw updateError;
+    } else {
+      const { error: insertError } = await admin
+        .from('users')
+        .insert(fullProfile);
+      if (insertError) {
+        // Fallback para schemas em que as colunas adicionadas por migrations
+        // recentes ainda não existem. Os campos historicamente obrigatórios
+        // continuam presentes.
+        const { error: coreInsertError } = await admin
+          .from('users')
+          .insert({
+            email,
+            name,
+            phone: FIXED_ADMIN_PHONE,
+            cpf: FIXED_ADMIN_CPF,
+            user_type: role,
+            condominium: condominiumSnapshot
+          });
+        if (coreInsertError) throw coreInsertError;
       }
     }
   } catch (error) {
@@ -2291,8 +2337,10 @@ exports.handler = async (event, context) => {
       const authUser = await getAuthenticatedSupabaseUser(event);
       if (!authUser) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Autenticação necessária.' }) };
       let pathSuffix = '/users?select=email,name,phone,cpf,user_type,condominium,profile_photo,two_factor_enabled,two_factor_enabled_at,demo_access';
+      let requestedEmail = '';
       if (query.email) {
         const value = String(query.email).replace(/^eq\./, '');
+        requestedEmail = value.trim().toLowerCase();
         pathSuffix += `&email=eq.${encodeURIComponent(value)}`;
       } else if (query.cpf) {
         const value = String(query.cpf).replace(/^eq\./, '');
@@ -2301,6 +2349,42 @@ exports.handler = async (event, context) => {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Informe email ou cpf.' }) };
       }
       const result = await proxySupabaseRequest(null, pathSuffix, 'GET');
+
+      // Conta administrativa fixa: a autenticação no Supabase Auth é a fonte
+      // de identidade. Se um banco legado ainda não conseguiu materializar o
+      // registro em public.users, devolvemos um perfil administrativo seguro
+      // somente para a própria sessão autenticada. Isso evita bloquear o login
+      // por diferenças históricas do schema de perfil.
+      const signedEmail = String(authUser.email || '').trim().toLowerCase();
+      const isFixedAdminLookup = requestedEmail === FIXED_ADMIN_EMAIL && signedEmail === FIXED_ADMIN_EMAIL;
+      const hasRows = Array.isArray(result.data) && result.data.length > 0;
+      if (isFixedAdminLookup && (!hasRows || result.status >= 400)) {
+        const metadata = authUser.user_metadata || {};
+        const roleRaw = String(metadata.user_type || metadata.type || 'sindico').trim().toLowerCase();
+        const role = ['morador', 'sindico', 'porteiro'].includes(roleRaw) ? roleRaw : 'sindico';
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify([{
+            email: FIXED_ADMIN_EMAIL,
+            name: metadata.name || 'Administrador Condomit',
+            phone: metadata.phone || FIXED_ADMIN_PHONE,
+            cpf: metadata.cpf || FIXED_ADMIN_CPF,
+            user_type: role,
+            condominium: {
+              name: 'Condomit',
+              condominium_name: 'Condomit',
+              cep: '99999-999',
+              condominium_id: '99999-999'
+            },
+            profile_photo: null,
+            two_factor_enabled: false,
+            two_factor_enabled_at: null,
+            demo_access: true
+          }])
+        };
+      }
+
       return { statusCode: result.status, headers, body: JSON.stringify(result.data) };
     }
 
