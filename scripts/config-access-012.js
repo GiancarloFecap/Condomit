@@ -121,6 +121,7 @@
                     ${needsUnit ? '<label><span>Apartamento</span><input id="changeCondoApartment012" type="text" required></label>' : ''}
                     ${needsUnit ? '<label><span>Bloco</span><input id="changeCondoBlock012" type="text" required></label>' : ''}
                 `)}
+                <p class="visitor-feedback" style="background:#fff7e8;border:1px solid #f2d19e;border-radius:10px;padding:12px;color:#8a550c" role="note"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> ${window.getCondomitResolvedLanguage?.() === 'en' ? 'After switching to a different condominium, <strong>all your existing reservations will be permanently deleted</strong>.' : 'Ao mudar para outro condomínio, <strong>todas as suas reservas anteriores serão excluídas permanentemente</strong> após a confirmação da troca.'}</p>
                 <div id="changeCondoFeedback012" class="visitor-feedback"></div>
                 <div class="reservas-modal-footer visitor-access-footer">
                     <button type="button" class="btn-edit-profile" data-cancel>Cancelar</button>
@@ -146,6 +147,14 @@
                 return;
             }
 
+            // Deleting existing bookings is irreversible; confirm only when changing to another CEP.
+            const previousCep = String(user?.condominium?.cep || user?.condominium?.condominium_id || user?.cep || '').replace(/\D/g, '');
+            if (previousCep.length === 8 && previousCep !== cepDigits) {
+                const text = window.getCondomitResolvedLanguage?.() === 'en'
+                    ? 'Changing condominiums will permanently delete ALL your existing reservations. Continue?'
+                    : 'Ao mudar de condomínio, TODAS as suas reservas existentes serão excluídas permanentemente. Deseja continuar?';
+                if (!window.confirm(text)) return;
+            }
             submit.disabled = true;
             submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Alterando...';
             feedback(fb, 'Validando condomínio...', 'info');

@@ -5,14 +5,14 @@
     const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const copy = {
         pt: {
-            overview:'VISÃO GERAL',dashboard:'Painel do condomínio',dashboardSubtitle:'Indicadores e movimentações do condomínio',loading:'Carregando dados',ready:'Dados atualizados',partial:'Dados parcialmente indisponíveis',
+            overview:'VISÃO GERAL',dashboard:'Painel do condomínio',dashboardSubtitle:'Indicadores e movimentações do condomínio',loading:'Carregando dados',ready:'',partial:'Dados parcialmente indisponíveis',
             residents:'Moradores cadastrados',reservations:'Reservas neste mês',occurrences:'Ocorrências no mês',notices:'Avisos publicados',
             activityTitle:'Evolução da atividade do condomínio',activitySubtitle:'Movimentação registrada ao longo dos meses',metricLabel:'Indicador',periodLabel:'Período',reservationsShort:'Reservas',noticesShort:'Comunicados',occurrencesShort:'Ocorrências',sixMonths:'Últimos 6 meses',twelveMonths:'Últimos 12 meses',
             chartNote:'Os números representam registros do condomínio, não valores estimados.',recentResidents:'Moradores recentes',recentResidentsSub:'Cadastros vinculados ao condomínio',viewAll:'Ver todos',name:'Morador',unit:'Unidade',joined:'Entrada',status:'Situação',distribution:'Distribuição de atividades',distributionSubtitle:'Registros deste mês por categoria',records:'registros',
             noResidents:'Ainda não há moradores cadastrados.',noRecords:'Nenhum registro no período.',registered:'Cadastrado',pending:'Pendente',notAvailable:'Não informado',total:'Total cadastrado',monthOverMonth:'em relação ao mês anterior',noChange:'sem variação',allRecent:'moradores registrados',maintenance:'Manutenções',
         },
         en: {
-            overview:'OVERVIEW',dashboard:'Condominium dashboard',dashboardSubtitle:'Condominium indicators and activity',loading:'Loading data',ready:'Data updated',partial:'Some data is unavailable',
+            overview:'OVERVIEW',dashboard:'Condominium dashboard',dashboardSubtitle:'Condominium indicators and activity',loading:'Loading data',ready:'',partial:'Some data is unavailable',
             residents:'Registered residents',reservations:'Reservations this month',occurrences:'Incidents this month',notices:'Published notices',
             activityTitle:'Condominium activity over time',activitySubtitle:'Monthly activity from recorded operations',metricLabel:'Metric',periodLabel:'Period',reservationsShort:'Reservations',noticesShort:'Notices',occurrencesShort:'Incidents',sixMonths:'Last 6 months',twelveMonths:'Last 12 months',
             chartNote:'All numbers come from condominium records, not estimates.',recentResidents:'Recent residents',recentResidentsSub:'Residents registered in this condominium',viewAll:'View all',name:'Resident',unit:'Unit',joined:'Joined',status:'Status',distribution:'Activity distribution',distributionSubtitle:'Records this month by category',records:'records',

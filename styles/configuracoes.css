@@ -2068,3 +2068,52 @@ html[data-theme="dark"] .release-item>span{background:#172554}
 .desktop-update-progress-track span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,#2252bd,#3d73ea); transition:width .22s ease; }
 .desktop-update-progress small { color:#64748b; }
 .btn-secondary-settings { border:1px solid #cdd8e8; background:#fff; color:#315078; border-radius:12px; padding:11px 18px; font-weight:700; cursor:pointer; }
+
+
+/* Configurações reorganizadas em abas, com conteúdo existente preservado. */
+.settings-tabs {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 5px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    padding: 0 2px;
+    margin: 0 0 24px;
+    scrollbar-width: thin;
+}
+.settings-tab {
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary, #64748b);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font: inherit;
+    font-size: .91rem;
+    font-weight: 600;
+    padding: 14px 17px;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.settings-tab:hover { color: var(--text-primary,#172b50); background: rgba(60,98,150,.06); }
+.settings-tab.is-active { color: #3263ad; border-bottom-color: #3263ad; }
+.settings-tab:focus-visible { outline: 2px solid #3263ad; outline-offset: -4px; }
+.settings-tab-panel[hidden] { display: none !important; }
+.settings-merged-card { width: 100%; max-width: 1150px; padding: clamp(18px,3vw,32px); border: 1px solid var(--border-color,#e2e8f0); box-shadow: 0 8px 24px rgba(30,65,105,.055); }
+.settings-subsection + .settings-subsection { margin-top: 26px; padding-top: 24px; border-top: 1px solid var(--border-color,#e2e8f0); }
+.settings-subsection > h3 { font-size: 1.05rem; margin: 0 0 16px; font-weight: 700; color: var(--text-primary,#1e293b); }
+.settings-subsection > .form-group, .settings-subsection > .config-profile-link { max-width: none; }
+.settings-subsection > .config-profile-link { text-decoration: none; display: flex; }
+.settings-subsection > .config-profile-link:hover { color: #3263ad; }
+[data-theme="dark"] .settings-tab.is-active { color: #a9c9ff; border-bottom-color: #a9c9ff; }
+[data-theme="dark"] .settings-merged-card { background: var(--card-bg,#1f2937); }
+@media (max-width: 740px) {
+    .config-content { padding: 18px 14px; }
+    .settings-tabs { margin-bottom: 16px; }
+    .settings-tab { font-size: .83rem; padding: 12px 14px; }
+    .settings-merged-card { padding: 18px; }
+}

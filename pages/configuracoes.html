@@ -1,543 +1,497 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Condomit - Configurações</title>
-    <link rel="icon" type="image/png" href="../assets/favicon.png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/index.css?v=053">
-    <link rel="stylesheet" href="../styles/configuracoes.css?v=0711">
-    <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/profile-photo-editor.css?v=015">
-    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
-    <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Condomit - Configurações</title>
+<link href="../assets/favicon.png" rel="icon" type="image/png"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<link href="../styles/index.css?v=053" rel="stylesheet"/>
+<link href="../styles/configuracoes.css?v=0725" rel="stylesheet"/>
+<link href="../styles/theme.css?v=044" rel="stylesheet"/>
+<link href="../styles/profile-photo-editor.css?v=015" rel="stylesheet"/>
+<link href="../styles/responsive-mobile.css?v=035" rel="stylesheet"/>
+<link href="../manifest.webmanifest" rel="manifest"/>
+<link href="../styles/ux-polish.css?v=0720" rel="stylesheet"/>
 </head>
 <body class="condomit-app-page">
-    <div class="dashboard-sindico">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <img src="../assets/logo-lado.png" alt="Condomit Icon" class="sidebar-logo">
-                <h2 class="condo-name"></h2>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <a href="#" id="inicio-link" class="nav-item">
-                        <i class="fas fa-home"></i>
-                        <span>Início</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Comunicado e Engajamento</div>
-                    <a href="mural-avisos.html" class="nav-item">
-                        <i class="fas fa-bullhorn"></i>
-                        <span>Mural de Avisos</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-lightbulb"></i>
-                        <span>Canal de Sugestões</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-flag"></i>
-                        <span>Indicações</span>
-                    </a>
-                    <div class="nav-section-title">Comunicação e Relacionamento</div>
-                    <a href="chat.html" class="nav-item">
-                        <i class="fas fa-comments"></i>
-                        <span>Chat</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-search"></i>
-                        <span>Achados e Perdidos</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-shopping-bag"></i>
-                        <span>Market Place</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <a href="assembleia.html" class="nav-item">
-                        <i class="fas fa-calendar-check"></i>
-                        <span>Assembleia</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-video"></i>
-                        <span>Chamadas</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-comment-dots"></i>
-                        <span>Avisos de Assembleia</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Gestão de Moradores</div>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-users-cog"></i>
-                        <span>Gestão de Moradores</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Reserva e Manutenção</div>
-                    <a href="reservas.html" class="nav-item">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Reserva de Locais</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-tools"></i>
-                        <span>Manutenção Preventiva</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">IA e Automação</div>
-                    <a href="ai-condomit.html" class="nav-item">
-                        <i class="fas fa-robot"></i>
-                        <span>IA - Dúvidas do Condomínio</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Configurações</div>
-                    <a href="configuracoes.html" class="nav-item active">
-                        <i class="fas fa-cog"></i>
-                        <span>Configurações</span>
-                    </a>
-                </div>
-            </nav>
-            
-            <div class="sidebar-footer">
-                <button class="btn-support">
-                    <i class="fas fa-headset"></i>
-                    <span>Central de Suporte</span>
-                </button>
-                <button class="btn-logout-sidebar" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Sair</span>
-                </button>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Top Bar -->
-            <header class="top-bar">
-                <div class="top-bar-left">
-                    <h1>Configurações</h1>
-                    <p>Personalize e gerencie as configurações do sistema</p>
-                </div>
-                <div class="top-bar-right">
-                    <div class="top-icons">
-                        <button class="icon-btn"><i class="fas fa-bell"></i></button>
-                        <button class="icon-btn"><i class="fas fa-comments"></i></button>
-                        <button class="icon-btn"><i class="fas fa-video"></i></button>
-                        <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
-                    </div>
-                    <div class="user-profile-small">
-                        <div class="user-info-small">
-                            <div class="name" id="user-name-top">Usuário</div>
-                            <div class="type" id="user-type-top">Síndico</div>
-                        </div>
-                        <div class="avatar" id="user-avatar-top">US</div>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Configurations Content -->
-            <div class="config-content">
-                <div class="config-grid">
-
-                    <!-- Conta e Perfil -->
-                    <div class="config-card">
-                        <h3>Conta e Perfil</h3>
-                        <div class="form-group" onclick="openConfigSection('dados-pessoais')">
-                            <i class="fas fa-user-cog"></i>
-                            <span>Dados pessoais</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('minha-unidade')">
-                            <i class="fas fa-home"></i>
-                            <span>Minha unidade</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" id="myHousematesConfigRow" data-sindico-only onclick="openConfigSection('meus-condominos')">
-                            <i class="fas fa-users"></i>
-                            <span>Meus condôminos</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('foto-de-perfil')">
-                            <i class="fas fa-camera"></i>
-                            <span>Foto de perfil</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-
-                    <!-- Segurança -->
-                    <div class="config-card">
-                        <h3>Segurança e acesso</h3>
-                        <div class="form-group" onclick="openConfigSection('alterar-senha')">
-                            <i class="fas fa-key"></i>
-                            <span>Alterar senha</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('autenticacao-2fa')">
-                            <i class="fas fa-shield-alt"></i>
-                            <span>Autenticação de dois fatores</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" data-min-plan="Pro" onclick="openConfigSection('controle-acesso')">
-                            <i class="fas fa-lock"></i>
-                            <span>Controle de acesso</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openChangeCondominiumModal()">
-                            <i class="fas fa-building-circle-arrow-right"></i>
-                            <span>Mudar de condomínio</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" data-min-plan="Pro" onclick="openPackageRegistrationModal()">
-                            <i class="fas fa-box-open"></i>
-                            <span>Registrar encomenda</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-
-                    <!-- Notificações -->
-                    <div class="config-card notification-settings-card">
-                        <h3>Notificações</h3>
-                                                <div class="notification-preference-row" data-notification-preference="counterpart_messages">
-                            <div class="notification-preference-copy">
-                                <i class="fas fa-comments"></i>
-                                <div>
-                                    <strong id="counterpartNotificationLabel">Comunicados do síndico</strong>
-                                    <small id="counterpartNotificationHint">Mensagens e comunicados relacionados ao síndico do seu condomínio.</small>
-                                </div>
-                            </div>
-                            <label class="notification-switch" aria-label="Ativar ou desativar comunicados">
-                                <input type="checkbox" id="prefCounterpartMessages" checked>
-                                <span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
-                            </label>
-                        </div>
-                        <div class="notification-preference-row" data-notification-preference="general_notices">
-                            <div class="notification-preference-copy">
-                                <i class="fas fa-bullhorn"></i>
-                                <div><strong>Avisos gerais do condomínio</strong><small>Avisos, mural e atualizações gerais.</small></div>
-                            </div>
-                            <label class="notification-switch" aria-label="Ativar ou desativar avisos gerais">
-                                <input type="checkbox" id="prefGeneralNotices" checked>
-                                <span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
-                            </label>
-                        </div>
-                        <div class="notification-preference-row" data-min-plan="Pro" data-notification-preference="reservations">
-                            <div class="notification-preference-copy">
-                                <i class="fas fa-calendar-check"></i>
-                                <div><strong>Reserva de áreas comuns</strong><small>Confirmações, alterações e lembretes de reservas.</small></div>
-                            </div>
-                            <label class="notification-switch" aria-label="Ativar ou desativar notificações de reservas">
-                                <input type="checkbox" id="prefReservations" checked>
-                                <span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
-                            </label>
-                        </div>
-                        <div class="notification-preference-row" data-min-plan="Pro" data-notification-preference="packages">
-                            <div class="notification-preference-copy">
-                                <i class="fas fa-box"></i>
-                                <div><strong>Encomendas e correspondências</strong><small>Chegada, retirada e atualizações de encomendas.</small></div>
-                            </div>
-                            <label class="notification-switch" aria-label="Ativar ou desativar notificações de encomendas">
-                                <input type="checkbox" id="prefPackages" checked>
-                                <span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Reserva e áreas comuns -->
-                    <div class="config-card" data-min-plan="Pro">
-                        <h3>Reserva e áreas comuns</h3>
-                        <div class="form-group" onclick="openConfigSection('minhas-reservas')">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>Minhas reservas</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('lembretes-reserva')">
-                            <i class="fas fa-bell"></i>
-                            <span>Lembretes da reserva</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('confirmacao-cancelamento')">
-                            <i class="fas fa-times-circle"></i>
-                            <span>Confirmação/lembrete cancelamento</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('reserva-area-comum')">
-                            <i class="fas fa-door-closed"></i>
-                            <span>Reservas e espaços das áreas comuns</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-
-                    <!-- Privacidade -->
-                    <div class="config-card">
-                        <h3>Privacidade</h3>
-                        <div class="form-group" onclick="openConfigSection('politica-privacidade')">
-                            <i class="fas fa-lock"></i>
-                            <span>Política de privacidade</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('termos-uso')">
-                            <i class="fas fa-file-contract"></i>
-                            <span>Termos de uso</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('consentimentos')">
-                            <i class="fas fa-check-square"></i>
-                            <span>Gerenciar consentimentos</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <button class="privacy-session-action" id="logoutAllDevicesBtn" type="button">
-                            <span class="privacy-session-action-icon"><i class="fas fa-right-from-bracket"></i></span>
-                            <span class="privacy-session-action-copy"><strong>Sair de todos os dispositivos</strong><small>Encerra as sessões da Condomit abertas em outros dispositivos e também neste aparelho.</small></span>
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-
-                    <!-- Condomínio -->
-                    <div class="config-card">
-                        <h3>Condomínio</h3>
-                        <div class="form-group" onclick="openConfigSection('info-condominio')">
-                            <i class="fas fa-building"></i>
-                            <span>Informações do condomínio</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" id="condominiumAccessCodeRow" data-min-plan="Essencial" data-sindico-only onclick="openCondominiumAccessCodeModal()" hidden>
-                            <i class="fas fa-key"></i>
-                            <span>Gerar código de acesso</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('contato-uteis')">
-                            <i class="fas fa-phone-alt"></i>
-                            <span>Contatos úteis</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" data-min-plan="Pro" onclick="openConfigSection('prestadores-servicos')">
-                            <i class="fas fa-tools"></i>
-                            <span>Prestadores de serviços</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-
-                    <!-- Aparência e acessibilidade -->
-                    <div class="config-card">
-                        <h3>Aparência e acessibilidade</h3>
-                        <div class="theme-selector">
-                            <label>Tema</label>
-                            <div class="theme-buttons">
-                                <button class="theme-btn" id="theme-light" type="button" onclick="setTheme('light')">Claro</button>
-                                <button class="theme-btn" id="theme-dark" type="button" onclick="setTheme('dark')">Escuro</button>
-                            </div>
-                        </div>
-                        <div class="font-size-selector">
-                            <label>Tamanho da fonte</label>
-                            <div class="font-buttons">
-                                <button class="font-btn" id="font-small" type="button" onclick="setFontSize('small')">A-</button>
-                                <button class="font-btn" id="font-medium" type="button" onclick="setFontSize('medium')">médio</button>
-                                <button class="font-btn" id="font-large" type="button" onclick="setFontSize('large')">A+</button>
-                            </div>
-                        </div>
-                        <div class="language-selector">
-                            <label>Idioma</label>
-                            <div class="language-select-wrap">
-                                <i class="fas fa-globe"></i>
-                                <select id="language-select" class="language-select" onchange="setLanguage(this.value)">
-                                    <option value="auto">Padrão (dispositivo)</option>
-                                    <option value="pt">Português</option>
-                                    <option value="en">English</option>
-                                </select>
-                                <i class="fas fa-chevron-down language-select-arrow"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sobre -->
-                    <div class="config-card">
-                        <h3>Sobre</h3>
-                        <div class="form-group" onclick="openConfigSection('sobre-empresa')">
-                            <i class="fas fa-building"></i>
-                            <span>Sobre a empresa</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" onclick="openConfigSection('versao-app')">
-                            <i class="fas fa-info-circle"></i>
-                            <span id="appVersionSettingsLabel">Versão do app: 0.71.7</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                        <div class="form-group" id="desktopUpdateSettingsItem" hidden style="display:none" onclick="openConfigSection('novas-atualizacoes')">
-                            <i class="fas fa-sync-alt"></i>
-                            <span>Verifique novas atualizações</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="config-footer">
-                    <div>© 2026 Condomit.</div>
-                    <div>Todos os direitos reservados</div>
-                </div>
-                <input type="file" id="profile-photo-input" accept="image/*" style="display:none" onchange="updateProfilePhoto(event)">
-            </div>
-        </main>
-    </div>
-    <script src="../scripts/platform-config.js?v=035"></script>
-
-
-    <script src="../scripts/supabase-client.js?v=0710"></script>
-    <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
-    <script src="../scripts/sidebar-links.js?v=0720"></script>
-    <script src="../scripts/visitor-registration.js"></script>
-    <script src="../scripts/two-factor.js?v=0710"></script>
-    <script src="../scripts/configuracoes.js?v=0717"></script>
-    <script src="../scripts/config-access-012.js?v=038"></script>
-    <script src="../scripts/profile-photo-editor.js?v=015"></script>
-
-    <div class="reservas-modal-overlay" id="reservasModal">
-        <div class="reservas-modal-card">
-            <div class="reservas-modal-header">
-                <div>
-                    <h3>Minhas reservas</h3>
-                    <p>Veja todas as reservas feitas na sua conta.</p>
-                </div>
-                <button type="button" class="reservas-modal-close" id="reservasModalClose" aria-label="Fechar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="reservas-modal-body" id="reservasModalBody">
-                <div class="reservas-empty-state">
-                    <i class="fas fa-calendar-days"></i>
-                    <p>Carregando reservas...</p>
-                </div>
-            </div>
-            <div class="reservas-modal-footer">
-                <button type="button" class="btn-edit-profile" id="reservasModalAction">Ir para reservas</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="reservas-modal-overlay" id="condominioModal">
-        <div class="reservas-modal-card condo-modal-card">
-            <div class="reservas-modal-header">
-                <div>
-                    <h3>Informações do condomínio</h3>
-                    <p>Veja os dados cadastrados do seu condomínio.</p>
-                </div>
-                <button type="button" class="reservas-modal-close" id="condominioModalClose" aria-label="Fechar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="reservas-modal-body" id="condominioModalBody">
-                <div class="reservas-empty-state">
-                    <i class="fas fa-building"></i>
-                    <p>Carregando informações do condomínio...</p>
-                </div>
-            </div>
-            <div class="reservas-modal-footer condominio-modal-actions">
-                <button type="button" class="btn-edit-profile btn-secondary-config" id="condominioModalSecondary">Fechar</button>
-                <button type="button" class="btn-edit-profile" id="condominioModalAction" hidden>Editar informações</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="reservas-modal-overlay" id="visitorAccessModal" aria-hidden="true">
-        <div class="reservas-modal-card condo-modal-card access-registration-modal">
-            <div class="reservas-modal-header">
-                <div>
-                    <h3 id="accessRegistrationTitle">Controle de acesso</h3>
-                    <p id="accessRegistrationSubtitle">Escolha o que deseja registrar.</p>
-                </div>
-                <button type="button" class="reservas-modal-close" id="visitorAccessModalClose" aria-label="Fechar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="reservas-modal-body">
-                <section class="access-kind-selector" id="accessKindSelector">
-                    <button type="button" class="access-kind-card" data-access-kind="visitor">
-                        <i class="fas fa-user-plus"></i>
-                        <strong>Visitante</strong>
-                        <span>Autorize uma pessoa a visitar sua unidade.</span>
-                    </button>
-                    <button type="button" class="access-kind-card" data-access-kind="dependent">
-                        <i class="fas fa-people-roof"></i>
-                        <strong>Dependente</strong>
-                        <span>Cadastre um dependente ligado à sua unidade.</span>
-                    </button>
-                    <button type="button" class="access-kind-card" data-access-kind="vehicle">
-                        <i class="fas fa-car-side"></i>
-                        <strong>Carro</strong>
-                        <span>Cadastre um veículo autorizado no condomínio.</span>
-                    </button>
-                </section>
-
-                <form id="visitorAccessForm" class="visitor-access-form access-registration-form" hidden>
-                    <button type="button" class="access-back-btn" data-access-back><i class="fas fa-arrow-left"></i> Voltar</button>
-                    <div class="visitor-access-grid">
-                        <label><span>Nome completo</span><input type="text" data-field="visitor-full-name" placeholder="Digite o nome completo" required></label>
-                        <label><span>CPF</span><input type="text" data-field="visitor-cpf" placeholder="Digite o CPF" required></label>
-                        <label><span>RG</span><input type="text" data-field="visitor-rg" placeholder="Digite o RG" required></label>
-                        <label><span>Telefone do visitante</span><input type="text" data-field="visitor-phone" placeholder="(11) 99999-9999"></label>
-                        <label class="visitor-access-email"><span>E-mail</span><input type="email" data-field="visitor-email" placeholder="visitante@email.com"></label>
-                        <input type="hidden" data-field="responsible-cpf">
-                        <input type="hidden" data-field="responsible-name">
-                        <input type="hidden" data-field="responsible-phone">
-                        <input type="hidden" data-field="responsible-apartment">
-                        <input type="hidden" data-field="responsible-block">
-                    </div>
-                    <div class="visitor-feedback" data-role="visitor-feedback"></div>
-                    <div class="reservas-modal-footer visitor-access-footer">
-                        <button type="button" class="btn-edit-profile" data-action="cancel-visitor">Cancelar</button>
-                        <button type="submit" class="btn-edit-profile visitor-submit-btn" data-action="submit-visitor">Registrar visitante</button>
-                    </div>
-                </form>
-
-                <form id="dependentAccessForm" class="visitor-access-form access-registration-form" hidden>
-                    <button type="button" class="access-back-btn" data-access-back><i class="fas fa-arrow-left"></i> Voltar</button>
-                    <div class="visitor-access-grid">
-                        <label><span>Nome completo</span><input id="dependentFullName" type="text" maxlength="120" required></label>
-                        <label><span>CPF</span><input id="dependentCpf" type="text" maxlength="14" placeholder="000.000.000-00" required></label>
-                        <label><span>Parentesco</span><input id="dependentRelationship" type="text" maxlength="60" placeholder="Ex.: Filho(a), responsável" required></label>
-                        <label><span>Telefone</span><input id="dependentPhone" type="text" maxlength="25" placeholder="(11) 99999-9999" required></label>
-                        <label class="visitor-access-email"><span>Data de nascimento</span><input id="dependentBirthDate" type="date" required></label>
-                    </div>
-                    <div class="visitor-feedback" data-role="dependent-feedback"></div>
-                    <div class="reservas-modal-footer visitor-access-footer">
-                        <button type="button" class="btn-edit-profile" data-access-back>Cancelar</button>
-                        <button type="submit" class="btn-edit-profile visitor-submit-btn">Registrar dependente</button>
-                    </div>
-                </form>
-
-                <form id="vehicleAccessForm" class="visitor-access-form access-registration-form" hidden>
-                    <button type="button" class="access-back-btn" data-access-back><i class="fas fa-arrow-left"></i> Voltar</button>
-                    <div class="visitor-access-grid">
-                        <label><span>Placa</span><input id="vehiclePlate" type="text" maxlength="10" placeholder="ABC1D23" required></label>
-                        <label><span>Modelo</span><input id="vehicleModel" type="text" maxlength="100" placeholder="Ex.: Honda Civic" required></label>
-                        <label><span>Cor</span><input id="vehicleColor" type="text" maxlength="50" placeholder="Ex.: Preto" required></label>
-                        <label><span>Observações</span><input id="vehicleNotes" type="text" maxlength="180" placeholder="Opcional"></label>
-                    </div>
-                    <div class="visitor-feedback" data-role="vehicle-feedback"></div>
-                    <div class="reservas-modal-footer visitor-access-footer">
-                        <button type="button" class="btn-edit-profile" data-access-back>Cancelar</button>
-                        <button type="submit" class="btn-edit-profile visitor-submit-btn">Registrar carro</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <script src="../scripts/topbar-actions.js?v=035"></script>
-    <script src="../scripts/condomit-alerts.js?v=014"></script>
-    <script src="../scripts/responsive-nav.js?v=025"></script>
-    <script src="../scripts/advanced-global.js?v=053"></script>
+<div class="dashboard-sindico">
+<!-- Sidebar -->
+<aside class="sidebar">
+<div class="sidebar-header">
+<img alt="Condomit Icon" class="sidebar-logo" src="../assets/logo-lado.png"/>
+<h2 class="condo-name"></h2>
+</div>
+<nav class="sidebar-nav">
+<div class="nav-section">
+<a class="nav-item" href="#" id="inicio-link">
+<i class="fas fa-home"></i>
+<span>Início</span>
+</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Comunicado e Engajamento</div>
+<a class="nav-item" href="mural-avisos.html">
+<i class="fas fa-bullhorn"></i>
+<span>Mural de Avisos</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-lightbulb"></i>
+<span>Canal de Sugestões</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-flag"></i>
+<span>Indicações</span>
+</a>
+<div class="nav-section-title">Comunicação e Relacionamento</div>
+<a class="nav-item" href="chat.html">
+<i class="fas fa-comments"></i>
+<span>Chat</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-search"></i>
+<span>Achados e Perdidos</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-shopping-bag"></i>
+<span>Market Place</span>
+</a>
+</div>
+<div class="nav-section">
+<a class="nav-item" href="assembleia.html">
+<i class="fas fa-calendar-check"></i>
+<span>Assembleia</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-video"></i>
+<span>Chamadas</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-comment-dots"></i>
+<span>Avisos de Assembleia</span>
+</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Gestão de Moradores</div>
+<a class="nav-item" href="#">
+<i class="fas fa-users-cog"></i>
+<span>Gestão de Moradores</span>
+</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Reserva e Manutenção</div>
+<a class="nav-item" href="reservas.html">
+<i class="fas fa-calendar-alt"></i>
+<span>Reserva de Locais</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-tools"></i>
+<span>Manutenção Preventiva</span>
+</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">IA e Automação</div>
+<a class="nav-item" href="ai-condomit.html">
+<i class="fas fa-robot"></i>
+<span>IA - Dúvidas do Condomínio</span>
+</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Configurações</div>
+<a class="nav-item active" href="configuracoes.html">
+<i class="fas fa-cog"></i>
+<span>Configurações</span>
+</a>
+</div>
+</nav>
+<div class="sidebar-footer">
+<button class="btn-support">
+<i class="fas fa-headset"></i>
+<span>Central de Suporte</span>
+</button>
+<button class="btn-logout-sidebar" onclick="logout()">
+<i class="fas fa-sign-out-alt"></i>
+<span>Sair</span>
+</button>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="main-content">
+<!-- Top Bar -->
+<header class="top-bar">
+<div class="top-bar-left">
+<h1>Configurações</h1>
+<p>Personalize e gerencie as configurações do sistema</p>
+</div>
+<div class="top-bar-right">
+<div class="top-icons">
+<button class="icon-btn"><i class="fas fa-bell"></i></button>
+<button class="icon-btn"><i class="fas fa-comments"></i></button>
+<button class="icon-btn"><i class="fas fa-video"></i></button>
+<button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+</div>
+<div class="user-profile-small">
+<div class="user-info-small">
+<div class="name" id="user-name-top">Usuário</div>
+<div class="type" id="user-type-top">Síndico</div>
+</div>
+<div class="avatar" id="user-avatar-top">US</div>
+</div>
+</div>
+</header>
+<!-- Configurations Content -->
+<div class="config-content">
+<nav aria-label="Categorias de configurações" class="settings-tabs" id="settingsTabs" role="tablist"><button aria-controls="settings-panel-account" aria-selected="true" class="settings-tab is-active" id="settings-tab-account" role="tab" tabindex="0" type="button"><i aria-hidden="true" class="fas fa-user-circle"></i><span data-config-tab-label="tabs_account">Conta e perfil</span></button><button aria-controls="settings-panel-security" aria-selected="false" class="settings-tab" id="settings-tab-security" role="tab" tabindex="-1" type="button"><i aria-hidden="true" class="fas fa-shield-alt"></i><span data-config-tab-label="tabs_security">Segurança e notificações</span></button><button aria-controls="settings-panel-reservations" aria-selected="false" class="settings-tab" id="settings-tab-reservations" role="tab" tabindex="-1" type="button"><i aria-hidden="true" class="fas fa-calendar-check"></i><span data-config-tab-label="tabs_reservations">Reservas e privacidade</span></button><button aria-controls="settings-panel-condominium" aria-selected="false" class="settings-tab" id="settings-tab-condominium" role="tab" tabindex="-1" type="button"><i aria-hidden="true" class="fas fa-building"></i><span data-config-tab-label="tabs_condominium">Condomínio e aparência</span></button><button aria-controls="settings-panel-about" aria-selected="false" class="settings-tab" id="settings-tab-about" role="tab" tabindex="-1" type="button"><i aria-hidden="true" class="fas fa-circle-info"></i><span data-config-tab-label="tabs_about">Sobre</span></button></nav><div class="settings-tab-panels"><section aria-labelledby="settings-tab-account" class="settings-tab-panel" id="settings-panel-account" role="tabpanel"><div class="config-card settings-merged-card"><section class="settings-subsection">
+<a class="form-group config-profile-link" href="perfil.html" id="settingsOpenProfile"><i aria-hidden="true" class="fas fa-address-card"></i><span data-config-profile-link="">Meu perfil</span><i aria-hidden="true" class="fas fa-chevron-right"></i></a><h3 data-config-title="account_profile">Conta e Perfil</h3>
+<div class="form-group" onclick="openConfigSection('dados-pessoais')">
+<i class="fas fa-user-cog"></i>
+<span>Dados pessoais</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openConfigSection('minha-unidade')">
+<i class="fas fa-home"></i>
+<span>Minha unidade</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" data-sindico-only="" id="myHousematesConfigRow" onclick="openConfigSection('meus-condominos')">
+<i class="fas fa-users"></i>
+<span>Meus condôminos</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openConfigSection('foto-de-perfil')">
+<i class="fas fa-camera"></i>
+<span>Foto de perfil</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+</section></div></section><section aria-labelledby="settings-tab-security" class="settings-tab-panel" hidden="" id="settings-panel-security" role="tabpanel"><div class="config-card settings-merged-card"><section class="settings-subsection">
+<h3 data-config-title="security">Segurança e acesso</h3>
+<div class="form-group" onclick="openConfigSection('alterar-senha')">
+<i class="fas fa-key"></i>
+<span>Alterar senha</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openConfigSection('autenticacao-2fa')">
+<i class="fas fa-shield-alt"></i>
+<span>Autenticação de dois fatores</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" data-min-plan="Pro" onclick="openConfigSection('controle-acesso')">
+<i class="fas fa-lock"></i>
+<span>Controle de acesso</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<button class="privacy-session-action" id="logoutAllDevicesBtn" type="button">
+<span class="privacy-session-action-icon"><i class="fas fa-right-from-bracket"></i></span>
+<span class="privacy-session-action-copy"><strong>Sair de todos os dispositivos</strong><small>Encerra as sessões da Condomit abertas em outros dispositivos e também neste aparelho.</small></span>
+<i class="fas fa-chevron-right"></i>
+</button></section><section class="settings-subsection">
+<h3 data-config-title="notifications">Notificações</h3>
+<div class="notification-preference-row" data-notification-preference="counterpart_messages">
+<div class="notification-preference-copy">
+<i class="fas fa-comments"></i>
+<div>
+<strong id="counterpartNotificationLabel">Comunicados do síndico</strong>
+<small id="counterpartNotificationHint">Mensagens e comunicados relacionados ao síndico do seu condomínio.</small>
+</div>
+</div>
+<label aria-label="Ativar ou desativar comunicados" class="notification-switch">
+<input checked="" id="prefCounterpartMessages" type="checkbox"/>
+<span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
+</label>
+</div>
+<div class="notification-preference-row" data-notification-preference="general_notices">
+<div class="notification-preference-copy">
+<i class="fas fa-bullhorn"></i>
+<div><strong>Avisos gerais do condomínio</strong><small>Avisos, mural e atualizações gerais.</small></div>
+</div>
+<label aria-label="Ativar ou desativar avisos gerais" class="notification-switch">
+<input checked="" id="prefGeneralNotices" type="checkbox"/>
+<span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
+</label>
+</div>
+<div class="notification-preference-row" data-min-plan="Pro" data-notification-preference="reservations">
+<div class="notification-preference-copy">
+<i class="fas fa-calendar-check"></i>
+<div><strong>Reserva de áreas comuns</strong><small>Confirmações, alterações e lembretes de reservas.</small></div>
+</div>
+<label aria-label="Ativar ou desativar notificações de reservas" class="notification-switch">
+<input checked="" id="prefReservations" type="checkbox"/>
+<span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
+</label>
+</div>
+<div class="notification-preference-row" data-min-plan="Pro" data-notification-preference="packages">
+<div class="notification-preference-copy">
+<i class="fas fa-box"></i>
+<div><strong>Encomendas e correspondências</strong><small>Chegada, retirada e atualizações de encomendas.</small></div>
+</div>
+<label aria-label="Ativar ou desativar notificações de encomendas" class="notification-switch">
+<input checked="" id="prefPackages" type="checkbox"/>
+<span class="notification-switch-track"><span class="notification-switch-thumb"></span></span>
+</label>
+</div>
+</section></div></section><section aria-labelledby="settings-tab-reservations" class="settings-tab-panel" hidden="" id="settings-panel-reservations" role="tabpanel"><div class="config-card settings-merged-card"><section class="settings-subsection" data-min-plan="Pro">
+<h3 data-config-title="reservations_title">Reserva e áreas comuns</h3>
+<div class="form-group" onclick="openConfigSection('minhas-reservas')">
+<i class="fas fa-calendar-alt"></i>
+<span>Minhas reservas</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openConfigSection('lembretes-reserva')">
+<i class="fas fa-bell"></i>
+<span>Lembretes da reserva</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openConfigSection('confirmacao-cancelamento')">
+<i class="fas fa-times-circle"></i>
+<span>Confirmação/lembrete cancelamento</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openConfigSection('reserva-area-comum')">
+<i class="fas fa-door-closed"></i>
+<span>Reservas e espaços das áreas comuns</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+</section><section class="settings-subsection">
+<h3 data-config-title="privacy">Privacidade</h3>
+<div class="form-group" onclick="openConfigSection('politica-privacidade')">
+<i class="fas fa-lock"></i>
+<span>Política de privacidade</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openConfigSection('termos-uso')">
+<i class="fas fa-file-contract"></i>
+<span>Termos de uso</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openConfigSection('consentimentos')">
+<i class="fas fa-check-square"></i>
+<span>Gerenciar consentimentos</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+</section></div></section><section aria-labelledby="settings-tab-condominium" class="settings-tab-panel" hidden="" id="settings-panel-condominium" role="tabpanel"><div class="config-card settings-merged-card"><section class="settings-subsection">
+<h3 data-config-title="condominium">Condomínio</h3>
+<div class="form-group" onclick="openConfigSection('info-condominio')">
+<i class="fas fa-building"></i>
+<span>Informações do condomínio</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" data-min-plan="Essencial" data-sindico-only="" hidden="" id="condominiumAccessCodeRow" onclick="openCondominiumAccessCodeModal()">
+<i class="fas fa-key"></i>
+<span>Gerar código de acesso</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openConfigSection('contato-uteis')">
+<i class="fas fa-phone-alt"></i>
+<span>Contatos úteis</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" data-min-plan="Pro" onclick="openConfigSection('prestadores-servicos')">
+<i class="fas fa-tools"></i>
+<span>Prestadores de serviços</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openChangeCondominiumModal()">
+<i class="fas fa-building-circle-arrow-right"></i>
+<span>Mudar de condomínio</span>
+<i class="fas fa-chevron-right"></i>
+</div><div class="form-group" data-min-plan="Pro" onclick="openPackageRegistrationModal()">
+<i class="fas fa-box-open"></i>
+<span>Registrar encomenda</span>
+<i class="fas fa-chevron-right"></i>
+</div></section><section class="settings-subsection">
+<h3 data-config-title="appearance_accessibility">Aparência e acessibilidade</h3>
+<div class="theme-selector">
+<label>Tema</label>
+<div class="theme-buttons">
+<button class="theme-btn" id="theme-light" onclick="setTheme('light')" type="button">Claro</button>
+<button class="theme-btn" id="theme-dark" onclick="setTheme('dark')" type="button">Escuro</button>
+</div>
+</div>
+<div class="font-size-selector">
+<label>Tamanho da fonte</label>
+<div class="font-buttons">
+<button class="font-btn" id="font-small" onclick="setFontSize('small')" type="button">A-</button>
+<button class="font-btn" id="font-medium" onclick="setFontSize('medium')" type="button">médio</button>
+<button class="font-btn" id="font-large" onclick="setFontSize('large')" type="button">A+</button>
+</div>
+</div>
+<div class="language-selector">
+<label>Idioma</label>
+<div class="language-select-wrap">
+<i class="fas fa-globe"></i>
+<select class="language-select" id="language-select" onchange="setLanguage(this.value)">
+<option value="auto">Padrão (dispositivo)</option>
+<option value="pt">Português</option>
+<option value="en">English</option>
+</select>
+<i class="fas fa-chevron-down language-select-arrow"></i>
+</div>
+</div>
+</section></div></section><section aria-labelledby="settings-tab-about" class="settings-tab-panel" hidden="" id="settings-panel-about" role="tabpanel"><div class="config-card settings-merged-card"><section class="settings-subsection">
+<h3 data-config-title="about">Sobre</h3>
+<div class="form-group" onclick="openConfigSection('sobre-empresa')">
+<i class="fas fa-building"></i>
+<span>Sobre a empresa</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" onclick="openConfigSection('versao-app')">
+<i class="fas fa-info-circle"></i>
+<span id="appVersionSettingsLabel">Versão do app: 0.71.7</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+<div class="form-group" hidden="" id="desktopUpdateSettingsItem" onclick="openConfigSection('novas-atualizacoes')" style="display:none">
+<i class="fas fa-sync-alt"></i>
+<span>Verifique novas atualizações</span>
+<i class="fas fa-chevron-right"></i>
+</div>
+</section></div></section></div>
+<div class="config-footer">
+<div>© 2026 Condomit.</div>
+<div>Todos os direitos reservados</div>
+</div>
+<input accept="image/*" id="profile-photo-input" onchange="updateProfilePhoto(event)" style="display:none" type="file"/>
+</div>
+</main>
+</div>
+<script src="../scripts/platform-config.js?v=035"></script>
+<script src="../scripts/supabase-client.js?v=0710"></script>
+<script src="../scripts/supabase-auth.js?v=036" type="module"></script>
+<script src="../scripts/sidebar-links.js?v=0720"></script>
+<script src="../scripts/visitor-registration.js"></script>
+<script src="../scripts/two-factor.js?v=0710"></script>
+<script src="../scripts/configuracoes.js?v=0725"></script>
+<script src="../scripts/config-access-012.js?v=038"></script>
+<script src="../scripts/profile-photo-editor.js?v=015"></script>
+<div class="reservas-modal-overlay" id="reservasModal">
+<div class="reservas-modal-card">
+<div class="reservas-modal-header">
+<div>
+<h3>Minhas reservas</h3>
+<p>Veja todas as reservas feitas na sua conta.</p>
+</div>
+<button aria-label="Fechar" class="reservas-modal-close" id="reservasModalClose" type="button">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="reservas-modal-body" id="reservasModalBody">
+<div class="reservas-empty-state">
+<i class="fas fa-calendar-days"></i>
+<p>Carregando reservas...</p>
+</div>
+</div>
+<div class="reservas-modal-footer">
+<button class="btn-edit-profile" id="reservasModalAction" type="button">Ir para reservas</button>
+</div>
+</div>
+</div>
+<div class="reservas-modal-overlay" id="condominioModal">
+<div class="reservas-modal-card condo-modal-card">
+<div class="reservas-modal-header">
+<div>
+<h3>Informações do condomínio</h3>
+<p>Veja os dados cadastrados do seu condomínio.</p>
+</div>
+<button aria-label="Fechar" class="reservas-modal-close" id="condominioModalClose" type="button">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="reservas-modal-body" id="condominioModalBody">
+<div class="reservas-empty-state">
+<i class="fas fa-building"></i>
+<p>Carregando informações do condomínio...</p>
+</div>
+</div>
+<div class="reservas-modal-footer condominio-modal-actions">
+<button class="btn-edit-profile btn-secondary-config" id="condominioModalSecondary" type="button">Fechar</button>
+<button class="btn-edit-profile" hidden="" id="condominioModalAction" type="button">Editar informações</button>
+</div>
+</div>
+</div>
+<div aria-hidden="true" class="reservas-modal-overlay" id="visitorAccessModal">
+<div class="reservas-modal-card condo-modal-card access-registration-modal">
+<div class="reservas-modal-header">
+<div>
+<h3 id="accessRegistrationTitle">Controle de acesso</h3>
+<p id="accessRegistrationSubtitle">Escolha o que deseja registrar.</p>
+</div>
+<button aria-label="Fechar" class="reservas-modal-close" id="visitorAccessModalClose" type="button">
+<i class="fas fa-times"></i>
+</button>
+</div>
+<div class="reservas-modal-body">
+<section class="access-kind-selector" id="accessKindSelector">
+<button class="access-kind-card" data-access-kind="visitor" type="button">
+<i class="fas fa-user-plus"></i>
+<strong>Visitante</strong>
+<span>Autorize uma pessoa a visitar sua unidade.</span>
+</button>
+<button class="access-kind-card" data-access-kind="dependent" type="button">
+<i class="fas fa-people-roof"></i>
+<strong>Dependente</strong>
+<span>Cadastre um dependente ligado à sua unidade.</span>
+</button>
+<button class="access-kind-card" data-access-kind="vehicle" type="button">
+<i class="fas fa-car-side"></i>
+<strong>Carro</strong>
+<span>Cadastre um veículo autorizado no condomínio.</span>
+</button>
+</section>
+<form class="visitor-access-form access-registration-form" hidden="" id="visitorAccessForm">
+<button class="access-back-btn" data-access-back="" type="button"><i class="fas fa-arrow-left"></i> Voltar</button>
+<div class="visitor-access-grid">
+<label><span>Nome completo</span><input data-field="visitor-full-name" placeholder="Digite o nome completo" required="" type="text"/></label>
+<label><span>CPF</span><input data-field="visitor-cpf" placeholder="Digite o CPF" required="" type="text"/></label>
+<label><span>RG</span><input data-field="visitor-rg" placeholder="Digite o RG" required="" type="text"/></label>
+<label><span>Telefone do visitante</span><input data-field="visitor-phone" placeholder="(11) 99999-9999" type="text"/></label>
+<label class="visitor-access-email"><span>E-mail</span><input data-field="visitor-email" placeholder="visitante@email.com" type="email"/></label>
+<input data-field="responsible-cpf" type="hidden"/>
+<input data-field="responsible-name" type="hidden"/>
+<input data-field="responsible-phone" type="hidden"/>
+<input data-field="responsible-apartment" type="hidden"/>
+<input data-field="responsible-block" type="hidden"/>
+</div>
+<div class="visitor-feedback" data-role="visitor-feedback"></div>
+<div class="reservas-modal-footer visitor-access-footer">
+<button class="btn-edit-profile" data-action="cancel-visitor" type="button">Cancelar</button>
+<button class="btn-edit-profile visitor-submit-btn" data-action="submit-visitor" type="submit">Registrar visitante</button>
+</div>
+</form>
+<form class="visitor-access-form access-registration-form" hidden="" id="dependentAccessForm">
+<button class="access-back-btn" data-access-back="" type="button"><i class="fas fa-arrow-left"></i> Voltar</button>
+<div class="visitor-access-grid">
+<label><span>Nome completo</span><input id="dependentFullName" maxlength="120" required="" type="text"/></label>
+<label><span>CPF</span><input id="dependentCpf" maxlength="14" placeholder="000.000.000-00" required="" type="text"/></label>
+<label><span>Parentesco</span><input id="dependentRelationship" maxlength="60" placeholder="Ex.: Filho(a), responsável" required="" type="text"/></label>
+<label><span>Telefone</span><input id="dependentPhone" maxlength="25" placeholder="(11) 99999-9999" required="" type="text"/></label>
+<label class="visitor-access-email"><span>Data de nascimento</span><input id="dependentBirthDate" required="" type="date"/></label>
+</div>
+<div class="visitor-feedback" data-role="dependent-feedback"></div>
+<div class="reservas-modal-footer visitor-access-footer">
+<button class="btn-edit-profile" data-access-back="" type="button">Cancelar</button>
+<button class="btn-edit-profile visitor-submit-btn" type="submit">Registrar dependente</button>
+</div>
+</form>
+<form class="visitor-access-form access-registration-form" hidden="" id="vehicleAccessForm">
+<button class="access-back-btn" data-access-back="" type="button"><i class="fas fa-arrow-left"></i> Voltar</button>
+<div class="visitor-access-grid">
+<label><span>Placa</span><input id="vehiclePlate" maxlength="10" placeholder="ABC1D23" required="" type="text"/></label>
+<label><span>Modelo</span><input id="vehicleModel" maxlength="100" placeholder="Ex.: Honda Civic" required="" type="text"/></label>
+<label><span>Cor</span><input id="vehicleColor" maxlength="50" placeholder="Ex.: Preto" required="" type="text"/></label>
+<label><span>Observações</span><input id="vehicleNotes" maxlength="180" placeholder="Opcional" type="text"/></label>
+</div>
+<div class="visitor-feedback" data-role="vehicle-feedback"></div>
+<div class="reservas-modal-footer visitor-access-footer">
+<button class="btn-edit-profile" data-access-back="" type="button">Cancelar</button>
+<button class="btn-edit-profile visitor-submit-btn" type="submit">Registrar carro</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<script src="../scripts/topbar-actions.js?v=035"></script>
+<script src="../scripts/condomit-alerts.js?v=014"></script>
+<script src="../scripts/responsive-nav.js?v=025"></script>
+<script src="../scripts/advanced-global.js?v=053"></script>
 </body>
 </html>

@@ -106,6 +106,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    initSettingsTabs();
     initPreferences();
     initEditProfileModal();
     setNotificationRoleCopy(currentUser);
@@ -120,6 +121,38 @@ document.addEventListener('DOMContentLoaded', async function() {
         try { openConfigSection('editar-perfil'); } catch (_) {}
     }
 });
+
+
+function initSettingsTabs() {
+    const tablist = document.getElementById('settingsTabs');
+    if (!tablist || tablist.dataset.initialized === 'true') return;
+    tablist.dataset.initialized = 'true';
+    const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+    function activate(tab, focus = false) {
+        tabs.forEach(button => {
+            const selected = button === tab;
+            button.classList.toggle('is-active', selected);
+            button.setAttribute('aria-selected', String(selected));
+            button.tabIndex = selected ? 0 : -1;
+            const panel = document.getElementById(button.getAttribute('aria-controls'));
+            if (panel) panel.hidden = !selected;
+        });
+        if (focus) tab.focus();
+        try { history.replaceState(null, '', `${location.pathname}${location.search}#${tab.id.replace('settings-tab-', '')}`); } catch (_) {}
+    }
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => activate(tab));
+        tab.addEventListener('keydown', event => {
+            if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+            event.preventDefault();
+            const target = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+            activate(tabs[target], true);
+        });
+    });
+    const hash = decodeURIComponent(location.hash.slice(1));
+    const direct = tabs.find(tab => tab.id === 'settings-tab-' + hash);
+    if (direct) activate(direct);
+}
 
 function getCurrentUser() {
     try {
@@ -1834,6 +1867,11 @@ function openAppVersionModal() { ensureAppVersionModal().classList.add('open'); 
 const translations = {
     pt: {
         config_title: 'Configurações',
+        tabs_account: 'Conta e perfil',
+        tabs_security: 'Segurança e notificações',
+        tabs_reservations: 'Reservas e privacidade',
+        tabs_condominium: 'Condomínio e aparência',
+        tabs_about: 'Sobre',
         config_subtitle: 'Personalize e gerencie as configurações do sistema',
         user_profile: 'Perfil do usuário',
         edit: 'Editar',
@@ -1924,6 +1962,11 @@ const translations = {
     },
     en: {
         config_title: 'Settings',
+        tabs_account: 'Account & profile',
+        tabs_security: 'Security & notifications',
+        tabs_reservations: 'Reservations & privacy',
+        tabs_condominium: 'Condominium & appearance',
+        tabs_about: 'About',
         config_subtitle: 'Customize and manage system settings',
         user_profile: 'User Profile',
         edit: 'Edit',
@@ -2025,22 +2068,17 @@ function applyTranslations(lang) {
     applyText('.top-bar-left h1', translations[lang].config_title);
     applyText('.top-bar-left p', translations[lang].config_subtitle);
 
-    const cardTitles = document.querySelectorAll('.config-card > h3');
-    const titleKeys = [
-        'user_profile',
-        'account_profile',
-        'security',
-        'notifications',
-        'reservations_title',
-        'privacy',
-        'condominium',
-        'appearance_accessibility',
-        'about'
-    ];
-    cardTitles.forEach((title, index) => {
-        const key = titleKeys[index];
-        if (key && translations[lang][key]) title.textContent = translations[lang][key];
+    // Headings are keyed to their content: card position is no longer a translation key.
+    document.querySelectorAll('[data-config-title]').forEach(heading => {
+        const label = translations[lang][heading.dataset.configTitle];
+        if (label) heading.textContent = label;
     });
+    document.querySelectorAll('[data-config-tab-label]').forEach(label => {
+        const value = translations[lang][label.dataset.configTabLabel];
+        if (value) label.textContent = value;
+    });
+    const profileLabel = document.querySelector('[data-config-profile-link]');
+    if (profileLabel) profileLabel.textContent = lang === 'en' ? 'Open my profile' : 'Abrir meu perfil';
 
     applyText('.profile-card-actions .btn-edit-profile', translations[lang].edit);
     applyText('#btn-logout-main', translations[lang].logout);
