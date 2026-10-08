@@ -2,7 +2,26 @@
 // DASHBOARD DO MORADOR - SCRIPT PRINCIPAL
 // ═══════════════════════════════════════════════════════════════
 
+// Resumo 054: traduções independentes do idioma salvo em Configurações.
+const residentOverviewStrings = {
+  pt: {dashboard:'PAINEL DO MORADOR',greeting:'Olá',subtitle:'Acompanhe o que é importante no seu condomínio.',condoFallback:'Meu condomínio',notices:'Mural de avisos',noticesDesc:'Informações e comunicados da administração.',reservations:'Minhas reservas',reservationsDesc:'Consulte ou agende áreas comuns.',assemblies:'Assembleias',assembliesDesc:'Confira reuniões e decisões do condomínio.',suggestionPrompt:'Tem uma sugestão para melhorar o condomínio?',suggestionCta:'Enviar sugestão'},
+  en: {dashboard:'RESIDENT DASHBOARD',greeting:'Hello',subtitle:'Keep up with what matters in your condominium.',condoFallback:'My condominium',notices:'Notice board',noticesDesc:'News and announcements from management.',reservations:'My reservations',reservationsDesc:'View or book shared spaces.',assemblies:'Meetings',assembliesDesc:'Review meetings and condominium decisions.',suggestionPrompt:'Have a suggestion for your condominium?',suggestionCta:'Send suggestion'}
+};
+function applyResidentOverviewLanguage() {
+  let choice = 'auto';
+  try { choice = localStorage.getItem('app-language') || 'auto'; } catch (_) {}
+  const lang = (typeof window.getCondomitResolvedLanguage === 'function' ? window.getCondomitResolvedLanguage() : (choice === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : choice)) === 'en' ? 'en' : 'pt';
+  document.querySelectorAll('[data-resident-i18n]').forEach(el => {
+    if (el.id === 'residentCondoName' && el.dataset.hasRealCondo === '1') return;
+    const value = residentOverviewStrings[lang][el.dataset.residentI18n];
+    if (value) el.textContent = value;
+  });
+}
+window.addEventListener('condomit:language-changed', applyResidentOverviewLanguage);
+window.addEventListener('storage', event => { if (event.key === 'app-language') applyResidentOverviewLanguage(); });
+
 document.addEventListener('DOMContentLoaded', async function() {
+    applyResidentOverviewLanguage();
     // Dados globais
     let currentUser = null;
     let condominiumData = null;
@@ -205,6 +224,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 avatarEl.textContent = initials;
             }
 
+            const condoLabel = document.getElementById('residentCondoName');
+            if (condoLabel) {
+                const condoName = condominiumData?.condominium_name || condominiumData?.name || userCondominiumData?.condominium_name || currentUser?.condominium?.name;
+                if (condoName) { condoLabel.textContent = condoName; condoLabel.dataset.hasRealCondo = '1'; }
+            }
+
             // Exibir nome do condomínio na sidebar embaixo da logo
             const sidebarApart = document.getElementById('sidebarApartment');
             if (sidebarApart) {
@@ -220,6 +245,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // INICIALIZAÇÃO
     // ═══════════════════════════════════════════════════════════════
 
+    document.querySelectorAll('[data-resident-route]').forEach(link => link.addEventListener('click', event => {
+        const route = link.dataset.residentRoute;
+        if (typeof window.canCondomitUseRoute === 'function' && !window.canCondomitUseRoute(route)) {
+            event.preventDefault();
+            window.navigateTo?.(route);
+        }
+    }));
     await checkAuthAndBind();
 });
 function logout() {

@@ -6,21 +6,14 @@
     <title>Condomit - Gestão Inteligente para Condomínios</title>
     <link rel="icon" type="image/png" href="assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="styles/inicio.css?v=048">
+    <link rel="stylesheet" href="styles/inicio.css?v=054">
     <link rel="stylesheet" href="styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#2252BD">
     <link rel="stylesheet" href="styles/ux-polish.css?v=049">
 </head>
 <body>
-    <!-- Hero and Header -->
-    <section class="hero-section" id="inicio">
-        <div class="hero-background">
-            <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80" alt="Condomínio" class="hero-bg-image">
-            <div class="hero-overlay"></div>
-        </div>
-        
-        <div class="container">
+    <!-- Cabeçalho global visível durante toda a navegação -->
             <header class="header">
                 <div class="header-content">
                     <img src="assets/logo-lado.png" alt="Condomit Logo" class="logo" onerror="this.onerror=null; this.src='assets/logo-full2.png';">
@@ -34,7 +27,7 @@
                         <div class="landing-language-switcher" title="Idioma">
                             <i class="fas fa-globe" aria-hidden="true"></i>
                             <select id="landing-language-select" aria-label="Idioma">
-                                <option value="auto">Padrão (dispositivo)</option>
+                                <option value="auto">Padrão</option>
                                 <option value="pt">Português</option>
                                 <option value="en">English</option>
                             </select>
@@ -45,6 +38,15 @@
                     </nav>
                 </div>
             </header>
+    <!-- Hero and Header -->
+    <section class="hero-section" id="inicio">
+        <div class="hero-background">
+            <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80" alt="Condomínio" class="hero-bg-image">
+            <div class="hero-overlay"></div>
+        </div>
+        
+        <div class="container">
+
 
             <div class="hero-content">
                 <div class="hero-text">
@@ -322,7 +324,7 @@
     <script src="scripts/supabase-client.js?v=043"></script>
     <script type="module" src="scripts/supabase-auth.js?v=036"></script>
     <script src="scripts/session-resume.js?v=038"></script>
-    <script src="scripts/inicio-i18n.js?v=0712"></script>
+    <script src="scripts/inicio-i18n.js?v=054"></script>
     <script src="scripts/inicio.js?v=0717"></script>
     <script src="scripts/condomit-alerts.js?v=014"></script>
     <script src="scripts/pwa-register.js?v=0712"></script>

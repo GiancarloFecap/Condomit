@@ -6,7 +6,24 @@ const sidebarRuntime = {
     currentUserType: 'sindico'
 };
 const sidebarCondoLogoCache = new Map();
-let sidebarOpenSection = null; // Acordeão: apenas uma seção aberta por vez
+// Lembra o último grupo da sidebar enquanto a pessoa navega entre páginas.
+// Uma nova sessão começa com todos os grupos recolhidos.
+const SIDEBAR_GROUP_KEY = 'condomit:sidebar-expanded:054';
+function sidebarGroupStorageKey() {
+    const user = sidebarRuntime.currentUser;
+    return `${SIDEBAR_GROUP_KEY}:${String(user?.email || 'visitor').toLowerCase()}:${sidebarRuntime.currentUserType}`;
+}
+function restoreSidebarGroup() {
+    try { return sessionStorage.getItem(sidebarGroupStorageKey()) || null; } catch (_) { return null; }
+}
+function saveSidebarGroup(group) {
+    try {
+        const key = sidebarGroupStorageKey();
+        if (group) sessionStorage.setItem(key, group);
+        else sessionStorage.removeItem(key);
+    } catch (_) {}
+}
+let sidebarOpenSection = null; // Acordeão: um grupo por vez
 
 const sidebarI18n = {
     pt: {
@@ -1215,22 +1232,36 @@ function sidebarAccountMarkup(user, userType, lang = getAppLanguage()) {
         <span class="sidebar-account-copy"><strong id="profileNameTop">${escapeSidebarHtml(name)}</strong><small id="profileTypeTop">${escapeSidebarHtml(role)}</small></span>
         <i class="fas fa-chevron-right sidebar-account-chevron" aria-hidden="true"></i>
       </a>
-      <button class="sidebar-notification-button" type="button" title="${escapeSidebarHtml(t('notifications', lang))}"
-        aria-label="${escapeSidebarHtml(t('notifications', lang))}"><i class="fas fa-bell" aria-hidden="true"></i></button>
+
     </div>`;
 }
 
-function bindSidebarNotification(sidebar) {
-    sidebar.querySelector('.sidebar-notification-button')?.addEventListener('click', () => {
-        if (typeof window.openCondomitNotifications === 'function') window.openCondomitNotifications();
-        else window.location.hash = 'notificacoes';
-    });
+function bindSidebarNotification() {
+    // A topbar foi removida; o sino fica no canto superior direito do workspace.
+    // Usa o mesmo popup de notificações de topbar-actions.js.
+    let button = document.getElementById('condomitFloatingBell');
+    if (!button) {
+        button = document.createElement('button');
+        button.id = 'condomitFloatingBell';
+        button.className = 'condomit-floating-bell';
+        button.type = 'button';
+        button.innerHTML = '<i class="fas fa-bell" aria-hidden="true"></i>';
+        button.addEventListener('click', () => {
+            if (typeof window.openCondomitNotifications === 'function') window.openCondomitNotifications();
+            else window.location.hash = 'notificacoes';
+        });
+        document.body.appendChild(button);
+    }
+    const label = t('notifications', getAppLanguage());
+    button.title = label;
+    button.setAttribute('aria-label', label);
 }
 
 function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage()) {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
 
+    sidebarOpenSection = restoreSidebarGroup();
     sidebar.classList.toggle('porteiro-sidebar', userType === 'porteiro');
     sidebar.classList.toggle('sindico-sidebar', userType !== 'porteiro' && userType !== 'morador');
     sidebar.classList.toggle('morador-sidebar', userType === 'morador');
@@ -1415,6 +1446,7 @@ function bindSidebarAccordion(sidebar) {
         button.addEventListener('click', () => {
             const key = button.dataset.accordionToggle;
             sidebarOpenSection = sidebarOpenSection === key ? null : key;
+            saveSidebarGroup(sidebarOpenSection);
             sidebar.querySelectorAll('[data-accordion-section]').forEach(section => {
                 const expanded = section.dataset.accordionSection === sidebarOpenSection;
                 section.classList.toggle('expanded', expanded);

@@ -1297,3 +1297,47 @@ body {
     }
     #landing-language-select { width: 62px !important; font-size: 11px !important; }
 }
+
+/* 054 - Cabeçalho da landing acompanha toda a página. */
+body > .header {
+  position:fixed !important;top:0;left:0;right:0;z-index:5000;
+  background:linear-gradient(105deg,#0d1b39 0%,#17357d 55%,#2354bf 100%);
+  box-shadow:0 3px 16px rgba(9,27,67,.16);
+}
+body > .header .header-content{width:min(100% - 40px,1140px);margin:0 auto;min-height:86px;padding:7px 0;gap:15px}
+body > .header .logo{width:190px;height:68px;min-width:0;object-fit:contain;margin:0}
+body > .header .header-nav{gap:clamp(9px,1.3vw,18px);margin:0;min-width:0}
+body > .header .header-nav>a,body > .header .header-nav .btn-login,body > .header .header-nav .btn-signup{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  white-space:nowrap!important;word-break:normal!important;flex-wrap:nowrap!important;
+  flex-shrink:0;line-height:1.15;min-width:max-content;
+}
+body > .header .header-nav>a i{display:inline-block;flex-shrink:0;margin:0!important}
+body > .header .landing-language-switcher{flex-shrink:0;min-width:105px;}
+body > .header .landing-language-switcher #landing-language-select{width:100%;min-width:0;white-space:nowrap}
+.hero-section .hero-content{padding-top:clamp(135px,13vw,172px)}
+html{scroll-padding-top:100px}
+@media(max-width:992px){
+ body > .header .header-content{width:calc(100% - 28px);min-height:76px}
+ body > .header .logo{width:min(28vw,162px);height:60px}
+ body > .header .header-nav{gap:9px!important}
+ .hero-section .hero-content{padding-top:125px}
+}
+@media(max-width:680px){
+ body > .header .header-content{width:calc(100% - 20px);min-height:70px;gap:8px}
+ body > .header .logo{width:clamp(88px,25vw,140px)!important;height:56px;min-width:0!important}
+ body > .header .header-nav .btn-login,body > .header .header-nav .btn-signup{min-width:max-content!important;padding:8px 10px!important;font-size:12px!important}
+ body > .header .header-nav{gap:6px!important}
+ body > .header .landing-language-switcher{min-width:84px;height:36px!important;grid-template-columns:21px minmax(41px,1fr) 15px!important;padding:0 3px!important}
+ body > .header .landing-language-switcher #landing-language-select{font-size:11px!important}
+ .hero-section .hero-content{padding-top:114px}
+}
+@media(max-width:390px){
+ body > .header .logo{width:88px!important}
+ body > .header .header-nav .btn-login,body > .header .header-nav .btn-signup{padding:7px 8px!important;font-size:11px!important}
+ body > .header .landing-language-switcher{min-width:75px;grid-template-columns:18px minmax(36px,1fr) 12px!important}
+}
+
+@media(max-width:680px){
+  body > .header .header-nav .btn-signup{display:inline-flex!important;}
+}

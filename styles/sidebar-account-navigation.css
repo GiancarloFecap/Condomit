@@ -39,3 +39,20 @@ html[data-theme="dark"] .advanced-page-heading p {color:#94a3b8;}
   body.advanced-page .advanced-page-heading #advancedMenuBtn { display:inline-flex; }
 }
 @media(max-width:480px) { .sidebar-account-card{gap:8px}.sidebar-notification-button{flex-basis:38px;width:38px;} }
+
+/* 054: Notificações retornam ao canto superior direito, sem recriar a topbar. */
+.sidebar-account-row .sidebar-account-card { width:100%; }
+.condomit-floating-bell {
+  position:fixed;top:18px;right:24px;z-index:1800;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:46px;height:46px;border-radius:15px;border:1px solid #dbe4ef;
+  background:rgba(255,255,255,.96);color:#234c9e;
+  box-shadow:0 8px 24px rgba(15,35,71,.12);
+  cursor:pointer;font-size:18px;transition:background .16s,transform .16s;
+}
+.condomit-floating-bell:hover { background:#eef5ff;transform:translateY(-1px); }
+.condomit-floating-bell:focus-visible { outline:3px solid #93c5fd;outline-offset:3px; }
+html[data-theme="dark"] .condomit-floating-bell { background:#1b2c45;color:#d9eafe;border-color:#334865; }
+@media(max-width:900px) { .condomit-floating-bell { top:max(12px,env(safe-area-inset-top));right:14px;width:42px;height:42px;z-index:2200; } }
+
+body.advanced-page .advanced-page-heading, body:has(.admin-company-page) .admin-company-header { padding-right:62px; }

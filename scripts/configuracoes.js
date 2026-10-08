@@ -2127,7 +2127,7 @@ function applyTranslations(lang) {
     const autoOption = languageSelect?.querySelector('[value="auto"]');
     const ptOption = languageSelect?.querySelector('[value="pt"]');
     const enOption = languageSelect?.querySelector('[value="en"]');
-    if (autoOption) autoOption.textContent = lang === 'en' ? 'Default (device)' : 'Padrão (dispositivo)';
+    if (autoOption) autoOption.textContent = lang === 'en' ? 'Default' : 'Padrão';
     if (ptOption) ptOption.textContent = translations[lang].language_option_pt;
     if (enOption) enOption.textContent = translations[lang].language_option_en;
 

@@ -3,6 +3,7 @@
   const PT_EN = {
   "Condomit - Gestão Inteligente para Condomínios": "Condomit - Smart Condominium Management",
   "Início": "Home",
+  "Padrão": "Default",
   "Sobre": "About",
   "Recursos": "Features",
   "Planos": "Plans",
