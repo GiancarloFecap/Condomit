@@ -627,3 +627,70 @@ html[data-theme="dark"] .lost-found-detail-section p,
 html[data-theme="dark"] .lost-found-owner-editor>div p{color:#94a3b8}
 html[data-theme="dark"] .lost-found-detail-image-wrap,
 html[data-theme="dark"] .lost-found-detail-image{background:#0f172a;border-color:#334155}
+
+
+/* 056 - achados e perdidos redesenhado com filtros e busca limpos. */
+.lost-found-page { padding: 0 32px 32px; }
+.lost-found-page-header {
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+}
+.lost-found-page-header h2 { font-size: clamp(1.65rem,2vw,2rem); color:#0f172a; margin-bottom:6px; }
+.lost-found-page-header p { color:#64748b; max-width:640px; }
+.lost-found-page-actions { display:flex; gap:12px; }
+.toolbar { align-items: center; }
+.search-box {
+    position: relative;
+    border: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+}
+.search-box i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    z-index: 2;
+}
+.search-box input {
+    min-height: 52px;
+    padding: 0 18px 0 46px !important;
+    border: 1px solid #dbe2f0 !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-sizing: border-box;
+}
+.search-box input:focus { outline:none; border-color:#294FD8 !important; box-shadow:0 0 0 4px rgba(41,79,216,.08); }
+.status-filter-group {
+    padding: 4px;
+    border: 1px solid #dbe2f0;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+}
+.sort-filter-wrap {
+    min-height: 52px;
+    padding: 0 14px;
+    border: 1px solid #dbe2f0;
+    border-radius: 16px;
+    background: #fff;
+}
+.sort-filter-wrap select {
+    min-height: 50px;
+    padding: 0 6px !important;
+}
+.lost-found-layout { align-items:start; }
+.items-grid { grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); }
+.res-item-card { border-radius: 18px; }
+.lost-found-sidebar .card-shell { position: sticky; top: 96px; }
+.primary-action, .ghost-btn { min-height: 52px; border-radius: 16px; }
+@media (max-width: 980px) {
+    .lost-found-page { padding: 0 18px 24px; }
+    .lost-found-layout { grid-template-columns: 1fr; }
+    .lost-found-sidebar .card-shell { position: static; top: auto; }
+}

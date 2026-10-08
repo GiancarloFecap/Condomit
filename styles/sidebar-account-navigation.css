@@ -56,3 +56,50 @@ html[data-theme="dark"] .condomit-floating-bell { background:#1b2c45;color:#d9ea
 @media(max-width:900px) { .condomit-floating-bell { top:max(12px,env(safe-area-inset-top));right:14px;width:42px;height:42px;z-index:2200; } }
 
 body.advanced-page .advanced-page-heading, body:has(.admin-company-page) .admin-company-header { padding-right:62px; }
+
+
+/* 056 - reserva espaço para o sino e evita sobreposição em páginas com ações no topo. */
+body.condomit-no-topbar .resident-overview,
+body.condomit-no-topbar .notifications-page,
+body.condomit-no-topbar .marketplace-page,
+body.condomit-no-topbar .lost-found-page {
+  padding-top: 72px !important;
+}
+body.condomit-no-topbar .chat-page {
+  padding-top: 76px !important;
+  height: calc(100svh - 156px) !important;
+}
+body.condomit-no-topbar .marketplace-head,
+body.condomit-no-topbar .lost-found-page-header,
+body.condomit-no-topbar .page-head,
+body.condomit-no-topbar .chat-header {
+  padding-right: 72px;
+}
+body.condomit-no-topbar .lost-found-page-actions,
+body.condomit-no-topbar .page-head .page-actions {
+  flex-shrink: 0;
+}
+.condomit-floating-bell {
+  top: 18px; right: 18px; width: 48px; height: 48px; border-radius: 16px;
+}
+.sidebar .nav-item.active {
+  background: rgba(14,165,164,.18) !important;
+  border: 1px solid rgba(94,234,212,.24);
+  color: #ffffff !important;
+}
+.sidebar .nav-item:hover {
+  background: rgba(255,255,255,.12);
+}
+@media(max-width:900px) {
+  body.condomit-no-topbar .resident-overview,
+  body.condomit-no-topbar .notifications-page,
+  body.condomit-no-topbar .marketplace-page,
+  body.condomit-no-topbar .lost-found-page,
+  body.condomit-no-topbar .chat-page {
+    padding-top: 58px !important;
+  }
+  body.condomit-no-topbar .marketplace-head,
+  body.condomit-no-topbar .lost-found-page-header,
+  body.condomit-no-topbar .page-head,
+  body.condomit-no-topbar .chat-header { padding-right: 56px; }
+}

@@ -28,3 +28,8 @@ html[data-theme="dark"] .resident-summary-card,html[data-theme="dark"] .resident
 html[data-theme="dark"] .resident-feedback-row{background:#192b43;color:#afc1d9;border-color:#35445c}
 @media(max-width:1080px){.resident-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){.resident-overview{padding:24px 16px 40px}.resident-welcome{align-items:flex-start;flex-direction:column;gap:15px}.resident-summary-grid{grid-template-columns:1fr;gap:12px}.resident-summary-card{min-height:145px;gap:13px;padding:18px}.resident-card-arrow{top:29px}.resident-feedback-row{align-items:flex-start;flex-direction:column;padding:17px}}
+
+
+/* 055 - painel do morador mais limpo sem o nome do condomínio no topo. */
+.resident-welcome { align-items: flex-start; }
+.resident-welcome > div { max-width: 760px; }

@@ -633,3 +633,16 @@ body { background: linear-gradient(180deg, #f7faff 0%, #eef5ff 100%); }
 .choose { border-top:1px solid #edf2f7; margin-top:auto; color:#174b91; }
 .bottom { max-width:1120px; background:rgba(255,255,255,.78); border:1px solid #dfe8f4; }
 @media (max-width:700px) { .shell{width:min(100% - 20px,1180px)} .topbar{align-items:flex-start} .demo-link{order:3} }
+
+
+/* 056 - refinamento visual e responsividade da escolha de perfil. */
+body { min-height: 100vh; overflow-x: hidden; }
+.topbar { display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+.top-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.cards { align-items: stretch; }
+.profile { height: 100%; }
+.choose, .continue { white-space: nowrap; }
+@media (max-width: 760px) {
+  .topbar, .top-actions { justify-content:center; }
+  .bottom { gap: 14px; flex-wrap: wrap; }
+}
