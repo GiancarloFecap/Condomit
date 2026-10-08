@@ -4107,7 +4107,7 @@ window.addEventListener(
         'function'
     ) {
       applyTranslations(
-        e.newValue
+        window.getCondomitResolvedLanguage?.() || (e.newValue === 'auto' ? (/^pt/i.test(navigator.language || 'pt') ? 'pt' : 'en') : e.newValue)
       );
     }
   }

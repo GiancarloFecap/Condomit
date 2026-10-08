@@ -1,3 +1,4 @@
+https://condomit.netlify.app/*  https://condomit.com.br/:splat  301!
 /api/assembly/transcribe              /.netlify/functions/assembly-transcribe 200!
 /api/* /.netlify/functions/api-proxy/api/:splat 200!
 /pages/redefinir-senha.html         /pages/redefinir-senha.html     200

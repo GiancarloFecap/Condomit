@@ -1,7 +1,7 @@
 
 (function () {
   function getLang() {
-    try { return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt'; } catch (_) { return 'pt'; }
+    try { return ((window.getCondomitResolvedLanguage?.() || ((localStorage.getItem('app-language') || 'auto') === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : localStorage.getItem('app-language'))) === 'en' ? 'en' : 'pt'); } catch (_) { return /^pt/i.test(navigator.language || 'pt')?'pt':'en'; }
   }
 
   const text = {

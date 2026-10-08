@@ -731,16 +731,24 @@ function setFontSize(size) {
     }
 }
 
-function setLanguage(lang) {
-    localStorage.setItem('app-language', lang);
-    if (typeof window.applyGlobalAppLanguage === 'function') {
-        window.applyGlobalAppLanguage(lang);
-    }
-    applyTranslations(lang);
+function resolveConfigLanguage(choice) {
+    if (choice === 'pt' || choice === 'en') return choice;
+    const device = (navigator.languages || [navigator.language || 'pt'])[0] || 'pt';
+    return /^pt(?:-|$)/i.test(device) ? 'pt' : 'en';
+}
+function setLanguage(choice) {
+    const selection = ['auto','pt','en'].includes(choice) ? choice : 'auto';
+    localStorage.setItem('app-language', selection);
+    const language = resolveConfigLanguage(selection);
+    window.applyGlobalAppLanguage?.(language);
+    applyTranslations(language);
+    const control = document.getElementById('language-select');
+    if (control) control.value = selection;
+    window.dispatchEvent(new CustomEvent('condomit:language-changed',{detail:{language,selection}}));
 }
 
 function getConfigLocale() {
-    return localStorage.getItem('app-language') || 'pt';
+    return resolveConfigLanguage(localStorage.getItem('app-language') || 'auto');
 }
 
 function cfgT(key) {
@@ -2078,8 +2086,12 @@ function applyTranslations(lang) {
     applyText('#font-medium', translations[lang].font_medium);
 
     const languageSelect = document.getElementById('language-select');
-    if (languageSelect?.options[0]) languageSelect.options[0].textContent = translations[lang].language_option_pt;
-    if (languageSelect?.options[1]) languageSelect.options[1].textContent = translations[lang].language_option_en;
+    const autoOption = languageSelect?.querySelector('[value="auto"]');
+    const ptOption = languageSelect?.querySelector('[value="pt"]');
+    const enOption = languageSelect?.querySelector('[value="en"]');
+    if (autoOption) autoOption.textContent = lang === 'en' ? 'Default (device)' : 'Padrão (dispositivo)';
+    if (ptOption) ptOption.textContent = translations[lang].language_option_pt;
+    if (enOption) enOption.textContent = translations[lang].language_option_en;
 
     const footerItems = document.querySelectorAll('.config-footer div');
     if (footerItems[0]) footerItems[0].textContent = translations[lang].footer_condo;
@@ -2256,7 +2268,7 @@ function bindLogoutAllDevices() {
 function initPreferences() {
     const theme = localStorage.getItem('app-theme') || 'light';
     const fontSize = localStorage.getItem('app-font-size') || 'medium';
-    const language = localStorage.getItem('app-language') || 'pt';
+    const language = localStorage.getItem('app-language') || 'auto';
 
     setTheme(theme);
     setFontSize(fontSize);

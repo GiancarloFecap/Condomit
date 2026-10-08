@@ -87,7 +87,7 @@
     if(!nav)return;
 
     const currentRole=role(readUser());
-    const lang=(()=>{try{return localStorage.getItem('app-language')==='en'?'en':'pt';}catch(_){return 'pt';}})();
+    const lang=(()=>{try{return ((window.getCondomitResolvedLanguage?.() || ((localStorage.getItem('app-language') || 'auto') === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : localStorage.getItem('app-language'))) === 'en' ? 'en' : 'pt');}catch(_){return 'pt';}})();
     const labels=lang==='en'
       ? {management:'Management',advanced:'Advanced Management',assembly:'Assembly'}
       : {management:'Gestão',advanced:'Gestão Avançada',assembly:'Assembleia'};
@@ -113,8 +113,8 @@
     const managementSection=residentLink?.closest('.nav-section');
     if(managementSection){
       let title=managementSection.querySelector(':scope > .nav-section-title');
-      if(!title){ title=document.createElement('div'); title.className='nav-section-title'; managementSection.prepend(title); }
-      title.textContent=labels.management;
+      if(!title && !managementSection.matches('[data-accordion-section]')){ title=document.createElement('div'); title.className='nav-section-title'; managementSection.prepend(title); }
+      if(title)title.textContent=labels.management;
 
       // Mantém exatamente um botão Gestão Avançada logo abaixo de Gestão de Moradores.
       const keep=advancedLinks.find(a=>a.closest('.nav-section')===managementSection) || advancedLinks[0] || document.createElement('a');
@@ -129,7 +129,7 @@
     // Adiciona o título “Assembleia” no grupo da assembleia quando a sidebar legada não o tiver.
     const assemblyLink=[...nav.querySelectorAll('a.nav-item')].find(a=>/assembleia|assembly/i.test(a.textContent||'') && /assembleia\.html|assembleias/i.test(a.getAttribute('href')||a.textContent||''));
     const assemblySection=assemblyLink?.closest('.nav-section');
-    if(assemblySection && !assemblySection.querySelector(':scope > .nav-section-title')){
+    if(assemblySection && !assemblySection.matches('[data-accordion-section]') && !assemblySection.querySelector(':scope > .nav-section-title')){
       const title=document.createElement('div');title.className='nav-section-title';title.textContent=labels.assembly;assemblySection.prepend(title);
     }
   }

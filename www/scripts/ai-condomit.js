@@ -3,7 +3,7 @@
 
     const state = { user: null, history: [], conversations: [], conversationId: null, restoring: false };
     const $ = (id) => document.getElementById(id);
-    const appLanguage = () => { try { return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt'; } catch (_) { return 'pt'; } };
+    const appLanguage = () => { try { return ((window.getCondomitResolvedLanguage?.() || ((localStorage.getItem('app-language') || 'auto') === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : localStorage.getItem('app-language'))) === 'en' ? 'en' : 'pt'); } catch (_) { return 'pt'; } };
     const isEnglish = () => appLanguage() === 'en';
 
     const AI_EN_REPLACEMENTS = [

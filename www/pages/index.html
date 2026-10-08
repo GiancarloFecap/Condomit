@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=073">
-    <link rel="stylesheet" href="../styles/index-reference-dashboard.css?v=0731">
+    <link rel="stylesheet" href="../styles/index-reference-dashboard.css?v=0740">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
@@ -150,137 +150,44 @@
 
             <!-- Dashboard Content -->
             <section class="reference-dashboard" id="referenceDashboard" aria-label="Visão geral do condomínio">
-                <div class="reference-kpi-grid">
-                    <article class="reference-kpi-card">
-                        <div class="reference-kpi-icon residents"><i class="fas fa-users"></i></div>
-                        <div class="reference-kpi-main">
-                            <span>Moradores ativos</span>
-                            <strong id="refResidentsValue">—</strong>
-                            <small id="refResidentsTrend"><i class="fas fa-minus"></i> aguardando dados</small>
-                        </div>
-                        <a href="gestao-moradores.html" class="reference-kpi-arrow" aria-label="Abrir moradores"><i class="fas fa-chevron-right"></i></a>
-                    </article>
-
-                    <article class="reference-kpi-card">
-                        <div class="reference-kpi-icon billing"><i class="fas fa-dollar-sign"></i></div>
-                        <div class="reference-kpi-main">
-                            <span>Boletos pagos</span>
-                            <strong id="refBillingValue">—</strong>
-                            <small id="refBillingTrend"><i class="fas fa-minus"></i> situação do condomínio</small>
-                        </div>
-                        <a href="configuracoes.html" class="reference-kpi-arrow" aria-label="Abrir financeiro"><i class="fas fa-chevron-right"></i></a>
-                    </article>
-
-                    <article class="reference-kpi-card">
-                        <div class="reference-kpi-icon reservations"><i class="fas fa-calendar-days"></i></div>
-                        <div class="reference-kpi-main">
-                            <span>Reservas do salão</span>
-                            <strong id="refReservationsValue">—</strong>
-                            <small id="refReservationsTrend"><i class="fas fa-minus"></i> vs. mês anterior</small>
-                        </div>
-                        <a href="reservas.html" class="reference-kpi-arrow" aria-label="Abrir reservas"><i class="fas fa-chevron-right"></i></a>
-                    </article>
-
-                    <article class="reference-kpi-card">
-                        <div class="reference-kpi-icon calls"><i class="fas fa-headset"></i></div>
-                        <div class="reference-kpi-main">
-                            <span>Chamados abertos</span>
-                            <strong id="refCallsValue">—</strong>
-                            <small id="refCallsTrend"><i class="fas fa-minus"></i> vs. mês anterior</small>
-                        </div>
-                        <a href="ocorrencias.html" class="reference-kpi-arrow" aria-label="Abrir ocorrências"><i class="fas fa-chevron-right"></i></a>
-                    </article>
+                <div class="reference-dashboard-title">
+                    <div><span class="ref-eyebrow" data-ref-t="overview">VISÃO GERAL</span><h2 data-ref-t="dashboard">Painel do condomínio</h2><p data-ref-t="dashboardSubtitle">Indicadores e movimentações em tempo real</p></div>
+                    <span class="ref-data-status" id="refDataStatus"><i class="fas fa-circle-notch fa-spin"></i> <span data-ref-t="loading">Carregando dados</span></span>
                 </div>
-
+                <div class="reference-kpi-grid">
+                    <a class="reference-kpi-card" href="gestao-moradores.html" aria-label="Ver gestão de moradores">
+                        <div class="ref-kpi-top"><span data-ref-t="residents">Moradores cadastrados</span><span class="ref-kpi-icon blue"><i class="fas fa-users"></i></span></div>
+                        <div class="ref-kpi-value" id="refResidentsValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refResidentsTrend">—</span><svg class="ref-spark" id="refSparkResidents" viewBox="0 0 120 40" aria-hidden="true"></svg></div>
+                    </a>
+                    <a class="reference-kpi-card" href="reservas.html" aria-label="Ver reservas">
+                        <div class="ref-kpi-top"><span data-ref-t="reservations">Reservas neste mês</span><span class="ref-kpi-icon teal"><i class="fas fa-calendar-check"></i></span></div>
+                        <div class="ref-kpi-value" id="refReservationsValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refReservationsTrend">—</span><svg class="ref-spark" id="refSparkReservations" viewBox="0 0 120 40" aria-hidden="true"></svg></div>
+                    </a>
+                    <a class="reference-kpi-card" href="ocorrencias.html" aria-label="Ver ocorrências">
+                        <div class="ref-kpi-top"><span data-ref-t="occurrences">Ocorrências no mês</span><span class="ref-kpi-icon amber"><i class="fas fa-clipboard-list"></i></span></div>
+                        <div class="ref-kpi-value" id="refOccurrencesValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refOccurrencesTrend">—</span><svg class="ref-spark" id="refSparkOccurrences" viewBox="0 0 120 40" aria-hidden="true"></svg></div>
+                    </a>
+                    <a class="reference-kpi-card" href="mural-avisos.html" aria-label="Ver avisos">
+                        <div class="ref-kpi-top"><span data-ref-t="notices">Avisos publicados</span><span class="ref-kpi-icon violet"><i class="fas fa-bullhorn"></i></span></div>
+                        <div class="ref-kpi-value" id="refNoticesValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refNoticesTrend">—</span><svg class="ref-spark" id="refSparkNotices" viewBox="0 0 120 40" aria-hidden="true"></svg></div>
+                    </a>
+                </div>
                 <article class="reference-panel reference-movement-card">
-                    <header class="reference-panel-header movement-header">
-                        <div>
-                            <h2>Movimentação do condomínio</h2>
-                            <p>Comparativo entre os últimos meses</p>
-                        </div>
-                        <label class="reference-period-select">
-                            <i class="far fa-calendar"></i>
-                            <select id="refMovementPeriod" aria-label="Período do gráfico">
-                                <option value="2">Últimos 2 meses</option>
-                                <option value="6" selected>Últimos 6 meses</option>
-                            </select>
-                            <i class="fas fa-chevron-down"></i>
-                        </label>
+                    <header class="ref-panel-heading">
+                        <div><h3 data-ref-t="activityTitle">Evolução da atividade do condomínio</h3><p data-ref-t="activitySubtitle">Acompanhe a movimentação registrada ao longo dos meses</p></div>
+                        <div class="ref-chart-controls"><label><span data-ref-t="metricLabel">Indicador</span><select id="refMetricSelect"><option value="reservations" data-ref-t="reservationsShort">Reservas</option><option value="notices" data-ref-t="noticesShort">Comunicados</option><option value="occurrences" data-ref-t="occurrencesShort">Ocorrências</option></select></label><label><span data-ref-t="periodLabel">Período</span><select id="refPeriodSelect"><option value="6" data-ref-t="sixMonths">Últimos 6 meses</option><option value="12" data-ref-t="twelveMonths">Últimos 12 meses</option></select></label></div>
                     </header>
-
-                    <div class="reference-chart-shell">
-                        <div class="reference-y-axis" aria-hidden="true">
-                            <span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0</span>
-                        </div>
-                        <div class="reference-chart-area">
-                            <div class="reference-grid-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-                            <div class="reference-bar-groups" id="refBarGroups">
-                                <div class="reference-bar-group" data-chart-category="finance">
-                                    <div class="reference-bars">
-                                        <div class="reference-bar previous"><span id="refFinancePreviousLabel">0</span><b id="refFinancePrevious"></b></div>
-                                        <div class="reference-bar current"><span id="refFinanceCurrentLabel">0</span><b id="refFinanceCurrent"></b></div>
-                                    </div>
-                                    <strong>Financeiro</strong><small>(R$)</small>
-                                </div>
-                                <div class="reference-bar-group" data-chart-category="reservations">
-                                    <div class="reference-bars">
-                                        <div class="reference-bar previous"><span id="refReservationsPreviousLabel">0</span><b id="refReservationsPrevious"></b></div>
-                                        <div class="reference-bar current"><span id="refReservationsCurrentLabel">0</span><b id="refReservationsCurrent"></b></div>
-                                    </div>
-                                    <strong>Reservas</strong><small>(uso)</small>
-                                </div>
-                                <div class="reference-bar-group" data-chart-category="occurrences">
-                                    <div class="reference-bars">
-                                        <div class="reference-bar previous"><span id="refOccurrencesPreviousLabel">0</span><b id="refOccurrencesPrevious"></b></div>
-                                        <div class="reference-bar current"><span id="refOccurrencesCurrentLabel">0</span><b id="refOccurrencesCurrent"></b></div>
-                                    </div>
-                                    <strong>Ocorrências</strong><small>(quantidade)</small>
-                                </div>
-                                <div class="reference-bar-group" data-chart-category="notices">
-                                    <div class="reference-bars">
-                                        <div class="reference-bar previous"><span id="refNoticesPreviousLabel">0</span><b id="refNoticesPrevious"></b></div>
-                                        <div class="reference-bar current"><span id="refNoticesCurrentLabel">0</span><b id="refNoticesCurrent"></b></div>
-                                    </div>
-                                    <strong>Comunicados</strong><small>(publicações)</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="reference-chart-legend" aria-label="Legenda do gráfico">
-                            <span><i class="legend-square previous"></i><b id="refPreviousMonthLegend">Mês anterior</b></span>
-                            <span><i class="legend-square current"></i><b id="refCurrentMonthLegend">Mês atual</b></span>
-                        </div>
-                    </div>
+                    <div id="refActivityChart" class="ref-line-chart" role="img" aria-label="Gráfico de atividade mensal"><div class="ref-empty-chart">Carregando gráfico…</div></div>
+                    <div class="ref-graph-note"><i class="fas fa-circle-info"></i> <span data-ref-t="chartNote">Os números representam registros do condomínio, não valores estimados.</span></div>
                 </article>
-
                 <div class="reference-bottom-grid">
-                    <article class="reference-panel reference-list-card">
-                        <header class="reference-list-header">
-                            <h3>Próximas assembleias</h3>
-                            <a href="assembleia.html" aria-label="Ver assembleias"><i class="fas fa-chevron-right"></i></a>
-                        </header>
-                        <div class="reference-list" id="refAssembliesList">
-                            <div class="reference-list-empty">Carregando assembleias...</div>
-                        </div>
+                    <article class="reference-panel reference-residents-card">
+                        <header class="ref-panel-heading"><div><h3 data-ref-t="recentResidents">Moradores recentes</h3><p data-ref-t="recentResidentsSub">Cadastros vinculados ao condomínio</p></div><a class="ref-see-all" href="gestao-moradores.html"><span data-ref-t="viewAll">Ver todos</span> <i class="fas fa-arrow-right"></i></a></header>
+                        <div class="ref-table-scroll"><table class="ref-residents-table"><thead><tr><th data-ref-t="name">Morador</th><th data-ref-t="unit">Unidade</th><th data-ref-t="joined">Entrada</th><th data-ref-t="status">Situação</th></tr></thead><tbody id="refResidentsTable"><tr><td colspan="4" class="ref-table-empty">Carregando moradores...</td></tr></tbody></table></div>
                     </article>
-
-                    <article class="reference-panel reference-list-card">
-                        <header class="reference-list-header">
-                            <h3>Avisos recentes</h3>
-                            <a href="mural-avisos.html">Ver todos <i class="fas fa-chevron-right"></i></a>
-                        </header>
-                        <div class="reference-list" id="refNoticesList">
-                            <div class="reference-list-empty">Carregando avisos...</div>
-                        </div>
-                    </article>
-
-                    <article class="reference-panel reference-list-card">
-                        <header class="reference-list-header">
-                            <h3>Atividades recentes</h3>
-                            <span class="reference-muted-link">Atualizado agora</span>
-                        </header>
-                        <div class="reference-list" id="refActivitiesList">
-                            <div class="reference-list-empty">Carregando atividades...</div>
-                        </div>
+                    <article class="reference-panel reference-distribution-card">
+                        <header class="ref-panel-heading"><div><h3 data-ref-t="distribution">Distribuição de atividades</h3><p data-ref-t="distributionSubtitle">Registros deste mês por categoria</p></div></header>
+                        <div class="ref-donut-layout"><div class="ref-donut" id="refDonut" role="img" aria-label="Distribuição por categoria"><div class="ref-donut-hole"><strong id="refDonutTotal">0</strong><small data-ref-t="records">registros</small></div></div><div class="ref-donut-legend" id="refDonutLegend"></div></div>
                     </article>
                 </div>
             </section>
@@ -291,10 +198,10 @@
 
     <script src="../scripts/supabase-client.js?v=0710"></script>
     <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
-    <script src="../scripts/sidebar-links.js?v=0720"></script>
+    <script src="../scripts/sidebar-links.js?v=0740"></script>
     <script src="../scripts/index.js?v=073"></script>
-    <script src="../scripts/index-reference-dashboard.js?v=0731"></script>
-    <script src="../scripts/topbar-actions.js?v=035"></script>
+    <script src="../scripts/index-reference-dashboard.js?v=0740"></script>
+    <script src="../scripts/topbar-actions.js?v=0740"></script>
     <script src="../scripts/condomit-alerts.js?v=014"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>
     <script src="../scripts/advanced-global.js?v=053"></script>

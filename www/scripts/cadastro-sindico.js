@@ -47,7 +47,7 @@
             if (typeof window.getCondomitAuthLanguage === 'function') {
                 return window.getCondomitAuthLanguage() === 'en' ? 'en' : 'pt';
             }
-            return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt';
+            return ((window.getCondomitResolvedLanguage?.() || ((localStorage.getItem('app-language') || 'auto') === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : localStorage.getItem('app-language'))) === 'en' ? 'en' : 'pt');
         } catch (_) {
             return 'pt';
         }

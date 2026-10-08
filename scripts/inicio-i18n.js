@@ -75,7 +75,7 @@
   const titlePt = 'Condomit - Gestão Inteligente para Condomínios';
 
   function getLanguage() {
-    try { return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt'; } catch (_) { return 'pt'; }
+    try { return ((window.getCondomitResolvedLanguage?.() || ((localStorage.getItem('app-language') || 'auto') === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : localStorage.getItem('app-language'))) === 'en' ? 'en' : 'pt'); } catch (_) { return /^pt/i.test(navigator.language || 'pt')?'pt':'en'; }
   }
 
   function translateTextNode(node, lang) {
@@ -116,21 +116,21 @@
     root.querySelectorAll?.('[title],[aria-label]').forEach(el => translateElementAttributes(el, lang));
   }
 
-  function applyLanguage(lang) {
-    lang = lang === 'en' ? 'en' : 'pt';
+  function applyLanguage(choice, persist = true) {
+    const lang = choice === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : (choice === 'en' ? 'en' : 'pt');
     document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
     document.title = lang === 'en' ? PT_EN[titlePt] : titlePt;
     translateTree(document.body, lang);
     const select = document.getElementById('landing-language-select');
-    if (select) select.value = lang;
-    try { localStorage.setItem('app-language', lang); } catch (_) {}
+    if (select) select.value = persist ? choice : (localStorage.getItem('app-language') || 'auto');
+    if (persist) try { localStorage.setItem('app-language', choice); } catch (_) {}
     window.dispatchEvent(new CustomEvent('condomit:language-changed', { detail: { language: lang } }));
   }
 
   function boot() {
     const select = document.getElementById('landing-language-select');
     if (select) select.addEventListener('change', () => applyLanguage(select.value));
-    applyLanguage(getLanguage());
+    applyLanguage(localStorage.getItem('app-language') || 'auto', false);
     const observer = new MutationObserver(mutations => {
       const lang = getLanguage();
       for (const mutation of mutations) {

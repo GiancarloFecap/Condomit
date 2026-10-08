@@ -32,7 +32,7 @@
     const button = event.target.closest?.('[data-install-condomit]');
     if (!button) return;
     if (!deferredPrompt) {
-      const lang = (() => { try { return localStorage.getItem('app-language') === 'en' ? 'en' : 'pt'; } catch (_) { return 'pt'; } })();
+      const lang = (() => { try { return ((window.getCondomitResolvedLanguage?.() || ((localStorage.getItem('app-language') || 'auto') === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : localStorage.getItem('app-language'))) === 'en' ? 'en' : 'pt'); } catch (_) { return 'pt'; } })();
       window.showToast?.(lang === 'en' ? 'Use your browser’s “Install app” option when it becomes available.' : 'Use a opção “Instalar aplicativo” do navegador quando ela estiver disponível.', 'info');
       return;
     }

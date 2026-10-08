@@ -6,6 +6,7 @@ const sidebarRuntime = {
     currentUserType: 'sindico'
 };
 const sidebarCondoLogoCache = new Map();
+let sidebarOpenSection = null; // Acordeão: apenas uma seção aberta por vez
 
 const sidebarI18n = {
     pt: {
@@ -1059,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('storage', (event) => {
     if (event.key === 'app-language' && typeof window.applyGlobalAppLanguage === 'function') {
-        window.applyGlobalAppLanguage(event.newValue || 'pt');
+        window.applyGlobalAppLanguage(getAppLanguage());
     }
 });
 
@@ -1072,12 +1073,14 @@ window.addEventListener('condomit:plan-access-ready', () => {
 });
 
 function getAppLanguage() {
-    try {
-        return localStorage.getItem('app-language') || 'pt';
-    } catch (_) {
-        return 'pt';
-    }
+    let choice = 'auto';
+    try { choice = localStorage.getItem('app-language') || 'auto'; } catch (_) {}
+    if (choice === 'en' || choice === 'pt') return choice;
+    const device = (navigator.languages || [navigator.language || 'pt'])[0] || 'pt';
+    return /^pt(?:-|$)/i.test(device) ? 'pt' : 'en';
 }
+window.getCondomitResolvedLanguage = getAppLanguage;
+
 
 function t(key, lang = getAppLanguage()) {
     return sidebarI18n[lang]?.[key] ?? sidebarI18n.pt[key] ?? key;
@@ -1218,6 +1221,8 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
             </button>
         </div>
     `;
+    bindSidebarAccordion(sidebar);
+    ensureSidebarAccordionStyles();
 }
 
 
@@ -1348,28 +1353,67 @@ function buildSidebarNav(userType, currentPage, lang = getAppLanguage()) {
 }
 
 function renderSidebarSection(section, userType, currentPage, lang = getAppLanguage()) {
-    const hasTitle = !!section.titleKey;
-    const title = hasTitle
-        ? `<div class="nav-section-title">${escapeSidebarHtml(t(section.titleKey, lang))}</div>`
-        : '';
-
+    const hasTitle = Boolean(section.titleKey);
+    const groupKey = section.titleKey || 'principal';
+    const opened = hasTitle && sidebarOpenSection === groupKey;
     const items = section.items.map((item) => {
         const target = getTargetForRoute(item.route, userType);
         const targetPage = target.split('#')[0].split('?')[0];
         const currentPathWithSearch = `${currentPage}${window.location.search || ''}`;
-        const isActive = target.includes('?')
+        const active = target.includes('?')
             ? target === currentPathWithSearch
             : targetPage && targetPage === currentPage && !window.location.search;
-        return `
-            <a href="${target || '#'}" class="nav-item ${isActive ? 'active' : ''}" data-section="${item.route}">
-                <i class="${item.icon}"></i>
-                <span>${escapeSidebarHtml(t(item.labelKey, lang))}</span>
-            </a>
-        `;
+        return `<a href="${target || '#'}" class="nav-item ${active ? 'active' : ''}" data-section="${item.route}">
+            <i class="${item.icon}"></i><span>${escapeSidebarHtml(t(item.labelKey, lang))}</span>
+        </a>`;
     }).join('');
+    if (!hasTitle) return `<div class="nav-section nav-section--plain">${items}</div>`;
+    const label = escapeSidebarHtml(t(section.titleKey, lang));
+    return `<div class="nav-section nav-section--accordion ${opened ? 'expanded' : ''}" data-accordion-section="${groupKey}">
+        <button type="button" class="nav-section-toggle" data-accordion-toggle="${groupKey}"
+            aria-expanded="${opened}" aria-controls="nav-group-${groupKey}">
+            <span>${label}</span><i class="fas fa-chevron-down nav-section-chevron" aria-hidden="true"></i>
+        </button>
+        <div class="nav-section-children" id="nav-group-${groupKey}" ${opened ? '' : 'hidden'}>${items}</div>
+    </div>`;
+}
 
-    const sectionClass = 'nav-section' + (hasTitle ? '' : ' nav-section--plain');
-    return `<div class="${sectionClass}">${title}${items}</div>`;
+function bindSidebarAccordion(sidebar) {
+    sidebar.querySelectorAll('[data-accordion-toggle]').forEach(button => {
+        button.addEventListener('click', () => {
+            const key = button.dataset.accordionToggle;
+            sidebarOpenSection = sidebarOpenSection === key ? null : key;
+            sidebar.querySelectorAll('[data-accordion-section]').forEach(section => {
+                const expanded = section.dataset.accordionSection === sidebarOpenSection;
+                section.classList.toggle('expanded', expanded);
+                section.querySelector('[data-accordion-toggle]')?.setAttribute('aria-expanded', String(expanded));
+                const children = section.querySelector('.nav-section-children');
+                if (children) children.hidden = !expanded;
+            });
+        });
+    });
+}
+
+function ensureSidebarAccordionStyles() {
+    if (document.getElementById('condomit-sidebar-accordion-css')) return;
+    const css = document.createElement('style');
+    css.id = 'condomit-sidebar-accordion-css';
+    css.textContent = `
+    .sidebar .nav-section--accordion{margin:3px 0 7px;padding:0}
+    .sidebar .nav-section-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:9px;
+        padding:11px 12px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;
+        border-radius:10px;letter-spacing:.015em;font-size:.77rem;font-weight:750;opacity:.9}
+    .sidebar .nav-section-toggle:hover,.sidebar .nav-section--accordion.expanded>.nav-section-toggle{background:rgba(87,153,227,.15);opacity:1}
+    .sidebar .nav-section-chevron{font-size:.72rem;opacity:.75;transition:transform .2s ease;flex:none}
+    .sidebar .nav-section--accordion.expanded .nav-section-chevron{transform:rotate(180deg)}
+    .sidebar .nav-section-children[hidden]{display:none!important}
+    .sidebar .nav-section-children{display:grid;gap:2px;margin:2px 0 5px;padding-left:5px;
+        animation:condomit-nav-open .18s ease-out}
+    .sidebar .nav-section-children .nav-item{padding-left:18px;min-height:39px}
+    @keyframes condomit-nav-open{from{opacity:.55;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+    @media(prefers-reduced-motion:reduce){.sidebar .nav-section-children{animation:none}.sidebar .nav-section-chevron{transition:none}}
+    `;
+    document.head.appendChild(css);
 }
 
 function getSidebarConfig(userType) {
