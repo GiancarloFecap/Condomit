@@ -4367,11 +4367,22 @@ async function getCondomitPlanAccess(billing = null, force = false) {
     const level = getCondomitPlanLevelFromName(normalized);
     if (level) candidates.push({name:normalized,level,id});
   };
-  add(currentBilling?.plan_name,currentBilling?.plan_id);
-  add(user?.plan_name || user?.planName,user?.plan || user?.plan_id);
-  [currentBilling?.plan_id,user?.plan,user?.plan_id].map(Number).filter(x=>x>=1&&x<=3).forEach(id=>{
-    candidates.push({name:CONDOMIT_PLAN_LABELS[id]||'',level:id,id});
-  });
+  // O plano retornado pela RPC é específico do condomínio ATUAL e prevalece
+  // sobre o plano salvo de outro condomínio (inclusive o administrativo).
+  const hasServerBilling = Boolean(currentBilling && currentBilling.status && currentBilling.status !== 'no_condominium');
+  add(currentBilling?.plan_name, currentBilling?.plan_id);
+  if (currentBilling?.plan_id != null) {
+    const billedId = Number(currentBilling.plan_id);
+    if (billedId >= 1 && billedId <= 3) {
+      candidates.push({ name: CONDOMIT_PLAN_LABELS[billedId], level: billedId, id: billedId });
+    }
+  }
+  if (!hasServerBilling) {
+    add(user?.plan_name || user?.planName, user?.plan || user?.plan_id);
+    [user?.plan, user?.plan_id].map(Number).filter(x=>x>=1&&x<=3).forEach(id=>{
+      candidates.push({name:CONDOMIT_PLAN_LABELS[id]||'',level:id,id});
+    });
+  }
   if (currentBilling?.plan_id != null) {
     try {
       const catalog = await fetchCondomitPlanCatalog(force);
@@ -4382,13 +4393,13 @@ async function getCondomitPlanAccess(billing = null, force = false) {
   const best = candidates.sort((a,b)=>b.level-a.level)[0] || {name:'',level:0,id:null};
   const access = {
     resolved: best.level > 0,
-    plan_id: currentBilling?.plan_id ?? best.id ?? user?.plan ?? user?.plan_id ?? null,
+    plan_id: hasServerBilling ? (currentBilling?.plan_id ?? null) : (best.id ?? user?.plan ?? user?.plan_id ?? null),
     plan_name: best.name || null,
     level: best.level,
     billing: currentBilling
   };
   if (user && access.resolved) {
-    user.plan = access.plan_id ?? user.plan ?? null;
+    user.plan = access.plan_id;
     user.plan_name = access.plan_name;
     user.plan_level = access.level;
     try { sessionStorage.setItem('condominiumUser', JSON.stringify(user)); } catch (_) {}
@@ -4784,11 +4795,15 @@ async function getCondomitBillingStatus(
     return { status: 'demo', can_use: true, plan_id: null, plan_name: 'Premium', demo_access: true, cep: storedUser?.condominium?.cep || storedUser?.condominium?.condominium_id || null };
   }
 
+  // Se o usuario trocou de condominio, um resultado anterior da cache
+  // nao pode suspender o condominio isento nem liberar o que exige pagamento.
+  const selectedCep = String(getStoredUserCep(storedUser) || '').replace(/\D/g, '');
+  const cachedCep = String(condomitBillingCache.value?.cep || '').replace(/\D/g, '');
   if (
     !force &&
     condomitBillingCache.value &&
-    condomitBillingCache.expiresAt >
-      now
+    condomitBillingCache.expiresAt > now &&
+    (!selectedCep || (cachedCep && selectedCep === cachedCep))
   ) {
     return condomitBillingCache.value;
   }
@@ -4841,10 +4856,12 @@ async function getCondomitBillingStatus(
   if (billing.can_use && user) {
     if (billing.plan_id) user.plan = billing.plan_id;
 
-    const resolvedPlanName = normalizeCondomitPlanName(billing.plan_name || user.plan_name || user.planName);
+    const resolvedPlanName = normalizeCondomitPlanName(billing.plan_name);
     const resolvedPlanLevel = getCondomitPlanLevelFromName(resolvedPlanName);
-    if (resolvedPlanName) user.plan_name = resolvedPlanName;
-    if (resolvedPlanLevel) user.plan_level = resolvedPlanLevel;
+    // Nao reaproveitar Premium do condominio anterior depois da troca.
+    user.plan_name = resolvedPlanName || null;
+    user.plan_level = resolvedPlanLevel || 0;
+    if (billing.status === 'exempt') user.plan = null;
 
     try {
       sessionStorage.setItem(

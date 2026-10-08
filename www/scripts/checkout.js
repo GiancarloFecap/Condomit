@@ -56,7 +56,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         const billing = billingResult.value;
         if (billing?.can_use) {
             persistApprovedPlan(billing);
-            if (!isUpgradeFlow) {
+            // Condomínio administrativo é isento: nunca oferecer upgrade
+            // pago, nem mesmo se a URL contiver ?upgrade=1.
+            const isBillingExempt = billing.billing_exempt === true || billing.status === 'exempt' ||
+                (String(currentUser?.email || '').trim().toLowerCase() === 'contato.condomit@gmail.com' && currentUser?.demo_access === true);
+            if (isBillingExempt || !isUpgradeFlow) {
                 window.location.href = 'index.html';
                 return;
             }
