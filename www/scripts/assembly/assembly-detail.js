@@ -1030,8 +1030,9 @@
   function bindSupportButton() {
     var buttons = document.querySelectorAll('.btn-support');
     buttons.forEach(function (button) {
+      if (button.tagName === 'A') return;
       button.addEventListener('click', function () {
-        window.location.href = 'mailto:contato.condomit@gmail.com?subject=Contato%20Condomit';
+        window.open('https://mail.google.com/mail/?view=cm&fs=1&to=contato.condomit%40gmail.com&su=Suporte%20Condomit', '_blank', 'noopener,noreferrer');
       });
     });
   }

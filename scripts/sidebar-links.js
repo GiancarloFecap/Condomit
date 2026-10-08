@@ -13,6 +13,7 @@ const sidebarI18n = {
         your_condo: 'Seu Condomínio',
         support_center: 'Central de Suporte',
         sign_out: 'Sair',
+        my_profile: 'Meu perfil',
         home: 'Início',
         notice_engagement: 'Comunicado e Engajamento',
         relationships: 'Comunicação e Relacionamento',
@@ -64,6 +65,7 @@ const sidebarI18n = {
         your_condo: 'Your Condo',
         support_center: 'Support Center',
         sign_out: 'Sign Out',
+        my_profile: 'My profile',
         home: 'Home',
         notice_engagement: 'Communication and Engagement',
         relationships: 'Communication and Relationships',
@@ -1033,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
         renderSidebar(sidebarRuntime.currentUser, sidebarRuntime.currentUserType, sidebarRuntime.currentPage, lang);
         refreshSidebarCondominiumLogo(sidebarRuntime.currentUser);
-        bindSupportButtons('mailto:contato.condomit@gmail.com?subject=Contato%20Condomit');
+        bindSupportButtons();
         translateDocument(lang);
     };
 
@@ -1197,6 +1199,34 @@ function getSidebarCurrentPlanLevel(user) {
     return 1;
 }
 
+function sidebarAccountMarkup(user, userType, lang = getAppLanguage()) {
+    const name = String(user?.name || user?.full_name || user?.nome || user?.email?.split('@')[0] || (lang === 'en' ? 'User' : 'Usuário')).trim();
+    const role = userType === 'porteiro' ? (lang === 'en' ? 'Porter' : 'Porteiro')
+        : userType === 'morador' ? (lang === 'en' ? 'Resident' : 'Morador')
+        : (lang === 'en' ? 'Manager' : 'Síndico');
+    const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'US';
+    const photo = String(user?.profile_photo || user?.profilePhoto || '').trim();
+    // Only image data or real URLs can be put in the image's src attribute.
+    const safePhoto = /^(https?:\/\/|data:image\/(?:png|jpeg|webp|gif);base64,)/i.test(photo) ? photo : '';
+    const avatar = safePhoto ? `<img src="${escapeSidebarHtml(safePhoto)}" alt="" loading="lazy">` : escapeSidebarHtml(initials);
+    return `<div class="sidebar-account-row">
+      <a href="perfil.html" class="sidebar-account-card" aria-label="${escapeSidebarHtml(t('my_profile', lang))}" title="${escapeSidebarHtml(t('my_profile', lang))}">
+        <span class="sidebar-account-avatar" id="profileAvatarTop">${avatar}</span>
+        <span class="sidebar-account-copy"><strong id="profileNameTop">${escapeSidebarHtml(name)}</strong><small id="profileTypeTop">${escapeSidebarHtml(role)}</small></span>
+        <i class="fas fa-chevron-right sidebar-account-chevron" aria-hidden="true"></i>
+      </a>
+      <button class="sidebar-notification-button" type="button" title="${escapeSidebarHtml(t('notifications', lang))}"
+        aria-label="${escapeSidebarHtml(t('notifications', lang))}"><i class="fas fa-bell" aria-hidden="true"></i></button>
+    </div>`;
+}
+
+function bindSidebarNotification(sidebar) {
+    sidebar.querySelector('.sidebar-notification-button')?.addEventListener('click', () => {
+        if (typeof window.openCondomitNotifications === 'function') window.openCondomitNotifications();
+        else window.location.hash = 'notificacoes';
+    });
+}
+
 function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage()) {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
@@ -1211,10 +1241,11 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
         </div>
         ${buildSidebarNav(userType, currentPage, lang)}
         <div class="sidebar-footer">
-            <button class="btn-support" type="button">
+            ${sidebarAccountMarkup(currentUser, userType, lang)}
+            <a class="btn-support" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=contato.condomit%40gmail.com&amp;su=Suporte%20Condomit" target="_blank" rel="noopener noreferrer">
                 <i class="fas fa-headset"></i>
                 <span>${t('support_center', lang)}</span>
-            </button>
+            </a>
             <button class="btn-logout-sidebar" onclick="logout()">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>${t('sign_out', lang)}</span>
@@ -1223,6 +1254,7 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
     `;
     bindSidebarAccordion(sidebar);
     ensureSidebarAccordionStyles();
+    bindSidebarNotification(sidebar);
 }
 
 
@@ -1551,10 +1583,15 @@ function getSidebarConfig(userType) {
     ];
 }
 
-function bindSupportButtons(supportMailto) {
-    document.querySelectorAll('.btn-support').forEach((button) => {
+function bindSupportButtons() {
+    // The shared footer is an ordinary Gmail link (also works without JS).
+    // Legacy pages may still provide a button instead of an anchor.
+    document.querySelectorAll('button.btn-support').forEach((button) => {
+        if (button.dataset.gmailSupportBound === 'true') return;
+        button.dataset.gmailSupportBound = 'true';
         button.addEventListener('click', () => {
-            window.location.href = supportMailto;
+            const url = 'https://mail.google.com/mail/?view=cm&fs=1&to=contato.condomit%40gmail.com&su=Suporte%20Condomit';
+            window.open(url, '_blank', 'noopener,noreferrer');
         });
     });
 }

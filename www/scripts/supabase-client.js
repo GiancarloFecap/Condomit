@@ -3976,6 +3976,24 @@ function syncAllAvatars(
     }
   }
 
+  // Condomit 053: o avatar deixou a topbar e agora fica no cartão da sidebar.
+  const sidebarAvatar = document.querySelector('.sidebar-account-avatar');
+  if (sidebarAvatar) {
+    sidebarAvatar.replaceChildren();
+    const safePhoto = String(profilePhoto || '');
+    if (/^(https?:\/\/|data:image\/(?:png|jpeg|webp|gif);base64,)/i.test(safePhoto)) {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.src = safePhoto;
+      img.loading = 'lazy';
+      sidebarAvatar.appendChild(img);
+    } else {
+      sidebarAvatar.textContent = initials;
+    }
+    const sidebarName = document.querySelector('.sidebar-account-copy strong');
+    if (sidebarName && name) sidebarName.textContent = name;
+  }
+
   const topAvatar =
     document.getElementById(
       'user-avatar-top'

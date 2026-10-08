@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     if (typeof bindSupportButtons === 'function') {
-        try { bindSupportButtons('mailto:contato.condomit@gmail.com?subject=Contato%20Condomit'); } catch (_) {}
+        try { bindSupportButtons('https://mail.google.com/mail/?view=cm&fs=1&to=contato.condomit%40gmail.com&su=Suporte%20Condomit'); } catch (_) {}
     }
     
     // Update user info
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const text = btn.textContent.toLowerCase();
         if (text.includes('e-mail') || text.includes('email') || text.includes('mail')) {
             btn.addEventListener('click', () => {
-                window.location.href = 'mailto:contato.condomit@gmail.com?subject=Contato%20Condomit';
+                window.open('https://mail.google.com/mail/?view=cm&fs=1&to=contato.condomit%40gmail.com&su=Suporte%20Condomit', '_blank', 'noopener,noreferrer');
             });
         }
     });

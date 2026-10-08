@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.btn-support').forEach((button) => {
         button.addEventListener('click', () => {
-            window.location.href = 'mailto:contato.condomit@gmail.com?subject=Contato%20Condomit';
+            if (button.tagName === 'A') return;
+            window.open('https://mail.google.com/mail/?view=cm&fs=1&to=contato.condomit%40gmail.com&su=Suporte%20Condomit', '_blank', 'noopener,noreferrer');
         });
     });
 

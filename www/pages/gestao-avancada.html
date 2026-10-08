@@ -12,8 +12,9 @@
   <link rel="stylesheet" href="../styles/gestao-avancada.css?v=036">
   <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
+  <link rel="stylesheet" href="../styles/sidebar-account-navigation.css?v=053">
 </head>
-<body class="advanced-page condomit-app-page">
+<body class="advanced-page condomit-no-topbar condomit-app-page">
 <div class="advanced-shell">
   <aside class="advanced-sidebar" id="advancedSidebar">
     <div class="advanced-brand">
@@ -62,33 +63,24 @@
       <a class="advanced-nav-item" href="configuracoes.html"><i class="fas fa-cog"></i><span>Configurações</span></a>
     </div>
     <div class="advanced-sidebar-footer sidebar-footer">
-      <button id="advancedSupportBtn" class="btn-support" type="button"><i class="fas fa-headset"></i><span>Central de Suporte</span></button>
+      <div class="sidebar-account-row">
+        <a class="sidebar-account-card" href="perfil.html" aria-label="Meu perfil">
+          <span class="sidebar-account-avatar" id="advancedAvatar">US</span>
+          <span class="sidebar-account-copy"><strong id="advancedUserName">Usuário</strong><small id="advancedUserRole">Perfil</small></span>
+          <i class="fas fa-chevron-right sidebar-account-chevron" aria-hidden="true"></i>
+        </a>
+        <button class="sidebar-notification-button" type="button" id="advancedNotificationButton" title="Notificações" aria-label="Notificações"><i class="fas fa-bell" aria-hidden="true"></i></button>
+      </div>
+      <a id="advancedSupportBtn" class="btn-support" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=contato.condomit%40gmail.com&amp;su=Suporte%20Condomit" target="_blank" rel="noopener noreferrer"><i class="fas fa-headset"></i><span>Central de Suporte</span></a>
       <button id="advancedLogoutBtn" class="btn-logout-sidebar" type="button"><i class="fas fa-sign-out-alt"></i><span>Sair</span></button>
     </div>
   </aside>
 
   <main class="advanced-main">
-    <header class="advanced-topbar top-bar">
-      <div class="advanced-topbar-left top-bar-left">
-        <button id="advancedMenuBtn" class="icon-square" type="button" aria-label="Menu"><i class="fas fa-bars"></i></button>
-        <div><h1 id="pageTitle">Gestão Avançada</h1><p id="pageSubtitle">Indicadores e operações do condomínio</p></div>
-      </div>
-      <div class="advanced-topbar-right top-bar-right">
-        <div class="top-icons">
-          <button class="icon-btn" type="button" aria-label="Chat"><i class="fas fa-comments"></i></button>
-          <button class="icon-btn" type="button" aria-label="Assembleias"><i class="fas fa-video"></i></button>
-          <button class="icon-btn" type="button" aria-label="Notificações"><i class="fas fa-bell"></i></button>
-          <button class="icon-btn" type="button" aria-label="Editar perfil"><i class="fas fa-user-circle"></i></button>
-        </div>
-        <div class="user-profile-small" id="advancedProfileBlock">
-          <div class="user-info-small">
-            <div class="name" id="advancedUserName">Usuário</div>
-            <div class="type" id="advancedUserRole">Perfil</div>
-          </div>
-          <div id="advancedAvatar" class="avatar advanced-avatar">US</div>
-        </div>
-      </div>
-    </header>
+    <div class="advanced-page-heading" aria-label="Seção atual">
+      <button id="advancedMenuBtn" class="icon-square" type="button" aria-label="Abrir menu"><i class="fas fa-bars"></i></button>
+      <div><h1 id="pageTitle">Gestão Avançada</h1><p id="pageSubtitle">Indicadores e operações do condomínio</p></div>
+    </div>
 
     <div id="migrationWarning" class="migration-warning" hidden><i class="fas fa-database"></i><div><strong>Recursos avançados ainda não estão ativos no banco.</strong><span>Execute <code>supabase/migrations/024_advanced_management_suite.sql</code> no Supabase SQL Editor.</span></div></div>
 

@@ -98,8 +98,9 @@
       if (document.body.classList.contains('advanced-menu-open') && !e.target.closest('.advanced-sidebar') && !e.target.closest('#advancedMenuBtn')) document.body.classList.remove('advanced-menu-open');
     });
     $('refreshAdvancedBtn')?.addEventListener('click', refreshAdvancedData);
-    $('advancedSupportBtn')?.addEventListener('click', () => {
-      window.location.href='mailto:contato.condomit@gmail.com?subject=Contato%20Condomit';
+    $('advancedNotificationButton')?.addEventListener('click', () => {
+      if (typeof window.openCondomitNotifications === 'function') window.openCondomitNotifications();
+      else window.location.hash = 'notificacoes';
     });
     $('advancedLogoutBtn')?.addEventListener('click', async () => {
       const button=$('advancedLogoutBtn');

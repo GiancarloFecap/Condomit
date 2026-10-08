@@ -1,0 +1,41 @@
+/* Condomit 053 | Sidebar account and topbar-free workspace. */
+.sidebar .sidebar-footer, .advanced-sidebar-footer { min-width: 0; }
+.sidebar-account-row { display:flex; align-items:stretch; gap:8px; width:100%; margin-bottom:4px; }
+.sidebar-account-card { display:flex; flex:1 1 auto; min-width:0; min-height:64px; align-items:center; gap:10px;
+    padding:9px 10px; border-radius:14px; text-decoration:none; color:#fff; background:rgba(255,255,255,.11);
+    border:1px solid rgba(255,255,255,.19); transition: background-color .18s, border-color .18s; }
+.sidebar-account-card:hover, .sidebar-account-card:focus-visible { background:rgba(255,255,255,.19); border-color:rgba(255,255,255,.32); color:#fff; }
+.sidebar-account-avatar { width:42px; height:42px; flex:0 0 42px; border-radius:13px; background:linear-gradient(145deg,#d4f8fa,#a6dff1);
+    display:flex; align-items:center; justify-content:center; color:#16406c; font-size:.85rem; font-weight:800; overflow:hidden; }
+.sidebar-account-avatar img { width:100%;height:100%;object-fit:cover;display:block; }
+.sidebar-account-copy { min-width:0; display:grid;gap:3px; flex:1; }
+.sidebar-account-copy strong { color:#fff;font-size:.86rem;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.sidebar-account-copy small { color:rgba(255,255,255,.7);font-size:.75rem; }
+.sidebar-account-chevron { color:rgba(255,255,255,.65);font-size:.7rem;flex-shrink:0; }
+.sidebar-notification-button { flex:0 0 40px; width:40px; min-width:40px; align-self:stretch; border:1px solid rgba(255,255,255,.19);
+    color:#fff; background:rgba(255,255,255,.11); border-radius:13px; cursor:pointer; font-size:1rem; }
+.sidebar-notification-button:hover, .sidebar-notification-button:focus-visible { background:rgba(255,255,255,.22); }
+.sidebar .sidebar-footer .btn-support, .advanced-sidebar-footer .btn-support { display:flex;align-items:center;justify-content:center;gap:9px;
+    text-decoration:none;color:#fff;min-height:48px;width:100%; box-sizing:border-box; }
+.sidebar .sidebar-footer .btn-support:hover, .advanced-sidebar-footer .btn-support:hover {color:#fff;}
+.sidebar .sidebar-footer .btn-support:focus-visible,.sidebar-notification-button:focus-visible,.sidebar-account-card:focus-visible { outline:2px solid #bae6fd;outline-offset:3px; }
+/* No header remains on authenticated dashboard pages. */
+body.condomit-no-topbar .main-content { min-width:0; }
+.advanced-page-heading { display:flex; align-items:center; gap:15px; margin:16px 22px 4px; }
+.advanced-page-heading h1 { font-size:clamp(1.25rem,2vw,1.6rem); color:#1e293b; margin:0 0 4px; }
+.advanced-page-heading p { margin:0; color:#64748b; font-size:.89rem; }
+.advanced-page-heading #advancedMenuBtn { display:none; }
+html[data-theme="dark"] .advanced-page-heading h1 {color:#f8fafc;}
+html[data-theme="dark"] .advanced-page-heading p {color:#94a3b8;}
+@media(max-width:900px) {
+  body.condomit-no-topbar:not(.advanced-page) .main-content { padding-top:58px !important; }
+  body.condomit-no-topbar:not(.advanced-page) .mobile-menu-btn-floating { display:inline-flex !important;
+    position:fixed !important;top:max(12px,env(safe-area-inset-top));left:14px;z-index:4020;width:42px;height:42px;
+    box-shadow:0 4px 18px rgba(15,23,42,.18) !important; }
+  body.condomit-no-topbar:not(.advanced-page) .chat-page,
+  body.condomit-no-topbar:not(.advanced-page) .ai-chat-container { height:calc(100svh - 58px) !important;
+    min-height:calc(100svh - 58px) !important; max-height:calc(100svh - 58px) !important; }
+  body.advanced-page .advanced-page-heading { margin:0 12px 10px; padding-top:12px; }
+  body.advanced-page .advanced-page-heading #advancedMenuBtn { display:inline-flex; }
+}
+@media(max-width:480px) { .sidebar-account-card{gap:8px}.sidebar-notification-button{flex-basis:38px;width:38px;} }
