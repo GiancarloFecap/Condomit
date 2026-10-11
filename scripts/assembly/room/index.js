@@ -4,7 +4,7 @@ import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHan
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=0724';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0724';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
-import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=0724';
+import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=057';
 
 function $(id) {
   return document.getElementById(id);
@@ -131,7 +131,7 @@ function bindControls() {
     setPanelOpen(!state.panelOpen);
   });
   $('btn-leave')?.addEventListener('click', async () => {
-  const ok = window.confirm('Deseja sair da assembleia?');
+  const ok = await window.showConfirm({title: 'Sair da assembleia', message: 'Deseja sair da assembleia? A gravação será salva antes de encerrar sua participação.', confirmText: 'Sair da assembleia', cancelText: 'Continuar na reunião'});
 
   if (!ok) {
     return;
@@ -590,7 +590,8 @@ async function init() {
       } else {
         try {
           await startAssemblyRecording();
-          toast('Esta assembleia está sendo gravada automaticamente.', 'success');
+          // A comunicação sobre gravação é apresentada antes de entrar, na preparação.
+          // Mantém apenas o indicador discreto REC durante a reunião.
         } catch (recordingError) {
           console.error('Não foi possível iniciar a gravação automática:', recordingError);
           showBanner(`Não foi possível iniciar a gravação automática: ${recordingError?.message || 'erro desconhecido'}`, 'error');

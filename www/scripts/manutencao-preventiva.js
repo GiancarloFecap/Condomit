@@ -241,7 +241,7 @@ async function saveMaintenance(event) {
 
 async function deleteMaintenance(id) {
     if (!id) return;
-    const confirmed = window.confirm('Excluir esta manutenção programada?');
+    const confirmed = await window.showConfirm({title:'Excluir manutenção',message:'Excluir esta manutenção programada?',confirmText:'Excluir',danger:true});
     if (!confirmed) return;
 
     try {

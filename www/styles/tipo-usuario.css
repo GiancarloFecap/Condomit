@@ -646,3 +646,14 @@ body { min-height: 100vh; overflow-x: hidden; }
   .topbar, .top-actions { justify-content:center; }
   .bottom { gap: 14px; flex-wrap: wrap; }
 }
+
+
+/* 057: o botão Continuar deve ser alcançável em qualquer resolução/zoom. */
+html,body{height:auto!important;min-height:100%!important;overflow-y:auto!important;scroll-behavior:smooth}
+.shell{height:auto!important;min-height:100dvh!important;overflow:visible!important;padding-bottom:30px!important}
+.shell main{flex:1 0 auto!important;overflow:visible!important;justify-content:flex-start!important}
+.cards{align-items:stretch}
+.bottom{position:sticky;bottom:max(12px,env(safe-area-inset-bottom));z-index:80;box-shadow:0 12px 36px rgba(15,40,77,.13);background:rgba(255,255,255,.95);backdrop-filter:blur(18px)}
+.profile{height:auto!important;min-height:0!important;display:flex;flex-direction:column}
+@media(max-width:940px){.bottom{bottom:max(8px,env(safe-area-inset-bottom));margin-top:24px}.cards{grid-template-columns:1fr!important}.profile{min-height:260px!important}}
+@media(max-width:620px){.topbar{gap:10px}.top-actions{justify-content:flex-end}.bottom{padding:12px}.continue{min-height:48px}.hint{font-size:12px}}

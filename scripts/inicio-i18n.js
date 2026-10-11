@@ -73,7 +73,7 @@
 };
   const originalText = new WeakMap();
   const originalAttrs = new WeakMap();
-  const titlePt = 'Condomit - Gestão Inteligente para Condomínios';
+  const titlePt = 'Condomit - Gestão Inteligente de Condomínios';
 
   function getLanguage() {
     try { return ((window.getCondomitResolvedLanguage?.() || ((localStorage.getItem('app-language') || 'auto') === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : localStorage.getItem('app-language'))) === 'en' ? 'en' : 'pt'); } catch (_) { return /^pt/i.test(navigator.language || 'pt')?'pt':'en'; }
@@ -120,7 +120,7 @@
   function applyLanguage(choice, persist = true) {
     const lang = choice === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : (choice === 'en' ? 'en' : 'pt');
     document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
-    document.title = lang === 'en' ? PT_EN[titlePt] : titlePt;
+    document.title = titlePt; // Título SEO fixo em pt-BR; traduções visuais continuam disponíveis.
     translateTree(document.body, lang);
     const select = document.getElementById('landing-language-select');
     if (select) select.value = persist ? choice : (localStorage.getItem('app-language') || 'auto');

@@ -1068,7 +1068,7 @@
       return;
     }
 
-    if (window.confirm(`${message}\n\nDeseja entrar na assembleia?`)) enterRoom();
+    window.showConfirm({title: 'Esta assembleia será gravada',message,confirmText:'Estou ciente e quero entrar'}).then(confirmed => { if (confirmed) enterRoom(); });
   }
 
   async function loadData() {

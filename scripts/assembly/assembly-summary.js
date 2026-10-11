@@ -598,7 +598,7 @@
                 cancelText: 'Cancelar',
                 onConfirm: execute
             });
-        } else if (window.confirm('Confirmar este voto?')) {
+        } else if (await window.showConfirm({title:'Confirmar voto',message:'Confirmar este voto? Ele não poderá ser alterado.',confirmText:'Confirmar voto'})) {
             await execute();
         }
     }

@@ -358,10 +358,10 @@
         $('chatInput')?.focus();
     }
 
-    function deleteConversation(id) {
+    async function deleteConversation(id) {
         const conversation = state.conversations.find((item) => item.id === id);
         if (!conversation) return;
-        const confirmed = window.confirm(isEnglish() ? 'Delete this chat history?' : 'Excluir este chat do histórico?');
+        const confirmed = await window.showConfirm({title: isEnglish() ? 'Delete chat' : 'Excluir chat',message: isEnglish() ? 'Delete this chat history?' : 'Excluir este chat do histórico?',confirmText: isEnglish() ? 'Delete' : 'Excluir',danger: true});
         if (!confirmed) return;
         state.conversations = state.conversations.filter((item) => item.id !== id);
         persistConversationStore();

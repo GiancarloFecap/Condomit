@@ -179,14 +179,56 @@ function getScreenShareVideo() {
   return container.querySelector('video');
 }
 
-function getCameraVideos() {
-  return Array.from(document.querySelectorAll('#call-grid video[data-assembly-camera="1"], #call-grid video'))
-    .filter((video) => video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0);
+function getParticipantTiles() {
+  return Array.from(document.querySelectorAll('#call-grid .call-tile'));
+}
+
+function drawParticipantPlaceholder(ctx, tile, x, y, w, h) {
+  ctx.fillStyle = '#182d49';
+  ctx.fillRect(x, y, w, h);
+  const avatar = tile.querySelector('.tile-avatar');
+  const photo = avatar?.querySelector('img');
+  const diameter = Math.min(w * .35, h * .48, 118);
+  const midX = x + w / 2;
+  const midY = y + (h - 42) / 2;
+  ctx.beginPath();
+  ctx.arc(midX, midY, diameter / 2, 0, 2 * Math.PI);
+  ctx.closePath();
+  ctx.fillStyle = '#2969aa';
+  ctx.fill();
+  if (photo?.complete && photo.naturalWidth > 0) {
+    ctx.save();
+    ctx.clip();
+    drawCover(ctx, photo, midX - diameter/2, midY - diameter/2, diameter, diameter);
+    ctx.restore();
+  } else {
+    const initials = safeText(avatar?.textContent || tile.querySelector('.tile-name')?.textContent || '?').split(/\s+/).map(p => p[0] || '').join('').slice(0, 2).toUpperCase();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 ${Math.max(16, Math.round(diameter * .3))}px Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(initials || '?', midX, midY);
+    ctx.textBaseline = 'alphabetic';
+  }
+}
+
+function drawParticipantTile(ctx, tile, x, y, w, h) {
+  const cameraOff = !!tile.querySelector('.tile-icon[title="Câmera desligada"]');
+  const video = cameraOff ? null : Array.from(tile.querySelectorAll('video')).find(v => v.readyState >= 2 && v.videoWidth > 0 && v.videoHeight > 0);
+  if (video) drawCover(ctx, video, x, y, w, h);
+  else drawParticipantPlaceholder(ctx, tile, x, y, w, h);
+  ctx.fillStyle = 'rgba(3,12,28,.73)';
+  ctx.fillRect(x, y + h - 38, w, 38);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#fff';
+  ctx.font = '600 17px Arial, sans-serif';
+  const name = safeText(tile.querySelector('.tile-name')?.textContent || 'Participante');
+  ctx.fillText(name.slice(0, Math.max(12, Math.floor(w / 12))), x + 12, y + h - 13);
 }
 
 function drawCover(ctx, video, x, y, w, h, contain = false) {
-  const vw = video.videoWidth || 16;
-  const vh = video.videoHeight || 9;
+  const vw = video.videoWidth || video.naturalWidth || 16;
+  const vh = video.videoHeight || video.naturalHeight || 9;
   const sourceRatio = vw / vh;
   const targetRatio = w / h;
   let dw = w;
@@ -232,18 +274,24 @@ function drawMeetingFrame() {
   const screen = getScreenShareVideo();
   if (screen?.readyState >= 2 && screen.videoWidth > 0) {
     drawCover(ctx, screen, 0, 0, w, h, true);
+    // Mantém também na gravação os participantes com câmeras desligadas durante o compartilhamento.
+    const participants = getParticipantTiles();
+    const visible = participants.slice(0, 6);
+    const thumbW = Math.min(180, Math.floor((w - 20 - Math.max(0, visible.length - 1) * 8) / Math.max(1, visible.length)));
+    const thumbH = 105;
+    visible.forEach((tile, i) => drawParticipantTile(ctx, tile, 10 + i * (thumbW + 8), h - thumbH - 10, thumbW, thumbH));
   } else {
-    const videos = getCameraVideos();
-    if (videos.length) {
-      const cols = Math.ceil(Math.sqrt(videos.length));
-      const rows = Math.ceil(videos.length / cols);
+    const tiles = getParticipantTiles();
+    if (tiles.length) {
+      const cols = Math.ceil(Math.sqrt(tiles.length));
+      const rows = Math.ceil(tiles.length / cols);
       const gap = 8;
       const tileW = (w - gap * (cols + 1)) / cols;
       const tileH = (h - gap * (rows + 1)) / rows;
-      videos.forEach((video, index) => {
+      tiles.forEach((tile, index) => {
         const col = index % cols;
         const row = Math.floor(index / cols);
-        drawCover(ctx, video, gap + col * (tileW + gap), gap + row * (tileH + gap), tileW, tileH, false);
+        drawParticipantTile(ctx, tile, gap + col * (tileW + gap), gap + row * (tileH + gap), tileW, tileH);
       });
     } else {
       ctx.fillStyle = '#ffffff';

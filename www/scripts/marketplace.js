@@ -1620,7 +1620,7 @@ async function deleteOwnMarketplaceItem(item, triggerButton = null) {
                     onCancel: () => resolve(false)
                 });
             })
-            : window.confirm('Deseja excluir este anúncio?');
+            : await window.showConfirm({ title: 'Excluir anúncio', message: 'Deseja excluir este anúncio permanentemente?', confirmText: 'Excluir', danger: true });
 
     if (!confirmed) return;
 

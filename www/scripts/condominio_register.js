@@ -170,8 +170,8 @@ document.addEventListener('DOMContentLoaded', function () {
     bindFilePresentation(regulationInput, 'Word (.doc ou .docx) até 10MB');
     bindFilePresentation(logoInput, 'PNG ou JPG até 2MB');
 
-    cancelBtn?.addEventListener('click', function () {
-        if (confirm('Tem certeza que deseja cancelar? As alterações não serão salvas.')) {
+    cancelBtn?.addEventListener('click', async function () {
+        if (await window.showConfirm({title:'Cancelar cadastro',message:'Tem certeza que deseja cancelar? As alterações não serão salvas.',confirmText:'Descartar alterações',danger:true})) {
             condoForm.reset();
             spacesBody.innerHTML = '';
             updateBlockInputs(0);

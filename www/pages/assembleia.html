@@ -7,12 +7,13 @@
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
-    <link rel="stylesheet" href="../styles/assembleia.css?v=011">
+    <link rel="stylesheet" href="../styles/assembleia.css?v=057">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
   <link rel="stylesheet" href="../styles/sidebar-account-navigation.css?v=056">
+    <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="condomit-no-topbar condomit-app-page">
     <div class="dashboard-sindico">
@@ -27,15 +28,27 @@
 
             <div id="main-content">
 
-                <section id="scheduled-section" class="section-block">
+                <header class="assembly-hub-title"><span class="assembly-kicker">ASSEMBLEIAS DO CONDOMÍNIO</span><h1>Assembleias</h1><p>Confira reuniões, organize novos encontros e consulte os registros anteriores.</p></header>
+                <div class="assembly-hub-actions" aria-label="Ações de assembleias">
+                    <button type="button" class="assembly-hub-action" data-open-assembly-dialog="scheduled"><span class="assembly-hub-icon"><i class="fas fa-calendar-check"></i></span><span class="assembly-hub-text"><strong>Assembleias agendadas</strong><small>Consulte datas e prepare sua entrada</small></span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                    <button type="button" class="assembly-hub-action" id="open-schedule-modal" data-open-assembly-dialog="schedule" hidden><span class="assembly-hub-icon"><i class="fas fa-calendar-plus"></i></span><span class="assembly-hub-text"><strong>Agendar nova assembleia</strong><small>Defina título, data e horário</small></span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                    <button type="button" class="assembly-hub-action" data-open-assembly-dialog="past"><span class="assembly-hub-icon"><i class="fas fa-clock-rotate-left"></i></span><span class="assembly-hub-text"><strong>Assembleias realizadas</strong><small>Consulte as reuniões mais recentes</small></span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                </div>
+                <p class="assembly-hub-hint"><i class="fas fa-circle-info"></i> Selecione uma opção para abrir a lista ou o formulário.</p>
+                <div class="assembly-dialog-overlay" data-assembly-dialog="scheduled" hidden>
+                <section id="scheduled-section" class="section-block assembly-dialog" data-dialog="scheduled" role="dialog" aria-modal="true" aria-labelledby="dialog-title-scheduled" hidden>
+                    <div class="assembly-dialog-bar"><h2 id="dialog-title-scheduled"><i class="fas fa-calendar-check"></i> Assembleias agendadas</h2><button type="button" class="assembly-dialog-close" data-close-assembly-dialog aria-label="Fechar janela"><i class="fas fa-xmark"></i></button></div>
                     <div class="card">
                         <h2><i class="fas fa-calendar-check"></i> Assembleias Agendadas</h2>
                         <div id="scheduled-list">
                         </div>
                     </div>
                 </section>
+                </div><!-- modal scheduled -->
 
-                <section id="schedule-section" class="section-block" style="display: none;">
+                <div class="assembly-dialog-overlay" data-assembly-dialog="schedule" hidden>
+                <section id="schedule-section" class="section-block assembly-dialog" data-dialog="schedule" role="dialog" aria-modal="true" aria-labelledby="dialog-title-schedule" hidden>
+                    <div class="assembly-dialog-bar"><h2 id="dialog-title-schedule"><i class="fas fa-calendar-plus"></i> Agendar nova assembleia</h2><button type="button" class="assembly-dialog-close" data-close-assembly-dialog aria-label="Fechar janela"><i class="fas fa-xmark"></i></button></div>
                     <div class="card">
                         <h2><i class="fas fa-calendar-plus"></i> Agendar Nova Assembleia</h2>
                         <div id="schedule-info" class="schedule-info" style="display: none;"></div>
@@ -60,14 +73,18 @@
                         </form>
                     </div>
                 </section>
+                </div><!-- modal schedule -->
 
-                <section id="past-section" class="section-block">
+                <div class="assembly-dialog-overlay" data-assembly-dialog="past" hidden>
+                <section id="past-section" class="section-block assembly-dialog" data-dialog="past" role="dialog" aria-modal="true" aria-labelledby="dialog-title-past" hidden>
+                    <div class="assembly-dialog-bar"><h2 id="dialog-title-past"><i class="fas fa-clock-rotate-left"></i> Assembleias realizadas</h2><button type="button" class="assembly-dialog-close" data-close-assembly-dialog aria-label="Fechar janela"><i class="fas fa-xmark"></i></button></div>
                     <div class="card">
                         <h2><i class="fas fa-history"></i> Assembleias Realizadas</h2>
                         <div id="past-list">
                         </div>
                     </div>
                 </section>
+                </div><!-- modal past -->
             </div>
 
             <div id="prejoin-overlay" class="fullscreen-overlay prejoin-overlay" aria-hidden="true">
@@ -80,7 +97,8 @@
                         <div class="prejoin-copy">
                             <span class="prejoin-eyebrow">Preparar entrada</span>
                             <h2 id="prejoin-title">Assembleia</h2>
-                            <p id="prejoin-subtitle">Revise microfone e camera antes de entrar na sala.</p>
+                            <p id="prejoin-subtitle">Revise microfone e câmera antes de entrar na sala.</p>
+                            <p class="prejoin-recording-advice"><i class="fas fa-circle-dot" aria-hidden="true"></i> Esta assembleia poderá ser gravada automaticamente, incluindo áudio e a identificação de participantes sem câmera.</p>
                         </div>
                         <div class="prejoin-user-card">
                             <div class="prejoin-user-avatar" id="prejoin-user-avatar">US</div>
@@ -317,9 +335,10 @@
     <script src="../scripts/community-hub.js?v=053"></script>
     <script src="../scripts/sidebar-links.js?v=056"></script>
     <script src="../scripts/i18n.js"></script>
-    <script src="../scripts/assembleia.js?v=0711"></script>
+    <script src="../scripts/assembleia.js?v=057"></script>
+    <script src="../scripts/assembleia-dialogs.js?v=057"></script>
     <script src="../scripts/topbar-actions.js?v=035"></script>
-    <script src="../scripts/condomit-alerts.js?v=014"></script>
+    <script src="../scripts/condomit-alerts.js?v=057"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>
     <script src="../scripts/advanced-global.js?v=053"></script>
 </body>

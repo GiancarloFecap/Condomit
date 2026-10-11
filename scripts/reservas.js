@@ -345,7 +345,7 @@ async function handleAgendar() {
             cancelText: 'Cancelar',
             onConfirm: doSave
         });
-    } else if (window.confirm('Confirmar esta reserva?')) {
+    } else if (await window.showConfirm({title:'Confirmar reserva',message:'Confirmar esta reserva?',confirmText:'Confirmar reserva'})) {
         await doSave();
     }
 }
@@ -467,7 +467,7 @@ async function deleteOwnReservation(row, button) {
             cancelText: 'Cancelar',
             onConfirm: execute
         });
-    } else if (window.confirm('Deseja cancelar esta reserva?')) {
+    } else if (await window.showConfirm({title:'Cancelar reserva',message:'Deseja cancelar esta reserva?',confirmText:'Cancelar reserva',danger:true})) {
         await execute();
     }
 }

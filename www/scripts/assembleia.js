@@ -1496,7 +1496,7 @@ function updateUserProfile() {
     const avatar = $('user-avatar');
     const nameEl = $('user-name');
     const typeEl = $('user-type');
-    const scheduleSection = $('schedule-section');
+    const scheduleButton = $('open-schedule-modal');
 
     if (avatar) {
         avatar.textContent = getInitials(assemblyState.currentUser.name);
@@ -1509,8 +1509,8 @@ function updateUserProfile() {
             : (assemblyState.currentUser.type === 'porteiro' ? 'Porteiro' : 'Morador');
     }
 
-    if (scheduleSection) {
-        scheduleSection.style.display = assemblyState.currentUser.type === 'sindico' ? 'block' : 'none';
+    if (scheduleButton) {
+        scheduleButton.hidden = assemblyState.currentUser.type !== 'sindico';
     }
 
     if (typeof window.applyGlobalAppLanguage === 'function') {
@@ -1740,6 +1740,7 @@ async function scheduleAssembly(event) {
 
         renderScheduledAssemblies();
         event.target.reset();
+        window.closeAssemblyDialog?.();
         showToast('Assembleia agendada com sucesso.', 'success');
     } catch (error) {
         console.error('Erro ao agendar assembleia:', error);
@@ -1785,6 +1786,7 @@ async function confirmFinalizeAssembly(id) {
                 if (finalized?.end_time) assembly.end_time = finalized.end_time;
                 scheduledAssemblies = scheduledAssemblies.filter((item) => String(item.id) !== String(id));
                 pastAssemblies.unshift(assembly);
+                pastAssemblies.sort((a,b) => (getScheduledAssemblyStartDate(b)?.getTime() || 0) - (getScheduledAssemblyStartDate(a)?.getTime() || 0));
             }
             renderScheduledAssemblies();
             renderPastAssemblies();
@@ -1804,25 +1806,31 @@ async function confirmFinalizeAssembly(id) {
             cancelText: 'Cancelar',
             onConfirm: execute
         });
-    } else if (window.confirm('Finalizar esta assembleia agora?')) {
+    } else if (await window.showConfirm({ title: 'Finalizar assembleia', message: 'Finalizar esta assembleia agora?', confirmText: 'Finalizar', danger: true })) {
         await execute();
     }
 }
 
 async function confirmDeleteAssembly(id) {
     if (!id) return;
-    if (!window.confirm('Tem certeza que deseja excluir esta assembleia agendada?')) return;
-
+    const confirmed = await window.showConfirm({
+        title: 'Excluir assembleia',
+        message: 'Tem certeza de que deseja excluir esta assembleia agendada? Essa ação não poderá ser desfeita.',
+        confirmText: 'Excluir assembleia',
+        cancelText: 'Cancelar',
+        danger: true
+    });
+    if (!confirmed) return;
     try {
         if (typeof deleteScheduledAssemblyById === 'function') {
             await deleteScheduledAssemblyById(id);
         }
         scheduledAssemblies = scheduledAssemblies.filter((assembly) => String(assembly.id) !== String(id));
         renderScheduledAssemblies();
-        showToast('Assembleia excluida com sucesso.', 'success');
+        showToast('Assembleia excluída com sucesso.', 'success');
     } catch (error) {
         console.error('Erro ao excluir assembleia:', error);
-        showToast('Nao foi possivel excluir a assembleia. Tente novamente.', 'error');
+        showToast('Não foi possível excluir a assembleia. Tente novamente.', 'error');
     }
 }
 

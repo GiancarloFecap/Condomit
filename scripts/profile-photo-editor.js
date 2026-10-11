@@ -143,7 +143,7 @@ class ProfilePhotoEditor {
         return;
       }
 
-      const confirmed = window.confirm('Deseja remover a foto de perfil e voltar ao avatar padrão?');
+      const confirmed = await window.showConfirm({title:'Remover foto',message:'Deseja remover a foto de perfil e voltar ao avatar padrão?',confirmText:'Remover foto',danger:true});
       if (!confirmed) return;
 
       resetProfilePhotoBtn.disabled = true;

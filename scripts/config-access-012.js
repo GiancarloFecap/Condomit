@@ -153,7 +153,7 @@
                 const text = window.getCondomitResolvedLanguage?.() === 'en'
                     ? 'Changing condominiums will permanently delete ALL your existing reservations. Continue?'
                     : 'Ao mudar de condomínio, TODAS as suas reservas existentes serão excluídas permanentemente. Deseja continuar?';
-                if (!window.confirm(text)) return;
+                if (!await window.showConfirm({title:'Trocar de condomínio',message:text,confirmText:'Trocar condomínio',danger:true})) return;
             }
             submit.disabled = true;
             submit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Alterando...';

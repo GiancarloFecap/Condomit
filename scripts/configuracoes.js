@@ -379,9 +379,9 @@ function updateUIWithUserData(currentUser) {
     }
 }
 
-function logout() {
+async function logout() {
     if (typeof window.performFullLogout === 'function') { window.performFullLogout(); return; }
-    if (confirm(cfgT('confirm_logout'))) {
+    if (await window.showConfirm({title:'Sair da conta',message:cfgT('confirm_logout'),confirmText:'Sair'})) {
         sessionStorage.removeItem('condominiumUser');
         try { localStorage.removeItem('condominiumPersistentUser'); } catch(_) {}
         window.location.href = '../inicio.html';
@@ -1565,7 +1565,7 @@ function removeSelectedSpaces056() {
         } catch (error) { window.showToast?.(error?.message || 'Não foi possível remover os espaços.', 'error'); }
     };
     if (typeof window.showModal === 'function') window.showModal({ title: 'Excluir espaço(s)', message: `Deseja excluir ${selected.length} espaço(s) selecionado(s)? As reservas já registradas serão preservadas no histórico.`, type: 'warning', confirmText: 'Excluir', cancelText: 'Cancelar', onConfirm: execute });
-    else if (window.confirm('Excluir os espaços selecionados?')) execute();
+    else window.showConfirm({title:'Excluir espaços',message:'Excluir os espaços selecionados?',confirmText:'Excluir',danger:true}).then(ok => {if(ok) execute();});
 }
 
 function openCondominiumEditMode() {
@@ -2297,8 +2297,8 @@ function bindLogoutAllDevices() {
                 cancelText: 'Cancelar',
                 onConfirm: execute
             });
-        } else if (window.confirm('Encerrar sua conta em todos os dispositivos?')) {
-            execute();
+        } else {
+            window.showConfirm({title:'Encerrar sessões',message:'Encerrar sua conta em todos os dispositivos?',confirmText:'Encerrar sessões',danger:true}).then(ok => {if(ok) execute();});
         }
     });
 }

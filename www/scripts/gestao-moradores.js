@@ -394,9 +394,7 @@ function askConfirmation(options) {
         window.showModal(options);
         return;
     }
-    if (window.confirm(options.message || options.title || 'Confirmar ação?')) {
-        Promise.resolve(options.onConfirm?.()).catch(console.error);
-    }
+    window.showConfirm({title: options.title || 'Confirmar ação',message: options.message || '',confirmText:options.confirmText || 'Confirmar',danger:options.type==='warning'}).then(ok => { if (ok) Promise.resolve(options.onConfirm?.()).catch(console.error); });
 }
 
 function confirmExpelResident(resident) {

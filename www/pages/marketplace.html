@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/marketplace.css?v=056">
+    <link rel="stylesheet" href="../styles/marketplace.css?v=057">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
   <link rel="stylesheet" href="../styles/sidebar-account-navigation.css?v=056">
+    <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="condomit-no-topbar condomit-app-page">
     <div class="dashboard-sindico">
@@ -40,10 +41,10 @@
                 <div class="marketplace-toolbar card-shell">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input id="marketplaceSearch" type="search" placeholder="Buscar por itens, categorias ou vendedor...">
+                        <input id="marketplaceSearch" type="search" autocomplete="off" aria-label="Buscar anúncios" placeholder="Buscar por itens, categorias ou vendedor...">
                     </div>
                     <div class="toolbar-actions">
-                        <select id="marketplaceCategory">
+                        <select id="marketplaceCategory" aria-label="Filtrar categoria">
                             <option value="todos">Todas as categorias</option>
                             <option value="moveis">Móveis</option>
                             <option value="eletrodomesticos">Eletrodomésticos</option>
@@ -144,7 +145,7 @@
     <script src="../scripts/sidebar-links.js?v=056"></script>
     <script src="../scripts/marketplace.js?v=056"></script>
     <script src="../scripts/topbar-actions.js?v=035"></script>
-    <script src="../scripts/condomit-alerts.js?v=014"></script>
+    <script src="../scripts/condomit-alerts.js?v=057"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>
     <script src="../scripts/advanced-global.js?v=053"></script>
 </body>

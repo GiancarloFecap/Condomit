@@ -694,3 +694,42 @@ html[data-theme="dark"] .lost-found-detail-image{background:#0f172a;border-color
     .lost-found-layout { grid-template-columns: 1fr; }
     .lost-found-sidebar .card-shell { position: static; top: auto; }
 }
+
+
+/* 057 - Achados e Perdidos: simplificação do visual e buscas coerentes. */
+.lost-found-page { max-width:1480px;margin:0 auto;padding-top:68px!important; }
+.lost-found-page-header{padding-right:72px;align-items:center;margin-bottom:26px}
+.lost-found-page-header h2{font-size:clamp(26px,2.7vw,34px);letter-spacing:-.035em;color:#172b49}
+.lost-found-page-header p{font-size:14px;line-height:1.6}
+.lost-found-page-actions{margin:0}
+.lost-found-page-actions .primary-action{background:#215fc6;box-shadow:0 8px 20px rgba(33,95,198,.15);white-space:nowrap;min-height:46px;padding:0 19px;border-radius:12px}
+.lost-found-layout{display:block}
+.lost-found-sidebar:has(> [hidden]){display:none}
+.lost-found-toolbar.card-shell{display:grid;grid-template-columns:minmax(240px,1fr) auto;gap:12px;padding:14px!important;margin:0 0 18px;box-shadow:none;border:1px solid #e3eaf3;border-radius:18px;background:#fff;align-items:center;justify-content:stretch}
+.lost-found-toolbar .lost-found-search{min-width:0;display:block;}
+.lost-found-toolbar .lost-found-search input{width:100%;min-height:46px;border:1px solid #dce5ef!important;background:#f9fbfe!important;border-radius:12px!important;font-size:14px;color:#334155}
+.lost-found-toolbar .lost-found-filter-actions{width:auto!important;justify-content:flex-end!important;gap:7px}
+.lost-found-toolbar .status-filter-group{gap:2px;padding:3px;max-width:none;border:1px solid #e1e9f3;border-radius:12px;background:#f8fafc}
+.lost-found-toolbar .status-filter-btn{font-size:12px;padding:0 10px;min-height:38px;border-radius:9px}
+.lost-found-toolbar .sort-filter-wrap{min-height:46px;border-radius:12px;min-width:150px}
+.lost-found-toolbar .sort-filter-wrap select{min-height:44px}
+.lost-found-toolbar .compact-btn{border-radius:12px;font-size:12px;padding:0 12px;min-height:46px}
+.type-switcher{grid-template-columns:repeat(2,minmax(0,1fr));max-width:720px;margin:0 0 18px;gap:10px}
+.type-switcher .type-card{min-height:68px;padding:12px 16px;box-shadow:none;border-radius:14px;background:#fff;text-align:left}
+.type-switcher .type-card.active{background:#eff6ff;border-color:#b9d0f4}
+.type-switcher .type-icon{width:40px;height:40px;border-radius:12px;font-size:16px}
+.type-switcher .type-card strong{font-size:13px;margin-bottom:1px}
+.type-switcher .type-card small{font-size:11px}
+.lost-found-main .section-head{margin:0 0 13px;padding-bottom:13px;border-bottom:1px solid #ecf1f7}
+.lost-found-main .section-head h2{font-size:17px;letter-spacing:-.015em}
+.lost-found-main .items-grid{grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:15px}
+.lost-found-main .res-item-card{border:1px solid #e3eaf3;box-shadow:none;border-radius:16px;overflow:hidden;background:#fff}
+.lost-found-main .res-item-card:hover{transform:translateY(-2px);border-color:#b4cef1;box-shadow:0 12px 25px rgba(24,54,93,.08)}
+.lost-found-main .res-item-image{height:162px}
+.lost-found-main .res-item-body{padding:15px}
+.lost-found-main .res-item-copy{font-size:13px;line-height:1.55}
+@media(max-width:1240px){.lost-found-toolbar.card-shell{grid-template-columns:1fr!important}.lost-found-toolbar .lost-found-filter-actions{justify-content:flex-start!important;flex-wrap:wrap}}
+@media(max-width:700px){.lost-found-page{padding:64px 14px 22px!important}.lost-found-page-header{padding-right:0;gap:14px}.lost-found-page-actions{width:100%}.lost-found-page-actions .primary-action{width:100%}.lost-found-toolbar.card-shell{padding:12px!important}.lost-found-toolbar .lost-found-filter-actions{flex-wrap:wrap}.lost-found-toolbar .status-filter-group{max-width:100%;overflow-x:auto;width:100%;flex:none}.lost-found-toolbar .sort-filter-wrap{flex:1}.lost-found-toolbar .compact-btn{flex:1}.type-switcher{gap:8px}.type-switcher .type-card{padding:12px 10px;gap:8px;min-width:0}.type-switcher .type-card small{display:none}.type-switcher .type-icon{width:36px;height:36px;flex:0 0 36px}.lost-found-main .items-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.lost-found-main .res-item-image{height:136px}.lost-found-main .res-item-body{padding:11px}}
+@media(max-width:390px){.lost-found-main .items-grid{grid-template-columns:1fr}}
+html[data-theme="dark"] .lost-found-toolbar.card-shell,html[data-theme="dark"] .lost-found-main .res-item-card,html[data-theme="dark"] .type-switcher .type-card{background:#152236;border-color:#334155}
+html[data-theme="dark"] .lost-found-page-header h2{color:#f8fafc}

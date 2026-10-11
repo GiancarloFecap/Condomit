@@ -204,7 +204,7 @@
     }
 
     async function logoutAccount() {
-        const confirmed = window.confirm('Deseja sair da sua conta?');
+        const confirmed = await window.showConfirm({title: 'Sair da conta',message:'Deseja sair da sua conta?',confirmText:'Sair'});
         if (!confirmed) return;
 
         const button = $('profileLogoutBtn');
@@ -239,14 +239,10 @@
             return;
         }
 
-        const confirmed = window.confirm(
-            'Excluir sua conta permanentemente?\n\nEsta ação remove sua conta e não pode ser desfeita.'
-        );
+        const confirmed = await window.showConfirm({title: 'Excluir conta',message:'Excluir sua conta permanentemente? Esta ação remove sua conta e não pode ser desfeita.',confirmText:'Continuar',danger:true});
         if (!confirmed) return;
 
-        const finalConfirmation = window.confirm(
-            `Confirme novamente a exclusão da conta ${email}.`
-        );
+        const finalConfirmation = await window.showConfirm({title: 'Confirmação final',message:`Confirme novamente a exclusão da conta ${email}.`,confirmText:'Excluir definitivamente',danger:true});
         if (!finalConfirmation) return;
 
         const button = $('profileDeleteBtn');

@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/achados-perdidos.css?v=056">
+    <link rel="stylesheet" href="../styles/achados-perdidos.css?v=057">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
   <link rel="stylesheet" href="../styles/sidebar-account-navigation.css?v=056">
+    <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="condomit-no-topbar condomit-app-page">
     <div class="dashboard-sindico">
@@ -40,7 +41,11 @@
                 </div>
                 <div class="lost-found-layout">
                     <section class="lost-found-main">
-                        <div class="toolbar card-shell">
+                        <div class="toolbar card-shell lost-found-toolbar">
+                            <label class="search-box lost-found-search" for="lostFoundSearch">
+                                <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                                <input id="lostFoundSearch" type="search" autocomplete="off" placeholder="Buscar item, local ou descrição..." aria-label="Buscar itens">
+                            </label>
                             <div class="toolbar-actions lost-found-filter-actions">
                                 <div class="status-filter-group" id="lostFoundStatusFilters" aria-label="Filtrar por status">
                                     <button type="button" class="status-filter-btn active" data-lost-status="todos">Todos</button>
@@ -187,7 +192,7 @@
     <script src="../scripts/sidebar-links.js?v=056"></script>
     <script src="../scripts/achados-perdidos.js?v=056"></script>
     <script src="../scripts/topbar-actions.js?v=035"></script>
-    <script src="../scripts/condomit-alerts.js?v=014"></script>
+    <script src="../scripts/condomit-alerts.js?v=057"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>
     <script src="../scripts/advanced-global.js?v=053"></script>
 </body>

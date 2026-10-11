@@ -1898,3 +1898,39 @@ nav {
 .assembly-finalize-btn{background:#fff7ed;color:#b45309;border:1px solid #fed7aa;font-weight:750}
 .assembly-finalize-btn:hover{background:#ffedd5;border-color:#fdba74;color:#92400e}
 html[data-theme="dark"] .assembly-finalize-btn{background:rgba(180,83,9,.16);border-color:rgba(251,146,60,.35);color:#fdba74}
+
+
+/* 057: painel compacto de assembleias e modais de listagem e agendamento */
+#main-content { padding: clamp(20px,3vw,38px); max-width: 1280px; margin-inline:auto; }
+.assembly-hub-title { padding-right:72px; margin-bottom:26px; }
+.assembly-kicker { color:#2563eb; font-size:12px; letter-spacing:.09em; font-weight:800; }
+.assembly-hub-title h1 { font-size:clamp(28px,3vw,36px); line-height:1.2; margin:5px 0 9px; color:#172642; }
+.assembly-hub-title p { color:#64748b; font-size:15px; }
+.assembly-hub-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.assembly-hub-action { min-width:0; display:flex;align-items:center;gap:14px;text-align:left; padding:20px 18px; border:1px solid #dce5f0; border-radius:20px; background:#fff; color:#162c4d;cursor:pointer;box-shadow:0 9px 28px rgba(18,42,75,.05);transition:.18s ease; }
+.assembly-hub-action:hover { transform:translateY(-3px);border-color:#8eb7ed;box-shadow:0 15px 33px rgba(18,42,75,.09); }
+.assembly-hub-action:focus-visible { outline:3px solid #93c5fd;outline-offset:3px; }
+.assembly-hub-icon { width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;background:#eaf3ff;border-radius:14px;color:#2360aa;font-size:19px; }
+.assembly-hub-text { min-width:0;display:grid;gap:5px;flex:1; }
+.assembly-hub-text strong { font-size:15px;line-height:1.3; }
+.assembly-hub-text small { font-size:12px;line-height:1.45;color:#64748b; }
+.assembly-hub-action > .fa-chevron-right { color:#94a3b8; }
+.assembly-hub-hint { margin-top:18px;color:#71809a;font-size:13px;display:flex;align-items:center;gap:8px; }
+.assembly-dialog-overlay[hidden],.assembly-dialog[hidden],.assembly-hub-action[hidden] { display:none!important; }
+.assembly-dialog-overlay { position:fixed;inset:0;z-index:5400;display:flex;justify-content:center;align-items:center;padding:20px;background:rgba(8,22,48,.6);backdrop-filter:blur(5px); }
+.assembly-dialog { width:min(850px,100%);max-height:min(88dvh,880px);display:flex; flex-direction:column;overflow:hidden;background:#fff;border:1px solid #e4eaf3;border-radius:22px;box-shadow:0 35px 95px rgba(4,20,50,.3); }
+.assembly-dialog-bar { padding:21px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #edf1f7;flex-shrink:0; }
+.assembly-dialog-bar h2 { font-size:20px;color:#1b3150;display:flex;align-items:center;gap:10px;margin:0; }
+.assembly-dialog-bar h2 i { color:#2563eb; }
+.assembly-dialog-close { width:38px;height:38px;border:0;border-radius:11px;background:#f1f5fa;color:#475569;cursor:pointer; }
+.assembly-dialog-close:hover { background:#e2e8f0; }
+.assembly-dialog .card { margin:0!important; padding:22px 24px!important;border:none!important;box-shadow:none!important;border-radius:0!important; min-height:0; overflow-y:auto; }
+.assembly-dialog .card > h2 { display:none; }
+.assembly-dialog .assembly-item { border:1px solid #e7edf5; background:#fbfdff; border-radius:13px;margin-bottom:12px;padding:18px; }
+.assembly-dialog .assembly-actions { display:flex;gap:9px;flex-wrap:wrap; }
+.assembly-dialog .btn { white-space:nowrap; }
+body.assembly-dialog-open { overflow:hidden; }
+.prejoin-recording-advice { display:flex; gap:10px; align-items:flex-start;color:#9b4b17!important;font-size:13px!important;background:#fff8e9;border:1px solid #f9d38a;border-radius:11px;padding:11px 13px;margin-top:12px!important; }
+@media(max-width:900px) { .assembly-hub-actions{grid-template-columns:1fr;} .assembly-dialog-overlay{padding:12px;} .assembly-dialog .card{padding:16px!important;} .assembly-dialog-bar{padding:15px 18px;} }
+html[data-theme="dark"] .assembly-hub-action,html[data-theme="dark"] .assembly-dialog{background:#152236;color:#e2e8f0;border-color:#35445d}
+html[data-theme="dark"] .assembly-dialog-bar h2,html[data-theme="dark"] .assembly-hub-title h1{color:#f1f5f9}
