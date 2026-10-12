@@ -20,16 +20,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     occurrenceState.currentUser = user;
     occurrenceState.userType = normalizeOccurrenceUserType(user);
-    occurrenceState.cep = await resolveOccurrenceCep(user);
-
-    if (!occurrenceState.cep) {
-        occurrenceToast('Não foi possível identificar o condomínio da sua conta.', 'error');
-    }
-
+    // Primeiro pinta ações e conecta eventos; o CEP pode exigir chamada de rede.
     setupOccurrenceShell(user);
     setupOccurrenceActions();
     setupSignatureCanvas();
     prepareOccurrenceForm();
+
+    occurrenceState.cep = await resolveOccurrenceCep(user);
+    if (!occurrenceState.cep) {
+        occurrenceToast('Não foi possível identificar o condomínio da sua conta.', 'error');
+    }
 });
 
 async function loadOccurrenceUser() {

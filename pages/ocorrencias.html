@@ -69,6 +69,19 @@
                         <i class="fas fa-chevron-right action-arrow"></i>
                     </button>
                 </section>
+                <script>
+                // A visibilidade inicial vem da sessão local; operações seguem
+                // protegidas pela autenticação e pelas verificações do servidor.
+                (() => {
+                    try {
+                        const user = JSON.parse(sessionStorage.getItem('condominiumUser') || 'null');
+                        const type = String(user?.type || user?.user_type || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                        if (!type.startsWith('sind')) return;
+                        const button = document.getElementById('openAllOccurrencesBtn');
+                        if (button) { button.hidden = false; button.disabled = false; button.setAttribute('aria-hidden', 'false'); }
+                    } catch (_) {}
+                })();
+                </script>
 
                 <section class="syndic-occurrences card-shell" id="syndicOccurrencesSection" hidden>
                     <div class="section-heading-row">
@@ -277,7 +290,7 @@
     <script src="../scripts/supabase-client.js?v=0710"></script>
     <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
     <script src="../scripts/sidebar-links.js?v=056"></script>
-    <script src="../scripts/ocorrencias.js?v=0710"></script>
+    <script src="../scripts/ocorrencias.js?v=060"></script>
     <script src="../scripts/topbar-actions.js?v=035"></script>
     <script src="../scripts/condomit-alerts.js?v=021"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>

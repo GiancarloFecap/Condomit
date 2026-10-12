@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/manutencao-preventiva.css?v=022">
+    <link rel="stylesheet" href="../styles/manutencao-preventiva.css?v=060">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
@@ -71,10 +71,11 @@
                 <div class="maintenance-layout">
                     <section class="maintenance-main">
                         <div class="toolbar card-shell">
-                            <div class="search-box">
-                                <i class="fas fa-search"></i>
+                            <label class="search-box maintenance-search-field">
+                                <span class="sr-only">Pesquisar manutenções</span>
+                                <i class="fas fa-search" aria-hidden="true"></i>
                                 <input id="maintenanceSearch" type="search" placeholder="Buscar por tarefa ou local...">
-                            </div>
+                            </label>
                             <div class="toolbar-actions">
                                 <select id="maintenanceCategoryFilter">
                                     <option value="todos">Todas as categorias</option>

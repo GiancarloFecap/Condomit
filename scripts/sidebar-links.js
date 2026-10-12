@@ -1277,7 +1277,7 @@ function renderSidebar(currentUser, userType, currentPage, lang = getAppLanguage
                 <i class="fas fa-headset"></i>
                 <span>${t('support_center', lang)}</span>
             </a>
-            <button class="btn-logout-sidebar" onclick="logout()">
+            <button class="btn-logout-sidebar" type="button" data-condomit-logout>
                 <i class="fas fa-sign-out-alt"></i>
                 <span>${t('sign_out', lang)}</span>
             </button>
@@ -1498,12 +1498,6 @@ function getSidebarConfig(userType) {
                     { labelKey: 'released_visitors', icon: 'fas fa-user-check', route: 'porteiro-visitantes' },
                     { labelKey: 'deliveries_authorization', icon: 'fas fa-box', route: 'porteiro-entregas' },
                     { labelKey: 'provider_control', icon: 'fas fa-file-contract', route: 'porteiro-prestadores' }
-                ]
-            },
-            {
-                titleKey: 'emergency_services',
-                items: [
-                    { labelKey: 'emergency_button', icon: 'fas fa-triangle-exclamation', route: 'porteiro-emergencia' }
                 ]
             },
             {
@@ -1790,4 +1784,33 @@ function escapeSidebarHtml(text) {
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;');
+}
+
+
+// 060: O menu é construído dinamicamente. O encerramento de sessão deve funcionar
+// em qualquer página, inclusive nas que não declaram uma função global logout().
+// Captura também botões legados com onclick="logout()" antes do manipulador inline.
+if (!window.__condomitSidebarLogoutBound) {
+    window.__condomitSidebarLogoutBound = true;
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest?.('.btn-logout-sidebar');
+        if (!button) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        if (button.dataset.loggingOut === 'true') return;
+        button.dataset.loggingOut = 'true';
+        button.disabled = true;
+        if (typeof window.performFullLogout === 'function') {
+            Promise.resolve(window.performFullLogout()).catch(error => {
+                console.error('[Condomit] Erro ao encerrar sessão:', error);
+                window.location.replace('../inicio.html');
+            });
+        } else {
+            // Fallback defensivo; a rotina completa normalmente é carregada primeiro.
+            try { sessionStorage.removeItem('condominiumUser'); } catch (_) {}
+            try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
+            window.location.replace('../inicio.html');
+        }
+    }, true);
 }

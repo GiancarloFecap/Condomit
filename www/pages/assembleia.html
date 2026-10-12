@@ -34,6 +34,18 @@
                     <button type="button" class="assembly-hub-action" id="open-schedule-modal" data-open-assembly-dialog="schedule" hidden><span class="assembly-hub-icon"><i class="fas fa-calendar-plus"></i></span><span class="assembly-hub-text"><strong>Agendar nova assembleia</strong><small>Defina título, data e horário</small></span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
                     <button type="button" class="assembly-hub-action" data-open-assembly-dialog="past"><span class="assembly-hub-icon"><i class="fas fa-clock-rotate-left"></i></span><span class="assembly-hub-text"><strong>Assembleias realizadas</strong><small>Consulte as reuniões mais recentes</small></span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
                 </div>
+                <script>
+                (() => {
+                    try {
+                        const user = JSON.parse(sessionStorage.getItem('condominiumUser') || 'null');
+                        const role = String(user?.type || user?.user_type || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                        if (role.startsWith('sind')) {
+                            const button = document.getElementById('open-schedule-modal');
+                            if (button) button.hidden = false;
+                        }
+                    } catch (_) {}
+                })();
+                </script>
                 <p class="assembly-hub-hint"><i class="fas fa-circle-info"></i> Selecione uma opção para abrir a lista ou o formulário.</p>
                 <div class="assembly-dialog-overlay" data-assembly-dialog="scheduled" hidden>
                 <section id="scheduled-section" class="section-block assembly-dialog" data-dialog="scheduled" role="dialog" aria-modal="true" aria-labelledby="dialog-title-scheduled" hidden>

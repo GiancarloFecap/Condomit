@@ -1,0 +1,15 @@
+# Condomit — orientações para mecanismos de pesquisa.
+# As páginas administrativas e de conta têm meta robots noindex em seu HTML.
+User-agent: *
+Disallow: /api/
+Disallow: /.netlify/
+Disallow: /netlify/
+Disallow: /supabase/
+Disallow: /android/
+Disallow: /mobile/
+Disallow: /desktop/
+Disallow: /tools/
+Disallow: /www/
+Allow: /
+
+Sitemap: https://condomit.com.br/sitemap.xml
