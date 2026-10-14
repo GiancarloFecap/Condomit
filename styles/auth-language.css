@@ -1,20 +1,39 @@
-/* 067 - idioma nos formulários de cadastro, igual ao login e escolha de perfil. */
-.auth-language-control{
- position:fixed;top:max(18px,env(safe-area-inset-top));right:max(20px,env(safe-area-inset-right));
- z-index:1000;display:inline-flex;align-items:center;gap:9px;
- min-height:46px;padding:0 14px;border-radius:14px;
- background:rgba(10,42,107,.88);border:1px solid rgba(255,255,255,.4);
- color:#fff;box-shadow:0 10px 26px rgba(10,42,107,.18);backdrop-filter:blur(10px);
- font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:700;
+/* 068 - mesmo seletor utilizado em Tipo de Usuário, sem conflito com o formulário. */
+body.condomit-app-page .auth-language-control {
+  position:fixed;top:max(18px, env(safe-area-inset-top));right:max(20px, env(safe-area-inset-right));
+  left:auto;z-index:2000;display:inline-flex;align-items:center;gap:10px;
+  min-height:48px;padding:0 14px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.48);
+  background:rgba(10,42,107,.82);color:#fff;
+  box-shadow:0 10px 28px rgba(10,42,107,.18);backdrop-filter:blur(10px);
+  font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:700;
+  width:auto;max-width:calc(100vw - 95px);
 }
-.auth-language-control select{
- appearance:none;min-width:92px;padding:0 18px 0 0;border:0;outline:0;
- background:transparent;color:inherit;font:inherit;cursor:pointer;
+body.condomit-app-page .auth-language-control > i {color:#fff;flex-shrink:0}
+body.condomit-app-page .auth-language-control select#landing-language-select {
+  appearance:none !important;-webkit-appearance:none !important;
+  display:block !important;min-width:0 !important;width:auto !important;max-width:128px;
+  min-height:0 !important;height:46px !important;
+  border:0 !important;outline:0 !important;box-shadow:none !important;
+  border-radius:0 !important;padding:0 3px 0 0 !important;margin:0 !important;
+  background:transparent !important;background-image:none !important;color:#fff !important;
+  font:inherit !important;cursor:pointer;line-height:normal;
+  text-shadow:none;
 }
-.auth-language-control option{color:#0f172a;background:#fff}
-.auth-language-arrow{pointer-events:none;font-size:.81rem}
+body.condomit-app-page .auth-language-control select#landing-language-select:focus,
+body.condomit-app-page .auth-language-control select#landing-language-select:focus-visible {
+  border:0 !important;outline:0 !important;box-shadow:none !important;
+  background:transparent !important;color:#fff !important;
+}
+body.condomit-app-page .auth-language-control select#landing-language-select option {
+  background:#fff !important;color:#0f172a !important;
+}
+body.condomit-app-page .auth-language-control .auth-language-arrow {font-size:.81rem;pointer-events:none;color:#fff}
 @media(max-width:480px){
- .auth-language-control{top:max(12px,env(safe-area-inset-top));right:12px;min-height:40px;padding:0 9px;gap:6px;font-size:12px}
- .auth-language-control select{min-width:74px}
- body:has(.auth-language-control) .btn-back{left:12px;top:max(12px,env(safe-area-inset-top));padding:10px 12px;font-size:13px}
+  body.condomit-app-page .auth-language-control {
+    top:max(12px,env(safe-area-inset-top));right:12px;min-height:42px;
+    padding:0 11px;gap:7px;font-size:12px;
+  }
+  body.condomit-app-page .auth-language-control select#landing-language-select {height:40px !important;max-width:104px}
+  body:has(.auth-language-control) .btn-back{left:12px;top:max(12px,env(safe-area-inset-top));padding:10px 12px;font-size:13px}
 }

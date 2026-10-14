@@ -1,13 +1,16 @@
 
 (function () {
+  // A escolha do usuário é a única fonte de verdade nas páginas de autenticação.
+  // Mantém um valor em memória também quando o armazenamento do navegador está bloqueado.
+  let activeChoice = null;
   function getChoice() {
+    if (activeChoice !== null) return activeChoice;
     try {
       const saved = String(localStorage.getItem('app-language') || 'auto').trim().toLowerCase();
       return ['pt', 'en', 'auto'].includes(saved) ? saved : 'auto';
     } catch (_) { return 'auto'; }
   }
   function getLang() {
-    // A escolha explícita sempre prevalece sobre detecções de idioma de outros módulos.
     const choice = getChoice();
     if (choice === 'pt' || choice === 'en') return choice;
     const device = (navigator.languages || [navigator.language || 'pt-BR'])[0] || 'pt-BR';
@@ -210,7 +213,7 @@
     setAttr('.login-back', 'aria-label', t.back);
     const back = document.querySelector('.login-back');
     if (back) {
-      const label = [...back.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      const label = [...back.childNodes].find(node => node.nodeType === 3 && node.textContent.trim());
       if (label) label.textContent = ' ' + (lang === 'en' ? 'Back' : 'Voltar');
     }
     setText('#loginTitle', t.heading);
@@ -226,13 +229,20 @@
     const signup = document.querySelector('.login-signup');
     if (signup) {
       const a = signup.querySelector('a');
-      signup.innerHTML = `${t.signupPrefix} `;
-      if (a) {
-        a.textContent = t.signupAction;
-        signup.appendChild(a);
+      // Remove o texto original em português: ele não pode permanecer ao lado da tradução.
+      [...signup.childNodes].filter(node => node.nodeType === 3).forEach(node => node.remove());
+      // Não destrói e recria a âncora em toda mudança de idioma.
+      let label = signup.querySelector('[data-auth-signup-prefix]');
+      if (!label) {
+        label = document.createElement('span');
+        label.dataset.authSignupPrefix = 'true';
+        signup.insertBefore(label, a);
       }
+      label.textContent = t.signupPrefix + ' ';
+      if (a) a.textContent = t.signupAction;
     }
     setText('.login-terms', t.terms);
+    setAttr('.login-modern-logo', 'alt', lang === 'en' ? 'Condomit - Your condominium app' : 'Condomit - O app do seu condomínio');
   }
 
   function applyTipo(lang) {
@@ -323,9 +333,9 @@
   }
 
   function applyTranslations() {
-    applyLanguagePicker(getLang());
-    const path = window.location.pathname;
     const lang = getLang();
+    applyLanguagePicker(lang);
+    const path = window.location.pathname;
     if (path.endsWith('/entrar.html') || path.endsWith('entrar.html')) return applyLogin(lang);
     if (path.endsWith('/tipo-usuario.html') || path.endsWith('tipo-usuario.html')) return applyTipo(lang);
     if (path.endsWith('/cadastro-morador.html') || path.endsWith('cadastro-morador.html')) return applyCadastro(lang, 'cadastroMorador');
@@ -339,8 +349,8 @@
     select.dataset.authLanguageBound = 'true';
     select.addEventListener('change', () => {
       const value = ['auto', 'pt', 'en'].includes(select.value) ? select.value : 'auto';
+      activeChoice = value; // O texto muda já neste evento, sem aguardar recarregar.
       try { localStorage.setItem('app-language', value); } catch (_) {}
-      // Atualização síncrona: título, labels, placeholders, botões e valores do seletor.
       applyTranslations();
       window.dispatchEvent(new CustomEvent('condomit:language-changed', {
         detail: { language: getLang(), selection: value }
@@ -355,7 +365,15 @@
     applyTranslations();
   });
   window.addEventListener('storage', function (event) {
-    if (event.key === 'app-language') applyTranslations();
+    if (event.key === 'app-language') {
+      activeChoice = null;
+      applyTranslations();
+    }
   });
-  window.addEventListener('condomit:language-changed', applyTranslations);
+  window.addEventListener('condomit:language-changed', function (event) {
+    if (event.detail?.selection && ['auto', 'pt', 'en'].includes(event.detail.selection)) {
+      activeChoice = event.detail.selection;
+    }
+    applyTranslations();
+  });
 })();

@@ -346,9 +346,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         submitBtn.disabled = isSubmitting;
         if (isSubmitting) {
             submitBtn.dataset.originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (window.getCondomitAuthLanguage?.() === 'en' ? 'Signing in...' : 'Entrando...');
         } else {
-            submitBtn.innerHTML = submitBtn.dataset.originalText || 'Entrar';
+            submitBtn.innerHTML = window.getCondomitAuthLanguage?.() === 'en' ? 'Sign in' : 'Entrar';
         }
     }
 

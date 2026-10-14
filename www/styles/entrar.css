@@ -394,3 +394,53 @@ html[data-theme="dark"] .login-terms { color: #8A96A8; }
 /* 067 - logo ampliado sem comprimir os campos e botão de acesso. */
 .login-modern-logo{width:210px;max-width:100%;height:auto}
 @media(max-width:460px){.login-modern-logo{width:176px}}
+
+/* 068 - Login inteiro visível sem rolagem nas telas comuns, mantendo a logo. */
+body.login-modern-page{min-height:100vh;min-height:100dvh}
+body.login-modern-page .login-modern-shell {
+  min-height:100vh;min-height:100dvh;
+  padding:64px 18px 12px;
+  align-items:center;
+}
+body.login-modern-page .login-modern-card {
+  width:min(420px,100%);
+  padding:18px 25px 18px;
+}
+body.login-modern-page .login-modern-logo-wrap{margin-bottom:7px}
+body.login-modern-page .login-modern-logo{width:162px;height:auto}
+body.login-modern-page .login-modern-card h1{font-size:23px;margin-bottom:5px}
+body.login-modern-page .login-modern-subtitle{margin-bottom:14px}
+body.login-modern-page .login-field{margin-bottom:11px}
+body.login-modern-page .login-field label{margin-bottom:5px}
+body.login-modern-page .login-field input{height:44px}
+body.login-modern-page .login-modern-card .login-submit{min-height:44px;margin-top:13px}
+body.login-modern-page .login-divider{margin:15px 0 11px}
+body.login-modern-page .login-terms{margin:10px auto 0}
+@media(max-width:700px){
+  body.login-modern-page .login-modern-shell{padding:64px 13px 10px}
+  body.login-modern-page .login-modern-card{padding:14px 18px 16px}
+  body.login-modern-page .login-modern-logo{width:144px}
+  body.login-modern-page .login-modern-subtitle{margin-bottom:11px}
+  body.login-modern-page .login-field{margin-bottom:9px}
+  body.login-modern-page .login-field input{height:42px}
+  body.login-modern-page .login-modern-card .login-submit{margin-top:11px}
+  body.login-modern-page .login-divider{margin:12px 0 9px}
+}
+@media(max-height:680px){
+  body.login-modern-page .login-modern-shell{padding-top:58px;padding-bottom:8px}
+  body.login-modern-page .login-modern-card{padding-top:10px;padding-bottom:10px}
+  body.login-modern-page .login-modern-logo{width:128px}
+  body.login-modern-page .login-modern-logo-wrap{margin-bottom:3px}
+  body.login-modern-page .login-modern-card h1{font-size:21px;margin-bottom:3px}
+  body.login-modern-page .login-modern-subtitle{margin-bottom:8px}
+  body.login-modern-page .login-field{margin-bottom:7px}
+  body.login-modern-page .login-field input{height:40px}
+  body.login-modern-page .login-field label{margin-bottom:3px;font-size:13px}
+  body.login-modern-page .login-modern-card .login-submit{margin-top:9px;min-height:41px}
+  body.login-modern-page .login-divider{margin:10px 0 8px}
+  body.login-modern-page .login-terms{margin-top:7px}
+}
+@media(max-height:480px){
+  /* Preserva o acesso aos campos mesmo em paisagem/zoom muito elevado. */
+  body.login-modern-page .login-modern-shell{align-items:start}
+}
