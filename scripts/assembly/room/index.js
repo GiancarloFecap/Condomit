@@ -385,6 +385,11 @@ function openAddPollModal() {
   const body = document.createElement('div');
   body.innerHTML = `
     <div class="field">
+      <label for="poll-kind">Tipo de votação</label>
+      <select id="poll-kind"><option value="regular">Votação geral</option><option value="sindico">Eleição de síndico</option></select>
+    </div>
+    <div class="field" id="poll-candidates-status" hidden role="status"></div>
+    <div class="field">
       <label for="poll-title">Título da votação *</label>
       <input id="poll-title" type="text" maxlength="255" placeholder="Ex: Aprovação orçamento anual 2026" />
     </div>
@@ -445,6 +450,54 @@ function openAddPollModal() {
     addOptionRow('');
   });
 
+  let electionCandidates = null;
+  const kindSelect = body.querySelector('#poll-kind');
+  const candidateStatus = body.querySelector('#poll-candidates-status');
+  const addOptionBtn = body.querySelector('#btn-add-option');
+  async function fetchCandidates() {
+    const cep = String(state.assembly?.cep || '').replace(/\D/g, '');
+    if (cep.length !== 8) throw new Error('A assembleia não possui um CEP válido.');
+    if (!window.supabase) throw new Error('Não foi possível conectar ao Supabase.');
+    if (!state.assemblyId || !/^\d+$/.test(String(state.assemblyId))) throw new Error('Identificação da assembleia inválida.');
+    const {data: users, error} = await window.supabase.rpc('condomit_assembly_election_candidates', {
+      target_assembly_id: Number(state.assemblyId)
+    });
+    if (error) throw new Error('Não foi possível consultar candidatos deste CEP. Aplique a migration 053 no Supabase: ' + error.message);
+    const names = (users || []).map(row => ({
+      email:String(row.email || '').trim().toLowerCase(), name:String(row.name || '').trim()
+    })).filter(row => row.email && row.name);
+    if (!names.length) throw new Error('Não há usuários registrados e vinculados ao condomínio desta assembleia.');
+    const counts = new Map(); names.forEach(row => counts.set(row.name,(counts.get(row.name)||0)+1));
+    return names.map(row => counts.get(row.name)>1 ? `${row.name} (${row.email})` : row.name).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  }
+  kindSelect.addEventListener('change', async () => {
+    const election = kindSelect.value === 'sindico';
+    candidateStatus.hidden = !election;
+    addOptionBtn.disabled = election;
+    list.querySelectorAll('.chip-row').forEach(row => row.querySelector('button')?.toggleAttribute('disabled', election));
+    if (!election) {
+      electionCandidates = null;
+      candidateStatus.textContent = '';
+      list.replaceChildren(); addOptionRow('Sim'); addOptionRow('Não');
+      return;
+    }
+    electionCandidates = null;
+    list.replaceChildren();
+    body.querySelector('#poll-title').value = 'Eleição de síndico';
+    candidateStatus.textContent = 'Carregando usuários vinculados ao CEP da assembleia...';
+    try {
+      const options = await fetchCandidates();
+      if (kindSelect.value !== 'sindico') return;
+      electionCandidates = options;
+      options.forEach(option => { const input = addOptionRow(option); input.readOnly = true; input.setAttribute('aria-readonly','true'); });
+      candidateStatus.textContent = `${options.length} candidato(s) do condomínio. A lista é obtida pelos vínculos registrados no Supabase.`;
+    } catch (error) {
+      electionCandidates = null;
+      candidateStatus.textContent = error?.message || 'Não foi possível carregar os candidatos.';
+      toast(candidateStatus.textContent, 'error');
+    }
+  });
+
   showSimpleModal({
     title: 'Nova Votação',
     bodyHtml: body,
@@ -456,6 +509,11 @@ function openAddPollModal() {
       const options = Array.from(b.querySelectorAll('#poll-options-list .chip-row input')).map(i => String(i.value || '').trim()).filter(Boolean);
       if (title.length < 3) throw new Error('Título da votação muito curto (min 3).');
       if (options.length < 2) throw new Error('Informe ao menos 2 opções válidas.');
+      if (kindSelect.value === 'sindico') {
+        if (!electionCandidates || electionCandidates.length < 2) throw new Error('A eleição exige pelo menos dois candidatos registrados no condomínio atual.');
+        const freshCandidates = await fetchCandidates();
+        if (JSON.stringify(freshCandidates) !== JSON.stringify(electionCandidates)) throw new Error('A lista de candidatos foi alterada. Reabra a votação para atualizar a lista.');
+      }
       const duration = Number(durationRaw);
       if (!duration || duration <= 0) throw new Error('Duração inválida.');
       await createPollWithDuration({ title, description: description || null, options }, duration);

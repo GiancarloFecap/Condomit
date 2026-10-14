@@ -662,6 +662,15 @@
             event.target.value = formatCpf(event.target.value);
         });
 
+        form.visitorRg?.addEventListener('input', (event) => {
+            const digits = String(event.target.value || '').replace(/\D/g, '').slice(0, 9);
+            const first = digits.slice(0, 2);
+            const middle = digits.length > 2 ? '.' + digits.slice(2, 5) : '';
+            const last = digits.length > 5 ? '.' + digits.slice(5, 8) : '';
+            const suffix = digits.length > 8 ? '-' + digits.slice(8, 9) : '';
+            event.target.value = first + middle + last + suffix;
+        });
+
         form.responsibleCpf?.addEventListener('input', (event) => {
             event.target.value = formatCpf(event.target.value);
             if (normalizeCpf(event.target.value).length === 11 && !options.lockResponsibleToCurrentUser) {

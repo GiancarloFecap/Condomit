@@ -67,6 +67,10 @@
     if (photo) avatar.innerHTML = `<img src="${esc(photo)}" alt="Foto de perfil">`;
     else avatar.textContent = initials(state.user?.name || 'US');
     document.querySelectorAll('.management-only').forEach(el => el.hidden = !state.management);
+    if (!state.management) document.querySelectorAll('[data-module-dialog]').forEach(button => {
+      const source = document.querySelector(`[data-dialog-source="${button.dataset.moduleDialog}"]`);
+      if (source?.classList.contains('management-only') || source?.querySelector('form.management-only')) button.hidden = true;
+    });
     const adminNav=document.querySelector('.advanced-nav-item[data-view="admin"]');
     if(adminNav)adminNav.hidden=state.role!=='administradora';
     if (!state.management && document.querySelector('.advanced-nav-item.active.management-only')) switchView('overview');
@@ -243,7 +247,7 @@
       if (button) button.disabled = true;
       try {
         const payload = payloadFromForm(form); const row = await action(payload);
-        form.reset(); toast(success,'success'); audit('create', id.replace('Form',''), row?.id || '', payload); await reload?.(); await loadMetrics();
+        form.reset(); toast(success,'success'); audit('create', id.replace('Form',''), row?.id || '', payload); await reload?.(); await loadMetrics(); renderReferenceDashboard();
       } catch(err){ console.error(err); toast(errorText(err),'error'); }
       finally { if (button) button.disabled = false; }
     });
@@ -279,6 +283,7 @@
       await Promise.allSettled([loadDocuments(),loadFinancial(),loadUtilities(),loadAssets(),loadTemplates(),loadTickets(),loadMobility(),loadEmergencies(),loadSurveys(),loadCalendar(),loadBadges(),loadTasks(),loadPermissions(),loadAudits(),loadManagedCondos(),loadSessions()]);
       $('migrationWarning').hidden = true;
       await loadMetrics();
+      renderReferenceDashboard();
       const updated=$('advancedLastUpdated');
       if(updated){
         const time=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -479,7 +484,7 @@
   function badgeLabel(code){ return ({participacao_assembleia:'Participação em assembleia',pesquisa:'Colaboração em pesquisa',comunidade:'Colaboração comunitária'})[code]||'Participação comunitária'; }
 
   async function loadTasks(){ if(!state.management)return; try { state.tasks=await tableGet('assembly_tasks','*','order=created_at.desc&limit=50'); renderTasks(); } catch(e){ handleSchemaError(e); } }
-  function renderTasks(){ $('assemblyTasksList').innerHTML=state.tasks.map(t=>`<div class="list-item"><div><strong>${esc(t.title)}</strong><small>${esc(t.assigned_to||'Sem responsável')} · ${fmtDate(t.due_date)}</small></div><button class="text-btn" data-action="task-toggle" data-id="${t.id}">${t.status==='concluida'?'Reabrir':'Concluir'}</button></div>`).join('')||'<div class="empty-state">Nenhuma tarefa.</div>'; }
+  function renderTasks(){ if (!$('assemblyTasksList')) return; $('assemblyTasksList').innerHTML=state.tasks.map(t=>`<div class="list-item"><div><strong>${esc(t.title)}</strong><small>${esc(t.assigned_to||'Sem responsável')} · ${fmtDate(t.due_date)}</small></div><button class="text-btn" data-action="task-toggle" data-id="${t.id}">${t.status==='concluida'?'Reabrir':'Concluir'}</button></div>`).join('')||'<div class="empty-state">Nenhuma tarefa.</div>'; }
 
   const permissionDefinitions=[['ver_financeiro','Ver financeiro'],['gerenciar_reservas','Gerenciar reservas'],['registrar_encomendas','Registrar encomendas'],['criar_assembleia','Criar assembleia'],['gerenciar_manutencao','Gerenciar manutenção'],['ver_auditoria','Ver auditoria']];
   async function loadPermissions(){ if(!state.management)return; try { state.permissions=await tableGet('role_permissions','*'); renderPermissions(); } catch(e){ handleSchemaError(e); } }
@@ -530,7 +535,39 @@
     } catch(e){ handleSchemaError(e); }
   }
   function setMetric(name,value){ const el=document.querySelector(`[data-metric="${name}"]`);if(el)el.textContent=value; }
-  function renderIndicators({tickets,maint,alerts,docs}){ const rows=[['Chamados fora do SLA',tickets.filter(t=>t.sla_due_at&&new Date(t.sla_due_at)<new Date()&&!['resolvido','cancelado'].includes(t.status)).length],['Manutenções em atraso',maint.filter(m=>m.next_date&&new Date(m.next_date)<new Date()&&m.status!=='concluida').length],['Documentos próximos do vencimento',state.documents.filter(d=>d.expires_at&&new Date(d.expires_at)-Date.now()<30*86400000&&new Date(d.expires_at)>new Date()).length],['Alertas de emergência',alerts.filter(a=>a.active).length]]; $('operationalIndicators').innerHTML=rows.map(([l,v])=>`<div class="indicator-row"><span>${esc(l)}</span><strong>${v}</strong></div>`).join(''); }
+  function renderReferenceDashboard() {
+    if (!$('advRefTop')) return;
+    const financial = Array.isArray(state.financial) ? state.financial : [];
+    const revenue = financial.filter(e => e.entry_type === 'receita').reduce((n,e) => n + Number(e.amount || 0), 0);
+    const expenses = financial.filter(e => e.entry_type !== 'receita').reduce((n,e) => n + Number(e.amount || 0), 0);
+    const pending = financial.filter(e => ['pendente','atrasado'].includes(String(e.status || '').toLowerCase()));
+    $('advRefBalance').textContent = state.management ? money(revenue - expenses) : 'Restrito';
+    $('advRefPending').textContent = String(pending.length);
+    $('advRefPendingDetail').textContent = pending.length === 1 ? '1 lançamento pendente' : `${pending.length} lançamentos pendentes`;
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const dt = new Date(); dt.setDate(1); dt.setMonth(dt.getMonth() - (5 - i));
+      const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2,'0')}`;
+      const rows = financial.filter(e => String(e.entry_date || e.date || e.created_at || '').slice(0,7) === key);
+      return { key, label:dt.toLocaleDateString('pt-BR',{month:'short'}).replace('.',''), income:rows.filter(e=>e.entry_type==='receita').reduce((n,e)=>n+Number(e.amount||0),0), expense:rows.filter(e=>e.entry_type!=='receita').reduce((n,e)=>n+Number(e.amount||0),0) };
+    });
+    const max = Math.max(1,...months.flatMap(m=>[m.income,m.expense]));
+    $('advRefChart').innerHTML = months.map(m => `<div class="adv-ref-month"><div class="adv-ref-pair"><div class="adv-ref-bar income" style="height:${Math.max(0,m.income / max * 100)}%" title="Receitas: ${money(m.income)}"></div><div class="adv-ref-bar expense" style="height:${Math.max(0,m.expense / max * 100)}%" title="Despesas: ${money(m.expense)}"></div></div><small>${esc(m.label)}</small></div>`).join('');
+    const build = (id, items, icon, emptyLabel) => {
+      const root = $(id); if (!root) return;
+      root.innerHTML = items.length ? items.slice(0,4).map(item => `<div class="adv-ref-item"><i class="fas ${icon}" aria-hidden="true"></i><span><strong>${esc(item.title)}</strong><small>${esc(item.detail || '')}</small></span>${item.status ? `<em>${esc(item.status)}</em>` : ''}</div>`).join('') : `<div class="empty-state">${esc(emptyLabel)}</div>`;
+    };
+    const openTickets = (state.tickets || []).filter(x => !['resolvido','cancelado'].includes(String(x.status || '').toLowerCase()));
+    build('advRefPriority',openTickets.map(x => ({title:x.title || 'Chamado',detail: x.category || 'Atendimento',status: x.priority || x.status})), 'fa-headset','Nenhuma pendência prioritária.');
+    build('advRefMaintenance',(state.assets||[]).slice(0,4).map(x => ({title:x.name || x.title || 'Equipamento',detail:x.location || x.category || 'Patrimônio',status:x.status || ''})), 'fa-screwdriver-wrench','Nenhum equipamento cadastrado.');
+    build('advRefApprovals',pending.map(x => ({title:x.description || x.category || 'Lançamento financeiro',detail:money(x.amount),status:x.status})), 'fa-file-invoice','Nenhuma aprovação pendente.');
+    build('advRefAdmin',[
+      {title:'Documentos cadastrados',detail:'Registros disponíveis',status:String(state.documents?.length || 0)},
+      {title:'Equipamentos no patrimônio',detail:'Ativos cadastrados',status:String(state.assets?.length || 0)},
+      {title:'Manutenções programadas',detail:'Planos recorrentes',status:String(state.templates?.length || 0)}
+    ],'fa-clipboard-check','Sem dados administrativos.');
+  }
+
+  function renderIndicators({tickets,maint,alerts,docs}){ const rows=[['Chamados fora do SLA',tickets.filter(t=>t.sla_due_at&&new Date(t.sla_due_at)<new Date()&&!['resolvido','cancelado'].includes(t.status)).length],['Manutenções em atraso',maint.filter(m=>m.next_date&&new Date(m.next_date)<new Date()&&m.status!=='concluida').length],['Documentos próximos do vencimento',state.documents.filter(d=>d.expires_at&&new Date(d.expires_at)-Date.now()<30*86400000&&new Date(d.expires_at)>new Date()).length],['Alertas de emergência',alerts.filter(a=>a.active).length]]; if (!$('operationalIndicators')) return; $('operationalIndicators').innerHTML=rows.map(([l,v])=>`<div class="indicator-row"><span>${esc(l)}</span><strong>${v}</strong></div>`).join(''); }
 
   async function loadSessions(){
     try {

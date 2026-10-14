@@ -1,189 +1,172 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Condomit - Painel do Síndico</title>
-    <link rel="icon" type="image/png" href="../assets/favicon.png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="../styles/index.css?v=073">
-    <link rel="stylesheet" href="../styles/index-reference-dashboard.css?v=0740">
-    <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
-    <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
-  <link rel="stylesheet" href="../styles/sidebar-account-navigation.css?v=056">
-    <meta name="robots" content="noindex, nofollow">
-</head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Condomit - Painel do Síndico</title>
+<link href="../assets/favicon.png" rel="icon" type="image/png"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
+<link href="../styles/index.css?v=073" rel="stylesheet"/>
+<link href="../styles/index-reference-dashboard.css?v=0740" rel="stylesheet"/>
+<link href="../styles/theme.css?v=044" rel="stylesheet"/>
+<link href="../styles/responsive-mobile.css?v=035" rel="stylesheet"/>
+<link href="../manifest.webmanifest" rel="manifest"/>
+<link href="../styles/ux-polish.css?v=0720" rel="stylesheet"/>
+<link href="../styles/sidebar-account-navigation.css?v=056" rel="stylesheet"/>
+<meta content="noindex, nofollow" name="robots"/>
+<link href="../styles/ui-refinement-071.css" rel="stylesheet"/></head>
 <body class="condomit-no-topbar condomit-app-page">
-    <div class="dashboard-sindico">
-        
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <img src="../assets/logo-lado.png" alt="Condomit Icon" class="sidebar-logo">
-                <h2 class="condo-name" id="sidebarApartment"></h2>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <a href="index.html" class="nav-item active">
-                        <i class="fas fa-home"></i>
-                        <span>Início</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Comunicado e Engajamento</div>
-                    <a href="mural-avisos.html" class="nav-item">
-                        <i class="fas fa-bullhorn"></i>
-                        <span>Mural de Avisos</span>
-                    </a>
-                    <a href="sugestoes.html" class="nav-item">
-                        <i class="fas fa-lightbulb"></i>
-                        <span>Canal de Sugestões</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-flag"></i>
-                        <span>Indicações</span>
-                    </a>
-                    <div class="nav-section-title">Comunicação e Relacionamento</div>
-                    <a href="chat.html" class="nav-item">
-                        <i class="fas fa-comments"></i>
-                        <span>Chat</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-search"></i>
-                        <span>Achados e Perdidos</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-shopping-bag"></i>
-                        <span>Market Place</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <a href="assembleia.html" class="nav-item">
-                        <i class="fas fa-calendar-check"></i>
-                        <span>Assembleia</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-video"></i>
-                        <span>Chamadas</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-comment-dots"></i>
-                        <span>Avisos de Assembleia</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Gestão de Moradores</div>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-users-cog"></i>
-                        <span>Gestão de Moradores</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Reserva e Manutenção</div>
-                    <a href="reservas.html" class="nav-item">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Reserva de Locais</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fas fa-tools"></i>
-                        <span>Manutenção Preventiva</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">IA e Automação</div>
-                    <a href="ai-condomit.html" class="nav-item">
-                        <i class="fas fa-robot"></i>
-                        <span>IA - Dúvidas do Condomínio</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Configurações</div>
-                    <a href="configuracoes.html" class="nav-item">
-                        <i class="fas fa-cog"></i>
-                        <span>Configurações</span>
-                    </a>
-                </div>
-            </nav>
-            
-            <div class="sidebar-footer">
-                <button class="btn-support">
-                    <i class="fas fa-headset"></i>
-                    <span>Central de Suporte</span>
-                </button>
-                <button class="btn-logout-sidebar" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Sair</span>
-                </button>
-            </div>
-        </aside>
+<div class="dashboard-sindico">
+<aside class="sidebar">
+<div class="sidebar-header">
+<img alt="Condomit Icon" class="sidebar-logo" src="../assets/logo-lado.png"/>
+<h2 class="condo-name" id="sidebarApartment"></h2>
+</div>
+<nav class="sidebar-nav">
+<div class="nav-section">
+<a class="nav-item active" href="index.html">
+<i class="fas fa-home"></i>
+<span>Início</span>
+</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Comunicado e Engajamento</div>
+<a class="nav-item" href="mural-avisos.html">
+<i class="fas fa-bullhorn"></i>
+<span>Mural de Avisos</span>
+</a>
+<a class="nav-item" href="sugestoes.html">
+<i class="fas fa-lightbulb"></i>
+<span>Canal de Sugestões</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-flag"></i>
+<span>Indicações</span>
+</a>
+<div class="nav-section-title">Comunicação e Relacionamento</div>
+<a class="nav-item" href="chat.html">
+<i class="fas fa-comments"></i>
+<span>Chat</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-search"></i>
+<span>Achados e Perdidos</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-shopping-bag"></i>
+<span>Market Place</span>
+</a>
+</div>
+<div class="nav-section">
+<a class="nav-item" href="assembleia.html">
+<i class="fas fa-calendar-check"></i>
+<span>Assembleia</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-video"></i>
+<span>Chamadas</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-comment-dots"></i>
+<span>Avisos de Assembleia</span>
+</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Gestão de Moradores</div>
+<a class="nav-item" href="#">
+<i class="fas fa-users-cog"></i>
+<span>Gestão de Moradores</span>
+</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Reserva e Manutenção</div>
+<a class="nav-item" href="reservas.html">
+<i class="fas fa-calendar-alt"></i>
+<span>Reserva de Locais</span>
+</a>
+<a class="nav-item" href="#">
+<i class="fas fa-tools"></i>
+<span>Manutenção Preventiva</span>
+</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">IA e Automação</div>
+<a class="nav-item" href="ai-condomit.html">
+<i class="fas fa-robot"></i>
+<span>IA - Dúvidas do Condomínio</span>
+</a>
+</div>
+<div class="nav-section">
+<div class="nav-section-title">Configurações</div>
+<a class="nav-item" href="configuracoes.html">
+<i class="fas fa-cog"></i>
+<span>Configurações</span>
+</a>
+</div>
+</nav>
+<div class="sidebar-footer">
+<button class="btn-support">
+<i class="fas fa-headset"></i>
+<span>Central de Suporte</span>
+</button>
+<button class="btn-logout-sidebar" onclick="logout()">
+<i class="fas fa-sign-out-alt"></i>
+<span>Sair</span>
+</button>
+</div>
+</aside>
+<main class="main-content">
+<section aria-label="Visão geral do condomínio" class="reference-dashboard" id="referenceDashboard">
 
-        
-        <main class="main-content">
-            
-
-            
-            <section class="reference-dashboard" id="referenceDashboard" aria-label="Visão geral do condomínio">
-                <div class="reference-dashboard-title">
-                    <div><span class="ref-eyebrow" data-ref-t="overview">VISÃO GERAL</span><h2 data-ref-t="dashboard">Painel do condomínio</h2><p data-ref-t="dashboardSubtitle">Indicadores e movimentações em tempo real</p></div></span>
-                </div>
-                <div class="reference-kpi-grid">
-                    <a class="reference-kpi-card" href="gestao-moradores.html" aria-label="Ver gestão de moradores">
-                        <div class="ref-kpi-top"><span data-ref-t="residents">Moradores cadastrados</span><span class="ref-kpi-icon blue"><i class="fas fa-users"></i></span></div>
-                        <div class="ref-kpi-value" id="refResidentsValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refResidentsTrend">—</span><svg class="ref-spark" id="refSparkResidents" viewBox="0 0 120 40" aria-hidden="true"></svg></div>
-                    </a>
-                    <a class="reference-kpi-card" href="reservas.html" aria-label="Ver reservas">
-                        <div class="ref-kpi-top"><span data-ref-t="reservations">Reservas neste mês</span><span class="ref-kpi-icon teal"><i class="fas fa-calendar-check"></i></span></div>
-                        <div class="ref-kpi-value" id="refReservationsValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refReservationsTrend">—</span><svg class="ref-spark" id="refSparkReservations" viewBox="0 0 120 40" aria-hidden="true"></svg></div>
-                    </a>
-                    <a class="reference-kpi-card" href="ocorrencias.html" aria-label="Ver ocorrências">
-                        <div class="ref-kpi-top"><span data-ref-t="occurrences">Ocorrências no mês</span><span class="ref-kpi-icon amber"><i class="fas fa-clipboard-list"></i></span></div>
-                        <div class="ref-kpi-value" id="refOccurrencesValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refOccurrencesTrend">—</span><svg class="ref-spark" id="refSparkOccurrences" viewBox="0 0 120 40" aria-hidden="true"></svg></div>
-                    </a>
-                    <a class="reference-kpi-card" href="mural-avisos.html" aria-label="Ver avisos">
-                        <div class="ref-kpi-top"><span data-ref-t="notices">Avisos publicados</span><span class="ref-kpi-icon violet"><i class="fas fa-bullhorn"></i></span></div>
-                        <div class="ref-kpi-value" id="refNoticesValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refNoticesTrend">—</span><svg class="ref-spark" id="refSparkNotices" viewBox="0 0 120 40" aria-hidden="true"></svg></div>
-                    </a>
-                </div>
-                <article class="reference-panel reference-movement-card">
-                    <header class="ref-panel-heading">
-                        <div><h3 data-ref-t="activityTitle">Evolução da atividade do condomínio</h3><p data-ref-t="activitySubtitle">Acompanhe a movimentação registrada ao longo dos meses</p></div>
-                        <div class="ref-chart-controls"><label><span data-ref-t="metricLabel">Indicador</span><select id="refMetricSelect"><option value="reservations" data-ref-t="reservationsShort">Reservas</option><option value="notices" data-ref-t="noticesShort">Comunicados</option><option value="occurrences" data-ref-t="occurrencesShort">Ocorrências</option></select></label><label><span data-ref-t="periodLabel">Período</span><select id="refPeriodSelect"><option value="6" data-ref-t="sixMonths">Últimos 6 meses</option><option value="12" data-ref-t="twelveMonths">Últimos 12 meses</option></select></label></div>
-                    </header>
-                    <div id="refActivityChart" class="ref-line-chart" role="img" aria-label="Gráfico de atividade mensal"><div class="ref-empty-chart">Carregando gráfico…</div></div>
-                    <div class="ref-graph-note"><i class="fas fa-circle-info"></i> <span data-ref-t="chartNote">Os números representam registros do condomínio, não valores estimados.</span></div>
-                </article>
-                <div class="reference-bottom-grid">
-                    <article class="reference-panel reference-residents-card">
-                        <header class="ref-panel-heading"><div><h3 data-ref-t="recentResidents">Moradores recentes</h3><p data-ref-t="recentResidentsSub">Cadastros vinculados ao condomínio</p></div><a class="ref-see-all" href="gestao-moradores.html"><span data-ref-t="viewAll">Ver todos</span> <i class="fas fa-arrow-right"></i></a></header>
-                        <div class="ref-table-scroll"><table class="ref-residents-table"><thead><tr><th data-ref-t="name">Morador</th><th data-ref-t="unit">Unidade</th><th data-ref-t="joined">Entrada</th><th data-ref-t="status">Situação</th></tr></thead><tbody id="refResidentsTable"><tr><td colspan="4" class="ref-table-empty">Carregando moradores...</td></tr></tbody></table></div>
-                    </article>
-                    <article class="reference-panel reference-distribution-card">
-                        <header class="ref-panel-heading"><div><h3 data-ref-t="distribution">Distribuição de atividades</h3><p data-ref-t="distributionSubtitle">Registros deste mês por categoria</p></div></header>
-                        <div class="ref-donut-layout"><div class="ref-donut" id="refDonut" role="img" aria-label="Distribuição por categoria"><div class="ref-donut-hole"><strong id="refDonutTotal">0</strong><small data-ref-t="records">registros</small></div></div><div class="ref-donut-legend" id="refDonutLegend"></div></div>
-                    </article>
-                </div>
-            </section>
-        </main>
-    </div>
-    <script src="../scripts/platform-config.js?v=035"></script>
-
-
-    <script src="../scripts/supabase-client.js?v=065"></script>
-    <script type="module" src="../scripts/supabase-auth.js?v=061"></script>
-    <script src="../scripts/sidebar-links.js?v=065"></script>
-    <script src="../scripts/index.js?v=073"></script>
-    <script src="../scripts/index-reference-dashboard.js?v=0740"></script>
-    <script src="../scripts/topbar-actions.js?v=065"></script>
-    <script src="../scripts/condomit-alerts.js?v=057"></script>
-    <script src="../scripts/responsive-nav.js?v=025"></script>
-    <script src="../scripts/advanced-global.js?v=065"></script>
+<div class="reference-kpi-grid">
+<a aria-label="Ver gestão de moradores" class="reference-kpi-card" href="gestao-moradores.html">
+<div class="ref-kpi-top"><span data-ref-t="residents">Moradores cadastrados</span><span class="ref-kpi-icon blue"><i class="fas fa-users"></i></span></div>
+<div class="ref-kpi-value" id="refResidentsValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refResidentsTrend">—</span><svg aria-hidden="true" class="ref-spark" id="refSparkResidents" viewbox="0 0 120 40"></svg></div>
+</a>
+<a aria-label="Ver reservas" class="reference-kpi-card" href="reservas.html">
+<div class="ref-kpi-top"><span data-ref-t="reservations">Reservas neste mês</span><span class="ref-kpi-icon teal"><i class="fas fa-calendar-check"></i></span></div>
+<div class="ref-kpi-value" id="refReservationsValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refReservationsTrend">—</span><svg aria-hidden="true" class="ref-spark" id="refSparkReservations" viewbox="0 0 120 40"></svg></div>
+</a>
+<a aria-label="Ver ocorrências" class="reference-kpi-card" href="ocorrencias.html">
+<div class="ref-kpi-top"><span data-ref-t="occurrences">Ocorrências no mês</span><span class="ref-kpi-icon amber"><i class="fas fa-clipboard-list"></i></span></div>
+<div class="ref-kpi-value" id="refOccurrencesValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refOccurrencesTrend">—</span><svg aria-hidden="true" class="ref-spark" id="refSparkOccurrences" viewbox="0 0 120 40"></svg></div>
+</a>
+<a aria-label="Ver avisos" class="reference-kpi-card" href="mural-avisos.html">
+<div class="ref-kpi-top"><span data-ref-t="notices">Avisos publicados</span><span class="ref-kpi-icon violet"><i class="fas fa-bullhorn"></i></span></div>
+<div class="ref-kpi-value" id="refNoticesValue">—</div><div class="ref-kpi-bottom"><span class="ref-kpi-trend" id="refNoticesTrend">—</span><svg aria-hidden="true" class="ref-spark" id="refSparkNotices" viewbox="0 0 120 40"></svg></div>
+</a>
+</div>
+<article class="reference-panel reference-movement-card">
+<header class="ref-panel-heading">
+<div><h3 data-ref-t="activityTitle">Evolução da atividade do condomínio</h3><p data-ref-t="activitySubtitle">Acompanhe a movimentação registrada ao longo dos meses</p></div>
+<div class="ref-chart-controls"><label><span data-ref-t="metricLabel">Indicador</span><select id="refMetricSelect"><option data-ref-t="reservationsShort" value="reservations">Reservas</option><option data-ref-t="noticesShort" value="notices">Comunicados</option><option data-ref-t="occurrencesShort" value="occurrences">Ocorrências</option></select></label><label><span data-ref-t="periodLabel">Período</span><select id="refPeriodSelect"><option data-ref-t="sixMonths" value="6">Últimos 6 meses</option><option data-ref-t="twelveMonths" value="12">Últimos 12 meses</option></select></label></div>
+</header>
+<div aria-label="Gráfico de atividade mensal" class="ref-line-chart" id="refActivityChart" role="img"><div class="ref-empty-chart">Carregando gráfico…</div></div>
+<div class="ref-graph-note"><i class="fas fa-circle-info"></i> <span data-ref-t="chartNote">Os números representam registros do condomínio, não valores estimados.</span></div>
+</article>
+<div class="reference-bottom-grid">
+<article class="reference-panel reference-residents-card">
+<header class="ref-panel-heading"><div><h3 data-ref-t="recentResidents">Moradores recentes</h3><p data-ref-t="recentResidentsSub">Cadastros vinculados ao condomínio</p></div><a class="ref-see-all" href="gestao-moradores.html"><span data-ref-t="viewAll">Ver todos</span> <i class="fas fa-arrow-right"></i></a></header>
+<div class="ref-table-scroll"><table class="ref-residents-table"><thead><tr><th data-ref-t="name">Morador</th><th data-ref-t="unit">Unidade</th><th data-ref-t="joined">Entrada</th><th data-ref-t="status">Situação</th></tr></thead><tbody id="refResidentsTable"><tr><td class="ref-table-empty" colspan="4">Carregando moradores...</td></tr></tbody></table></div>
+</article>
+<article class="reference-panel reference-distribution-card">
+<header class="ref-panel-heading"><div><h3 data-ref-t="distribution">Distribuição de atividades</h3><p data-ref-t="distributionSubtitle">Registros deste mês por categoria</p></div></header>
+<div class="ref-donut-layout"><div aria-label="Distribuição por categoria" class="ref-donut" id="refDonut" role="img"><div class="ref-donut-hole"><strong id="refDonutTotal">0</strong><small data-ref-t="records">registros</small></div></div><div class="ref-donut-legend" id="refDonutLegend"></div></div>
+</article>
+</div>
+</section>
+</main>
+</div>
+<script src="../scripts/platform-config.js?v=035"></script>
+<script src="../scripts/supabase-client.js?v=065"></script>
+<script src="../scripts/supabase-auth.js?v=061" type="module"></script>
+<script src="../scripts/sidebar-links.js?v=065"></script>
+<script src="../scripts/index.js?v=073"></script>
+<script src="../scripts/index-reference-dashboard.js?v=0740"></script>
+<script src="../scripts/topbar-actions.js?v=065"></script>
+<script src="../scripts/condomit-alerts.js?v=057"></script>
+<script src="../scripts/responsive-nav.js?v=025"></script>
+<script src="../scripts/advanced-global.js?v=065"></script>
 </body>
 </html>

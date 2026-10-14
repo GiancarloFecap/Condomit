@@ -81,7 +81,7 @@
         signupAction: 'Cadastrar no Condomit',
         loginPrefix: 'Já possui conta?',
         loginAction: 'Entrar',
-        copyright: '© 2025 Condomit. Todos os direitos reservados.'
+        copyright: '© 2026 Condomit. Todos os direitos reservados.'
       },
       cadastroMorador: {
         title: 'Condomit - Cadastro do Morador',
@@ -165,7 +165,7 @@
         signupAction: 'Sign up on Condomit',
         loginPrefix: 'Already have an account?',
         loginAction: 'Sign in',
-        copyright: '© 2025 Condomit. All rights reserved.'
+        copyright: '© 2026 Condomit. All rights reserved.'
       },
       cadastroMorador: {
         title: 'Condomit - Resident Sign up',
