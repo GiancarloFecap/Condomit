@@ -1,7 +1,17 @@
 
 (function () {
+  function getChoice() {
+    try {
+      const saved = String(localStorage.getItem('app-language') || 'auto').trim().toLowerCase();
+      return ['pt', 'en', 'auto'].includes(saved) ? saved : 'auto';
+    } catch (_) { return 'auto'; }
+  }
   function getLang() {
-    try { return ((window.getCondomitResolvedLanguage?.() || ((localStorage.getItem('app-language') || 'auto') === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : localStorage.getItem('app-language'))) === 'en' ? 'en' : 'pt'); } catch (_) { return /^pt/i.test(navigator.language || 'pt')?'pt':'en'; }
+    // A escolha explícita sempre prevalece sobre detecções de idioma de outros módulos.
+    const choice = getChoice();
+    if (choice === 'pt' || choice === 'en') return choice;
+    const device = (navigator.languages || [navigator.language || 'pt-BR'])[0] || 'pt-BR';
+    return /^pt(?:-|$)/i.test(device) ? 'pt' : 'en';
   }
 
   const text = {
@@ -198,6 +208,11 @@
     document.title = t.title;
     document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
     setAttr('.login-back', 'aria-label', t.back);
+    const back = document.querySelector('.login-back');
+    if (back) {
+      const label = [...back.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      if (label) label.textContent = ' ' + (lang === 'en' ? 'Back' : 'Voltar');
+    }
     setText('#loginTitle', t.heading);
     setText('.login-modern-subtitle', t.subtitle);
     setText('label[for="email"]', t.email);
@@ -239,6 +254,8 @@
     setText('#continueLabel', t.continue);
     setText('#hasAccountText', t.hasAccount);
     setText('#loginActionText', t.loginAction);
+    setAttr('.tipo-card-logo-link', 'aria-label', lang === 'en' ? 'Condomit - Home page' : 'Condomit - Página inicial');
+    setAttr('.tipo-card-logo', 'alt', lang === 'en' ? 'Condomit - Your condominium app' : 'Condomit - O app do seu condomínio');
   }
 
   function applyCadastro(lang, typeKey) {
@@ -288,6 +305,7 @@
       footerSpan.innerHTML = '<i class="fas fa-lock"></i> ' + c.secureFooter;
     }
     setText('.copyright', c.copyright);
+    setAttr('.signup-logo', 'alt', lang === 'en' ? 'Condomit logo' : 'Logo da Condomit');
   }
 
   function applyLanguagePicker(lang) {
@@ -299,9 +317,9 @@
       if (options[option.value]) option.textContent = options[option.value];
     }
     select.setAttribute('aria-label', en ? 'Language' : 'Idioma');
-    const control = select.closest('.tipo-language-control,.login-language-control');
+    const control = select.closest('.tipo-language-control,.login-language-control,.auth-language-control');
     if (control) control.title = en ? 'Language' : 'Idioma';
-    try { select.value = localStorage.getItem('app-language') || 'auto'; } catch (_) { select.value = 'auto'; }
+    select.value = getChoice();
   }
 
   function applyTranslations() {
@@ -315,9 +333,27 @@
     if (path.endsWith('/cadastro-porteiro.html') || path.endsWith('cadastro-porteiro.html')) return applyCadastro(lang, 'cadastroPorteiro');
   }
 
+  function bindLanguagePicker() {
+    const select = document.getElementById('landing-language-select');
+    if (!select || select.dataset.authLanguageBound === 'true') return;
+    select.dataset.authLanguageBound = 'true';
+    select.addEventListener('change', () => {
+      const value = ['auto', 'pt', 'en'].includes(select.value) ? select.value : 'auto';
+      try { localStorage.setItem('app-language', value); } catch (_) {}
+      // Atualização síncrona: título, labels, placeholders, botões e valores do seletor.
+      applyTranslations();
+      window.dispatchEvent(new CustomEvent('condomit:language-changed', {
+        detail: { language: getLang(), selection: value }
+      }));
+    });
+  }
+
   window.getCondomitAuthLanguage = getLang;
   window.getCondomitAuthTerms = function () { return text[getLang()].cadastroCommon; };
-  document.addEventListener('DOMContentLoaded', applyTranslations);
+  document.addEventListener('DOMContentLoaded', () => {
+    bindLanguagePicker();
+    applyTranslations();
+  });
   window.addEventListener('storage', function (event) {
     if (event.key === 'app-language') applyTranslations();
   });

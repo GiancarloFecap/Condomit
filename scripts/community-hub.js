@@ -585,6 +585,17 @@
         }
     }
 
+    function canReceiveRoleNotification(item, user) {
+        if (getUserType(user) !== 'porteiro') return true;
+        const category = String(item?.category || '').trim().toLowerCase();
+        if (category === 'assembleias') return false;
+        return !(category === 'avisos' && (
+            Boolean(item?.relatedNoticeId || item?.related_notice_id) ||
+            String(item?.eventType || item?.event_type || '').toLowerCase().includes('mural') ||
+            /mural de avisos/i.test(String(item?.title || ''))
+        ));
+    }
+
     async function getNotifications(
         user = getCurrentUser()
     ) {
@@ -669,6 +680,8 @@
                         0
                     ).getTime()
                 )}`;
+
+            if (!canReceiveRoleNotification(item, user)) continue;
 
             if (
                 seen.has(

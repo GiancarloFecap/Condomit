@@ -1,10 +1,6 @@
 /* Condomit 063 | Painel de portaria compacto, inspirado na referência visual. */
 .porter-dashboard{--porter-ink:#0c2347;--porter-muted:#647792;--porter-line:#e7edf6;--porter-blue:#164c96;--porter-teal:#17b7a0;max-width:1540px;margin:0 auto;padding:76px 22px 26px;display:grid;gap:16px;min-width:0}
 .porter-dashboard *{box-sizing:border-box}
-.porter-welcome{padding:0 0 2px}
-.porter-welcome h1{margin:0 0 3px;color:var(--porter-ink);font-size:clamp(1.55rem,2.2vw,2rem);font-weight:800;line-height:1.18;letter-spacing:-.025em}
-.porter-welcome h1 span[aria-hidden]{font-size:.8em}
-.porter-welcome p{margin:0;color:var(--porter-muted);font-size:.91rem}
 .porter-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:stretch}
 .porter-kpi,.porter-emergency-tile{min-width:0;min-height:112px;border-radius:17px;padding:17px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 5px 21px rgba(16,47,95,.055)}
 .porter-kpi{background:#fff;border:1px solid var(--porter-line)}

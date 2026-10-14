@@ -1155,7 +1155,7 @@ function getTargetForRoute(routeKey, userType) {
         comunicados: 'mural-avisos.html',
         configuracoes: 'configuracoes.html',
         'porteiro-liberacao': 'liberacao-visitantes.html',
-        'porteiro-registrar': 'registrar-visitantes.html',
+        'porteiro-registrar': 'liberacao-visitantes.html?register=1',
         'porteiro-registro': 'registro-entrada-saida.html',
         'porteiro-visitantes': 'visitantes-liberados.html',
         'porteiro-historico': 'registro-entrada-saida.html',
@@ -1493,7 +1493,6 @@ function getSidebarConfig(userType) {
                 titleKey: 'access_control',
                 items: [
                     { labelKey: 'visitor_release', icon: 'fas fa-user-group', route: 'porteiro-liberacao' },
-                    { labelKey: 'register_visitor', icon: 'fas fa-user-plus', route: 'porteiro-registrar' },
                     { labelKey: 'visitor_entry_exit', icon: 'fas fa-right-to-bracket', route: 'porteiro-registro' },
                     { labelKey: 'released_visitors', icon: 'fas fa-user-check', route: 'porteiro-visitantes' },
                     { labelKey: 'deliveries_authorization', icon: 'fas fa-box', route: 'porteiro-entregas' },

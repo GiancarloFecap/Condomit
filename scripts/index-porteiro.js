@@ -91,20 +91,20 @@ async function resolveCurrentCondoCep(user = null) {
     const locale = () => (window.getCondomitResolvedLanguage?.() || (/^en/i.test(navigator.language || 'pt') ? 'en' : 'pt')) === 'en' ? 'en' : 'pt';
     const dict = {
         pt: {
-            hello:'Olá', porter:'Porteiro', subtitle:'Resumo das atividades e atendimentos da portaria.', visitorKpi:'Visitantes esperados hoje', packageKpi:'Encomendas pendentes', reservationKpi:'Reservas de hoje', emergency:'Acionar emergência',
+            visitorKpi:'Visitantes esperados hoje', packageKpi:'Encomendas pendentes', reservationKpi:'Reservas de hoje', emergency:'Acionar emergência',
             loading:'Carregando...', today:'Hoje', yesterday:'Ontem', todayInfo:'Previstos para hoje', waitingPickup:'Aguardando retirada', reservationsInfo:'Reservas registradas',
             movementTitle:'Movimentação da portaria', movementDescription:'Liberações e revogações de acesso registradas no sistema.', movementFootnote:'Os eventos são registros de liberação ou revogação; não confirmam a passagem física.',
-            released:'Liberações', revoked:'Revogações', visitorsTitle:'Visitantes esperados', packagesTitle:'Encomendas na portaria', noticesTitle:'Avisos importantes', viewAll:'Ver todos',
-            noVisitors:'Nenhum visitante previsto para hoje.',noPackages:'Nenhuma encomenda registrada.',noNotices:'Nenhum aviso publicado.',noLogs:'Nenhum evento registrado neste período.', unavailable:'Dados temporariamente indisponíveis.',
-            noTime:'Horário não informado',unit:'Unidade',resident:'Morador',guest:'Visitante',package:'Encomenda',delivered:'Retirada',notice:'Comunicado', todayPicked:'Retirada hoje'
+            released:'Liberações', revoked:'Revogações', visitorsTitle:'Visitantes esperados', packagesTitle:'Encomendas na portaria', accessTitle:'Atualizações de acesso', viewHistory:'Ver histórico', viewAll:'Ver todos',
+            noVisitors:'Nenhum visitante previsto para hoje.',noPackages:'Nenhuma encomenda registrada.',noAccess:'Nenhuma alteração de acesso registrada.',noLogs:'Nenhum evento registrado neste período.', unavailable:'Dados temporariamente indisponíveis.',
+            noTime:'Horário não informado',unit:'Unidade',resident:'Morador',guest:'Visitante',package:'Encomenda',delivered:'Retirada',todayPicked:'Retirada hoje', accessGranted:'Acesso liberado', accessRevoked:'Liberação revogada', accessDenied:'Acesso recusado', accessChanged:'Acesso atualizado', responsible:'Responsável'
         },
         en: {
-            hello:'Hello', porter:'Porter', subtitle:'An overview of gatehouse activity and services.',visitorKpi:'Expected visitors today',packageKpi:'Pending packages',reservationKpi:'Reservations today',emergency:'Call emergency',
+            visitorKpi:'Expected visitors today',packageKpi:'Pending packages',reservationKpi:'Reservations today',emergency:'Call emergency',
             loading:'Loading...',today:'Today',yesterday:'Yesterday',todayInfo:'Expected today',waitingPickup:'Awaiting pickup',reservationsInfo:'Registered reservations',
             movementTitle:'Gatehouse activity',movementDescription:'Access authorizations and revocations recorded in the system.',movementFootnote:'These events record authorizations/revocations, not confirmed physical arrivals or departures.',
-            released:'Authorizations',revoked:'Revocations',visitorsTitle:'Expected visitors',packagesTitle:'Packages at the gatehouse',noticesTitle:'Important notices',viewAll:'View all',
-            noVisitors:'No visitors expected today.',noPackages:'No registered packages.',noNotices:'No published notices.',noLogs:'No recorded events for this period.',unavailable:'Data temporarily unavailable.',
-            noTime:'Time not provided',unit:'Unit',resident:'Resident',guest:'Visitor',package:'Package',delivered:'Picked up',notice:'Notice',todayPicked:'Picked up today'
+            released:'Authorizations',revoked:'Revocations',visitorsTitle:'Expected visitors',packagesTitle:'Packages at the gatehouse',accessTitle:'Access updates', viewHistory:'View history',viewAll:'View all',
+            noVisitors:'No visitors expected today.',noPackages:'No registered packages.',noAccess:'No access updates recorded.',noLogs:'No recorded events for this period.',unavailable:'Data temporarily unavailable.',
+            noTime:'Time not provided',unit:'Unit',resident:'Resident',guest:'Visitor',package:'Package',delivered:'Picked up',todayPicked:'Picked up today', accessGranted:'Access authorized', accessRevoked:'Authorization revoked', accessDenied:'Access denied', accessChanged:'Access updated', responsible:'Responsible'
         }
     };
     const t = key => dict[locale()][key] || key;
@@ -118,7 +118,7 @@ async function resolveCurrentCondoCep(user = null) {
     };
     const dateTime = input => { const d = new Date(input); return Number.isFinite(d.getTime()) ? d : null; };
     const asArray = rows => Array.isArray(rows) ? rows : [];
-    const state = {user:null, visitors:null,packages:null,reservations:null,notices:null,logs:null};
+    const state = {user:null, visitors:null,packages:null,reservations:null,logs:null};
     const initLabel = (id,text) => { const el=$(id);if(el)el.textContent=text; };
     const setValue = (id,value) => initLabel(id,value==null?'—':new Intl.NumberFormat(locale()==='en'?'en-US':'pt-BR').format(value));
     const emptyMarkup = msg => `<p class="porter-empty">${esc(msg)}</p>`;
@@ -139,7 +139,6 @@ async function resolveCurrentCondoCep(user = null) {
         document.querySelectorAll('#porterDashboard [data-porter-i18n]').forEach(el=>{el.textContent=t(el.dataset.porterI18n)});
         const period=$('porterPeriodSelect');
         if (period?.options.length>=2) {period.options[0].text=t('today');period.options[1].text=t('yesterday');}
-        initLabel('porterFirstName',state.user?.name?.trim()?.split(/\s+/)[0]||t('porter'));
     }
     function renderMetrics(){
         const visitors=state.visitors===null?null:expectedToday().length;
@@ -187,17 +186,29 @@ async function resolveCurrentCondoCep(user = null) {
             return `<article class="porter-record"><span class="porter-record-icon is-green"><i class="fas fa-box" aria-hidden="true"></i></span><div class="porter-record-content"><strong title="${esc(name)}">${esc(name)}</strong><small>${esc(desc)}</small></div><span class="porter-record-side"><span class="porter-tag ${pending?'is-pending':''}">${esc(status)}</span></span></article>`;
         }).join('');
     }
-    function renderNotices(){
-        const target=$('porterNoticesList');if(!target)return;
-        if(!state.notices){target.innerHTML=emptyMarkup(t('unavailable'));return;}
-        const notices=[...state.notices].sort((a,b)=>new Date(b.createdAt||b.created_at||0)-new Date(a.createdAt||a.created_at||0)).slice(0,4);
-        if(!notices.length){target.innerHTML=emptyMarkup(t('noNotices'));return;}
-        target.innerHTML=notices.map(notice=>{
-            const title=notice.title||t('notice');
-            const detail=notice.message||notice.description||'';
-            const d=dateTime(notice.createdAt||notice.created_at);
-            const date=d?new Intl.DateTimeFormat(locale()==='en'?'en-US':'pt-BR',{day:'2-digit',month:'short'}).format(d):'';
-            return `<article class="porter-record"><span class="porter-record-icon is-red"><i class="fas fa-bullhorn" aria-hidden="true"></i></span><div class="porter-record-content"><strong title="${esc(title)}">${esc(title)}</strong><small title="${esc(detail)}">${esc(detail)}</small></div><span class="porter-record-side">${esc(date)}</span></article>`;
+    // Últimas alterações de autorização: não representa entrada/saída física.
+    // Usa o mesmo histórico do gráfico, sem consultar o mural de avisos.
+    function renderAccessUpdates(){
+        const target=$('porterAccessList'); if(!target)return;
+        if(state.logs===null){target.innerHTML=emptyMarkup(t('unavailable'));return;}
+        const logs=asArray(state.logs)
+            .filter(log=>['liberacao','revogacao','recusa'].includes(String(log?.action||'').toLowerCase()))
+            .sort((a,b)=>(dateTime(b.created_at)?.getTime()||0)-(dateTime(a.created_at)?.getTime()||0))
+            .slice(0,4);
+        if(!logs.length){target.innerHTML=emptyMarkup(t('noAccess'));return;}
+        target.innerHTML=logs.map(log=>{
+            const action=String(log.action||'').toLowerCase();
+            const grant=action==='liberacao';
+            const title=t(grant?'accessGranted':action==='revogacao'?'accessRevoked':'accessDenied');
+            const name=String(log.visitor_name||t('guest'));
+            const location=[log.block?`Bloco ${log.block}`:'',log.apartment?`Apto ${log.apartment}`:'',log.responsible_name?`${t('responsible')}: ${log.responsible_name}`:''].filter(Boolean).join(' · ');
+            const when=dateTime(log.created_at);
+            const time=when?new Intl.DateTimeFormat(locale()==='en'?'en-US':'pt-BR',{
+                day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'
+            }).format(when):'';
+            const icon=grant?'fa-circle-check':action==='revogacao'?'fa-ban':'fa-triangle-exclamation';
+            const tone=grant?'is-green':action==='revogacao'?'is-red':'is-yellow';
+            return `<article class="porter-record"><span class="porter-record-icon ${tone}"><i class="fas ${icon}" aria-hidden="true"></i></span><div class="porter-record-content"><strong title="${esc(title)} · ${esc(name)}">${esc(title)} · ${esc(name)}</strong><small title="${esc(location)}">${esc(location)}</small></div><span class="porter-record-side">${esc(time)}</span></article>`;
         }).join('');
     }
     function renderChart(){
@@ -234,7 +245,7 @@ async function resolveCurrentCondoCep(user = null) {
         const accessible=`${t('released')}: ${entries.join(', ')}. ${t('revoked')}: ${revocations.join(', ')}`;
         target.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(accessible)}" viewBox="0 0 840 252">${lines.join('')}${bars.join('')}</svg>`;
     }
-    function renderAll(){renderText();renderMetrics();renderVisitors();renderPackages();renderNotices();renderChart();}
+    function renderAll(){renderText();renderMetrics();renderVisitors();renderPackages();renderAccessUpdates();renderChart();}
     function presentTask(promise, key){return Promise.resolve(promise).then(rows=>{state[key]=asArray(rows);renderAll();}).catch(error=>{state[key]=null;renderAll();console.warn(`[Porteiro] Não foi possível carregar ${key}:`,error?.message||error)});}
     async function refresh(){
         if(!state.user)return;
@@ -242,8 +253,7 @@ async function resolveCurrentCondoCep(user = null) {
             presentTask(window.getVisitorsForCondominium?.(state.user)??Promise.reject(new Error('Consulta de visitantes indisponível')), 'visitors'),
             presentTask(rpc('condomit_list_packages'), 'packages'),
             presentTask(rpc('condomit_list_all_reservations').catch(()=>rpc('condomit_list_reservation_slots')), 'reservations'),
-            presentTask(window.getVisitorAccessLogsForCondominium?.()??Promise.reject(new Error('Consulta de acessos indisponível')), 'logs'),
-            presentTask(window.communityHub?.getWallNotices?.(state.user)??Promise.reject(new Error('Consulta de avisos indisponível')), 'notices')
+            presentTask(window.getVisitorAccessLogsForCondominium?.()??Promise.reject(new Error('Consulta de acessos indisponível')), 'logs')
         ]);
     }
     async function init(){

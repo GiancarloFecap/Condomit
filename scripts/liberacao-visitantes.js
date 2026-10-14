@@ -18,6 +18,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     releaseState.currentUser = currentUser;
     initReleasePageShell(currentUser);
     bindReleasePageControls();
+    initVisitorRegistrationModal(currentUser);
+    if (new URLSearchParams(location.search).get('register') === '1' || location.hash === '#registrar') {
+        openVisitorRegistrationModal();
+    }
     await loadVisitorsForRelease();
 
     // Mantém a portaria sincronizada com cadastros feitos em outros dispositivos.
@@ -25,6 +29,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!document.hidden && !releaseState.busyCpf) loadVisitorsForRelease();
     }, 15000);
 });
+
+
+// 065: cadastro de visitante reutiliza validação e gravação já existentes no Supabase.
+function openVisitorRegistrationModal() {
+    const overlay = document.getElementById('visitorRegistrationModal');
+    if (!overlay || overlay.classList.contains('open')) return;
+    overlay.dataset.returnFocus = document.activeElement?.id || 'openVisitorRegistrationBtn';
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('visitor-register-modal-open');
+    overlay.querySelector('[data-field="visitor-full-name"]')?.focus();
+}
+function closeVisitorRegistrationModal(force = false) {
+    const overlay = document.getElementById('visitorRegistrationModal');
+    if (!overlay || !overlay.classList.contains('open')) return;
+    // Nunca interrompe um envio de formulário em andamento.
+    if (force !== true && overlay.querySelector('[data-action="submit-visitor"]')?.disabled) return;
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('visitor-register-modal-open');
+    const form = document.getElementById('visitorRegistrationForm');
+    form?.reset();
+    const feedback = form?.querySelector('[data-role="visitor-feedback"]');
+    if (feedback) { feedback.textContent = ''; feedback.style.display = 'none'; }
+    const active = document.getElementById(overlay.dataset.returnFocus || 'openVisitorRegistrationBtn');
+    active?.focus();
+    if (location.hash === '#registrar') history.replaceState(null, '', location.pathname + location.search);
+}
+function initVisitorRegistrationModal(currentUser) {
+    const overlay = document.getElementById('visitorRegistrationModal');
+    const form = document.getElementById('visitorRegistrationForm');
+    if (!overlay || !form || !window.visitorRegistration) return;
+    window.visitorRegistration.initForm(form, {
+        currentUser,
+        onCancel: closeVisitorRegistrationModal,
+        onSuccess: () => {
+            closeVisitorRegistrationModal(true);
+            loadVisitorsForRelease();
+            window.showToast?.('Visitante registrado com sucesso.', 'success');
+        }
+    });
+    document.getElementById('openVisitorRegistrationBtn')?.addEventListener('click', openVisitorRegistrationModal);
+    document.getElementById('closeVisitorRegistrationBtn')?.addEventListener('click', () => closeVisitorRegistrationModal());
+    overlay.addEventListener('click', (event) => { if (event.target === overlay) closeVisitorRegistrationModal(); });
+    document.addEventListener('keydown', (event) => {
+        if (!overlay.classList.contains('open')) return;
+        if (event.key === 'Escape') { event.preventDefault(); closeVisitorRegistrationModal(); }
+        if (event.key === 'Tab') {
+            const focusables = [...overlay.querySelectorAll('input:not([disabled]),button:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]')]
+              .filter(el => el.getClientRects().length);
+            if (!focusables.length) return;
+            const first = focusables[0], last = focusables[focusables.length-1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }
+    });
+}
 
 async function loadPorterUser() {
     let currentUser = null;

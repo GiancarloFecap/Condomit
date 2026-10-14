@@ -1,0 +1,20 @@
+/* 067 - idioma nos formulários de cadastro, igual ao login e escolha de perfil. */
+.auth-language-control{
+ position:fixed;top:max(18px,env(safe-area-inset-top));right:max(20px,env(safe-area-inset-right));
+ z-index:1000;display:inline-flex;align-items:center;gap:9px;
+ min-height:46px;padding:0 14px;border-radius:14px;
+ background:rgba(10,42,107,.88);border:1px solid rgba(255,255,255,.4);
+ color:#fff;box-shadow:0 10px 26px rgba(10,42,107,.18);backdrop-filter:blur(10px);
+ font-family:Inter,system-ui,sans-serif;font-size:14px;font-weight:700;
+}
+.auth-language-control select{
+ appearance:none;min-width:92px;padding:0 18px 0 0;border:0;outline:0;
+ background:transparent;color:inherit;font:inherit;cursor:pointer;
+}
+.auth-language-control option{color:#0f172a;background:#fff}
+.auth-language-arrow{pointer-events:none;font-size:.81rem}
+@media(max-width:480px){
+ .auth-language-control{top:max(12px,env(safe-area-inset-top));right:12px;min-height:40px;padding:0 9px;gap:6px;font-size:12px}
+ .auth-language-control select{min-width:74px}
+ body:has(.auth-language-control) .btn-back{left:12px;top:max(12px,env(safe-area-inset-top));padding:10px 12px;font-size:13px}
+}

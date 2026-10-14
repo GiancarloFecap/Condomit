@@ -664,34 +664,6 @@
     color: #dc2626;
 }
 
-.delivery-info-strip {
-    margin-top: 18px;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
-}
-
-.info-pill-card {
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
-    padding: 18px;
-    border-radius: 18px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-}
-
-.info-pill-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #eff6ff;
-    color: #3360F2;
-    flex-shrink: 0;
-}
 
 .modal-backdrop.delivery-modal {
     position: fixed;
@@ -1007,7 +979,6 @@
         grid-template-columns: 1fr;
     }
 
-    .delivery-info-strip,
     .delivery-form-row {
         grid-template-columns: 1fr;
     }
@@ -1071,3 +1042,12 @@ html[data-theme="dark"] #cancelProviderBtn.provider-cancel-btn {
     color: #cbd5e1;
 }
 html[data-theme="dark"] #cancelProviderBtn.provider-cancel-btn:hover { background: #1f2937; color: #fff; }
+
+/* 065 - indicadores compactos na página de prestadores (mantém filtros e rótulos da tabela). */
+.provider-page .metrics-row { gap: 12px; margin-bottom: 14px; }
+.provider-page .metric-card { padding: 13px 16px; min-height: 92px; border-radius: 15px; gap: 0; }
+.provider-page .metric-head { gap: 11px; }
+.provider-page .metric-icon { width: 40px; height: 40px; border-radius: 11px; font-size: .98rem; flex-shrink: 0; }
+.provider-page .metric-value { font-size: 1.55rem; line-height: 1.1; margin-top: 4px; }
+.provider-page .metric-label { font-size: .84rem; line-height: 1.3; }
+@media(max-width:680px) { .provider-page .metrics-row { grid-template-columns: repeat(2,minmax(0,1fr)); } }

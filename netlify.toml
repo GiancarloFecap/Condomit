@@ -34,6 +34,11 @@
   force = true
 
 [[redirects]]
+  from = "/pages/registrar-visitantes.html"
+  to = "/pages/liberacao-visitantes.html?register=1"
+  status = 301
+
+[[redirects]]
   from = "/pages/redefinir-senha.html"
   to = "/pages/redefinir-senha.html"
   status = 200

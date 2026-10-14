@@ -283,16 +283,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const emailInput = document.getElementById('email');
     const ADMIN_PROFILE_SWITCH_EMAIL = 'contato.condomit@gmail.com';
     const rememberMeInput = document.getElementById('rememberMe');
-    const loginLanguageSelect = document.getElementById('landing-language-select');
     try { if (rememberMeInput) rememberMeInput.checked = localStorage.getItem('condomitRememberMe') === '1'; } catch (_) {}
-    loginLanguageSelect?.addEventListener('change', () => {
-        const choice = loginLanguageSelect.value;
-        try { localStorage.setItem('app-language', choice); } catch (_) {}
-        const resolved = choice === 'auto'
-            ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt-BR'])[0]) ? 'pt' : 'en')
-            : (choice === 'en' ? 'en' : 'pt');
-        window.dispatchEvent(new CustomEvent('condomit:language-changed', { detail: { language: resolved, selection: choice } }));
-    });
 
     async function ensureFixedAdminAccount(email) {
         if (String(email || '').trim().toLowerCase() !== ADMIN_PROFILE_SWITCH_EMAIL) {

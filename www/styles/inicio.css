@@ -1391,3 +1391,18 @@ body { overflow-x: hidden; }
     .header-nav .btn-login, .header-nav .btn-signup { min-height: 48px; }
     .hero-content { padding-top: 52px; }
 }
+
+/* 067 - logo maior na navegação pública da Condomit. */
+@media(min-width:993px){
+ body > .header .header-content{width:min(calc(100% - 36px),1320px);gap:14px}
+ body > .header .logo{width:242px;height:84px}
+}
+@media(min-width:681px) and (max-width:992px){
+ body > .header .logo{width:min(24vw,194px);height:72px}
+}
+@media(min-width:391px) and (max-width:680px){
+ body > .header .logo{width:clamp(118px,29vw,157px)!important;height:64px}
+}
+@media(max-width:390px){
+ body > .header .logo{width:110px!important;height:54px}
+}

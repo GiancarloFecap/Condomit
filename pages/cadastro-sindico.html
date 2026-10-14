@@ -13,9 +13,19 @@
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
     <link rel="stylesheet" href="../styles/cadastro-shared-fixes.css?v=0719">
+    <link rel="stylesheet" href="../styles/auth-language.css?v=067">
     <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="condomit-app-page">
+    <div class="auth-language-control" title="Idioma">
+        <i class="fas fa-globe" aria-hidden="true"></i>
+        <select id="landing-language-select" aria-label="Idioma">
+            <option value="auto">Padrão</option>
+            <option value="pt">Português</option>
+            <option value="en">English</option>
+        </select>
+        <i class="fas fa-chevron-down auth-language-arrow" aria-hidden="true"></i>
+    </div>
     <button class="btn-back" onclick="window.location.href='tipo-usuario.html'">
         <i class="fas fa-arrow-left"></i> Voltar
     </button>
@@ -150,12 +160,12 @@
     <script src="../scripts/platform-config.js?v=035"></script>
 
 
-    <script src="../scripts/supabase-client.js?v=061"></script>
+    <script src="../scripts/supabase-client.js?v=065"></script>
     <script type="module" src="../scripts/supabase-auth.js?v=061"></script>
-    <script src="../scripts/auth-pages-i18n.js?v=0719"></script>
+    <script src="../scripts/auth-pages-i18n.js?v=067"></script>
     <script src="../scripts/cadastro-sindico.js?v=0719"></script>
     <script src="../scripts/cadastro-shared-fixes.js?v=055"></script>
     <script src="../scripts/condomit-alerts.js?v=057"></script>
-    <script src="../scripts/advanced-global.js?v=053"></script>
+    <script src="../scripts/advanced-global.js?v=065"></script>
 </body>
 </html>

@@ -158,7 +158,7 @@
     if(document.querySelector('script[data-condomit-device-notifications]'))return;
     const script=document.createElement('script');
     script.dataset.condomitDeviceNotifications='1';
-    script.src=inPages()?'../scripts/device-notifications.js?v=053':'scripts/device-notifications.js?v=053';
+    script.src=inPages()?'../scripts/device-notifications.js?v=065':'scripts/device-notifications.js?v=065';
     script.defer=true;
     document.head.appendChild(script);
   }

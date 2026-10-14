@@ -73,6 +73,12 @@
     const actorRoleRaw = String(row?.actor_role || '').trim().toLowerCase();
     const actorRole = actorRoleRaw.startsWith('sind') ? 'sindico' : actorRoleRaw.startsWith('porteir') ? 'porteiro' : actorRoleRaw ? 'morador' : '';
 
+  const isWallNotice = category === 'avisos' && (
+    Boolean(row?.related_notice_id) ||
+    String(row?.event_type || '').toLowerCase().includes('mural') ||
+    /mural de avisos/i.test(String(row?.title || ''))
+  );
+  if (currentRole === 'porteiro' && (category === 'assembleias' || isWallNotice)) return false;
     if (category === 'chat' && prefs.counterpart_messages === false) return false;
     if (currentRole === 'sindico' && actorRole === 'morador' && prefs.counterpart_messages === false) return false;
     if (currentRole !== 'sindico' && actorRole === 'sindico' && prefs.counterpart_messages === false) return false;

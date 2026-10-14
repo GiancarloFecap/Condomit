@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/porteiro-acessos.css?v=015">
+    <link rel="stylesheet" href="../styles/porteiro-acessos.css?v=065">
+    <link rel="stylesheet" href="../styles/registrar-visitantes.css?v=065">
+    <link rel="stylesheet" href="../styles/visitor-registration-modal.css?v=065">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
@@ -75,6 +77,11 @@
 
                 <div class="access-layout">
                     <section class="access-main panel-card">
+                        <div class="release-register-action">
+                            <button type="button" class="release-register-button" id="openVisitorRegistrationBtn">
+                                <i class="fas fa-user-plus" aria-hidden="true"></i><span>Registrar visitante</span>
+                            </button>
+                        </div>
                         <div class="status-tabs" id="releaseTabs">
                             <button class="status-tab active" data-tab="pending" type="button">Aguardando liberação <span class="count-pill" id="tabPendingCount">0</span></button>
                             <button class="status-tab" data-tab="approved" type="button">Liberados <span class="count-pill" id="tabApprovedCount">0</span></button>
@@ -113,32 +120,6 @@
                     </section>
 
                     <aside class="sidebar-stack">
-                        <section class="side-card">
-                            <h3>Acesso rápido</h3>
-                            <div class="quick-links">
-                                <a href="registrar-visitantes.html" class="quick-link">
-                                    <span class="quick-link-icon"><i class="fas fa-user-plus"></i></span>
-                                    <span>
-                                        <strong>Registrar visitante</strong>
-                                        <small>Cadastrar nova entrada</small>
-                                    </span>
-                                </a>
-                                <a href="liberacao-visitantes.html?tab=approved" class="quick-link">
-                                    <span class="quick-link-icon"><i class="fas fa-list-check"></i></span>
-                                    <span>
-                                        <strong>Lista de autorizados</strong>
-                                        <small>Ver liberados do dia</small>
-                                    </span>
-                                </a>
-                                <a href="registro-entrada-saida.html" class="quick-link">
-                                    <span class="quick-link-icon"><i class="fas fa-right-left"></i></span>
-                                    <span>
-                                        <strong>Histórico de acessos</strong>
-                                        <small>Visualizar movimentações</small>
-                                    </span>
-                                </a>
-                            </div>
-                        </section>
 
                         <section class="side-card">
                             <h3>Informações importantes</h3>
@@ -164,16 +145,89 @@
             </section>
         </main>
     </div>
+
+    <div id="visitorRegistrationModal" class="visitor-registration-overlay" aria-hidden="true">
+        <section class="visitor-registration-dialog" role="dialog" aria-modal="true" aria-labelledby="visitorRegistrationDialogTitle" tabindex="-1">
+            <div class="visitor-registration-dialog-head">
+                <div><h2 id="visitorRegistrationDialogTitle">Registrar visitante</h2><p>Informe os dados do visitante e do morador responsável.</p></div>
+                <button type="button" class="visitor-registration-close" id="closeVisitorRegistrationBtn" aria-label="Fechar cadastro"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+            </div>
+            <div class="visitor-registration-dialog-body">
+<form class="visitor-form" id="visitorRegistrationForm">
+<div class="form-row form-row-3">
+<label>
+<span>Nome completo</span>
+<input data-field="visitor-full-name" placeholder="Digite o nome completo" required="" type="text"/>
+</label>
+<label>
+<span>CPF</span>
+<input data-field="visitor-cpf" placeholder="Digite o CPF" required="" type="text"/>
+</label>
+<label>
+<span>RG</span>
+<input data-field="visitor-rg" placeholder="Digite o RG" required="" type="text"/>
+</label>
+</div>
+<div class="form-row form-row-2">
+<label>
+<span>Telefone do visitante</span>
+<input data-field="visitor-phone" placeholder="(11) 99999-9999" type="text"/>
+</label>
+<label>
+<span>E-mail</span>
+<input data-field="visitor-email" placeholder="visitante@email.com" type="email"/>
+</label>
+</div>
+<div class="form-row form-row-2">
+<label class="full-width">
+<span>CPF do responsável</span>
+<input data-field="responsible-cpf" placeholder="Digite o CPF do responsável" required="" type="text"/>
+</label>
+</div>
+<div class="form-row form-row-2 responsible-grid">
+<label>
+<span>Nome do responsável</span>
+<input data-field="responsible-name" placeholder="Digite o nome do responsável" readonly="" type="text"/>
+</label>
+<label>
+<span>Telefone do responsável</span>
+<input data-field="responsible-phone" placeholder="(11) 99999-9999" readonly="" type="text"/>
+</label>
+<label>
+<span>Apartamento</span>
+<input data-field="responsible-apartment" placeholder="Ex: 101" readonly="" type="text"/>
+</label>
+<label>
+<span>Bloco</span>
+<input data-field="responsible-block" placeholder="Ex: A" readonly="" type="text"/>
+</label>
+</div>
+<div class="visitor-feedback" data-role="visitor-feedback"></div>
+
+<div class="form-actions">
+<button class="ghost-btn" data-action="cancel-visitor" type="button">
+<span>Cancelar</span>
+</button>
+<button class="primary-action" data-action="submit-visitor" type="submit">
+<i class="fas fa-id-badge"></i>
+<span>Registrar visitante</span>
+</button>
+</div>
+</form>
+            </div>
+        </section>
+    </div>
     <script src="../scripts/platform-config.js?v=035"></script>
 
 
-    <script src="../scripts/supabase-client.js?v=061"></script>
-    <script src="../scripts/sidebar-links.js?v=056"></script>
+    <script src="../scripts/supabase-client.js?v=065"></script>
+    <script src="../scripts/sidebar-links.js?v=065"></script>
     <script src="../scripts/porteiro-topbar.js?v=035"></script>
-    <script src="../scripts/liberacao-visitantes.js?v=012"></script>
-    <script src="../scripts/topbar-actions.js?v=035"></script>
+    <script src="../scripts/visitor-registration.js?v=065"></script>
+    <script src="../scripts/liberacao-visitantes.js?v=065"></script>
+    <script src="../scripts/topbar-actions.js?v=065"></script>
     <script src="../scripts/condomit-alerts.js?v=057"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>
-    <script src="../scripts/advanced-global.js?v=053"></script>
+    <script src="../scripts/advanced-global.js?v=065"></script>
 </body>
 </html>

@@ -390,3 +390,7 @@ html[data-theme="dark"] .login-terms { color: #8A96A8; }
     .login-language-control select {min-width:74px;font-size:12px;}
     .login-remember-label,.login-remember-row .login-forgot {font-size:12px;}
 }
+
+/* 067 - logo ampliado sem comprimir os campos e botão de acesso. */
+.login-modern-logo{width:210px;max-width:100%;height:auto}
+@media(max-width:460px){.login-modern-logo{width:176px}}

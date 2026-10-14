@@ -675,3 +675,74 @@ body.marketplace-modal-open {
 @media(max-width:390px){.marketplace-grid .products-grid{grid-template-columns:1fr}}
 html[data-theme="dark"] .marketplace-toolbar.card-shell,html[data-theme="dark"] .marketplace-grid.card-shell,html[data-theme="dark"] .marketplace-detail.card-shell,html[data-theme="dark"] .marketplace-grid .product-card{background:#152236;border-color:#334155}
 html[data-theme="dark"] .marketplace-head h2,html[data-theme="dark"] .marketplace-grid .section-head h3{color:#f8fafc}
+
+
+/* 066: busca do Marketplace ocupa toda a largura, filtros compactos na linha seguinte. */
+.marketplace-page .marketplace-head {
+    justify-content: flex-end;
+    padding-right: 74px !important; /* Área reservada para o sino fixo. */
+    margin-bottom: 12px;
+}
+.marketplace-page .marketplace-toolbar.card-shell {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+}
+.marketplace-page .marketplace-toolbar .search-box {
+    width: 100%;
+    min-width: 0;
+    grid-column: 1 / -1;
+}
+.marketplace-page .marketplace-toolbar .search-box input {
+    width: 100%;
+    display: block;
+    box-sizing: border-box;
+}
+.marketplace-page .marketplace-toolbar .toolbar-actions {
+    display: flex !important;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 9px;
+    width: 100%;
+}
+.marketplace-page .marketplace-toolbar .toolbar-actions select,
+.marketplace-page .marketplace-toolbar .toolbar-actions .ghost-btn {
+    flex: 0 0 153px;
+    width: 153px;
+    min-width: 0;
+    height: 46px;
+    min-height: 46px;
+    box-sizing: border-box;
+    font-size: 13px;
+    white-space: nowrap;
+}
+.marketplace-page .marketplace-toolbar .toolbar-actions select {
+    padding: 0 10px;
+    text-overflow: ellipsis;
+}
+.marketplace-page .marketplace-toolbar #toggleMyAdsBtn {
+    flex-basis: 158px;
+    width: 158px;
+}
+@media (max-width: 700px) {
+    .marketplace-page .marketplace-head {
+        padding-right: 0 !important;
+    }
+    .marketplace-page .marketplace-toolbar .toolbar-actions {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px;
+    }
+    .marketplace-page .marketplace-toolbar .toolbar-actions select,
+    .marketplace-page .marketplace-toolbar .toolbar-actions .ghost-btn {
+        width: 100% !important;
+        min-width: 0 !important;
+        grid-column: auto !important;
+        padding-inline: 8px;
+    }
+    .marketplace-page .marketplace-toolbar #toggleMyAdsBtn {
+        grid-column: 1 / -1 !important;
+        width: 100% !important;
+    }
+}

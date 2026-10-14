@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/porteiro-acessos.css?v=015">
+    <link rel="stylesheet" href="../styles/porteiro-acessos.css?v=065">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
@@ -26,7 +26,7 @@
 
         <main class="main-content">
 
-            <section class="access-page">
+            <section class="access-page provider-page">
                 <div class="metrics-row">
                     <article class="metric-card success">
                         <div class="metric-head">
@@ -36,7 +36,7 @@
                                 <div class="metric-value" id="activeProvidersCount">0</div>
                             </div>
                         </div>
-                        <div class="metric-caption">Ativos</div>
+                        
                     </article>
 
                     <article class="metric-card accent">
@@ -47,7 +47,7 @@
                                 <div class="metric-value" id="scheduledProvidersCount">0</div>
                             </div>
                         </div>
-                        <div class="metric-caption">Agendados</div>
+                        
                     </article>
 
                     <article class="metric-card pending">
@@ -58,7 +58,7 @@
                                 <div class="metric-value" id="inProgressProvidersCount">0</div>
                             </div>
                         </div>
-                        <div class="metric-caption">Em andamento</div>
+                        
                     </article>
 
                     <article class="metric-card danger">
@@ -69,7 +69,7 @@
                                 <div class="metric-value" id="blockedProvidersCount">0</div>
                             </div>
                         </div>
-                        <div class="metric-caption">Irregular</div>
+                        
                     </article>
                 </div>
 
@@ -150,22 +150,6 @@
                         <section class="side-card">
                             <h3>Categorias</h3>
                             <ul class="category-list" id="providerCategoryList"></ul>
-                        </section>
-
-                        <section class="side-card">
-                            <h3>Documentos necessários</h3>
-                            <ul class="document-checklist">
-                                <li><span class="document-icon"><i class="fas fa-check"></i></span><div><strong>Documento de identificação</strong><br><small class="legend-note">RG ou CNH atualizados</small></div></li>
-                                <li><span class="document-icon"><i class="fas fa-check"></i></span><div><strong>Comprovante de empresa</strong><br><small class="legend-note">CNPJ ou contrato do serviço</small></div></li>
-                                <li><span class="document-icon"><i class="fas fa-check"></i></span><div><strong>Certificados e licenças</strong><br><small class="legend-note">Quando exigidos pela atividade</small></div></li>
-                                <li><span class="document-icon"><i class="fas fa-check"></i></span><div><strong>Seguro de responsabilidade</strong><br><small class="legend-note">Para serviços com maior exposição</small></div></li>
-                                <li><span class="document-icon"><i class="fas fa-check"></i></span><div><strong>NRs e treinamentos</strong><br><small class="legend-note">Conforme o tipo de manutenção</small></div></li>
-                            </ul>
-                        </section>
-
-                        <section class="side-card">
-                            <h3>Dica de segurança</h3>
-                            <p>Sempre verifique a documentação e libere o acesso apenas para prestadores autorizados e vinculados ao serviço esperado.</p>
                         </section>
                     </aside>
                 </div>
@@ -260,14 +244,14 @@
     <script src="../scripts/platform-config.js?v=035"></script>
 
 
-    <script src="../scripts/supabase-client.js?v=061"></script>
+    <script src="../scripts/supabase-client.js?v=065"></script>
     <script type="module" src="../scripts/supabase-auth.js?v=061"></script>
-    <script src="../scripts/sidebar-links.js?v=056"></script>
+    <script src="../scripts/sidebar-links.js?v=065"></script>
     <script src="../scripts/porteiro-topbar.js?v=035"></script>
     <script src="../scripts/controle-prestadores.js?v=011"></script>
-    <script src="../scripts/topbar-actions.js?v=035"></script>
+    <script src="../scripts/topbar-actions.js?v=065"></script>
     <script src="../scripts/condomit-alerts.js?v=057"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>
-    <script src="../scripts/advanced-global.js?v=053"></script>
+    <script src="../scripts/advanced-global.js?v=065"></script>
 </body>
 </html>

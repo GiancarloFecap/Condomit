@@ -12,31 +12,6 @@
   const languageSelect = document.getElementById('landing-language-select');
   let selectedProfile = null;
 
-  function resolveLanguage(choice) {
-    if (choice === 'auto') {
-      const nav = (navigator.languages || [navigator.language || 'pt-BR'])[0] || 'pt-BR';
-      return /^pt(?:-|$)/i.test(nav) ? 'pt' : 'en';
-    }
-    return choice === 'en' ? 'en' : 'pt';
-  }
-
-  function syncLanguageSelect() {
-    if (!languageSelect) return;
-    let choice = 'auto';
-    try { choice = localStorage.getItem('app-language') || 'auto'; } catch (_) {}
-    languageSelect.value = choice;
-  }
-
-  function applyLanguageChoice(choice, persist = true) {
-    try {
-      if (persist) localStorage.setItem('app-language', choice);
-    } catch (_) {}
-    syncLanguageSelect();
-    window.dispatchEvent(new CustomEvent('condomit:language-changed', {
-      detail: { language: resolveLanguage(choice), selection: choice }
-    }));
-  }
-
   function selectProfile(profileCard, options = {}) {
     if (!profileCard) return;
 
@@ -91,9 +66,5 @@
     if (storedCard) selectProfile(storedCard);
   } catch (_) {}
 
-  syncLanguageSelect();
-  languageSelect?.addEventListener('change', (event) => applyLanguageChoice(event.target.value, true));
-  window.addEventListener('storage', (event) => {
-    if (event.key === 'app-language') syncLanguageSelect();
-  });
+  // Idiomas são sincronizados e aplicados pelo módulo compartilhado auth-pages-i18n.js.
 })();

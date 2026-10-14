@@ -1,0 +1,22 @@
+
+/* 065 - modal único de cadastro de visitantes no painel de liberação. */
+.release-register-action { display:flex; justify-content:flex-end; margin-bottom:16px; }
+.release-register-button { display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:43px;padding:10px 17px;border:0;border-radius:12px;background:linear-gradient(135deg,#294FD8,#0ea5a4);color:#fff;font-size:.93rem;font-weight:700;cursor:pointer;white-space:nowrap; }
+.release-register-button:hover { filter:brightness(1.08); }
+.visitor-registration-overlay { position:fixed;inset:0;z-index:5200;padding:24px;display:none;align-items:center;justify-content:center;background:rgba(12,25,49,.58); }
+.visitor-registration-overlay.open { display:flex; }
+.visitor-registration-dialog { display:flex;flex-direction:column;width:min(820px,100%);max-height:min(92dvh,900px);background:#fff;border-radius:20px;box-shadow:0 22px 80px rgba(15,23,42,.3);overflow:hidden; }
+.visitor-registration-dialog-head { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 24px;border-bottom:1px solid #e2e8f0; }
+.visitor-registration-dialog-head h2 { margin:0 0 4px;font-size:1.3rem;color:#14264a; }
+.visitor-registration-dialog-head p { margin:0;color:#64748b;font-size:.86rem; }
+.visitor-registration-close { flex-shrink:0;width:40px;height:40px;border:0;border-radius:11px;background:#f1f5f9;color:#475569;cursor:pointer; }
+.visitor-registration-dialog-body { padding:22px 24px 24px;overflow-y:auto;overscroll-behavior:contain; }
+.visitor-registration-dialog .visitor-form { display:grid;gap:15px; }
+.visitor-registration-dialog .visitor-form .form-row { min-width:0; }
+.visitor-registration-dialog .visitor-form input { width:100%;min-width:0; }
+.visitor-registration-dialog .form-actions { position:sticky;bottom:-24px;background:#fff;padding:16px 0 0;border-top:1px solid #e2e8f0;z-index:1; }
+body.visitor-register-modal-open { overflow:hidden; }
+html[data-theme="dark"] .visitor-registration-dialog { background:#111827;color:#e2e8f0; }
+html[data-theme="dark"] .visitor-registration-dialog-head,html[data-theme="dark"] .visitor-registration-dialog .form-actions { background:#111827;border-color:#334155; }
+html[data-theme="dark"] .visitor-registration-dialog-head h2 { color:#f8fafc; }
+@media(max-width:650px){.visitor-registration-overlay{padding:8px;align-items:flex-start}.visitor-registration-dialog{max-height:calc(100dvh - 16px);border-radius:14px}.visitor-registration-dialog-head{padding:14px 16px}.visitor-registration-dialog-body{padding:15px 16px 22px}.release-register-action{justify-content:stretch}.release-register-button{width:100%}}

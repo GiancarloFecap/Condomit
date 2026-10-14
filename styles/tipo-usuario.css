@@ -318,3 +318,27 @@ body{
   .tipo-avatar {width:42px;height:42px;}
   .tipo-heading > p {font-size:.75rem;}
 }
+
+/* 067 — botão Voltar externo e identidade da Condomit no topo do cartão. */
+.tipo-back-floating{
+  position:fixed;top:22px;left:22px;right:auto;z-index:10;
+  min-height:48px; padding:0 20px;
+  background:rgba(255,255,255,.92);border:1px solid rgba(10,42,107,.14);
+  box-shadow:0 9px 26px rgba(10,42,107,.12);
+}
+.tipo-language-control{right:22px;left:auto}
+.tipo-card-logo-link{display:block;width:max-content;max-width:100%;margin:0 auto 3px}
+.tipo-card-logo{display:block;width:205px;max-width:100%;height:auto;max-height:91px;object-fit:contain}
+.tipo-heading{margin:0 auto 12px}
+.tipo-eyebrow{margin-top:0}
+@media(max-width:760px){
+  .tipo-back-floating{top:12px;left:12px;right:auto;min-height:42px;padding:0 12px}
+  .tipo-back-floating .tipo-back-label{display:inline}
+  .tipo-language-control{top:12px;right:12px;left:auto}
+  .tipo-card-logo{width:148px;max-height:66px}
+  .tipo-page-shell{padding-top:78px;padding-bottom:16px}
+  .tipo-card{padding-top:15px}
+}
+@media(max-height:740px) and (min-width:761px){
+  .tipo-card-logo{width:170px;max-height:70px}
+}
