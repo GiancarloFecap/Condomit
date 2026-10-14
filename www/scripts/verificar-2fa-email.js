@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const normalized = normalizeUserType(profile.user_type || result.userType);
                         const loaded = { ...profile, type: normalized, user_type: normalized };
                         sessionStorage.setItem('condominiumUser', JSON.stringify(loaded));
-                        try { localStorage.setItem('condominiumPersistentUser', JSON.stringify(loaded)); } catch (_) {}
+                        try { (localStorage.getItem('condomitRememberMe') === '1' ? localStorage : sessionStorage).setItem('condominiumPersistentUser', JSON.stringify(loaded)); } catch (_) {}
                     }
                 }
             } catch (profileError) {

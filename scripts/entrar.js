@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         try { window.persistCondomitUser?.(user); } catch (_) {}
         try {
             const persistent = { email: user.email, name: user.name || null, type: user.type || null, t: Date.now() };
-            localStorage.setItem('condominiumPersistentUser', JSON.stringify(persistent));
+            (localStorage.getItem('condomitRememberMe') === '1' ? localStorage : sessionStorage).setItem('condominiumPersistentUser', JSON.stringify(persistent));
         } catch(_) {}
         if (typeof syncAllAvatars === 'function') syncAllAvatars(user);
 
@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         try { window.persistCondomitUser?.(user); } catch (_) {}
         try {
             const persistent = { email: user.email, name: user.name || null, type: user.type || null, t: Date.now() };
-            localStorage.setItem('condominiumPersistentUser', JSON.stringify(persistent));
+            (localStorage.getItem('condomitRememberMe') === '1' ? localStorage : sessionStorage).setItem('condominiumPersistentUser', JSON.stringify(persistent));
         } catch(_) {}
         redirectByUserType(user);
         return;
@@ -282,6 +282,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     const submitBtn = loginForm?.querySelector('button[type="submit"]');
     const emailInput = document.getElementById('email');
     const ADMIN_PROFILE_SWITCH_EMAIL = 'contato.condomit@gmail.com';
+    const rememberMeInput = document.getElementById('rememberMe');
+    const loginLanguageSelect = document.getElementById('landing-language-select');
+    try { if (rememberMeInput) rememberMeInput.checked = localStorage.getItem('condomitRememberMe') === '1'; } catch (_) {}
+    loginLanguageSelect?.addEventListener('change', () => {
+        const choice = loginLanguageSelect.value;
+        try { localStorage.setItem('app-language', choice); } catch (_) {}
+        const resolved = choice === 'auto'
+            ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt-BR'])[0]) ? 'pt' : 'en')
+            : (choice === 'en' ? 'en' : 'pt');
+        window.dispatchEvent(new CustomEvent('condomit:language-changed', { detail: { language: resolved, selection: choice } }));
+    });
 
     async function ensureFixedAdminAccount(email) {
         if (String(email || '').trim().toLowerCase() !== ADMIN_PROFILE_SWITCH_EMAIL) {
@@ -474,6 +485,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                         email,
                         password
                     );
+
+                // A escolha só é aplicada após o servidor aceitar as credenciais.
+                // Assim, tokens do Supabase são gravados no armazenamento apropriado.
+                window.condomitSetRememberMe?.(rememberMeInput?.checked === true);
 
                 if (loginResult?.requiresTwoFactor) {
                     sessionStorage.setItem(
@@ -750,7 +765,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             try { window.persistCondomitUser?.(loadedUser); } catch (_) {}
 
             try {
-                localStorage.setItem(
+                (localStorage.getItem('condomitRememberMe') === '1' ? localStorage : sessionStorage).setItem(
                     'condominiumPersistentUser',
                     JSON.stringify({
                         email: loadedUser.email,

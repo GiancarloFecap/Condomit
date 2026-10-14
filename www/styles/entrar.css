@@ -363,3 +363,30 @@ html[data-theme="dark"] .login-field input { background: #fff; color: #27364D; b
 html[data-theme="dark"] .login-field input::placeholder { color: #8B97A9; }
 html[data-theme="dark"] .login-signup { color: #69768B; }
 html[data-theme="dark"] .login-terms { color: #8A96A8; }
+
+
+/* 061 — seletor no canto superior direito e checkbox em linha com recuperar senha. */
+.login-language-control {
+    position:fixed;top:max(19px,env(safe-area-inset-top));right:max(20px,env(safe-area-inset-right));z-index:7;
+    min-height:46px;display:inline-flex;align-items:center;gap:9px;padding:0 14px;
+    border-radius:14px;background:rgba(10,42,107,.78);color:#fff;
+    border:1px solid rgba(255,255,255,.46);box-shadow:0 10px 26px rgba(10,42,107,.16);
+    backdrop-filter:blur(10px);
+}
+.login-language-control select {appearance:none;min-width:88px;border:0;background:transparent;color:inherit;
+    outline:none;cursor:pointer;font:inherit;font-weight:700;padding-right:17px;}
+.login-language-control select option {color:#0f172a;}
+.login-language-arrow {pointer-events:none;font-size:.83rem;}
+.login-remember-row {display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:0;}
+.login-remember-label {display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+    font-size:13px;font-weight:600;color:#526482;white-space:nowrap;}
+.login-remember-label input[type="checkbox"] {width:17px;height:17px;margin:0;padding:0;flex-shrink:0;
+    accent-color:#2252BD;cursor:pointer;box-shadow:none;}
+.login-remember-row .login-forgot {margin:0 0 0 auto;}
+.login-modern-card .login-submit {margin-top:20px;}
+@media (max-width:460px) {
+    .login-language-control {top:max(12px,env(safe-area-inset-top));right:12px;padding:0 9px;min-height:42px;}
+    .login-back {top:max(12px,env(safe-area-inset-top));left:12px;padding:10px 12px;}
+    .login-language-control select {min-width:74px;font-size:12px;}
+    .login-remember-label,.login-remember-row .login-forgot {font-size:12px;}
+}

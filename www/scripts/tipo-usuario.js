@@ -15,7 +15,7 @@
   function resolveLanguage(choice) {
     if (choice === 'auto') {
       const nav = (navigator.languages || [navigator.language || 'pt-BR'])[0] || 'pt-BR';
-      return /^en/i.test(nav) ? 'en' : 'pt';
+      return /^pt(?:-|$)/i.test(nav) ? 'pt' : 'en';
     }
     return choice === 'en' ? 'en' : 'pt';
   }

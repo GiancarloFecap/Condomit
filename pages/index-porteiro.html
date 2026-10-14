@@ -8,114 +8,123 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/index-porteiro.css">
+    <link rel="stylesheet" href="../styles/index-porteiro.css?v=063">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
-    <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
-  <link rel="stylesheet" href="../styles/sidebar-account-navigation.css?v=056">
+    <link rel="stylesheet" href="../styles/sidebar-account-navigation.css?v=056">
+    <link rel="manifest" href="../manifest.webmanifest">
     <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="condomit-no-topbar condomit-app-page">
-    <div class="dashboard-sindico">
-        <aside class="sidebar porteiro-sidebar">
-            <div class="sidebar-header">
-                <img src="../assets/logo-lado.png" alt="Condomit Icon" class="sidebar-logo">
-                <h2 class="condo-name" id="sidebarApartment"></h2>
+<div class="dashboard-sindico">
+    <aside class="sidebar porteiro-sidebar">
+        <div class="sidebar-header">
+            <img src="../assets/logo-lado.png" alt="Condomit" class="sidebar-logo">
+            <h2 class="condo-name" id="sidebarApartment"></h2>
+        </div>
+    </aside>
+    <main class="main-content">
+        <section class="porter-dashboard" id="porterDashboard" aria-label="Painel da portaria">
+            <header class="porter-welcome">
+                <h1><span data-porter-i18n="hello">Olá</span>, <span id="porterFirstName" data-porter-default="Porteiro">Porteiro</span> <span aria-hidden="true">👋</span></h1>
+                <p data-porter-i18n="subtitle">Resumo das atividades e atendimentos da portaria.</p>
+            </header>
+
+            <div class="porter-kpis" aria-label="Indicadores da portaria">
+                <article class="porter-kpi">
+                    <span class="porter-kpi-icon is-blue" aria-hidden="true"><i class="fas fa-user-group"></i></span>
+                    <div class="porter-kpi-copy">
+                        <span data-porter-i18n="visitorKpi">Visitantes esperados hoje</span>
+                        <strong id="porterVisitorsCount" aria-live="polite">—</strong>
+                        <small id="porterVisitorsHint" data-porter-i18n="loading">Carregando...</small>
+                    </div>
+                </article>
+                <article class="porter-kpi">
+                    <span class="porter-kpi-icon is-green" aria-hidden="true"><i class="fas fa-box"></i></span>
+                    <div class="porter-kpi-copy">
+                        <span data-porter-i18n="packageKpi">Encomendas pendentes</span>
+                        <strong id="porterPackagesCount" aria-live="polite">—</strong>
+                        <small id="porterPackagesHint" data-porter-i18n="loading">Carregando...</small>
+                    </div>
+                </article>
+                <article class="porter-kpi">
+                    <span class="porter-kpi-icon is-sky" aria-hidden="true"><i class="far fa-calendar-check"></i></span>
+                    <div class="porter-kpi-copy">
+                        <span data-porter-i18n="reservationKpi">Reservas de hoje</span>
+                        <strong id="porterReservationsCount" aria-live="polite">—</strong>
+                        <small id="porterReservationsHint" data-porter-i18n="loading">Carregando...</small>
+                    </div>
+                </article>
+                <a href="tel:+5511974409806" class="porter-emergency-tile" id="emergencia" aria-label="Acionar emergência por telefone">
+                    <i class="fas fa-bell" aria-hidden="true"></i>
+                    <span data-porter-i18n="emergency">Acionar emergência</span>
+                    <i class="fas fa-arrow-up-right-from-square porter-emergency-arrow" aria-hidden="true"></i>
+                </a>
             </div>
-        </aside>
 
-        <main class="main-content">
-
-            <section class="porteiro-page">
-                <div class="overview-strip">
-                    <div class="overview-card">
-                        <span>Visitantes Liberados</span>
-                        <strong id="releasedVisitorsOverview">0</strong>
+            <div class="porter-middle-grid">
+                <section class="porter-panel porter-chart-panel" aria-labelledby="porterChartTitle">
+                    <div class="porter-panel-header porter-chart-header">
+                        <div>
+                            <h2 id="porterChartTitle" data-porter-i18n="movementTitle">Movimentação da portaria</h2>
+                            <p data-porter-i18n="movementDescription">Liberações e revogações de acesso registradas no sistema.</p>
+                        </div>
+                        <div class="porter-chart-actions">
+                            <div class="porter-chart-legend" aria-hidden="true">
+                                <span><i class="porter-legend-dot is-blue"></i><span data-porter-i18n="released">Liberações</span></span>
+                                <span><i class="porter-legend-dot is-green"></i><span data-porter-i18n="revoked">Revogações</span></span>
+                            </div>
+                            <label class="porter-period">
+                                <i class="far fa-calendar" aria-hidden="true"></i>
+                                <select id="porterPeriodSelect" aria-label="Período do gráfico">
+                                    <option value="today">Hoje</option>
+                                    <option value="yesterday">Ontem</option>
+                                </select>
+                            </label>
+                        </div>
                     </div>
-                    <div class="overview-card">
-                        <span>Entregas na portaria</span>
-                        <strong id="waitingPackagesOverview">0</strong>
+                    <div class="porter-chart-wrap" id="porterMovementChart" aria-live="polite">
+                        <p class="porter-empty" data-porter-i18n="loading">Carregando...</p>
                     </div>
-                    <div class="overview-card">
-                        <span>Prestadores autorizados</span>
-                        <strong id="authorizedProvidersOverview">0</strong>
-                    </div>
-                </div>
-
-                <section class="section-block" data-min-plan="Pro">
-                    <div class="section-heading">
-                        <h2>Acesso rápido</h2>
-                        <p>Atalhos para as operações mais usadas na portaria.</p>
-                    </div>
-                    <div class="quick-grid">
-                        <article class="quick-card" id="liberacao-visitantes">
-                            <div class="quick-icon"><i class="fas fa-user-check"></i></div>
-                            <h3>Liberação de Visitantes</h3>
-                            <p>Libere a entrada de visitantes pré-cadastrados.</p>
-                            <button class="ghost-btn" type="button">Ir para liberação</button>
-                        </article>
-                        <article class="quick-card" id="registrar-visitante">
-                            <div class="quick-icon"><i class="fas fa-user-plus"></i></div>
-                            <h3>Registrar Visitante</h3>
-                            <p>Cadastre um novo visitante no sistema.</p>
-                            <button class="ghost-btn" type="button">Novo registro</button>
-                        </article>
-                        <article class="quick-card" id="registro-acesso">
-                            <div class="quick-icon"><i class="fas fa-right-left"></i></div>
-                            <h3>Registro de Entrada e Saída</h3>
-                            <p>Controle as entradas e saídas de moradores e visitantes.</p>
-                            <button class="ghost-btn" type="button">Registrar acesso</button>
-                        </article>
-                        <article class="quick-card" id="visitantes-liberados">
-                            <div class="quick-icon"><i class="fas fa-user-check"></i></div>
-                            <h3>Visitantes Liberados</h3>
-                            <p>Consulte a lista de visitantes liberados hoje.</p>
-                            <button class="ghost-btn" type="button">Ver lista</button>
-                        </article>
-                    </div>
+                    <p class="porter-chart-footnote" data-porter-i18n="movementFootnote">Os eventos são registros de liberação ou revogação; não confirmam a passagem física.</p>
                 </section>
 
-                <div class="support-layout" data-min-plan="Pro">
-                    <section class="info-card alert-card" id="emergencia">
-                        <div class="card-label danger">Prioridade máxima</div>
-                        <h3>Botão de emergência</h3>
-                        <p>Acione o protocolo interno rapidamente em caso de ocorrência.</p>
-                        <button class="danger-btn" type="button">Acionar emergência</button>
-                    </section>
+                <section class="porter-panel porter-visitor-panel" aria-labelledby="porterVisitorsTitle">
+                    <div class="porter-panel-header">
+                        <h2 id="porterVisitorsTitle" data-porter-i18n="visitorsTitle">Visitantes esperados</h2>
+                        <a href="liberacao-visitantes.html" class="porter-more-link"><span data-porter-i18n="viewAll">Ver todos</span><i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    </div>
+                    <div id="porterVisitorsList" class="porter-record-list" aria-live="polite"><p class="porter-empty">Carregando...</p></div>
+                </section>
+            </div>
 
-                    <section class="info-card" id="entregas">
-                        <div class="card-label">Portaria</div>
-                        <h3>Autorização de entregas</h3>
-                        <ul class="simple-list">
-                            <li>Entrega para Bloco A - Apto 202</li>
-                            <li>Encomenda para Bloco B - Apto 104</li>
-                            <li>Retirada agendada às 18:30</li>
-                        </ul>
-                    </section>
-
-                    <section class="info-card" id="prestadores">
-                        <div class="card-label">Serviços</div>
-                        <h3>Controle de prestadores</h3>
-                        <ul class="simple-list">
-                            <li>Eletricista liberado até 16:00</li>
-                            <li>Limpeza da piscina às 14:30</li>
-                            <li>Manutenção elevador amanhã às 09:00</li>
-                        </ul>
-                    </section>
-                </div>
-            </section>
-        </main>
-    </div>
-    <script src="../scripts/platform-config.js?v=035"></script>
-
-
-    <script src="../scripts/supabase-client.js?v=0710"></script>
-    <script src="../scripts/sidebar-links.js?v=056"></script>
-    <script src="../scripts/porteiro-topbar.js?v=035"></script>
-    <script src="../scripts/index-porteiro.js?v=023"></script>
-    <script src="../scripts/topbar-actions.js?v=035"></script>
-    <script src="../scripts/condomit-alerts.js?v=057"></script>
-    <script src="../scripts/responsive-nav.js?v=025"></script>
-    <script src="../scripts/advanced-global.js?v=053"></script>
+            <div class="porter-bottom-grid">
+                <section class="porter-panel" aria-labelledby="porterDeliveriesTitle">
+                    <div class="porter-panel-header">
+                        <h2 id="porterDeliveriesTitle" data-porter-i18n="packagesTitle">Encomendas na portaria</h2>
+                        <a href="autorizacao-entregas.html" class="porter-more-link"><span data-porter-i18n="viewAll">Ver todas</span><i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    </div>
+                    <div id="porterPackagesList" class="porter-record-list" aria-live="polite"><p class="porter-empty">Carregando...</p></div>
+                </section>
+                <section class="porter-panel" aria-labelledby="porterNoticesTitle">
+                    <div class="porter-panel-header">
+                        <h2 id="porterNoticesTitle" data-porter-i18n="noticesTitle">Avisos importantes</h2>
+                        <a href="mural-avisos.html" class="porter-more-link"><span data-porter-i18n="viewAll">Ver todos</span><i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    </div>
+                    <div id="porterNoticesList" class="porter-record-list" aria-live="polite"><p class="porter-empty">Carregando...</p></div>
+                </section>
+            </div>
+        </section>
+    </main>
+</div>
+<script src="../scripts/platform-config.js?v=035"></script>
+<script src="../scripts/supabase-client.js?v=061"></script>
+<script src="../scripts/community-hub.js?v=053"></script>
+<script src="../scripts/sidebar-links.js?v=056"></script>
+<script src="../scripts/index-porteiro.js?v=063"></script>
+<script src="../scripts/topbar-actions.js?v=035"></script>
+<script src="../scripts/condomit-alerts.js?v=057"></script>
+<script src="../scripts/responsive-nav.js?v=025"></script>
+<script src="../scripts/advanced-global.js?v=053"></script>
 </body>
 </html>

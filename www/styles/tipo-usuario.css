@@ -259,3 +259,62 @@ body{
   .tipo-option{min-height:auto}
   .continue{width:100%;max-width:320px}
 }
+
+
+/* 061 — controles espelhados e fluxo compacto para a página inteira caber na tela. */
+.tipo-language-control { left:auto; right:22px; }
+.tipo-floating-logo { right:auto; left:22px; }
+.tipo-back-button { right:auto; left:22px; }
+.tipo-page-shell { padding:82px 20px 18px; min-height:100vh; min-height:100dvh; }
+.tipo-card { padding:22px 30px 22px; }
+.tipo-heading { margin:4px auto 12px; }
+.tipo-eyebrow { margin-bottom:6px; }
+.tipo-heading h1 { font-size:clamp(1.65rem,3.2vw,2.3rem);margin-bottom:7px; }
+.tipo-heading > p { font-size:.94rem;line-height:1.38; }
+.tipo-options { margin:16px 0 18px;gap:14px; }
+.tipo-option { min-height:208px;padding:18px 14px 15px; }
+.tipo-avatar { width:72px;height:72px;margin-bottom:12px; }
+.tipo-avatar svg { width:42px;height:42px; }
+.tipo-role-title { margin-bottom:5px; }
+.tipo-role-subtitle { font-size:.89rem;line-height:1.4; }
+.tipo-actions {gap:8px;}
+.continue { min-height:46px; }
+@media (max-height:720px) and (min-width:761px) {
+  .tipo-page-shell { padding-top:66px;padding-bottom:12px; }
+  .tipo-card { padding-top:14px;padding-bottom:14px; }
+  .tipo-options { margin:12px 0 14px; }
+  .tipo-option { min-height:168px;padding:10px 12px; }
+  .tipo-avatar { width:56px;height:56px;margin-bottom:7px; }
+  .tipo-avatar svg {width:36px;height:36px;}
+  .tipo-heading h1 {font-size:1.65rem;}
+  .tipo-role-subtitle {font-size:.83rem;}
+}
+@media (max-width:760px) {
+  .tipo-page-shell { padding:64px 12px 12px;align-items:center; }
+  .tipo-floating-logo { top:12px;left:12px;right:auto; }
+  .tipo-floating-logo img {width:112px;}
+  .tipo-language-control {top:11px;right:12px;left:auto;min-height:42px;}
+  .tipo-card {margin:0;padding:48px 14px 16px;}
+  .tipo-back-button {top:10px;left:12px;right:auto;min-height:32px;}
+  .tipo-heading {margin:0 auto 8px;}
+  .tipo-heading h1 {font-size:clamp(1.35rem,6.5vw,1.7rem);}
+  .tipo-heading > p {font-size:.81rem;line-height:1.35;}
+  .tipo-eyebrow {font-size:.82rem;}
+  .tipo-options {grid-template-columns:1fr;margin:10px 0 12px;gap:8px;}
+  .tipo-option {min-height:0;padding:9px 14px;display:grid;grid-template-columns:50px 1fr;column-gap:14px;align-items:center;text-align:left;}
+  .tipo-avatar {grid-row:span 2;width:48px;height:48px;margin:0;}
+  .tipo-avatar svg {width:30px;height:30px;}
+  .tipo-role-title {margin:0;font-size:1rem;}
+  .tipo-role-subtitle {font-size:.76rem;line-height:1.25;}
+  .tipo-option-check {top:5px;right:5px;width:20px;height:20px;font-size:9px;}
+  .continue {min-height:43px;max-width:100%;}
+  .tipo-login-text {font-size:.84rem;}
+}
+@media (max-height:570px) and (max-width:760px) {
+  .tipo-page-shell {align-items:flex-start;padding-top:58px;}
+  .tipo-card {padding-top:40px;}
+  .tipo-options {gap:5px;margin:7px 0;}
+  .tipo-option {padding:5px 10px;}
+  .tipo-avatar {width:42px;height:42px;}
+  .tipo-heading > p {font-size:.75rem;}
+}

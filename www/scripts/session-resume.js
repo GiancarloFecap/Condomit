@@ -155,7 +155,7 @@
             } catch (_) {}
             try { window.persistCondomitUser?.(user); } catch (_) {}
             try {
-                localStorage.setItem('condominiumPersistentUser', JSON.stringify({
+                (localStorage.getItem('condomitRememberMe') === '1' ? localStorage : sessionStorage).setItem('condominiumPersistentUser', JSON.stringify({
                     email: user.email,
                     name: user.name || null,
                     type: user.type || null,

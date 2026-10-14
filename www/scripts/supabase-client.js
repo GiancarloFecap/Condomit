@@ -40,10 +40,12 @@ function persistCondomitUser(user) {
   if (!safeUser) return false;
 
   try {
-    localStorage.setItem(
+    const remember = localStorage.getItem('condomitRememberMe') === '1';
+    (remember ? localStorage : sessionStorage).setItem(
       CONDOMIT_PERSISTED_USER_V2_KEY,
       JSON.stringify(safeUser)
     );
+    if (!remember) localStorage.removeItem(CONDOMIT_PERSISTED_USER_V2_KEY);
     return true;
   } catch (_) {
     return false;
@@ -52,6 +54,7 @@ function persistCondomitUser(user) {
 
 function clearPersistedCondomitUser() {
   try { localStorage.removeItem(CONDOMIT_PERSISTED_USER_V2_KEY); } catch (_) {}
+  try { sessionStorage.removeItem(CONDOMIT_PERSISTED_USER_V2_KEY); } catch (_) {}
 }
 
 function hydrateCondomitUserFromPersistence() {
@@ -61,7 +64,8 @@ function hydrateCondomitUserFromPersistence() {
     // Se o usuário clicou explicitamente em Sair, não restaurar a conta.
     if (localStorage.getItem('authExplicitLogoutAt')) return false;
 
-    const raw = localStorage.getItem(CONDOMIT_PERSISTED_USER_V2_KEY);
+    const remember = localStorage.getItem('condomitRememberMe') === '1';
+    const raw = (remember ? localStorage : sessionStorage).getItem(CONDOMIT_PERSISTED_USER_V2_KEY);
     if (!raw) return false;
 
     const cached = JSON.parse(raw);

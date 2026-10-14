@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="../styles/theme.css?v=044">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
-    <link rel="stylesheet" href="../styles/entrar.css?v=055-login">
+    <link rel="stylesheet" href="../styles/entrar.css?v=061">
     <meta name="robots" content="noindex, nofollow">
 </head>
 <body class="login-modern-page">
@@ -20,6 +20,16 @@
         </svg>
         Voltar
     </a>
+
+    <div class="login-language-control" title="Idioma">
+        <i class="fas fa-globe" aria-hidden="true"></i>
+        <select id="landing-language-select" aria-label="Idioma">
+            <option value="auto">Padrão</option>
+            <option value="pt">Português</option>
+            <option value="en">English</option>
+        </select>
+        <i class="fas fa-chevron-down login-language-arrow" aria-hidden="true"></i>
+    </div>
 
     <div class="login-buildings" aria-hidden="true">
         <div class="login-building login-building-1"></div>
@@ -68,7 +78,13 @@
                     </div>
                 </div>
 
-                <a class="login-forgot" href="esqueci-senha.html">Esqueceu sua senha?</a>
+                <div class="login-remember-row">
+                    <label class="login-remember-label" for="rememberMe">
+                        <input id="rememberMe" type="checkbox" name="rememberMe" value="1">
+                        <span id="rememberMeLabel">Lembrar de mim</span>
+                    </label>
+                    <a class="login-forgot" href="esqueci-senha.html">Esqueceu sua senha?</a>
+                </div>
 
                 <button class="login-submit" type="submit">Entrar</button>
             </form>
@@ -85,12 +101,12 @@
     </main>
 
     <script src="../scripts/platform-config.js?v=035"></script>
-    <script src="../scripts/supabase-client.js?v=0710"></script>
-    <script type="module" src="../scripts/supabase-auth.js?v=036"></script>
-    <script src="../scripts/session-resume.js?v=038"></script>
+    <script src="../scripts/supabase-client.js?v=061"></script>
+    <script type="module" src="../scripts/supabase-auth.js?v=061"></script>
+    <script src="../scripts/session-resume.js?v=061"></script>
     <script src="../scripts/two-factor.js?v=0710"></script>
-    <script src="../scripts/auth-pages-i18n.js?v=0718"></script>
-    <script src="../scripts/entrar.js?v=0720"></script>
+    <script src="../scripts/auth-pages-i18n.js?v=061"></script>
+    <script src="../scripts/entrar.js?v=061"></script>
     <script src="../scripts/condomit-alerts.js?v=057"></script>
     <script src="../scripts/advanced-global.js?v=053"></script>
 </body>

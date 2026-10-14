@@ -17,6 +17,7 @@
         showPassword: 'Mostrar senha',
         hidePassword: 'Ocultar senha',
         forgot: 'Esqueceu sua senha?',
+        remember: 'Lembrar de mim',
         submit: 'Entrar',
         signupPrefix: 'Ainda não possui conta?',
         signupAction: 'Criar conta',
@@ -100,6 +101,7 @@
         showPassword: 'Show password',
         hidePassword: 'Hide password',
         forgot: 'Forgot your password?',
+        remember: 'Remember me',
         submit: 'Sign in',
         signupPrefix: "Don't have an account yet?",
         signupAction: 'Create account',
@@ -204,6 +206,7 @@
     setAttr('#password', 'placeholder', t.passwordPlaceholder);
     setAttr('#togglePassword', 'aria-label', t.showPassword);
     setText('.login-forgot', t.forgot);
+    setText('#rememberMeLabel', t.remember);
     setText('.login-submit', t.submit);
     const signup = document.querySelector('.login-signup');
     if (signup) {
@@ -222,6 +225,7 @@
     document.title = t.title;
     document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
     setText('.tipo-back-label', t.back);
+    setAttr('.tipo-back-button', 'aria-label', t.back);
     setText('#tipoEyebrow', t.eyebrow);
     setText('#tipoTitle', t.heroTitle);
     setText('#tipoSubtitle', t.heroText);
@@ -286,7 +290,22 @@
     setText('.copyright', c.copyright);
   }
 
+  function applyLanguagePicker(lang) {
+    const select = document.getElementById('landing-language-select');
+    if (!select) return;
+    const en = lang === 'en';
+    const options = { auto: en ? 'Default' : 'Padrão', pt: en ? 'Portuguese' : 'Português', en: 'English' };
+    for (const option of select.options) {
+      if (options[option.value]) option.textContent = options[option.value];
+    }
+    select.setAttribute('aria-label', en ? 'Language' : 'Idioma');
+    const control = select.closest('.tipo-language-control,.login-language-control');
+    if (control) control.title = en ? 'Language' : 'Idioma';
+    try { select.value = localStorage.getItem('app-language') || 'auto'; } catch (_) { select.value = 'auto'; }
+  }
+
   function applyTranslations() {
+    applyLanguagePicker(getLang());
     const path = window.location.pathname;
     const lang = getLang();
     if (path.endsWith('/entrar.html') || path.endsWith('entrar.html')) return applyLogin(lang);
