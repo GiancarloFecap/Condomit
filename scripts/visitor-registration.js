@@ -156,10 +156,7 @@
             phone: String(visitor?.phone || '').trim() || null,
             email: String(visitor?.email || '').trim().toLowerCase() || null,
 
-            /*
-             * Mantém exatamente o formato salvo em users.cpf.
-             * Isso é necessário porque visitors.responsible_cpf é FK.
-             */
+             
             responsible_cpf: responsibleCpf
         };
 
@@ -527,10 +524,7 @@
         );
 
         try {
-            /*
-             * Busca o responsável pelo CPF ignorando
-             * pontuação e recupera o valor EXATO de users.cpf.
-             */
+             
             const responsibleUser =
                 await findResponsibleByCpf(
                     payload.responsible_cpf

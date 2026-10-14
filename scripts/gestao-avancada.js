@@ -439,7 +439,7 @@
       const items = await tableGet('condominium_calendar_events','*','order=starts_at.asc&limit=80').catch(()=>[]);
       const merged=(items||[]).map(x=>({...x,source:x.source||'manual'}));
 
-      // Integra automaticamente assembleias, manutenções e reservas já existentes.
+       
       try {
         const assemblies=await window.supabaseFetch(`/scheduled_assemblies?select=id,title,scheduled_date,scheduled_time,status,cep&cep=eq.${encodeURIComponent(state.cep)}&order=scheduled_date.asc&limit=50`);
         (assemblies||[]).forEach(a=>{

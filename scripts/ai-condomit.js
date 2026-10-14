@@ -401,8 +401,8 @@
         const isPorter = role === 'porteiro';
         const isSindico = role === 'sindico';
 
-        // Código de acesso é informação administrativa exclusiva do síndico.
-        // Moradores e porteiros não recebem o código nem instruções para gerenciá-lo.
+         
+         
         const asksAccessCode = includesAny(q, [
             'codigo de acesso', 'chave de acesso', 'codigo do condominio', 'access code', 'condominium code',
             'codigo do condomínio', 'meu codigo', 'meu código'
@@ -435,7 +435,7 @@
             return await answerCurrentAccessCode();
         }
 
-        // 027 - Copiloto do síndico: responde com dados reais do condomínio.
+         
         if (isSindico && includesAny(q, ['resumo do condominio', 'resumo do condomínio', 'painel', 'indicadores', 'como esta o condominio', 'como está o condomínio'])) {
             const summary = await buildManagementSummary();
             if (summary) return summary;
@@ -462,7 +462,7 @@
             };
         }
 
-        // 027 - RAG local simples: pesquisa os documentos cadastrados no próprio condomínio.
+         
         const documentAnswer = await answerFromCondominiumDocuments(question);
         if (documentAnswer) return documentAnswer;
 
@@ -639,9 +639,9 @@
                 };
             }
 
-            // Código criado antes da migration 031: o banco possui o hash, mas
-            // não o valor recuperável. Se ele ainda estiver nesta sessão, usamos
-            // o cache; caso contrário oferecemos a criação de um novo.
+             
+             
+             
             if (cached?.code) {
                 return {
                     text: `O código ativo desta sessão é ${cached.code}.${expiryText}${usageText}.`,

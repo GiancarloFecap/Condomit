@@ -1,8 +1,8 @@
 (() => {
     const FAST_POLL_INTERVAL_MS = 5000;
     const SLOW_POLL_INTERVAL_MS = 15000;
-    const FAST_POLL_LIMIT = 24; // ~2 minutos
-    const TOTAL_POLL_LIMIT = 40; // ~6 minutos no total
+    const FAST_POLL_LIMIT = 24;  
+    const TOTAL_POLL_LIMIT = 40;  
 
     document.addEventListener('DOMContentLoaded', () => {
         initPaymentReturnPage().catch((error) => {

@@ -2,18 +2,7 @@ let isResetSessionValid = false;
 let resetToken = '';
 let resetMode = 'token';
 
-/*
- * Modos possíveis:
- *
- * authenticated
- *   Usuário entrou em Configurações e quer mudar a senha.
- *
- * supabase-recovery
- *   Usuário chegou pelo fluxo oficial de recuperação do Supabase.
- *
- * token
- *   Usuário chegou pelo token customizado do seu backend/Brevo.
- */
+ 
 
 document.addEventListener(
     'DOMContentLoaded',
@@ -36,9 +25,7 @@ document.addEventListener(
 );
 
 
-/* ============================================================
-   EVENTOS
-============================================================ */
+ 
 
 function setupResetPasswordEvents() {
     const toggleNewPassword =
@@ -113,9 +100,7 @@ function setupResetPasswordEvents() {
 }
 
 
-/* ============================================================
-   CLIENTE SUPABASE
-============================================================ */
+ 
 
 function getSupabaseAuth() {
     const auth =
@@ -129,9 +114,7 @@ function getSupabaseAuth() {
 }
 
 
-/* ============================================================
-   INICIALIZAR SESSÃO DE RECUPERAÇÃO
-============================================================ */
+ 
 
 async function checkResetToken() {
     isResetSessionValid = false;
@@ -156,12 +139,7 @@ async function checkResetToken() {
     resetToken =
         params.get('token') || '';
 
-    /*
-     * ========================================================
-     * CASO 1
-     * Usuário veio das configurações.
-     * ========================================================
-     */
+     
     if (
         source === 'configuracoes'
     ) {
@@ -187,15 +165,7 @@ async function checkResetToken() {
     const auth =
         getSupabaseAuth();
 
-    /*
-     * ========================================================
-     * CASO 2
-     * PKCE do Supabase.
-     *
-     * URL:
-     * redefinir-senha.html?code=...
-     * ========================================================
-     */
+     
     if (
         code &&
         auth &&
@@ -240,18 +210,7 @@ async function checkResetToken() {
         }
     }
 
-    /*
-     * ========================================================
-     * CASO 3
-     * Fluxo implicit do Supabase.
-     *
-     * Algumas URLs podem chegar com:
-     *
-     * #access_token=...
-     * &refresh_token=...
-     * &type=recovery
-     * ========================================================
-     */
+     
 
     const accessToken =
         hashParams.get(
@@ -317,13 +276,7 @@ async function checkResetToken() {
         }
     }
 
-    /*
-     * ========================================================
-     * CASO 4
-     * O cliente Supabase pode já ter detectado
-     * automaticamente a sessão da URL.
-     * ========================================================
-     */
+     
     if (auth) {
         try {
             const {
@@ -354,12 +307,7 @@ async function checkResetToken() {
         }
     }
 
-    /*
-     * ========================================================
-     * CASO 5
-     * Token customizado enviado pelo seu backend/Brevo.
-     * ========================================================
-     */
+     
     if (resetToken) {
         resetMode =
             'token';
@@ -372,16 +320,12 @@ async function checkResetToken() {
         return;
     }
 
-    /*
-     * Nenhuma forma válida de recuperação.
-     */
+     
     showInvalidLink();
 }
 
 
-/* ============================================================
-   VALIDAR USUÁRIO AUTENTICADO
-============================================================ */
+ 
 
 async function validateAuthenticatedSession() {
     const auth =
@@ -396,10 +340,7 @@ async function validateAuthenticatedSession() {
     }
 
     try {
-        /*
-         * getUser() consulta o servidor do Supabase Auth
-         * e confirma que o usuário realmente está autenticado.
-         */
+         
         const {
             data,
             error
@@ -431,9 +372,7 @@ async function validateAuthenticatedSession() {
 }
 
 
-/* ============================================================
-   LIMPAR TOKEN DA URL
-============================================================ */
+ 
 
 function cleanRecoveryUrl() {
     try {
@@ -453,9 +392,7 @@ function cleanRecoveryUrl() {
 }
 
 
-/* ============================================================
-   INTERFACE
-============================================================ */
+ 
 
 function showResetForm() {
     const invalid =
@@ -536,9 +473,7 @@ function showInvalidLink() {
 }
 
 
-/* ============================================================
-   MOSTRAR / ESCONDER SENHA
-============================================================ */
+ 
 
 function togglePasswordVisibility(
     inputId,
@@ -591,9 +526,7 @@ function togglePasswordVisibility(
 }
 
 
-/* ============================================================
-   VALIDAR SENHA
-============================================================ */
+ 
 
 function validatePassword() {
     const newPasswordInput =
@@ -718,9 +651,7 @@ function validatePassword() {
 }
 
 
-/* ============================================================
-   ALTERAR SENHA NO SUPABASE AUTH
-============================================================ */
+ 
 
 async function updateSupabaseAuthPassword(
     newPassword
@@ -734,10 +665,7 @@ async function updateSupabaseAuthPassword(
         );
     }
 
-    /*
-     * Confirma primeiro que realmente há
-     * uma sessão autenticada.
-     */
+     
     const {
         data: userData,
         error: userError
@@ -761,13 +689,7 @@ async function updateSupabaseAuthPassword(
         );
     }
 
-    /*
-     * AQUI está a correção principal.
-     *
-     * A senha é atualizada no Supabase Auth,
-     * que é exatamente onde signInWithPassword()
-     * procura a senha.
-     */
+     
     const {
         data,
         error
@@ -807,9 +729,7 @@ async function updateSupabaseAuthPassword(
 }
 
 
-/* ============================================================
-   TOKEN CUSTOMIZADO
-============================================================ */
+ 
 
 async function updatePasswordWithCustomToken(
     newPassword
@@ -867,12 +787,7 @@ async function updatePasswordWithCustomToken(
         );
     }
 
-    /*
-     * Exige confirmação explícita do backend.
-     *
-     * Compatível também com endpoints antigos
-     * que simplesmente retornavam status 200.
-     */
+     
     if (
         data?.success === false
     ) {
@@ -886,9 +801,7 @@ async function updatePasswordWithCustomToken(
 }
 
 
-/* ============================================================
-   ERROS DO SUPABASE
-============================================================ */
+ 
 
 function normalizeSupabasePasswordError(
     error
@@ -948,9 +861,7 @@ function normalizeSupabasePasswordError(
 }
 
 
-/* ============================================================
-   SUBMIT
-============================================================ */
+ 
 
 async function handleResetPassword(
     event
@@ -1038,11 +949,7 @@ async function handleResetPassword(
         '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
 
     try {
-        /*
-         * =====================================================
-         * CONFIGURAÇÕES
-         * =====================================================
-         */
+         
         if (
             resetMode ===
             'authenticated'
@@ -1086,16 +993,7 @@ async function handleResetPassword(
             );
         }
 
-        /*
-         * Não faça:
-         *
-         * updateUserByEmail(email, {
-         *     password: newPassword
-         * });
-         *
-         * A senha usada para login pertence
-         * ao Supabase Auth.
-         */
+         
 
         const errorMessage =
             document.getElementById(
@@ -1127,11 +1025,7 @@ async function handleResetPassword(
                 'block';
         }
 
-        /*
-         * Se a alteração aconteceu através
-         * de uma sessão recovery, encerra essa
-         * sessão antes de voltar ao login.
-         */
+         
         if (
             resetMode ===
                 'supabase-recovery' &&
@@ -1152,9 +1046,7 @@ async function handleResetPassword(
             }
         }
 
-        /*
-         * Limpa dados antigos da aplicação.
-         */
+         
         try {
             sessionStorage.removeItem(
                 'sb-access-token'
@@ -1194,9 +1086,7 @@ async function handleResetPassword(
 }
 
 
-/* ============================================================
-   ERRO NA INTERFACE
-============================================================ */
+ 
 
 function showError(
     message
@@ -1223,10 +1113,7 @@ function showError(
 }
 
 
-/* ============================================================
-   USUÁRIO LOCAL
-   Mantido para compatibilidade com outras páginas.
-============================================================ */
+ 
 
 function getAuthenticatedUser() {
     try {

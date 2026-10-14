@@ -697,13 +697,7 @@ export async function refreshLists() {
 
   state.raisedHands.clear();
 
-  /*
-   * A tabela guarda histórico de solicitações. Somente o registro
-   * mais recente de cada participante define se a mão está ativa.
-   *
-   * Estados válidos do banco:
-   * aguardando | autorizado | recusado | finalizado
-   */
+   
   const latestHandByUser = new Map();
 
   hands.forEach((hand) => {
@@ -738,7 +732,7 @@ export async function refreshLists() {
   const activeHandStatuses = new Set([
     'aguardando',
     'autorizado',
-    // Compatibilidade com registros antigos antes da migration 009.
+     
     'raised'
   ]);
 

@@ -274,7 +274,7 @@ function drawMeetingFrame() {
   const screen = getScreenShareVideo();
   if (screen?.readyState >= 2 && screen.videoWidth > 0) {
     drawCover(ctx, screen, 0, 0, w, h, true);
-    // Mantém também na gravação os participantes com câmeras desligadas durante o compartilhamento.
+     
     const participants = getParticipantTiles();
     const visible = participants.slice(0, 6);
     const thumbW = Math.min(180, Math.floor((w - 20 - Math.max(0, visible.length - 1) * 8) / Math.max(1, visible.length)));
@@ -321,7 +321,7 @@ function canRecordAndPlay(mimeType) {
   try {
     const video = document.createElement('video');
     const result = video.canPlayType?.(mimeType) || '';
-    // `maybe` e `probably` indicam que o navegador reconhece o formato.
+     
     return result === 'maybe' || result === 'probably';
   } catch (_) {
     return true;
@@ -329,9 +329,9 @@ function canRecordAndPlay(mimeType) {
 }
 
 function chooseMimeType() {
-  // Prefere formatos mais portáveis. MP4/H.264 é escolhido quando o navegador
-  // realmente consegue gravar E reproduzir esse perfil. No WebM, VP8 vem antes
-  // de VP9 por ter compatibilidade mais ampla entre navegadores/WebViews.
+   
+   
+   
   const candidates = [
     'video/webm;codecs=vp8,opus',
     'video/webm',
@@ -463,8 +463,8 @@ async function uploadRecordingBlob(blob, startedAt, endedAt) {
   const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';
   const storagePath = `${Number(state.assemblyId)}/${stamp}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.${extension}`;
 
-  // Uploads maiores são enviados em blocos de 6 MB. Isso evita perder uma
-  // assembleia inteira por limite/t instabilidade de uma única requisição HTTP.
+   
+   
   if (blob.size > 6 * 1024 * 1024) {
     await uploadRecordingTus(blob, bucket, storagePath, token);
   } else {
@@ -482,8 +482,8 @@ async function uploadRecordingBlob(blob, startedAt, endedAt) {
     ended_at_value: endedAt.toISOString()
   };
 
-  // O registro é feito por RPC SECURITY DEFINER para não depender de uma
-  // segunda política RLS depois que o arquivo já foi enviado ao Storage.
+   
+   
   const recordingRow = await window.supabaseFetch('/rpc/condomit_register_assembly_recording_040', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -545,10 +545,10 @@ async function persistPendingRecording() {
       }
       const result = await uploadRecordingBlob(pending.blob, pending.startedAt, pending.endedAt);
 
-      // A transcrição oficial só começa DEPOIS que o vídeo foi enviado e
-      // registrado na Ata. A fonte do ASR é a própria cópia privada salva no
-      // Storage, baixada novamente após a confirmação do registro. Assim o
-      // texto da Ata sempre deriva exatamente da gravação audiovisual oficial.
+       
+       
+       
+       
       try {
         const label = document.getElementById('recording-status');
         if (label) {
@@ -640,8 +640,8 @@ export async function startAssemblyRecording() {
 }
 
 export async function stopAssemblyRecording() {
-  // Se uma tentativa anterior de upload falhou, um novo clique em Sair tenta
-  // persistir exatamente o mesmo arquivo antes de abandonar a página.
+   
+   
   if ((!recording.recorder || recording.recorder.state === 'inactive') && recording.pendingUpload) {
     await persistPendingRecording();
     setUi(false);
@@ -655,8 +655,8 @@ export async function stopAssemblyRecording() {
   const stopped = new Promise((resolve) => {
     recorder.addEventListener('stop', () => resolve(), { once: true });
   });
-  // stop() gera o bloco final e os metadados do contêiner. Evitamos
-  // requestData() porque alguns navegadores geram WebM fragmentado sem duração.
+   
+   
   recorder.stop();
   await stopped;
 
@@ -707,8 +707,8 @@ export async function stopAssemblyRecording() {
         label.textContent = 'Não foi possível salvar a gravação. Não feche esta página e tente sair novamente.';
         label.title = error?.message || '';
       }
-      // Não há download local como fallback. A página deve permanecer aberta
-      // para permitir nova tentativa de persistência na Ata.
+       
+       
       throw error;
     }
   }

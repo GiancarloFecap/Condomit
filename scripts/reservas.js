@@ -289,11 +289,7 @@ async function handleAgendar() {
     if (!selectedDate || !selectedTime || !selectedSpace) return;
     const doSave = async () => {
         try {
-            /*
-             * Revalida a agenda imediatamente antes de gravar. Assim, se
-             * outra pessoa reservou enquanto o popup de confirmação estava
-             * aberto, o horário é bloqueado sem depender do erro do banco.
-             */
+             
             await fetchReservations();
             const dateKey = formatDateInput(selectedDate);
             if (isTimeSlotReserved(dateKey, selectedTime)) {

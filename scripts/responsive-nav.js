@@ -1,4 +1,4 @@
-/* Condomit 025 - navegacao responsiva global das telas autenticadas. */
+ 
 (() => {
     const MOBILE_QUERY = '(max-width: 900px)';
 

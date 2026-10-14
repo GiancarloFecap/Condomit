@@ -44,8 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Sempre consulta o vínculo real. A presença/ausência de condominium no
-            // sessionStorage não decide mais se o cadastro foi concluído.
+             
+             
             let linkedCep = '';
             try {
                 if (typeof window.supabaseFetch === 'function') {
@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function saveToDatabaseAndUpdate() {
-        // A RPC segura já cria o vínculo e atualiza o perfil do porteiro.
+         
         return true;
     }
 

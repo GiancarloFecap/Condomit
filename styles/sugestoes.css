@@ -1060,11 +1060,6 @@ html[data-theme="dark"] .detalhes-status-sindico select {
         align-items: stretch;
     }
 }
-
-
-/* ============================================================
-   Ajustes 011 - modal Nova sugestão mais compacto
-============================================================ */
 #novaSugestaoModal .modal-content,
 .modal-overlay .modal-content {
     width: min(94vw, 640px);
@@ -1101,9 +1096,6 @@ html[data-theme="dark"] .detalhes-status-sindico select {
     padding: 14px 20px;
     gap: 10px;
 }
-
-
-/* Ajustes de composição da nova sugestão */
 .filters-bar .search-wrapper { position: relative; }
 .filters-bar .search-wrapper .search-icon {
   left: 16px !important; z-index: 3; pointer-events: none; width: 18px; text-align: center;

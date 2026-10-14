@@ -224,16 +224,7 @@ function forEachPublication(
     );
 }
 
-/*
- * ESSENCIAL:
- *
- * Uma publication pode continuar
- * tendo .track mesmo quando está
- * mutada.
- *
- * Não podemos tratar esse track
- * como câmera ativa.
- */
+ 
 function isPublicationUsable(
   publication
 ) {
@@ -266,20 +257,7 @@ function getTileMedia(
   );
 }
 
-/*
- * ============================================================
- * COMPARTILHAMENTO DE TELA
- * ============================================================
- *
- * Ao compartilhar:
- * - esconde grade de câmeras
- * - ocupa todo o palco
- * - object-fit contain
- *
- * Ao parar:
- * - esconde completamente container
- * - volta imediatamente para grade
- */
+ 
 function renderScreenShareFixed(
   track,
   ownerName = ''
@@ -316,10 +294,7 @@ function renderScreenShareFixed(
     return;
   }
 
-  /*
-   * NÃO HÁ MAIS
-   * COMPARTILHAMENTO.
-   */
+   
   if (!track) {
     container.style
       .display =
@@ -391,9 +366,7 @@ function renderScreenShareFixed(
     return;
   }
 
-  /*
-   * HÁ COMPARTILHAMENTO.
-   */
+   
   container.style
     .display =
     'flex';
@@ -430,10 +403,7 @@ function renderScreenShareFixed(
     .minHeight =
     '0';
 
-  /*
-   * Remove o 16:9 fixo
-   * enquanto compartilha.
-   */
+   
   surface.style
     .aspectRatio =
     'auto';
@@ -469,10 +439,7 @@ function renderScreenShareFixed(
     video.style.display =
       'block';
 
-    /*
-     * IMPORTANTE:
-     * contain mostra a tela inteira.
-     */
+     
     video.style.objectFit =
       'contain';
 
@@ -485,19 +452,13 @@ function renderScreenShareFixed(
       '#000';
   }
 
-  /*
-   * Durante o compartilhamento,
-   * a tela ocupa o palco principal.
-   */
+   
   if (grid) {
     grid.style.display =
       'none';
   }
 
-  /*
-   * Somente quem compartilha
-   * vê o botão Parar.
-   */
+   
   if (stopButton) {
     const localIdentity =
       state.room
@@ -555,10 +516,7 @@ function attachCameraTrack(
     return;
   }
 
-  /*
-   * Só removemos o avatar se
-   * realmente existe câmera ativa.
-   */
+   
   while (
     media.firstChild
   ) {
@@ -568,10 +526,7 @@ function attachCameraTrack(
   }
 
   try {
-    /*
-     * Evita múltiplos vídeos
-     * do mesmo track.
-     */
+     
     try {
       track
         .detach?.()
@@ -607,9 +562,7 @@ function attachCameraTrack(
       .objectPosition =
       'center center';
 
-    /*
-     * Câmera local sem áudio.
-     */
+     
     element.muted =
       identity ===
       state.room
@@ -669,8 +622,8 @@ async function unlockRemoteAudioPlayback() {
 
   audioUnlockInProgress = true;
   try {
-    // LiveKit exige startAudio() em navegadores que bloqueiam autoplay,
-    // principalmente Safari/iOS, Chrome Android e WebViews.
+     
+     
     if (typeof room.startAudio === 'function') {
       await room.startAudio();
     }
@@ -778,8 +731,8 @@ function attachAudio(
         element
       );
 
-    // Tenta imediatamente e, se o autoplay estiver bloqueado, os handlers de
-    // interação instalados acima repetem startAudio()/play no primeiro toque.
+     
+     
     unlockRemoteAudioPlayback().catch(() => {});
 
     const playPromise =
@@ -881,13 +834,7 @@ function syncRemoteAudio(
     );
 }
 
-/*
- * Não recria mais toda a grade
- * quando muda o participante falando.
- *
- * Isso evita flicker e reanexação
- * incorreta da câmera.
- */
+ 
 function updateActiveSpeakerClasses(
   speakers
 ) {
@@ -970,9 +917,7 @@ function findActiveMedia(
             return;
           }
 
-          /*
-           * CÂMERA
-           */
+           
           if (
             publication.source ===
               Track.Source.Camera &&
@@ -989,9 +934,7 @@ function findActiveMedia(
             }
           }
 
-          /*
-           * SCREEN SHARE
-           */
+           
           if (
             !screenTrack &&
             publication.source ===
@@ -1023,10 +966,7 @@ function findActiveMedia(
   };
 }
 
-/*
- * Sincroniza a UI com o estado REAL
- * atual do LiveKit.
- */
+ 
 function syncMediaFromRoom(
   room
 ) {
@@ -1076,21 +1016,12 @@ function syncMediaFromRoom(
   state.screenShareOwner =
     media.screenOwner;
 
-  /*
-   * Primeiro cria os tiles.
-   *
-   * renderGrid() cria o avatar
-   * automaticamente.
-   */
+   
   renderGrid(
     room
   );
 
-  /*
-   * Depois substitui avatar por
-   * vídeo SOMENTE se a câmera
-   * estiver realmente ativa.
-   */
+   
   state.cameraTracks
     .forEach(
       (
@@ -1113,10 +1044,7 @@ function syncMediaFromRoom(
     room
   );
 
-  /*
-   * Mantém indicação visual
-   * de quem está falando.
-   */
+   
   document
     .querySelectorAll(
       '.call-tile'
@@ -1279,8 +1207,7 @@ function getInitialDevicePrefs() {
   }
 
   if (isMobileCameraDevice()) {
-    /* A frontal continua sendo o padrão. Se o usuário escolheu uma câmera
-       na preparação, o facing real será confirmado pelo track após a conexão. */
+     
     state.mobileCameraFacing = 'user';
   }
 
@@ -1967,8 +1894,8 @@ export async function connectToRoom(
       }
     );
 
-    // Em desktop normalmente resolve imediatamente; em celular a chamada é
-    // repetida no primeiro gesto do usuário caso a política de autoplay bloqueie.
+     
+     
     await unlockRemoteAudioPlayback().catch(() => false);
 
     const preferences =
@@ -2159,7 +2086,7 @@ export async function switchMobileCamera() {
 
   let lastError = null;
 
-  // Caminho recomendado pelo LiveKit: reiniciar a faixa mudando o facingMode.
+   
   if (localTrack && typeof localTrack.restartTrack === 'function') {
     try {
       await localTrack.restartTrack({ facingMode: nextFacing });
@@ -2170,7 +2097,7 @@ export async function switchMobileCamera() {
     }
   }
 
-  // Alguns Androids só liberam a segunda câmera após encerrar completamente a primeira.
+   
   try {
     await participant.setCameraEnabled(false);
     await new Promise((resolve) => setTimeout(resolve, 320));
@@ -2181,7 +2108,7 @@ export async function switchMobileCamera() {
     warnLiveKit('Reabertura da câmera por facingMode falhou.', error);
   }
 
-  // Fallback por deviceId, somente depois que a câmera anterior já foi liberada.
+   
   if (targetDevice?.deviceId) {
     try {
       await participant.setCameraEnabled(false).catch(() => {});
@@ -2194,7 +2121,7 @@ export async function switchMobileCamera() {
     }
   }
 
-  // Restaura a câmera anterior para não deixar a chamada sem vídeo.
+   
   try {
     await participant.setCameraEnabled(false).catch(() => {});
     await new Promise((resolve) => setTimeout(resolve, 220));
@@ -2245,12 +2172,7 @@ export async function toggleCamera() {
       isLocalCameraActuallyRunning(room)
     );
 
-    /*
-     * Imediatamente refaz tile.
-     *
-     * Se câmera desligada:
-     * avatar volta ao centro.
-     */
+     
     syncMediaFromRoom(
       room
     );
@@ -2302,10 +2224,7 @@ export async function toggleScreenShare() {
       false
     );
 
-  /* Compartilhamento web depende da Screen Capture API do navegador.
-     Em navegadores móveis que não expõem getDisplayMedia não existe
-     captura de tela que o JavaScript possa forçar. Evitamos o erro
-     genérico e mantemos a função ativa nos navegadores que suportam. */
+   
   if (enabled && typeof navigator.mediaDevices?.getDisplayMedia !== 'function') {
     window.AssemblyUtils?.showToast?.(
       'Este navegador móvel não oferece compartilhamento de tela pelo site. Use um navegador/dispositivo com suporte à captura de tela.',
@@ -2315,13 +2234,7 @@ export async function toggleScreenShare() {
   }
 
   try {
-    /*
-     * Se está PARANDO:
-     * limpa a UI antes do LiveKit.
-     *
-     * Isso elimina a tela vazia
-     * da imagem 4.
-     */
+     
     if (!enabled) {
       state.screenShareTrack =
         null;

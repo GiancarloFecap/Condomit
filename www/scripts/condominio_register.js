@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    // Se o síndico já possui condomínio, o cadastro não deve ser repetido.
+     
     if (currentUser.condominium) {
         window.location.href = 'index.html';
         return;
@@ -102,10 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateBlockInputs(currentCount + 1);
     });
 
-    /**
-     * Mantém os nomes já digitados ao aumentar/diminuir a quantidade.
-     * Ao diminuir, somente os últimos blocos são descartados.
-     */
+     
     function updateBlockInputs(num) {
         const requestedCount = Math.max(0, Number(num) || 0);
         const previousValues = Array.from(

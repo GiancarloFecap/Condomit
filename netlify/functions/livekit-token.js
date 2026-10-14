@@ -570,19 +570,13 @@ exports.handler = async (event) => {
     const canScreenShare =
       canManage;
 
-    /*
-     * O LiveKit exige os valores do enum
-     * TrackSource, e não strings.
-     */
+     
     const canPublishSources = [
       TrackSource.CAMERA,
       TrackSource.MICROPHONE,
     ];
 
-    /*
-     * Essa segunda lista é usada apenas
-     * no JSON enviado ao frontend.
-     */
+     
     const canPublishSourceNames = [
       'camera',
       'microphone',
@@ -723,10 +717,7 @@ exports.handler = async (event) => {
       );
     }
 
-    /*
-     * O erro ao registrar o log não deve
-     * impedir a entrada na assembleia.
-     */
+     
     try {
       const {
         error: logError,

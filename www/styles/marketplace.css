@@ -425,11 +425,6 @@
         align-items: stretch;
     }
 }
-
-
-/* ============================================================
-   Ajustes 011 - favoritos, imagens e modal
-============================================================ */
 #toggleFavoritesBtn.active {
     color: #111827;
     background: #f1f5f9;
@@ -488,10 +483,6 @@ body.marketplace-modal-open {
         max-height: calc(100dvh - 24px);
     }
 }
-
-/* ============================================================
-   014 - Meus anúncios / edição / exclusão
-============================================================ */
 #toggleMyAdsBtn.active,
 #toggleFavoritesBtn.active {
     background: #eff6ff;
@@ -521,14 +512,7 @@ body.marketplace-modal-open {
         flex: 1 1 auto;
     }
 }
-
-/* 027 - status persistente do marketplace */
 .market-status{display:inline-flex;align-items:center;width:max-content;border-radius:999px;padding:4px 8px;font-size:.72rem;font-weight:700}.market-status-disponivel{background:#ecfdf5;color:#047857}.market-status-reservado{background:#fff7ed;color:#c2410c}.market-status-vendido,.market-status-doado{background:#eff6ff;color:#294FD8}.market-status-expirado{background:#f1f5f9;color:#64748b}.marketplace-status-actions{display:flex;flex-wrap:wrap;gap:8px;width:100%}
-
-
-/* ============================================================
-   Condomit 035 - modal isolado + estados de exclusão
-============================================================ */
 .marketplace-detail [data-delete-loading="true"] {
     pointer-events: none;
     opacity: .72;
@@ -554,18 +538,12 @@ body.marketplace-modal-open {
         padding-left: max(10px, env(safe-area-inset-left));
     }
 }
-
-
-/* Detalhes do anúncio aparecem somente após seleção explícita. */
 .marketplace-layout { grid-template-columns: minmax(0, 1fr) !important; }
 .marketplace-layout.detail-open { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px) !important; }
 #marketplaceDetail[hidden] { display: none !important; }
 @media (max-width: 1100px) {
   .marketplace-layout.detail-open { grid-template-columns: 1fr !important; }
 }
-
-
-/* 056 - marketplace redesenhado com busca limpa e sem bordas duplas. */
 .marketplace-page { padding: 0 32px 32px; }
 .marketplace-head { margin-bottom: 18px; align-items: flex-end; }
 .marketplace-head h2 { font-size: clamp(1.65rem, 2vw, 2rem); color: #0f172a; }
@@ -642,9 +620,6 @@ body.marketplace-modal-open {
     .toolbar-actions > * { width: 100%; }
     .marketplace-detail { position: static; top: auto; }
 }
-
-
-/* 057 - Marketplace: visual leve, controles integrados e cards responsivos. */
 .marketplace-page{padding-top:68px!important; max-width:1480px; margin-inline:auto;}
 .marketplace-head { align-items:center; padding:0 74px 0 0!important; margin:0 0 26px; }
 .marketplace-head h2{font-size:clamp(26px,2.7vw,34px);letter-spacing:-.035em;font-weight:800;margin-bottom:6px}
@@ -675,12 +650,9 @@ body.marketplace-modal-open {
 @media(max-width:390px){.marketplace-grid .products-grid{grid-template-columns:1fr}}
 html[data-theme="dark"] .marketplace-toolbar.card-shell,html[data-theme="dark"] .marketplace-grid.card-shell,html[data-theme="dark"] .marketplace-detail.card-shell,html[data-theme="dark"] .marketplace-grid .product-card{background:#152236;border-color:#334155}
 html[data-theme="dark"] .marketplace-head h2,html[data-theme="dark"] .marketplace-grid .section-head h3{color:#f8fafc}
-
-
-/* 066: busca do Marketplace ocupa toda a largura, filtros compactos na linha seguinte. */
 .marketplace-page .marketplace-head {
     justify-content: flex-end;
-    padding-right: 74px !important; /* Área reservada para o sino fixo. */
+    padding-right: 74px !important;
     margin-bottom: 12px;
 }
 .marketplace-page .marketplace-toolbar.card-shell {

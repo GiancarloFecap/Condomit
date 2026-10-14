@@ -147,7 +147,7 @@
                 return;
             }
 
-            // Deleting existing bookings is irreversible; confirm only when changing to another CEP.
+             
             const previousCep = String(user?.condominium?.cep || user?.condominium?.condominium_id || user?.cep || '').replace(/\D/g, '');
             if (previousCep.length === 8 && previousCep !== cepDigits) {
                 const text = window.getCondomitResolvedLanguage?.() === 'en'

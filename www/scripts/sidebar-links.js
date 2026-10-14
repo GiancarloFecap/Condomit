@@ -6,8 +6,8 @@ const sidebarRuntime = {
     currentUserType: 'sindico'
 };
 const sidebarCondoLogoCache = new Map();
-// Lembra o último grupo da sidebar enquanto a pessoa navega entre páginas.
-// Uma nova sessão começa com todos os grupos recolhidos.
+ 
+ 
 const SIDEBAR_GROUP_KEY = 'condomit:sidebar-expanded:054';
 function sidebarGroupStorageKey() {
     const user = sidebarRuntime.currentUser;
@@ -23,7 +23,7 @@ function saveSidebarGroup(group) {
         else sessionStorage.removeItem(key);
     } catch (_) {}
 }
-let sidebarOpenSection = null; // Acordeão: um grupo por vez
+let sidebarOpenSection = null;  
 
 const sidebarI18n = {
     pt: {
@@ -274,7 +274,7 @@ const placeholderTranslations = {
     }
 };
 
-// 022 - Cobertura de tradução das páginas autenticadas.
+ 
 Object.assign(textTranslations.en, {
     "Controle de Prestadores": "Provider Control",
     "Novo prestador": "New Provider",
@@ -1059,9 +1059,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.applyGlobalAppLanguage(getAppLanguage());
     installLanguageObserver();
 
-    // Revalida o plano diretamente no servidor mesmo em paginas Essencial.
-    // Antes, algumas telas dependiam de outro guard disparar o evento de plano,
-    // fazendo Pro/Premium permanecerem com a navegacao do Essencial.
+     
+     
+     
     Promise.resolve().then(async () => {
         try {
             if (typeof window.getCondomitPlanAccess !== 'function') return;
@@ -1193,15 +1193,15 @@ function getSidebarCurrentPlanLevel(user) {
     if (name === 'pro' || name.includes(' pro')) return 2;
     if (name.includes('essencial')) return 1;
 
-    // Nas instalacoes atuais os IDs dos planos seguem 1=Essencial, 2=Pro e
-    // 3=Premium. O campo plan costuma estar disponivel no sessionStorage antes
-    // mesmo da consulta de cobranca terminar, evitando a sidebar "cair" para
-    // Essencial durante o carregamento.
+     
+     
+     
+     
     const planId = Number(user?.plan || user?.plan_id || 0);
     if (planId >= 1 && planId <= 3) return planId;
 
-    // Ultimo acesso resolvido para este CEP. Serve apenas para a primeira
-    // pintura da sidebar; a consulta ao servidor abaixo sempre revalida.
+     
+     
     try {
         const cep = getSidebarCondominiumCep(user).replace(/\D/g, '');
         const raw = cep ? localStorage.getItem(`condomitPlanAccess:${cep}`) : null;
@@ -1223,7 +1223,7 @@ function sidebarAccountMarkup(user, userType, lang = getAppLanguage()) {
         : (lang === 'en' ? 'Manager' : 'Síndico');
     const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'US';
     const photo = String(user?.profile_photo || user?.profilePhoto || '').trim();
-    // Only image data or real URLs can be put in the image's src attribute.
+     
     const safePhoto = /^(https?:\/\/|data:image\/(?:png|jpeg|webp|gif);base64,)/i.test(photo) ? photo : '';
     const avatar = safePhoto ? `<img src="${escapeSidebarHtml(safePhoto)}" alt="" loading="lazy">` : escapeSidebarHtml(initials);
     return `<div class="sidebar-account-row">
@@ -1237,8 +1237,8 @@ function sidebarAccountMarkup(user, userType, lang = getAppLanguage()) {
 }
 
 function bindSidebarNotification() {
-    // A topbar foi removida; o sino fica no canto superior direito do workspace.
-    // Usa o mesmo popup de notificações de topbar-actions.js.
+     
+     
     let button = document.getElementById('condomitFloatingBell');
     if (!button) {
         button = document.createElement('button');
@@ -1395,8 +1395,8 @@ function buildSidebarNav(userType, currentPage, lang = getAppLanguage()) {
     const config = getSidebarConfig(userType)
         .map((section) => ({
             ...section,
-            // Porteiro é um benefício disponível apenas a partir do Pro; dentro
-            // dessa área, Pro e Premium exibem o mesmo conjunto operacional.
+             
+             
             items: userType === 'porteiro'
                 ? section.items
                 : section.items.filter((item) => planLevel >= getSidebarRouteMinPlanLevel(item.route))
@@ -1609,8 +1609,8 @@ function getSidebarConfig(userType) {
 }
 
 function bindSupportButtons() {
-    // The shared footer is an ordinary Gmail link (also works without JS).
-    // Legacy pages may still provide a button instead of an anchor.
+     
+     
     document.querySelectorAll('button.btn-support').forEach((button) => {
         if (button.dataset.gmailSupportBound === 'true') return;
         button.dataset.gmailSupportBound = 'true';
@@ -1684,12 +1684,7 @@ function translateRawText(value, lang = getAppLanguage()) {
     const trimmed = original.trim();
     if (!trimmed) return original;
 
-    /*
-     * Parágrafos formatados em várias linhas no HTML possuem quebras e
-     * indentação internas. Normalizamos apenas a chave de consulta; o texto
-     * registrado pelo usuário não é alterado e elementos marcados com
-     * data-no-translate/translate="no" são ignorados pelo walker.
-     */
+     
     const normalizedKey = trimmed.replace(/\s+/g, ' ');
     const translated =
         textTranslations[lang]?.[trimmed] ||
@@ -1786,9 +1781,9 @@ function escapeSidebarHtml(text) {
 }
 
 
-// 060: O menu é construído dinamicamente. O encerramento de sessão deve funcionar
-// em qualquer página, inclusive nas que não declaram uma função global logout().
-// Captura também botões legados com onclick="logout()" antes do manipulador inline.
+ 
+ 
+ 
 if (!window.__condomitSidebarLogoutBound) {
     window.__condomitSidebarLogoutBound = true;
     document.addEventListener('click', (event) => {
@@ -1806,7 +1801,7 @@ if (!window.__condomitSidebarLogoutBound) {
                 window.location.replace('../inicio.html');
             });
         } else {
-            // Fallback defensivo; a rotina completa normalmente é carregada primeiro.
+             
             try { sessionStorage.removeItem('condominiumUser'); } catch (_) {}
             try { localStorage.removeItem('condominiumPersistentUser'); } catch (_) {}
             window.location.replace('../inicio.html');

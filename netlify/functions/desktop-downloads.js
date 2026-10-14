@@ -60,12 +60,12 @@ async function githubJson(url, headers) {
 async function resolveRelease(repository, headers) {
   const base = `https://api.github.com/repos/${repository}`;
 
-  // Primeiro tenta a release estável mais recente.
+   
   const latest = await githubJson(`${base}/releases/latest`, headers);
   if (latest.value && hasDesktopAssets(latest.value)) return latest.value;
 
-  // Se não houver "latest" (ou se ela ainda não tiver os binários), procura
-  // releases recentes, inclusive prereleases. Isso evita falso erro 404.
+   
+   
   const list = await githubJson(`${base}/releases?per_page=20`, headers);
   const releases = Array.isArray(list.value) ? list.value : [];
   return releases.find(release => !release?.draft && hasDesktopAssets(release)) || null;
@@ -74,7 +74,7 @@ async function resolveRelease(repository, headers) {
 exports.handler = async () => {
   const repository = resolveRepository();
   if (!repository) {
-    // Configuração ausente não é erro para o visitante: apenas não há build publicado.
+     
     return json(200, {
       configured: false,
       published: false,
@@ -112,7 +112,7 @@ exports.handler = async () => {
     });
   } catch (error) {
     console.error('[desktop-downloads]', error);
-    // Uma falha temporária de consulta não deve quebrar a página pública.
+     
     return json(200, {
       configured: true,
       published: false,

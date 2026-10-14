@@ -120,8 +120,8 @@
         Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings: playableRecordings, speechActivities, commentVotes });
         state.signature = signatures[0] || null;
 
-        // Dados institucionais usados somente como texto na ata. A ata não inclui
-        // a logo do condomínio nem qualquer imagem do modelo de referência.
+         
+         
         state.condominium = (await fetchRows(
             `/condominiums?select=cep,condominium_name,address,address_number,complement,neighborhood,city,state&cep=eq.${encodeURIComponent(state.assembly.cep || '')}&limit=1`
         ).catch(() => []))[0] || null;
@@ -714,8 +714,8 @@
                 if (blobObjectUrl) { URL.revokeObjectURL(blobObjectUrl); blobObjectUrl = ''; }
                 video.src = freshUrl;
                 video.load();
-                // play() pode ser bloqueado por autoplay; como esta chamada vem de
-                // clique do usuário, navegadores normalmente permitem a reprodução.
+                 
+                 
                 await video.play().catch(() => {});
             } catch (error) {
                 errorBox.textContent = error?.message || 'Não foi possível renovar o acesso à gravação.';
@@ -729,9 +729,9 @@
 
         video.addEventListener('error', async () => {
             const mediaError = video.error;
-            // URLs assinadas podem não responder a Range da mesma forma em todos
-            // os WebViews. Tenta uma vez carregar o arquivo em memória como Blob,
-            // sem salvar/baixar no dispositivo do usuário.
+             
+             
+             
             if (!blobFallbackTried && !String(video.src || '').startsWith('blob:')) {
                 try {
                     errorBox.textContent = 'Preparando modo de reprodução compatível...';

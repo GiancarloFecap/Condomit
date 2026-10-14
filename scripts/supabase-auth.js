@@ -29,12 +29,12 @@ function clearAuthTokenKeys(store) {
   });
 }
 
-// A versão anterior usava localStorage sem consentimento. Não reabre essas
-// sessões de maneira silenciosa quando o usuário não escolheu Lembrar de mim.
+ 
+ 
 if (!wantsPersistentSession()) {
   try {
     clearAuthTokenKeys(localStorage);
-    // Remove também formatos antigos de cache de sessão usados pelo projeto.
+     
     for (const key of [
       'sb-session', 'sb-access-token',
       'condominiumPersistentSession', 'condominiumPersistentUser',
@@ -51,7 +51,7 @@ const condomitAuthStorage = {
     try { (wantsPersistentSession() ? localStorage : sessionStorage).setItem(key, value); } catch (_) {}
   },
   removeItem(key) {
-    // Desconectar deve limpar as cópias em ambos os lugares.
+     
     try { localStorage.removeItem(key); } catch (_) {}
     try { sessionStorage.removeItem(key); } catch (_) {}
   }
@@ -59,7 +59,7 @@ const condomitAuthStorage = {
 
 window.condomitSetRememberMe = function (remember) {
   try {
-    // Deixa de carregar qualquer sessão de outra conta/visita ao mudar de modo.
+     
     clearAuthTokenKeys(localStorage);
     clearAuthTokenKeys(sessionStorage);
     localStorage.setItem(REMEMBER_KEY, remember ? '1' : '0');

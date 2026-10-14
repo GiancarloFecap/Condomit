@@ -430,10 +430,7 @@
       );
     }
 
-    /*
-     * Não existe mais fallback
-     * para RPC.
-     */
+     
     return requireAuthenticatedApiFetch(
       '/.netlify/functions/send-chat',
       {

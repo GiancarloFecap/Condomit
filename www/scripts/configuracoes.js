@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (raw) currentUser = JSON.parse(raw);
     } catch (_) {}
 
-    // Renderiza os dados que ja estao em cache imediatamente. Assim a tela nao
-    // abre com nome/e-mail/unidade em branco enquanto o Supabase e consultado.
+     
+     
     if (currentUser) {
         updateUIWithUserData(currentUser);
     } else {
@@ -58,11 +58,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // Atualiza uma segunda vez com os dados mais recentes sem causar o atraso
-    // visual da primeira renderizacao.
+     
+     
     updateUIWithUserData(currentUser);
 
-    // A mensalidade é do condomínio (CEP), não da pessoa que ocupa o cargo.
+     
     if (currentUser.type === 'sindico' && currentUser.condominium) {
         const billing = await fetchCondominiumBillingStatus(true);
 
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // Se for morador e não tem o nome do condomínio no sessionStorage, busca via API
+     
     if (currentUser.type === 'morador' && currentUser.condominium?.condominium_id && !currentUser.condominium?.name) {
         try {
             const proxyFetch = async (path, options = {}) => {
@@ -206,10 +206,10 @@ function clearLoginPersistent() {
 }
 
 async function purgeDeletedAccountSession() {
-    // Uma conta excluída nunca deve continuar autenticada apenas porque o JWT
-    // ainda está armazenado no navegador. Primeiro tentamos encerrar a sessão
-    // local no Supabase; em seguida removemos manualmente qualquer cópia de
-    // sessão/cache e gravamos a mesma trava usada pelo logout explícito.
+     
+     
+     
+     
     try {
         if (window.supabase?.auth?.signOut) {
             await window.supabase.auth.signOut({ scope: 'local' });
@@ -246,8 +246,8 @@ async function purgeDeletedAccountSession() {
             }
         }
         keys.forEach((key) => localStorage.removeItem(key));
-        // Esta chave fica de propósito após a limpeza. session-resume.js a lê
-        // antes de tentar reaproveitar qualquer sessão persistida.
+         
+         
         localStorage.setItem('authExplicitLogoutAt', String(Date.now()));
         localStorage.setItem('accountDeletedAt', String(Date.now()));
     } catch (_) {}
@@ -266,8 +266,8 @@ function updateUIWithUserData(currentUser) {
             ? 'Porteiro'
             : 'Morador';
 
-    // O código de acesso do condomínio é uma função administrativa exclusiva do síndico.
-    // Esta regra independe do plano e é reaplicada ao atualizar os dados do usuário.
+     
+     
     const housematesRow = document.getElementById('myHousematesConfigRow');
     if (housematesRow) {
         const canViewHousemates = normalizedUserType === 'sindico';
@@ -286,7 +286,7 @@ function updateUIWithUserData(currentUser) {
 
     setNotificationRoleCopy(currentUser);
 
-    // Top bar avatar
+     
     const topAvatar = document.getElementById('user-avatar-top');
     if (topAvatar) {
         if (currentUser.profilePhoto || currentUser.profile_photo) {
@@ -299,14 +299,14 @@ function updateUIWithUserData(currentUser) {
         }
     }
 
-    // Top bar user info
+     
     const topName = document.getElementById('user-name-top');
     const topType = document.getElementById('user-type-top');
 
     if (topName) topName.textContent = displayName;
     if (topType) topType.textContent = userTypeLabel;
 
-    // Profile preview card
+     
     const cardName = document.getElementById('profile-name-card');
     const cardType = document.getElementById('profile-type-card');
     const cardEmail = document.getElementById('profile-email-card');
@@ -327,7 +327,7 @@ function updateUIWithUserData(currentUser) {
         }
     }
 
-    // Profile details list
+     
     const fullNameEl = document.getElementById('detail-full-name');
     const unitEl = document.getElementById('detail-unit');
     const typeEl = document.getElementById('detail-user-type');
@@ -351,7 +351,7 @@ function updateUIWithUserData(currentUser) {
         }
     }
 
-    // Sidebar condo name
+     
     if (currentUser.condominium && typeof currentUser.condominium === 'object') {
         const condoName = String(currentUser.condominium.name || currentUser.condominium.condominium_name || '').trim();
         const sidebarCondoNameEl = document.querySelector('.condo-name');
@@ -1247,8 +1247,8 @@ async function fetchCurrentCondominiumInfo() {
 async function fetchCurrentCondominiumManager(condominium, currentUser = getCurrentUser()) {
     if (typeof supabaseFetch !== 'function') return null;
 
-    // Fonte preferencial: RPC SECURITY DEFINER, que respeita o condomínio atual
-    // sem exigir SELECT amplo em public.users (normalmente bloqueado por RLS).
+     
+     
     try {
         const result = await supabaseFetch('/rpc/condomit_current_condominium_manager_039', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
@@ -1373,9 +1373,9 @@ function buildCityStateLabel(condominium) {
 
 
 
-// ============================================================
-// 0.63.0 - Gestão de reservas/espaços, edição do condomínio e histórico de versões
-// ============================================================
+ 
+ 
+ 
 const CONDOMIT_APP_VERSION = '0.71.7';
 let reservationManagementState = { reservations: [], spaces: [], selected: new Set(), isSindico: false };
 
@@ -2068,7 +2068,7 @@ function applyTranslations(lang) {
     applyText('.top-bar-left h1', translations[lang].config_title);
     applyText('.top-bar-left p', translations[lang].config_subtitle);
 
-    // Headings are keyed to their content: card position is no longer a translation key.
+     
     document.querySelectorAll('[data-config-title]').forEach(heading => {
         const label = translations[lang][heading.dataset.configTitle];
         if (label) heading.textContent = label;
@@ -2321,7 +2321,7 @@ function initPreferences() {
     ensureVisitorAccessModal();
 }
 
-/* ============ EXCLUIR CONTA ============ */
+ 
 
 function ensureDeleteAccountModal() {
     let modal = document.getElementById('delete-account-modal');
@@ -2468,8 +2468,8 @@ async function executeDeleteAccount() {
         msg.style.color = '#16a34a';
         msg.textContent = 'Conta excluída com sucesso. Sua sessão foi encerrada.';
         setTimeout(() => {
-            // Vai diretamente ao login com uma marca explícita de exclusão.
-            // entrar.js impede a restauração automática de uma sessão antiga.
+             
+             
             window.location.replace('entrar.html?deleted=1');
         }, 650);
     } catch (err) {
@@ -2482,10 +2482,7 @@ async function executeDeleteAccount() {
 }
 
 
-/* ============================================================
-   CONFIGURAÇÕES 014 - CONTEÚDO INSTITUCIONAL / PRIVACIDADE /
-   TERMOS / CONTATOS / PRESTADORES
-============================================================ */
+ 
 
 const CONDOMIT_COMPANY_EMAIL = 'contato.condomit@gmail.com';
 const CONDOMIT_COMPANY_PHONE = '(11)97440-9806';
@@ -3100,9 +3097,7 @@ async function openConsentManagementModal() {
     }
 }
 
-/* ============================================================
-   CONFIGURAÇÕES 016 - VERIFICAÇÃO EM DUAS ETAPAS POR E-MAIL
-============================================================ */
+ 
 
 async function openTwoFactorSettingsModal() {
     if (!window.condomitTwoFactor?.status) {
@@ -3113,11 +3108,7 @@ async function openTwoFactorSettingsModal() {
         return;
     }
 
-    /*
-     * Abre o popup imediatamente. Antes a página esperava a consulta ao
-     * backend terminar para só então exibir o modal, dando a impressão de
-     * que o botão não havia funcionado.
-     */
+     
     const modal = openSettingsContentModal({
         title: 'Autenticação de dois fatores',
         subtitle: 'Consultando a proteção da sua conta...',
@@ -3290,11 +3281,11 @@ async function openTwoFactorSettingsModal() {
 }
 window.openTwoFactorSettingsModal = openTwoFactorSettingsModal;
 
-// ============================================================
-// Condomit 0.41 - Código seguro de acesso ao condomínio
-// Disponível para síndicos em qualquer plano; porteiros continuam limitados a Pro/Premium.
-// O código bruto é retornado somente no momento da geração.
-// ============================================================
+ 
+ 
+ 
+ 
+ 
 function ensureCondominiumAccessCodeModal() {
     let modal = document.getElementById('condomitAccessCodeModal');
     if (modal) return modal;
@@ -3522,9 +3513,9 @@ async function generateCondominiumAccessCode() {
             metaEl.textContent = `Validade: ${expiryText} • ${Number(data?.remaining_uses ?? data?.max_uses ?? allowedUses)} uso(s) restante(s) de ${Number(data?.max_uses || allowedUses)}.`;
         }
         resultBox?.classList.add('visible');
-        // O banco persiste o valor em uma tabela sem leitura direta e a RPC segura só
-        // o devolve ao síndico do próprio condomínio enquanto ele estiver ativo.
-        // O cache de sessão permanece apenas como otimização visual.
+         
+         
+         
         try {
             const normalizedCep = String(data?.cep || cep || '').replace(/\D/g, '');
             sessionStorage.setItem(`condomitAccessCode:${normalizedCep}`, JSON.stringify({

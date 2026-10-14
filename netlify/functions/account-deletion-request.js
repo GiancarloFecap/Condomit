@@ -17,7 +17,7 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Método não permitido.' });
   let body = {};
   try { body = JSON.parse(event.body || '{}'); } catch (_) { return json(400, { error: 'Corpo da solicitação inválido.' }); }
-  if (clean(body.website, 200)) return json(200, { ok: true }); // honeypot
+  if (clean(body.website, 200)) return json(200, { ok: true });  
   const email = clean(body.email, 254).toLowerCase();
   const reason = clean(body.reason, 1200);
   if (!/^\S+@\S+\.\S+$/.test(email)) return json(400, { error: 'E-mail inválido.' });

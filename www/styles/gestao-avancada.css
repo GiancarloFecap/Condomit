@@ -20,8 +20,6 @@ body { margin: 0; background: var(--adv-bg); color: var(--adv-text); font-family
 button, input, select, textarea { font: inherit; }
 
 .advanced-shell { min-height: 100dvh; display: grid; grid-template-columns: 300px minmax(0, 1fr); background: var(--adv-bg); }
-
-/* Sidebar alinhada ao restante do Condomit */
 .advanced-sidebar {
     position: sticky;
     top: 0;
@@ -194,8 +192,6 @@ button, input, select, textarea { font: inherit; }
 .advanced-toast.success { background:#176b42; }
 .sla-overdue { border-color:#efb4b4; background:#fff9f9; }
 .utility-warning { border-color:#f0d28a; background:#fffaf0; }
-
-/* orçamento e ficha de patrimônio */
 .finance-chart { min-height:250px; display:grid; align-items:end; }
 .finance-chart-legend { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:14px; color:var(--adv-muted); font-size:.75rem; font-weight:800; }
 .finance-chart-legend span { display:flex; align-items:center; gap:6px; }
@@ -270,8 +266,6 @@ button, input, select, textarea { font: inherit; }
 @media (max-width: 390px) {
     .metric-grid,.metric-grid.compact { grid-template-columns:1fr; }
 }
-
-/* Sidebar 029: alinhada ao padrão das demais páginas do Condomit */
 .advanced-primary-nav { padding: 12px 16px 4px; }
 .advanced-primary-nav .advanced-nav-item { width: 100%; }
 .advanced-home-item { text-decoration: none; }
@@ -283,13 +277,6 @@ button, input, select, textarea { font: inherit; }
 .advanced-footer-btn i { width:20px; text-align:center; }
 .advanced-logout-btn { background:rgba(127,29,29,.24); }
 .advanced-logout-btn:hover { background:rgba(127,29,29,.36); }
-
-
-/* ============================================================
-   Condomit 035 - UX da Gestão Avançada
-   Mantém a identidade visual e aproxima a sidebar do padrão
-   das demais telas de síndico.
-============================================================ */
 .advanced-sidebar {
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,.25) transparent;
@@ -396,8 +383,6 @@ button, input, select, textarea { font: inherit; }
     margin: 0;
     width: 100%;
 }
-
-/* Exatamente o mesmo padrão visual dos botões das sidebars principais. */
 .advanced-sidebar-footer.sidebar-footer {
     margin-top: auto;
     padding: 10px 0 0;
@@ -635,11 +620,6 @@ html[data-theme="dark"] .advanced-form select,
 html[data-theme="dark"] .advanced-form textarea,
 html[data-theme="dark"] .mini-search,
 html[data-theme="dark"] .mini-select { background: #0f172a; color: #f8fafc; border-color: #2d3b50; }
-
-
-/* ============================================================
-   Condomit 036 - Top bar e sidebar alinhadas ao painel principal
-============================================================ */
 .advanced-brand-logo {
     width: auto !important;
     height: 160px !important;
@@ -743,8 +723,6 @@ html[data-theme="dark"] .mini-select { background: #0f172a; color: #f8fafc; bord
     flex: 0 0 45px;
     border-radius: 50%;
 }
-
-/* Modal do seletor de chat utilizado pelas demais top bars. */
 .quick-chat-modal {
     position: fixed;
     inset: 0;

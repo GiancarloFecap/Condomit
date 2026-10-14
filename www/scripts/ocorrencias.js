@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     occurrenceState.currentUser = user;
     occurrenceState.userType = normalizeOccurrenceUserType(user);
-    // Primeiro pinta ações e conecta eventos; o CEP pode exigir chamada de rede.
+     
     setupOccurrenceShell(user);
     setupOccurrenceActions();
     setupSignatureCanvas();

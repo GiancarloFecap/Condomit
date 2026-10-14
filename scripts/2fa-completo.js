@@ -74,12 +74,7 @@
                 const session = data?.session || null;
 
                 if (!error && session?.user?.email) {
-                    /*
-                     * Recria condominiumUser e demais dados locais antes de
-                     * abrir o dashboard. Usamos redirect:false porque o
-                     * destino desta etapa deve ser exclusivamente definido
-                     * pelo tipo da conta após a validação do 2FA.
-                     */
+                     
                     try {
                         if (typeof window.resumeCondomitSession === 'function') {
                             await window.resumeCondomitSession({ redirect: false });

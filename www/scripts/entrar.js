@@ -1,9 +1,10 @@
 document.addEventListener('DOMContentLoaded', async function() {
+    const authText = (pt, en) => window.getCondomitAuthLanguage?.() === 'en' ? en : pt;
     const deletionRedirect = new URLSearchParams(window.location.search).get('deleted') === '1';
 
     if (deletionRedirect) {
-        // A API já removeu a conta. Esta limpeza adicional existe para impedir
-        // que um token/cache antigo faça a tela de login restaurar a sessão.
+         
+         
         try { localStorage.setItem('authExplicitLogoutAt', String(Date.now())); } catch (_) {}
         try { window.clearPersistedCondomitUser?.(); } catch (_) {}
         try {
@@ -29,12 +30,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (_) {}
     }
 
-    /*
-     * A página Entrar nunca restaura/redireciona uma sessão automaticamente.
-     * Se o usuário chegou aqui pelo botão Entrar, ele deve permanecer aqui até
-     * informar as credenciais. Isso também impede tokens antigos de levarem o
-     * usuário, segundos depois, para entrar-condominio/index de uma conta anterior.
-     */
+     
     try {
         sessionStorage.removeItem('condominiumUser');
         sessionStorage.removeItem('sb-session');
@@ -107,12 +103,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch (_) {}
 
         showModal({
-            title: 'Acesso suspenso',
-            message:
-                'A mensalidade do condomínio está pendente. Enquanto o síndico não regularizar o pagamento, ' +
-                'moradores e porteiros não poderão acessar suas contas.',
+            title: authText('Acesso suspenso', 'Access suspended'),
+            message: authText('A mensalidade do condomínio está pendente. Enquanto o síndico não regularizar o pagamento, moradores e porteiros não poderão acessar suas contas.', 'The condominium subscription is overdue. Residents and porters cannot access their accounts until the manager regularizes payment.'),
             type: 'warning',
-            confirmText: 'Entendi'
+            confirmText: authText('Entendi', 'Got it')
         });
     }
 
@@ -205,8 +199,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return;
             }
 
-            // Sem pagamento ativo (primeiro pagamento ou renovação mensal vencida),
-            // o síndico segue apenas para o checkout para regularizar o condomínio.
+             
+             
             window.location.href = 'checkout.html';
             return;
         } else if (type === 'morador') {
@@ -225,8 +219,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 window.location.href = 'entrar-condominio.html';
             }
         } else if (type === 'porteiro') {
-            // O porteiro só vai para a página de concluir cadastro quando realmente
-            // não existe vínculo em user_condominiums. Não usamos flags temporárias.
+             
+             
             const linkedCondominium = await resolveCompletedCondominium(user);
             if (linkedCondominium) {
                 user.condominium = linkedCondominium;
@@ -304,9 +298,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                     error: payload?.error || null,
                     details: payload?.details || null
                 });
-                // O provisionamento é uma etapa de reparo/conveniência.
-                // Se a conta já existir no Supabase Auth, o login normal deve
-                // continuar mesmo quando essa chamada auxiliar falhar.
+                 
+                 
+                 
                 const detailParts = [
                     payload?.error,
                     payload?.details,
@@ -354,14 +348,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     async function handleResendConfirmation(email) {
         if (!email) {
-            showToast('Informe o e-mail para reenviar a confirmação.', 'warning');
+            showToast(authText('Informe o e-mail para reenviar a confirmação.', 'Enter your email to resend the confirmation.'), 'warning');
             return;
         }
 
         const normalized = email.trim().toLowerCase();
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(normalized)) {
-            showToast('Digite um e-mail válido para reenviar.', 'warning');
+            showToast(authText('Digite um e-mail válido para reenviar.', 'Enter a valid email address to resend.'), 'warning');
             return;
         }
 
@@ -369,7 +363,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (now < resendCooldownUntil) {
             const leftSecs = Math.ceil((resendCooldownUntil - now) / 1000);
             showToast(
-                `Aguarde ${leftSecs}s antes de solicitar outro reenvio.`,
+                authText(`Aguarde ${leftSecs}s antes de solicitar outro reenvio.`, `Wait ${leftSecs}s before requesting another resend.`),
                 'warning'
             );
             return;
@@ -380,7 +374,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         try {
             if (!window.supabase?.auth) {
-                throw new Error('Sistema de autenticação não carregado.');
+                throw new Error(authText('Sistema de autenticação não carregado.', 'Authentication service is not available.'));
             }
 
             const emailRedirectTo = `${window.location.origin}/pages/email-confirmado.html`;
@@ -398,7 +392,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     errMsg.includes('rate limit') ||
                     errMsg.includes('email rate limit')
                 ) {
-                    throw new Error('Muitas solicitações recentes. Aguarde alguns minutos e tente novamente.');
+                    throw new Error(authText('Muitas solicitações recentes. Aguarde alguns minutos e tente novamente.', 'Too many requests. Wait a few minutes and try again.'));
                 }
                 throw error;
             }
@@ -406,12 +400,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             resendCooldownUntil = Date.now() + 60 * 1000;
 
             showModal({
-                title: 'E-mail reenviado!',
-                message:
-                    'Enviamos um novo link de confirmação para:\n' + normalized + '\n\n' +
-                    'Verifique sua caixa de entrada e também a pasta de spam ou lixo eletrônico.',
+                title: authText('E-mail reenviado!', 'Email resent!'),
+                message: authText(
+                    'Enviamos um novo link de confirmação para:\n' + normalized + '\n\nVerifique sua caixa de entrada e também a pasta de spam ou lixo eletrônico.',
+                    'We sent a new confirmation link to:\n' + normalized + '\n\nCheck your inbox and spam folder.'),
                 type: 'success',
-                confirmText: 'Entendido'
+                confirmText: authText('Entendido', 'Got it')
             });
         } catch (err) {
             console.error('Erro ao reenviar confirmação:', err);
@@ -419,7 +413,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const friendly =
                 message && message.length > 5 && message !== 'Error'
                     ? message
-                    : 'Não foi possível reenviar o e-mail. Tente novamente em alguns instantes.';
+                    : authText('Não foi possível reenviar o e-mail. Tente novamente em alguns instantes.', 'Could not resend the email. Please try again shortly.');
             showToast(friendly, 'error');
         } finally {
             resendInProgress = false;
@@ -430,14 +424,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         const normalizedEmail = (email || emailInput?.value || '').trim().toLowerCase();
 
         showModal({
-            title: 'E-mail ainda não confirmado',
-            message:
-                'Seu endereço de e-mail ainda não foi confirmado.\n\n' +
-                'Abra a mensagem enviada pela Condomit para o e-mail informado e clique no botão de confirmação.\n\n' +
-                'Dica: verifique também as pastas de spam e lixo eletrônico.',
+            title: authText('E-mail ainda não confirmado', 'Email not confirmed yet'),
+            message: authText(
+                'Seu endereço de e-mail ainda não foi confirmado.\n\nAbra a mensagem enviada pela Condomit para o e-mail informado e clique no botão de confirmação.\n\nDica: verifique também as pastas de spam e lixo eletrônico.',
+                'Your email address has not been confirmed yet.\n\nOpen the email sent by Condomit and click the confirmation button.\n\nTip: also check your spam folder.'),
             type: 'warning',
-            confirmText: 'Reenviar e-mail',
-            cancelText: 'Fechar',
+            confirmText: authText('Reenviar e-mail', 'Resend email'),
+            cancelText: authText('Fechar', 'Close'),
             onConfirm: () => {
                 handleResendConfirmation(normalizedEmail);
             }
@@ -451,13 +444,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         const password = document.getElementById('password').value;
 
         if (!email || !password) {
-            showToast('Preencha e-mail e senha.', 'warning');
+            showToast(authText('Preencha e-mail e senha.', 'Enter your email and password.'), 'warning');
             return;
         }
 
         try {
             if (!window.supabase?.auth) {
-                throw new Error('Supabase Auth ainda não foi carregado. Atualize a página.');
+                throw new Error(authText('Supabase Auth ainda não foi carregado. Atualize a página.', 'Supabase Auth is not ready yet. Refresh the page.'));
             }
 
             setLoginSubmitting(true);
@@ -468,7 +461,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             try {
                 if (!window.condomitTwoFactor?.passwordLogin) {
-                    throw new Error('Módulo de verificação em duas etapas não carregado.');
+                    throw new Error(authText('Módulo de verificação em duas etapas não carregado.', 'Two-factor authentication module is not available.'));
                 }
 
                 const loginResult =
@@ -477,8 +470,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                         password
                     );
 
-                // A escolha só é aplicada após o servidor aceitar as credenciais.
-                // Assim, tokens do Supabase são gravados no armazenamento apropriado.
+                 
+                 
                 window.condomitSetRememberMe?.(rememberMeInput?.checked === true);
 
                 if (loginResult?.requiresTwoFactor) {
@@ -502,7 +495,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     !loginResult?.session?.refresh_token
                 ) {
                     throw new Error(
-                        'O servidor não retornou uma sessão válida.'
+                        authText('O servidor não retornou uma sessão válida.', 'The server did not return a valid session.')
                     );
                 }
 
@@ -550,9 +543,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             .trim()
             .toLowerCase();
 
-    /*
-     * E-mail ainda não confirmado
-     */
+     
     if (
         errCode === 'email_not_confirmed' ||
         errMsg.includes(
@@ -571,9 +562,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
     }
 
-    /*
-     * Limite de tentativas
-     */
+     
     if (
         errCode.includes(
             'rate'
@@ -589,20 +578,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         ) === 429
     ) {
         showToast(
-            'Muitas tentativas de login recentes. Aguarde alguns minutos e tente novamente.',
+            authText('Muitas tentativas de login recentes. Aguarde alguns minutos e tente novamente.', 'Too many recent login attempts. Wait a few minutes and try again.'),
             'error'
         );
 
         return;
     }
 
-    /*
-     * Credenciais realmente inválidas.
-     *
-     * IMPORTANTE:
-     * não considerar qualquer 4xx
-     * como senha incorreta.
-     */
+     
     const invalidCredentials =
         errCode ===
             'invalid_credentials' ||
@@ -624,7 +607,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 adminProvision?.error || 'Não foi possível preparar a conta administrativa.'
             ).trim();
             showToast(
-                `Conta ADM não preparada: ${provisionMessage}`,
+                authText(`Conta ADM não preparada: ${provisionMessage}`, `Admin account is not ready: ${provisionMessage}`),
                 'error'
             );
             return;
@@ -638,25 +621,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (probeResult?.exists && probeResult?.deleted) {
             setLoginSubmitting(false);
             showModal({
-                title: 'Conta excluída',
-                message: 'Esta conta foi excluída e não pode ser acessada novamente. Para voltar a usar a Condomit, faça um novo cadastro.',
+                title: authText('Conta excluída', 'Account deleted'),
+                message: authText('Esta conta foi excluída e não pode ser acessada novamente. Para voltar a usar a Condomit, faça um novo cadastro.', 'This account has been deleted and cannot be accessed again. Create a new account to use Condomit.'),
                 type: 'warning',
-                confirmText: 'Entendi'
+                confirmText: authText('Entendi', 'Got it')
             });
             return;
         }
 
         showToast(
-            'E-mail ou senha incorretos.',
+            authText('E-mail ou senha incorretos.', 'Incorrect email or password.'),
             'error'
         );
 
         return;
     }
 
-    /*
-     * Problema de internet
-     */
+     
     if (
         errMsg.includes(
             'network'
@@ -666,28 +647,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         )
     ) {
         showToast(
-            'Falha de conexão. Verifique sua internet e tente novamente.',
+            authText('Falha de conexão. Verifique sua internet e tente novamente.', 'Connection failed. Check your internet connection and try again.'),
             'error'
         );
 
         return;
     }
 
-    /*
-     * Qualquer outro erro:
-     * NÃO dizer que a senha está errada.
-     */
+     
     console.error(
         '[LOGIN] Falha de autenticação não reconhecida:',
         authError
     );
 
     showToast(
-        `Falha na autenticação: ${
-            authError.message ||
-            authError.code ||
-            'erro desconhecido'
-        }`,
+        `${authText('Falha na autenticação', 'Authentication failed')}: ${authError.message || authError.code || authText('erro desconhecido', 'unknown error')}`,
         'error'
     );
 
@@ -695,7 +669,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 }
 
             if (!authData?.session || !authData?.user) {
-                throw new Error('O Supabase não retornou uma sessão válida.');
+                throw new Error(authText('O Supabase não retornou uma sessão válida.', 'Supabase did not return a valid session.'));
             }
 
             if (!authData.user.email_confirmed_at) {
@@ -725,10 +699,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 sessionStorage.removeItem('sb-access-token');
 
                 showModal({
-                    title: 'Perfil não encontrado',
-                    message:
-                        'A autenticação foi realizada, mas o perfil do usuário não foi localizado no sistema.\n\n' +
-                        'Entre em contato com o suporte se o problema persistir.',
+                    title: authText('Perfil não encontrado', 'Profile not found'),
+                    message: authText('A autenticação foi realizada, mas o perfil do usuário não foi localizado no sistema.\n\nEntre em contato com o suporte se o problema persistir.', 'Authentication succeeded, but your user profile could not be found.\n\nContact support if the issue continues.'),
                     type: 'error'
                 });
                 return;
@@ -741,11 +713,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 profilePhoto: rawUser.profile_photo || rawUser.profilePhoto || null
             };
 
-            /*
-             * O usuário informou as credenciais e o login foi concluído.
-             * A partir daqui a restauração automática de sessão volta a ser
-             * permitida em recarregamentos futuros.
-             */
+             
             try { localStorage.removeItem('authExplicitLogoutAt'); } catch (_) {}
 
             sessionStorage.setItem(
@@ -774,7 +742,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             await redirectByUserType(loadedUser);
         } catch (error) {
             console.error('Erro ao fazer login:', error);
-            showToast('Erro ao fazer login. Tente novamente.', 'error');
+            showToast(authText('Erro ao fazer login. Tente novamente.', 'Sign-in failed. Please try again.'), 'error');
         } finally {
             if (document.body.contains(loginForm)) {
                 setLoginSubmitting(false);

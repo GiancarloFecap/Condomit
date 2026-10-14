@@ -99,12 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            /*
-             * 1. Nosso backend valida o código de 6 dígitos da Condomit.
-             * 2. Ele devolve somente um token_hash Supabase de uso único.
-             * 3. Este navegador troca o token_hash por uma sessão Supabase
-             *    diretamente, sem abrir action_link ou passar por localhost.
-             */
+             
             const result = await window.condomitTwoFactor.verifyLogin(
                 pending.challengeId,
                 code
@@ -158,11 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionStorage.removeItem('condomitVerifiedTwoFactorUserType');
             try { localStorage.removeItem('authExplicitLogoutAt'); } catch (_) {}
 
-            /*
-             * Se o projeto possuir o restaurador de sessão carregado, usa-o
-             * sem permitir que ele faça outro redirecionamento. Caso contrário,
-             * o dashboard carregará os dados normalmente pela sessão persistida.
-             */
+             
             try {
                 if (typeof window.resumeCondomitSession === 'function') {
                     await window.resumeCondomitSession({ redirect: false });

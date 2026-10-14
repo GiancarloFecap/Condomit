@@ -47,7 +47,7 @@
     window.initPorterTopBar = function initPorterTopBar(currentUser) {
         renderTopBarDate();
         renderTopBarUser(currentUser);
-        /* Ações e padronização dos ícones ficam centralizadas em topbar-actions.js. */
+         
         window.initTopbarActions?.();
     };
 })();

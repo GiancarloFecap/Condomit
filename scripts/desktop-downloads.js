@@ -114,8 +114,8 @@
     } catch (error) {
       console.warn('[desktop-downloads]', error);
       ['windows', 'macos', 'linux'].forEach(platform => renderDownloads(platform, []));
-      // Uma indisponibilidade temporária do GitHub não deve aparecer ao usuário
-      // como um erro da Condomit. Os cards já deixam claro quando não há build publicado.
+       
+       
       if (status) {
         status.hidden = true;
         status.removeAttribute('style');

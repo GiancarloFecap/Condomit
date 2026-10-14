@@ -314,10 +314,6 @@
 .todas-reservas-section .btn-cancelar {
     margin-bottom: 1rem;
 }
-
-/* ============================================================
-   015 - Histórico de reservas em popup
-============================================================ */
 .reservation-page-actions {
     display: flex;
     align-items: center;
@@ -437,9 +433,6 @@
     .reservation-modal-card { grid-template-columns: 42px minmax(0, 1fr); }
     .reservation-delete-btn { grid-column: 1 / -1; justify-content: center; }
 }
-
-
-/* 016 - Status e cancelamento de reservas */
 .reservation-status-badge {
     display: inline-flex;
     align-items: center;
@@ -463,8 +456,6 @@
 .reservation-cancel-btn:hover {
     background: #fee2e2 !important;
 }
-
-/* 0.72.0 - Reservas: superfícies coerentes no modo escuro */
 html[data-theme="dark"] .reservations-container,
 html[data-theme="dark"] .reservation-card,
 html[data-theme="dark"] .space-card,

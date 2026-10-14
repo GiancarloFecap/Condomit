@@ -467,12 +467,7 @@
         align-items: stretch;
     }
 }
-
-/* 027 - correspondências e arquivamento */
 .match-chip{display:inline-flex;align-items:center;gap:5px;background:#eef2ff;color:#4338ca;border-radius:999px;padding:5px 8px;font-size:.7rem;font-weight:700}.status-chip.arquivado{background:#f1f5f9;color:#64748b}
-
-
-/* 036 - ação da página fora da top bar, mantendo a barra idêntica ao painel */
 .lost-found-page-actions {
     display: flex;
     justify-content: flex-end;
@@ -484,9 +479,6 @@
     .lost-found-page-actions { margin-bottom: 12px; }
     .lost-found-page-actions .primary-action { width: 100%; min-height: 44px; }
 }
-
-
-/* 052 - melhorias visuais e UX em Achados e Perdidos */
 .lost-found-highlights{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0 0 22px}
 .highlight-card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:18px 20px;box-shadow:0 10px 24px rgba(15,23,42,.05)}
 .highlight-card span{display:block;font-size:.82rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
@@ -541,9 +533,6 @@ html[data-theme="dark"] .info-badge{background:#172554;color:#93c5fd}
 html[data-theme="dark"] .empty-state{border-color:#334155;color:#cbd5e1}
 @media(max-width:1100px){.lost-found-highlights{grid-template-columns:repeat(2,minmax(0,1fr))}.items-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){.lost-found-highlights{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr}.toolbar-actions>*{width:100%}.items-grid{grid-template-columns:1fr}}
-
-
-/* 053 - filtros no padrão do marketplace, sem filtro duplicado de tipo */
 .lost-found-filter-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .status-filter-group{display:flex;align-items:center;gap:6px;padding:4px;border:1px solid #dbe2f0;border-radius:13px;background:#f8fafc}
 .status-filter-btn{min-height:36px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:#64748b;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -560,8 +549,6 @@ html[data-theme="dark"] .sort-filter-wrap{background:#111827;border-color:#33415
 html[data-theme="dark"] .sort-filter-wrap select{color:#e2e8f0!important}
 @media(max-width:900px){.lost-found-filter-actions{justify-content:stretch}.status-filter-group{width:100%;overflow-x:auto;justify-content:flex-start}.sort-filter-wrap{flex:1}.sort-filter-wrap select{width:100%;min-width:0!important}}
 @media(max-width:620px){.sort-filter-wrap,.lost-found-filter-actions>.compact-btn{width:100%}.lost-found-filter-actions>.compact-btn{justify-content:center}}
-
-/* 0.56.0 - filtros compactos sem barra de pesquisa */
 .lost-found-main>.toolbar{display:flex;justify-content:flex-end;align-items:center;grid-template-columns:none;padding:12px 14px}
 .lost-found-main>.toolbar .lost-found-filter-actions{width:100%;justify-content:space-between}
 .status-filter-group{flex:1;max-width:max-content}
@@ -569,9 +556,6 @@ html[data-theme="dark"] .sort-filter-wrap select{color:#e2e8f0!important}
 
 .status-chip.procurando{background:#fff7ed;color:#c2410c}.status-chip.localizado{background:#dcfce7;color:#166534}
 .lost-found-status-editor{margin-top:12px;display:flex;align-items:center;gap:10px}.lost-found-status-editor span{font-size:.78rem;font-weight:700;color:#64748b}.lost-found-status-editor select{min-height:36px;border:1px solid #dbe2f0;border-radius:10px;padding:0 10px;background:var(--card-bg,#fff);color:var(--text-primary,#172033)}
-
-
-/* 0.71.1 - filtro "Meus itens" e detalhes em modal */
 .mine-filter-btn.active{
     background:#eaf1ff;
     border-color:#8fb0ff;
@@ -627,9 +611,6 @@ html[data-theme="dark"] .lost-found-detail-section p,
 html[data-theme="dark"] .lost-found-owner-editor>div p{color:#94a3b8}
 html[data-theme="dark"] .lost-found-detail-image-wrap,
 html[data-theme="dark"] .lost-found-detail-image{background:#0f172a;border-color:#334155}
-
-
-/* 056 - achados e perdidos redesenhado com filtros e busca limpos. */
 .lost-found-page { padding: 0 32px 32px; }
 .lost-found-page-header {
     display:flex;
@@ -694,9 +675,6 @@ html[data-theme="dark"] .lost-found-detail-image{background:#0f172a;border-color
     .lost-found-layout { grid-template-columns: 1fr; }
     .lost-found-sidebar .card-shell { position: static; top: auto; }
 }
-
-
-/* 057 - Achados e Perdidos: simplificação do visual e buscas coerentes. */
 .lost-found-page { max-width:1480px;margin:0 auto;padding-top:68px!important; }
 .lost-found-page-header{padding-right:72px;align-items:center;margin-bottom:26px}
 .lost-found-page-header h2{font-size:clamp(26px,2.7vw,34px);letter-spacing:-.035em;color:#172b49}

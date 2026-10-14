@@ -2127,8 +2127,8 @@ async function bootstrapUser() {
         assemblyState.currentUser.type = getNormalizedUserType(assemblyState.currentUser);
     }
 
-    // Acesso à assembleia depende da mensalidade do condomínio (CEP),
-    // e não do usuário que realizou o pagamento.
+     
+     
     if (typeof window.enforceCondomitBillingAccess === 'function') {
         const allowed = await window.enforceCondomitBillingAccess({ force: true });
         if (!allowed) {
@@ -2156,7 +2156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadScheduledAssemblies();
 
-    // Mantém a separação entre agendadas e realizadas atualizada sem exigir F5.
+     
     window.setInterval(() => {
         if (!document.hidden && !assemblyState.roomOpen && !assemblyState.preJoinOpen) {
             loadScheduledAssemblies().catch((error) => {

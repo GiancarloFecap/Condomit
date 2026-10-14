@@ -118,7 +118,7 @@ async function deliverToSubscription(subscription, notifications, preference, ac
         return { sent, cursor: id, disabled: true };
       }
       console.error('[Push] falha ao enviar', subscription.id, id, error?.message || error);
-      // Mantém o cursor anterior para uma nova tentativa no próximo ciclo.
+       
       break;
     }
   }

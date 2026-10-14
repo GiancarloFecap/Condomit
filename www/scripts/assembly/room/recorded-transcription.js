@@ -1,12 +1,12 @@
-// Condomit v0.72.5
-// Transcrição pós-reunião feita exclusivamente a partir do áudio do vídeo já salvo na Ata.
-// O processamento roda no navegador com Whisper/Transformers.js, sem API GPT.
-//
-// Trechos com associação segura a um falante continuam sendo salvos como
-// transcrição oficial. Quando o reconhecimento textual existe, mas a associação
-// de falante não é segura o bastante, a Condomit preserva uma versão presumida
-// claramente identificada e manda o usuário conferir a gravação audiovisual.
-// Sons não verbais continuam sendo descartados.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
 
 let transcriberPromise = null;
 
@@ -89,8 +89,8 @@ function resolveCleanSpeaker(start, end, timeline) {
     }
   }
 
-  // Se houve conversa paralela em parte material deste trecho, ele não entra
-  // na Ata. É preferível omitir um trecho ambíguo a atribuí-lo incorretamente.
+   
+   
   if (overlapWithMultipleSpeakers / total > 0.15) return null;
 
   let winner = null;
@@ -102,7 +102,7 @@ function resolveCleanSpeaker(start, end, timeline) {
     }
   }
 
-  // Exige cobertura suficiente de um único falante.
+   
   if (!winner || winnerOverlap / total < 0.42) return null;
   if (covered / total < 0.35) return null;
   return winner;
@@ -132,9 +132,9 @@ function resolveLikelySpeaker(start, end, timeline, participantDirectory) {
     ));
     if (!identities.length) continue;
 
-    // Quando há mais de um falante simultâneo, divide o peso entre eles em vez
-    // de fingir certeza. Isso serve apenas para escolher uma referência técnica
-    // para persistir o trecho presumido; a Ata não atribui essa fala à pessoa.
+     
+     
+     
     const weight = overlap / identities.length;
     identities.forEach((identity) => {
       scores.set(identity, (scores.get(identity) || 0) + weight);
@@ -154,9 +154,9 @@ function resolveLikelySpeaker(start, end, timeline, participantDirectory) {
 
   if (winner) return winner;
 
-  // Sem linha do tempo útil, usa apenas um e-mail válido do diretório para
-  // satisfazer a persistência. A interface trata o trecho como conteúdo geral
-  // presumido da gravação e nunca o exibe como declaração desse participante.
+   
+   
+   
   return Object.keys(participantDirectory || {}).find((identity) =>
     normalizeEmail(participantDirectory?.[identity]?.email)
   ) || '';
@@ -186,12 +186,12 @@ function buildInferredEntries(output, startedAt, timeline, participantDirectory,
     if (!Number.isFinite(start)) continue;
     const safeEnd = Number.isFinite(end) && end > start ? end : start + 0.6;
 
-    // Se este mesmo trecho já tem associação suficientemente segura a um
-    // participante, ele pertence à transcrição oficial, não à parte presumida.
+     
+     
     if (resolveCleanSpeaker(start, safeEnd, timeline)) continue;
 
-    // Se o trecho já foi aproveitado com segurança, ele não precisa aparecer
-    // novamente como presunção.
+     
+     
     const normalizedText = text.toLowerCase();
     const absoluteTime = baseTime.getTime() + Math.max(0, start) * 1000;
     const alreadyConfident = confidentWindows.some((item) => {
@@ -218,8 +218,8 @@ function buildInferredEntries(output, startedAt, timeline, participantDirectory,
     });
   }
 
-  // Junta fragmentos próximos para produzir uma leitura compreensível sem
-  // transformar pequenos tokens do Whisper em dezenas de parágrafos da Ata.
+   
+   
   const merged = [];
   for (const entry of inferred) {
     const last = merged[merged.length - 1];
@@ -346,8 +346,8 @@ function compactEntriesForPayload(entries) {
 }
 
 async function loadTransformers() {
-  // esm.sh já é permitido pela CSP da Condomit. A biblioteca e o modelo são
-  // baixados/cached pelo navegador; não há consumo de créditos de API.
+   
+   
   return await import('https://esm.sh/@huggingface/transformers@4.2.0?bundle');
 }
 
@@ -373,7 +373,7 @@ async function createTranscriber() {
   if (navigator?.gpu) preferredOptions.device = 'webgpu';
 
   try {
-    // Base é mais preciso que tiny e ainda é viável em navegador moderno.
+     
     return await pipeline(
       'automatic-speech-recognition',
       'Xenova/whisper-base',
@@ -402,8 +402,8 @@ async function getTranscriber() {
 
 async function persistEntries(assemblyId, entries) {
   if (!entries.length) {
-    // Limpa uma transcrição automática anterior caso a nova análise conclua
-    // que não houve fala inequívoca.
+     
+     
     await window.supabaseFetch('/rpc/condomit_replace_recording_transcripts_042', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -434,9 +434,9 @@ export async function transcribeRecordedAssembly({
 }) {
   if (!blob?.size || !assemblyId) return [];
 
-  // A linha do tempo continua sendo usada para distinguir transcrição segura
-  // de conteúdo presumido. Se ela estiver incompleta, ainda tentamos recuperar
-  // o conteúdo textual da gravação, mas ele será marcado como estimativa.
+   
+   
+   
   const cleanTimeline = (Array.isArray(speakerTimeline) ? speakerTimeline : [])
     .filter((segment) => Number(segment?.end) > Number(segment?.start));
 

@@ -2,9 +2,9 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
-// As chaves abaixo são públicas no frontend do próprio projeto e servem apenas
-// para validar a sessão do usuário. A OPENAI_API_KEY continua exclusivamente no
-// ambiente da Netlify e nunca é enviada ao navegador.
+ 
+ 
+ 
 const SUPABASE_URL = String(
   process.env.SUPABASE_URL ||
   process.env.VITE_SUPABASE_URL ||
@@ -221,8 +221,8 @@ exports.handler = async (event) => {
     let openaiResponse = attempt.response;
     let result = attempt.result;
 
-    // Erros de credencial/cota não melhoram trocando de modelo. Para erros de
-    // requisição/modelo, tenta whisper-1 como compatibilidade adicional.
+     
+     
     if (!openaiResponse.ok && !['whisper-1'].includes(usedModel) && ![401, 403, 429, 413].includes(openaiResponse.status)) {
       const detail = providerMessage(result).toLowerCase();
       if ([400, 404, 415, 422].includes(openaiResponse.status) || /model|unsupported|invalid.*model|not found/.test(detail)) {
@@ -259,9 +259,9 @@ exports.handler = async (event) => {
       });
     }
 
-    // Salva usando a sessão do próprio usuário. A RPC já valida se o usuário
-    // pertence ao condomínio da assembleia e se a assembleia aceita transcrição.
-    // Não é mais necessário configurar SUPABASE_SERVICE_ROLE_KEY só para isto.
+     
+     
+     
     const { data: savedRow, error: saveError } = await userClient.rpc('condomit_append_assembly_transcript', {
       target_assembly_id: assemblyId,
       transcript_text: text.slice(0, 4000),

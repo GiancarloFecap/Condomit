@@ -1,5 +1,5 @@
-// Regressao da interpretacao do status de mensalidade e nivel de plano.
-// Executar: node --test tools/test-admin-billing-exemption.mjs
+ 
+ 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

@@ -450,9 +450,6 @@
     width: auto;
     padding: 10px 12px;
 }
-
-
-/* CONDOMIT 028 - modais seguros em celular/tablet */
 body.condomit-modal-open {
     overflow: hidden;
     overscroll-behavior: none;
@@ -541,8 +538,6 @@ body.condomit-modal-open {
         gap: 8px;
     }
 }
-
-/* 0.56.0 - ícone do card Mural perfeitamente circular */
 .notifications-sidebar .help-card .help-icon{
     width:50px;
     height:50px;

@@ -17,7 +17,7 @@ async function fetchCondominiumBillingStatus(force = false) {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // Check if user is logged in
+     
     const currentUser = JSON.parse(sessionStorage.getItem('condominiumUser'));
     
     if (!currentUser) {
@@ -25,9 +25,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
     }
     
-    // O pagamento pertence ao condomínio, não ao e-mail do síndico.
-    // Assim, trocar o síndico não exige novo pagamento enquanto o ciclo
-    // mensal do mesmo CEP continuar ativo.
+     
+     
+     
     if (currentUser.type === 'sindico') {
         if (!currentUser.condominium) {
             window.location.href = 'condominio_register.html';
@@ -69,11 +69,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         try { bindSupportButtons('https://mail.google.com/mail/?view=cm&fs=1&to=contato.condomit%40gmail.com&su=Suporte%20Condomit'); } catch (_) {}
     }
     
-    // Update user info
+     
     const userName = currentUser.name || 'Síndico';
     const firstName = userName.split(' ')[0];
     
-    // Update greeting
+     
     const greetingEl = document.querySelector('.top-bar-left h1');
     if (greetingEl) {
         greetingEl.textContent = `Olá, ${firstName}!`;
@@ -87,13 +87,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         avatar.textContent = initials;
         nameEl.textContent = userName;
         
-        // Sincroniza avatar de perfil se houver foto armazenada
+         
         if (typeof syncAllAvatars === 'function') {
             syncAllAvatars(currentUser);
         }
     }
     
-    // Update sidebar condo name
+     
     if (currentUser.condominium) {
         const sidebarCondoNameEl = document.querySelector('.condo-name');
         if (sidebarCondoNameEl) {
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
 
-        // Update status section
+         
         const condoNameEl = document.querySelector('.status-item:nth-child(1) span');
         if (condoNameEl) {
             condoNameEl.textContent = `Nome do Condomínio: ${currentUser.condominium.name}`;
@@ -264,8 +264,8 @@ async function loadResidents(_cep) {
                 return a.apartment.localeCompare(b.apartment, 'pt-BR', { numeric: true, sensitivity: 'base' });
             });
 
-        // "Moradores ativos" significa moradores atualmente vinculados ao condomínio,
-        // independentemente de estarem com o site aberto.
+         
+         
         if (activeResidentsEl) activeResidentsEl.textContent = `Moradores Ativos: ${residents.length}`;
 
         if (!residents.length) {
@@ -388,9 +388,9 @@ async function loadMonthlyFinancialSummary(currentUser) {
     };
 
     const resolveCurrentCep = async () => {
-        // O condomínio armazenado na sessão representa a seleção ativa do usuário.
-        // A RPC antiga usa LIMIT 1 e, para contas ligadas a mais de um condomínio,
-        // pode devolver outro vínculo; por isso ela é apenas fallback.
+         
+         
+         
         const cached = currentUser?.condominium?.cep || currentUser?.condominium?.condominium_id || null;
         if (cached) return cached;
         if (typeof window.supabaseFetch === 'function') {

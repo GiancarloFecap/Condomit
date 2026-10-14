@@ -137,8 +137,8 @@ function bindControls() {
     return;
   }
 
-  // Primeiro encerra e persiste a gravação oficial. A navegação só continua
-  // depois que o arquivo estiver vinculado à Ata desta assembleia.
+   
+   
   try {
     await stopAssemblyRecording();
   } catch (error) {
@@ -562,8 +562,8 @@ async function init() {
 
     const id = resolveAssemblyId();
     if (!id) throw new Error('ID da assembleia não informado');
-    // Define o ID no estado compartilhado ANTES de qualquer chamada de dados,
-    // presença, LiveKit ou gravação.
+     
+     
     state.assemblyId = id;
 
     await loadAssembly();
@@ -582,8 +582,8 @@ async function init() {
 
     await connectToRoom(tokenInfo);
 
-    // A gravação oficial é automática e não possui controle manual.
-    // Apenas um usuário com permissão de gestão grava para evitar arquivos duplicados.
+     
+     
     if (isPrivilegedUser()) {
       if (!isRecordingSupported()) {
         showBanner('Este dispositivo não oferece suporte à gravação automática. Entre pelo navegador do computador do síndico para manter o registro audiovisual da assembleia.', 'error');
@@ -623,9 +623,9 @@ async function init() {
 }
 
 window.addEventListener('beforeunload', (event) => {
-  // Upload de vídeo não é confiável durante beforeunload. Enquanto houver uma
-  // gravação oficial em andamento, orientamos o organizador a usar “Sair”, que
-  // aguarda o upload e o vínculo com a Ata antes de navegar.
+   
+   
+   
   if (isPrivilegedUser()) {
     event.preventDefault();
     event.returnValue = '';

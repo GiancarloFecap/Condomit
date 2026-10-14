@@ -808,8 +808,6 @@ body.modal-open {
         grid-template-columns: 1fr;
     }
 }
-
-/* Ajustes simples para o tema escuro já utilizado no projeto. */
 body.dark-mode .card-shell,
 body.dark-mode .occurrence-action-card,
 body.dark-mode .occurrence-modal,
@@ -850,8 +848,6 @@ body.dark-mode .book-field input[readonly],
 html[data-theme="dark"] .book-field input[readonly] {
     background: #172033;
 }
-
-/* 024 - [hidden] deve prevalecer sobre display:flex do cartão. */
 .occurrence-action-card[hidden],
 .syndic-only[hidden] {
     display: none !important;

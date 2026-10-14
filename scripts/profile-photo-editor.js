@@ -417,7 +417,7 @@ class ProfilePhotoEditor {
   save() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    const size = 512; // Discord recommended 512x512
+    const size = 512;  
     const { width: cropAreaWidth, height: cropAreaHeight } = this.getCropAreaSize();
     const scaleX = size / cropAreaWidth;
     const scaleY = size / cropAreaHeight;
@@ -449,7 +449,7 @@ class ProfilePhotoEditor {
 
     const normalizedPhoto = imageData || null;
 
-    // O banco é a fonte de verdade: só atualiza a sessão depois de confirmar a persistência.
+     
     if (typeof window.supabaseFetch === 'function') {
       await window.supabaseFetch('/rpc/condomit_save_profile_photo', {
         method: 'POST',
@@ -504,12 +504,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const photoInput = document.getElementById('profile-photo-input');
   if (photoInput) {
-    // Remove default change listener and open modal directly
+     
     photoInput.replaceWith(photoInput.cloneNode(true));
   }
 });
 
-// Override openConfigSection to open our modal
+ 
 const originalOpenConfigSection = window.openConfigSection;
 window.openConfigSection = function(sectionKey) {
   if (sectionKey === 'foto-de-perfil') {

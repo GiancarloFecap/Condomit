@@ -1011,8 +1011,6 @@
         min-width: 0;
     }
 }
-
-/* 015 - Botão Cancelar do cadastro de prestador */
 #cancelProviderBtn.provider-cancel-btn {
     min-width: 132px;
     min-height: 44px;
@@ -1042,8 +1040,6 @@ html[data-theme="dark"] #cancelProviderBtn.provider-cancel-btn {
     color: #cbd5e1;
 }
 html[data-theme="dark"] #cancelProviderBtn.provider-cancel-btn:hover { background: #1f2937; color: #fff; }
-
-/* 065 - indicadores compactos na página de prestadores (mantém filtros e rótulos da tabela). */
 .provider-page .metrics-row { gap: 12px; margin-bottom: 14px; }
 .provider-page .metric-card { padding: 13px 16px; min-height: 92px; border-radius: 15px; gap: 0; }
 .provider-page .metric-head { gap: 11px; }

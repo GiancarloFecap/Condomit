@@ -59,10 +59,6 @@ html[data-theme="dark"] .minute-card, html[data-theme="dark"] .poll-result-card,
     font-weight: 700;
 }
 html[data-theme="dark"] .poll-option-label { background: #111827; color: #f3f4f6; border-color: #374151; }
-
-/* ============================================================
-   015 - Transcrição e voto pela ata
-============================================================ */
 .minutes-transcription-ok,
 .minutes-transcription-empty {
     display: flex;
@@ -112,13 +108,7 @@ html[data-theme="dark"] .post-assembly-vote-btn { background: #172554; border-co
     .poll-option-main { flex-wrap: wrap; }
     .post-assembly-vote-btn { width: 100%; justify-content: center; }
 }
-
-/* 027 - resumo executivo e tarefas automáticas */
 .summary-hero-actions{margin-top:16px}.minutes-decisions{margin:14px 0;padding:14px 16px;border-radius:14px;background:#eef6ff;border:1px solid #d7e8ff}.minutes-decisions ul{margin:8px 0 0;padding-left:20px}.minutes-decisions li+li{margin-top:6px}
-
-/* ============================================================
-   039 - Ata formal gerada a partir dos registros da assembleia
-============================================================ */
 .formal-minutes-document {
     width: min(100%, 920px);
     margin: 0 auto;
@@ -183,9 +173,6 @@ html[data-theme="dark"] .formal-minutes-note { color: #4b5563; }
     .formal-minutes-document { box-shadow: none; border: 0; border-radius: 0; max-width: none; width: 100%; padding: 0; }
     .formal-minutes-note { break-inside: avoid; }
 }
-
-
-/* 049 - assinatura eletrônica e impressão da ata */
 .summary-hero-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .summary-secondary{border:1px solid #d7dfef;border-radius:12px;background:var(--card-bg,#fff);color:#334155;padding:11px 15px;cursor:pointer;font-weight:750}
 .summary-secondary:hover{border-color:#3360F2;color:#3360F2;background:#f7f9ff}
@@ -206,9 +193,6 @@ html[data-theme="dark"] .summary-secondary:hover{color:#8EA9FF;border-color:#638
     body.printing-assembly-minutes .formal-minutes-document { width:100%; max-width:none; margin:0; padding:0; border:0; border-radius:0; box-shadow:none; }
     body.printing-assembly-minutes .formal-minutes-note { margin-top:24px; }
 }
-
-
-/* 052 - comentários estilo thread e assinatura desenhada da ata */
 .comment-head{align-items:flex-start}
 .comment-author{display:flex;align-items:flex-start;gap:12px;min-width:0}
 .comment-avatar{width:40px;height:40px;flex:0 0 40px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#e8eefc;color:#2252BD;font-size:.78rem;font-weight:800;border:1px solid #d8e2f6}
@@ -259,9 +243,6 @@ html[data-theme="dark"] .signature-clear{background:#162235;border-color:#334155
 html[data-theme="dark"] .signature-canvas-wrap{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)}
 @media(max-width:720px){.post-comment-form{grid-template-columns:1fr}.comment-replies{padding-left:16px}.signature-heading{flex-direction:column;align-items:stretch}.signature-clear,.compact-btn,.summary-primary{width:100%;justify-content:center}.comment-reply-actions{justify-content:stretch}.comment-reply-actions>*{flex:1}}
 @media(max-width:560px){.comment-avatar{width:36px;height:36px;flex-basis:36px}}
-
-
-/* 053 - correções do modal de assinatura */
 .signature-modal-backdrop{
     display:none !important;
     position:fixed;
@@ -322,9 +303,6 @@ html[data-theme="dark"] .signature-modal-card .modal-actions{border-color:#33415
   .signature-modal-card .modal-actions{flex-direction:column-reverse}
   .signature-modal-card .ghost-btn,.signature-modal-card .summary-primary{width:100%}
 }
-
-
-/* Condomit 0.66 - gravações na Ata */
 .recordings-list { display: grid; gap: 16px; }
 .recording-card { border: 1px solid var(--border-color,#dbe2f0); border-radius: 16px; padding: 16px; background: var(--card-bg,#fff); }
 .recording-card-head { display:flex; justify-content:space-between; gap:12px; margin-bottom:12px; }

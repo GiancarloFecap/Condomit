@@ -1,10 +1,10 @@
 import { state } from './state.js?v=0724';
 
-// Condomit v0.72.2
-// A transcrição textual não é mais feita diretamente do microfone.
-// Ela é gerada somente após a gravação ser finalizada, usando o áudio
-// contido no próprio vídeo. Este módulo mantém apenas o indicador de estado
-// da sala e o registro técnico de atividade de fala.
+ 
+ 
+ 
+ 
+ 
 
 let speechStartedAt = 0;
 let speechSavePromise = Promise.resolve();
@@ -86,8 +86,8 @@ export async function stopAssemblyTranscription() {
 }
 
 export function syncAssemblyTranscriptionWithMicrophone() {
-  // A transcrição não depende mais de iniciar/parar SpeechRecognition com o
-  // microfone. O estado permanece informativo enquanto a gravação está ativa.
+   
+   
   if (state.connected) startAssemblyTranscription();
 }
 

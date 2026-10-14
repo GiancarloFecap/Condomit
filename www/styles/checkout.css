@@ -27,8 +27,6 @@ body {
     margin: 0 auto;
     padding: 0 24px;
 }
-
-/* Header */
 .checkout-header {
     background: var(--white);
     padding: 40px 0;
@@ -71,8 +69,6 @@ body {
     color: var(--text-muted);
     font-size: 1.1rem;
 }
-
-/* Grid Layout */
 .checkout-container {
     max-width: 1200px;
     margin: 0 auto 80px;
@@ -91,16 +87,12 @@ body {
         grid-template-columns: 1fr;
     }
 }
-
-/* Column Titles */
 .column-title {
     font-size: 1.25rem;
     font-weight: 700;
     margin-bottom: 24px;
     color: var(--text-main);
 }
-
-/* Plan Cards */
 .plans-list {
     display: flex;
     flex-direction: column;
@@ -221,8 +213,6 @@ body {
 .plan-mini-features li i {
     color: #10b981;
 }
-
-/* Sidebar Summary */
 .sticky-sidebar {
     position: sticky;
     top: 32px;
@@ -283,8 +273,6 @@ body {
     font-weight: 900;
     color: var(--primary-blue);
 }
-
-/* Payment Section */
 .payment-section {
     margin-bottom: 24px;
 }
@@ -315,8 +303,6 @@ body {
 .security-badges i {
     color: #10b981;
 }
-
-/* MP Bricks Overrides */
 #payment-brick_container {
     min-height: 72px;
     width: 100%;
@@ -464,17 +450,11 @@ body {
     background: #e5e7eb;
     color: #111827;
 }
-
-/* 0.41 - botão imediato: não depende da renderização tardia do SDK visual */
 .payment-direct-fallback { display: grid; gap: 10px; }
 .mercado-pago-direct-button { width: 100%; min-height: 52px; border: 0; border-radius: 12px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #009ee3; color: #fff; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 10px 24px rgba(0, 158, 227, .2); }
 .mercado-pago-direct-button:hover { filter: brightness(.96); }
 .mercado-pago-direct-button:disabled { opacity: .7; cursor: wait; }
 .payment-direct-fallback p { margin: 0; color: #64748b; font-size: .86rem; line-height: 1.45; text-align: center; }
-
-/* ============================================================
-   Condomit 0.40 - Checkout realmente responsivo para celulares
-============================================================ */
 @media (max-width: 768px) {
     body {
         min-width: 0;

@@ -1,4 +1,3 @@
-/* 068 - mesmo seletor utilizado em Tipo de Usuário, sem conflito com o formulário. */
 body.condomit-app-page .auth-language-control {
   position:fixed;top:max(18px, env(safe-area-inset-top));right:max(20px, env(safe-area-inset-right));
   left:auto;z-index:2000;display:inline-flex;align-items:center;gap:10px;

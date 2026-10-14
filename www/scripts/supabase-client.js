@@ -7,14 +7,7 @@ const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY;
 const SUPABASE_REST_URL = `${SUPABASE_URL}/rest/v1`;
 
 
-/* ============================================================
-   CACHE DE PERFIL PARA MOBILE/PWA
-   ------------------------------------------------------------
-   A autenticação oficial continua sendo a sessão do Supabase.
-   Este cache existe apenas para repor, de forma síncrona, o
-   `condominiumUser` quando navegadores mobile/PWA descartam o
-   sessionStorage durante uma recarga/reabertura da aplicação.
-============================================================ */
+ 
 const CONDOMIT_PERSISTED_USER_V2_KEY = 'condomitPersistentUserV2';
 
 function sanitizeCondomitUserForPersistence(user) {
@@ -22,7 +15,7 @@ function sanitizeCondomitUserForPersistence(user) {
 
   const safeUser = { ...user };
 
-  // Nunca persistir credenciais ou tokens dentro do perfil da aplicação.
+   
   delete safeUser.password;
   delete safeUser.senha;
   delete safeUser.access_token;
@@ -61,7 +54,7 @@ function hydrateCondomitUserFromPersistence() {
   try {
     if (sessionStorage.getItem('condominiumUser')) return true;
 
-    // Se o usuário clicou explicitamente em Sair, não restaurar a conta.
+     
     if (localStorage.getItem('authExplicitLogoutAt')) return false;
 
     const remember = localStorage.getItem('condomitRememberMe') === '1';
@@ -82,7 +75,7 @@ function hydrateCondomitUserFromPersistence() {
   }
 }
 
-// Executa durante o carregamento do script, antes dos guards das páginas.
+ 
 hydrateCondomitUserFromPersistence();
 
 window.persistCondomitUser = persistCondomitUser;
@@ -167,12 +160,7 @@ const SUPABASE_HEADERS = {
     type = 'info',
     options = {}
   ) {
-    /*
-     * A partir da versão 014, todas as notificações visuais utilizam o
-     * componente compartilhado de scripts/condomit-alerts.js. Mantemos
-     * este fallback porque supabase-client.js também é usado em páginas
-     * que podem carregá-lo antes do componente global.
-     */
+     
     if (
       typeof window !== 'undefined' &&
       typeof window.showToast === 'function' &&
@@ -577,9 +565,7 @@ const SUPABASE_HEADERS = {
     showModal;
 })();
 
-/* ============================================================
-   AUTENTICAÇÃO / SESSÃO SUPABASE
-============================================================ */
+ 
 
 function decodeJwtPayload(token) {
   const raw =
@@ -1247,9 +1233,7 @@ async function supabaseFetch(
   return data;
 }
 
-/* ============================================================
-   USUÁRIOS
-============================================================ */
+ 
 
 async function fetchUserByEmail(
   email
@@ -1665,9 +1649,7 @@ async function createCondominium(
     : data;
 }
 
-/* ============================================================
-   CEP / CONDOMÍNIO DO USUÁRIO
-============================================================ */
+ 
 
 function parseUserCondominium(
   user
@@ -1876,9 +1858,7 @@ async function resolveUserCondominiumCep(
   return null;
 }
 
-/* ============================================================
-   VISITANTES
-============================================================ */
+ 
 
 async function createVisitor(
   visitor
@@ -2199,12 +2179,7 @@ async function fetchUsersByCpfs(
 async function getVisitorsForCondominium(
   user
 ) {
-  /*
-   * A partir da migration 010, esta RPC é a fonte principal.
-   * Ela filtra diretamente por visitors.cep e pelo condomínio do usuário
-   * autenticado, então um visitante cadastrado por morador, síndico ou
-   * porteiro aparece para qualquer porteiro vinculado ao mesmo CEP.
-   */
+   
   try {
     const rows =
       await supabaseFetch(
@@ -2229,7 +2204,7 @@ async function getVisitorsForCondominium(
     );
   }
 
-  /* Compatibilidade com bancos que ainda não executaram a migration 010. */
+   
   const condominiumIdentifiers =
     getUserCondominiumIdentifiers(
       user
@@ -2422,9 +2397,7 @@ async function getVisitorAccessLogsForCondominium() {
     : [];
 }
 
-/* ============================================================
-   AVISOS / MORADORES
-============================================================ */
+ 
 
 async function fetchPendingNoticesCount(
   cep
@@ -2552,9 +2525,7 @@ async function fetchResidentsByCondoCep(
     );
 }
 
-/* ============================================================
-   ASSEMBLEIAS
-============================================================ */
+ 
 
 function normalizeCepForDatabase(
   value
@@ -2916,9 +2887,7 @@ async function deleteScheduledAssemblyById(
   }
 }
 
-/* ============================================================
-   USUÁRIO ATUAL
-============================================================ */
+ 
 
 function getNormalizedUserType(
   user
@@ -3007,13 +2976,7 @@ async function refreshCurrentUserFromDb() {
         ...fresh
       };
 
-      /*
-       * O campo `type` salvo no navegador podia continuar com o cargo
-       * antigo mesmo depois de `users.user_type` ser alterado no banco.
-       * Isso fazia um morador promovido a síndico continuar vendo o painel
-       * de morador até sair e entrar novamente. O banco passa a ser a fonte
-       * de verdade para o cargo atual.
-       */
+       
       const freshType =
         getNormalizedUserType(
           fresh
@@ -3038,10 +3001,7 @@ async function refreshCurrentUserFromDb() {
         merged.profile_photo = fresh.profile_photo || fresh.profilePhoto;
       }
 
-      /*
-       * Nunca manter senha em
-       * sessionStorage.
-       */
+       
       delete merged.password;
 
       if (!merged.type) {
@@ -3143,9 +3103,7 @@ async function refreshCurrentUserFromDb() {
   return user;
 }
 
-/* ============================================================
-   LOGOUT
-============================================================ */
+ 
 
 async function performFullLogout(
   redirectPath = null
@@ -3231,10 +3189,7 @@ async function performFullLogout(
             'condomit.notifications.'
           )
         ) {
-          /*
-           * Notificações e estado de leitura pertencem ao condomínio/usuário
-           * e não devem desaparecer apenas porque a sessão foi encerrada.
-           */
+           
           continue;
         }
 
@@ -3315,12 +3270,7 @@ async function performFullLogout(
         );
       } catch (_) {}
 
-      /*
-       * Mantém uma marca fora das chaves de sessão da Condomit/Supabase.
-       * Ela impede que inicio.html/entrar.html restaurem uma sessão antiga
-       * logo após um logout explícito. A marca só é removida após um novo
-       * login concluído com sucesso.
-       */
+       
       try {
         localStorage.setItem(
           'authExplicitLogoutAt',
@@ -3394,9 +3344,7 @@ async function performFullLogout(
   }
 }
 
-/* ============================================================
-   PRESTADORES DE SERVIÇO
-============================================================ */
+ 
 
 async function listServiceProvidersByCep(
   cep
@@ -3410,11 +3358,7 @@ async function listServiceProvidersByCep(
   }
 
   try {
-    /*
-     * A policy RLS já limita a leitura ao(s) condomínio(s) do usuário.
-     * Buscamos os registros permitidos e comparamos o CEP sem máscara
-     * para aceitar tanto 04284-070 quanto 04284070.
-     */
+     
     const data = await supabaseFetch(
       '/service_providers?select=*&order=service_date.desc,created_at.desc'
     );
@@ -3683,9 +3627,7 @@ async function deleteServiceProvider(
   }
 }
 
-/* ============================================================
-   EXPORTAÇÕES GLOBAIS
-============================================================ */
+ 
 
 window.listServiceProvidersByCep =
   listServiceProvidersByCep;
@@ -3768,9 +3710,7 @@ window.getScheduledAssembliesByCep =
 window.deleteScheduledAssemblyById =
   deleteScheduledAssemblyById;
 
-/* ============================================================
-   SUGESTÕES
-============================================================ */
+ 
 
 async function saveSuggestion(
   suggestion
@@ -3899,9 +3839,7 @@ window.updateSuggestionStatus =
 window.getSuggestionsByCep =
   getSuggestionsByCep;
 
-/* ============================================================
-   DATA
-============================================================ */
+ 
 
 function formatDate(
   dateStr
@@ -3918,9 +3856,7 @@ function formatDate(
   );
 }
 
-/* ============================================================
-   AVATARES
-============================================================ */
+ 
 
 function syncAllAvatars(
   currentUser
@@ -3980,7 +3916,7 @@ function syncAllAvatars(
     }
   }
 
-  // Condomit 053: o avatar deixou a topbar e agora fica no cartão da sidebar.
+   
   const sidebarAvatar = document.querySelector('.sidebar-account-avatar');
   if (sidebarAvatar) {
     sidebarAvatar.replaceChildren();
@@ -4077,9 +4013,7 @@ function syncAllAvatars(
 window.syncAllAvatars =
   syncAllAvatars;
 
-/* ============================================================
-   STORAGE
-============================================================ */
+ 
 
 window.addEventListener(
   'storage',
@@ -4135,9 +4069,7 @@ window.addEventListener(
   }
 );
 
-/* ============================================================
-   TEMA / FONTE
-============================================================ */
+ 
 
 function applyTheme(
   theme
@@ -4241,9 +4173,7 @@ function updateFontButtons(
   }
 }
 
-/* ============================================================
-   COBRANÇA MENSAL DO CONDOMÍNIO
-============================================================ */
+ 
 
 let condomitBillingCache = {
   value: null,
@@ -4341,9 +4271,9 @@ function getCondomitRequiredPlanLevel(pageName) {
   const currentUser = getStoredCondominiumUser();
   const currentRole = getNormalizedUserType(currentUser || {});
 
-  // Porteiros só existem em condomínios Pro/Premium. Uma vez que o
-  // condomínio cumpra esse requisito global, todas as ferramentas que
-  // pertencem à área da portaria ficam disponíveis nos dois planos.
+   
+   
+   
   if (currentRole === 'porteiro' && CONDOMIT_PORTER_FULL_ACCESS_PAGES.has(page)) {
     return 1;
   }
@@ -4387,8 +4317,8 @@ async function getCondomitPlanAccess(billing = null, force = false) {
     const level = getCondomitPlanLevelFromName(normalized);
     if (level) candidates.push({name:normalized,level,id});
   };
-  // O plano retornado pela RPC é específico do condomínio ATUAL e prevalece
-  // sobre o plano salvo de outro condomínio (inclusive o administrativo).
+   
+   
   const hasServerBilling = Boolean(currentBilling && currentBilling.status && currentBilling.status !== 'no_condominium');
   add(currentBilling?.plan_name, currentBilling?.plan_id);
   if (currentBilling?.plan_id != null) {
@@ -4498,10 +4428,10 @@ function applyCondomitPlanVisibility(root = document) {
     const required = getCondomitPlanLevelFromName(element.getAttribute('data-min-plan'));
     if (!required) return;
 
-    // A hierarquia é sempre cumulativa:
-    // Essencial = nível 1; Pro = Essencial + nível 2; Premium = Essencial + Pro + nível 3.
-    // Dentro da interface de porteiro, Pro e Premium possuem exatamente o
-    // mesmo conjunto de ferramentas operacionais.
+     
+     
+     
+     
     const porterOperationalAccess = currentRole === 'porteiro' && currentLevel >= 2;
     const syndicOnlyBlocked = element.hasAttribute('data-sindico-only') && currentRole !== 'sindico';
     const hidden = syndicOnlyBlocked || (porterOperationalAccess ? false : currentLevel < required);
@@ -4558,9 +4488,9 @@ async function enforceCondomitPlanAccess(options = {}) {
   const currentRole = getNormalizedUserType(currentUser || {});
   const requiredLevel = getCondomitRequiredPlanLevel(options.pageName);
 
-  // A existência da conta de porteiro não basta: o condomínio precisa estar
-  // em Pro ou Premium. Esta verificação também cobre vínculos antigos criados
-  // antes da regra de planos.
+   
+   
+   
   if (currentRole === 'porteiro') {
     const porterAccess = await getCondomitPlanAccess(options.billing || null, Boolean(options.force));
     if (porterAccess.resolved && porterAccess.level < 2) {
@@ -4583,7 +4513,7 @@ async function enforceCondomitPlanAccess(options = {}) {
 
   const access = await getCondomitPlanAccess(options.billing || null, Boolean(options.force));
   if (!access.resolved) {
-    // Falha ao identificar o plano não deve bloquear por engano.
+     
     return true;
   }
 
@@ -4815,8 +4745,8 @@ async function getCondomitBillingStatus(
     return { status: 'demo', can_use: true, plan_id: null, plan_name: 'Premium', demo_access: true, cep: storedUser?.condominium?.cep || storedUser?.condominium?.condominium_id || null };
   }
 
-  // Se o usuario trocou de condominio, um resultado anterior da cache
-  // nao pode suspender o condominio isento nem liberar o que exige pagamento.
+   
+   
   const selectedCep = String(getStoredUserCep(storedUser) || '').replace(/\D/g, '');
   const cachedCep = String(condomitBillingCache.value?.cep || '').replace(/\D/g, '');
   if (
@@ -4878,7 +4808,7 @@ async function getCondomitBillingStatus(
 
     const resolvedPlanName = normalizeCondomitPlanName(billing.plan_name);
     const resolvedPlanLevel = getCondomitPlanLevelFromName(resolvedPlanName);
-    // Nao reaproveitar Premium do condominio anterior depois da troca.
+     
     user.plan_name = resolvedPlanName || null;
     user.plan_level = resolvedPlanLevel || 0;
     if (billing.status === 'exempt') user.plan = null;
@@ -5503,16 +5433,12 @@ async function enforceCondomitBillingAccess(
       error
     );
 
-    // Falha de rede não bloqueia o sistema por engano.
+     
     return true;
   }
 }
 
-/* ============================================================
-   SINCRONIZAÇÃO AUTOMÁTICA DE CARGO
-   Se outro síndico transferir a função enquanto esta conta estiver
-   conectada, o painel muda sem exigir logout/login.
-============================================================ */
+ 
 
 const condomitRoleSyncState = {
   busy: false,
@@ -5761,9 +5687,7 @@ window.syncCondomitRoleNow =
 window.startCondomitRoleSync =
   startCondomitRoleSync;
 
-/* ============================================================
-   REDIRECIONAMENTO HOME
-============================================================ */
+ 
 
 async function redirectToHome() {
   const loggedInUser =
@@ -5910,9 +5834,7 @@ document.addEventListener(
   }
 );
 
-/* ============================================================
-   INICIALIZAÇÃO
-============================================================ */
+ 
 
 document.addEventListener(
   'DOMContentLoaded',

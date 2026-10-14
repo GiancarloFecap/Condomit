@@ -37,8 +37,7 @@
   });
   window.condomitApiUrl = apiUrl;
 
-  /* Dentro do Capacitor, rotas serverless relativas precisam apontar para o Netlify.
-     No site/PWA o fetch original permanece intacto. */
+   
   if (isNativeApp() && typeof window.fetch === 'function' && !window.__condomitNativeFetchWrapped) {
     const originalFetch = window.fetch.bind(window);
     const shouldProxy = (value) =>

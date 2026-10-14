@@ -16,8 +16,6 @@ body {
     margin: 0 auto;
     min-height: 100vh;
 }
-
-/* Header antigo removido */
 .header-old {
     background: linear-gradient(135deg, #183B86 0%, #294FD8 100%);
     color: white;
@@ -138,8 +136,6 @@ nav {
 .logout-btn:hover {
     color: #f87171;
 }
-
-/* Schedule Form Styles */
 .schedule-form {
     max-width: 600px;
 }
@@ -201,8 +197,6 @@ nav {
     color: white;
     border-bottom-color: white;
 }
-
-/* Estilos antigos removidos ou adaptados para o novo layout com sidebar */
 .main-content-old {
     padding: 2rem;
 }
@@ -1884,23 +1878,15 @@ nav {
         min-width: 0;
     }
 }
-
-/* Ajuste 011 - ação de detalhes de assembleia realizada */
 .past-details-btn {
     background: linear-gradient(135deg, #294FD8, #0f766e) !important;
     border-color: transparent !important;
     color: #fff !important;
 }
 .past-details-btn:hover { filter: brightness(1.05); transform: translateY(-1px); }
-
-
-/* 049 - encerramento manual pelo síndico */
 .assembly-finalize-btn{background:#fff7ed;color:#b45309;border:1px solid #fed7aa;font-weight:750}
 .assembly-finalize-btn:hover{background:#ffedd5;border-color:#fdba74;color:#92400e}
 html[data-theme="dark"] .assembly-finalize-btn{background:rgba(180,83,9,.16);border-color:rgba(251,146,60,.35);color:#fdba74}
-
-
-/* 057: painel compacto de assembleias e modais de listagem e agendamento */
 #main-content { padding: clamp(20px,3vw,38px); max-width: 1280px; margin-inline:auto; }
 .assembly-hub-title { padding-right:72px; margin-bottom:26px; }
 .assembly-kicker { color:#2563eb; font-size:12px; letter-spacing:.09em; font-weight:800; }

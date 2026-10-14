@@ -345,9 +345,6 @@ body.login-modern-page::before {
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
 }
-
-/* O layout de login segue o arquivo visual de referência também quando o usuário
-   já possui preferência global de modo escuro salva no navegador. */
 html[data-theme="dark"] body.login-modern-page {
     color: var(--login-text);
     background:
@@ -363,9 +360,6 @@ html[data-theme="dark"] .login-field input { background: #fff; color: #27364D; b
 html[data-theme="dark"] .login-field input::placeholder { color: #8B97A9; }
 html[data-theme="dark"] .login-signup { color: #69768B; }
 html[data-theme="dark"] .login-terms { color: #8A96A8; }
-
-
-/* 061 — seletor no canto superior direito e checkbox em linha com recuperar senha. */
 .login-language-control {
     position:fixed;top:max(19px,env(safe-area-inset-top));right:max(20px,env(safe-area-inset-right));z-index:7;
     min-height:46px;display:inline-flex;align-items:center;gap:9px;padding:0 14px;
@@ -390,12 +384,8 @@ html[data-theme="dark"] .login-terms { color: #8A96A8; }
     .login-language-control select {min-width:74px;font-size:12px;}
     .login-remember-label,.login-remember-row .login-forgot {font-size:12px;}
 }
-
-/* 067 - logo ampliado sem comprimir os campos e botão de acesso. */
 .login-modern-logo{width:210px;max-width:100%;height:auto}
 @media(max-width:460px){.login-modern-logo{width:176px}}
-
-/* 068 - Login inteiro visível sem rolagem nas telas comuns, mantendo a logo. */
 body.login-modern-page{min-height:100vh;min-height:100dvh}
 body.login-modern-page .login-modern-shell {
   min-height:100vh;min-height:100dvh;
@@ -441,6 +431,5 @@ body.login-modern-page .login-terms{margin:10px auto 0}
   body.login-modern-page .login-terms{margin-top:7px}
 }
 @media(max-height:480px){
-  /* Preserva o acesso aos campos mesmo em paisagem/zoom muito elevado. */
   body.login-modern-page .login-modern-shell{align-items:start}
 }

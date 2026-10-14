@@ -14,15 +14,7 @@ async function resolveCurrentCondoCep(user = null) {
         return digits.length === 8 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : raw;
     };
 
-    /*
-     * 1) Usa o resolvedor compartilhado quando disponível.
-     * 2) Consulta a RPC autenticada.
-     * 3) Consulta o vínculo diretamente.
-     * 4) Por último, usa o vínculo já validado na sessão.
-     *
-     * Isso evita o ciclo index-porteiro -> entrar-condominio-porteiro -> index-porteiro
-     * quando uma das formas de consulta do CEP falha temporariamente.
-     */
+     
     try {
         if (typeof window.resolveUserCondominiumCep === 'function') {
             const resolved = await window.resolveUserCondominiumCep(user);
@@ -83,7 +75,7 @@ async function resolveCurrentCondoCep(user = null) {
 }
 
 
-/* Dashboard 063 — informações reais por condomínio, com estados vazios seguros. */
+ 
 (() => {
     'use strict';
     const $ = id => document.getElementById(id);
@@ -186,8 +178,8 @@ async function resolveCurrentCondoCep(user = null) {
             return `<article class="porter-record"><span class="porter-record-icon is-green"><i class="fas fa-box" aria-hidden="true"></i></span><div class="porter-record-content"><strong title="${esc(name)}">${esc(name)}</strong><small>${esc(desc)}</small></div><span class="porter-record-side"><span class="porter-tag ${pending?'is-pending':''}">${esc(status)}</span></span></article>`;
         }).join('');
     }
-    // Últimas alterações de autorização: não representa entrada/saída física.
-    // Usa o mesmo histórico do gráfico, sem consultar o mural de avisos.
+     
+     
     function renderAccessUpdates(){
         const target=$('porterAccessList'); if(!target)return;
         if(state.logs===null){target.innerHTML=emptyMarkup(t('unavailable'));return;}

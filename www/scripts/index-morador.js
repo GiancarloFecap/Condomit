@@ -1,8 +1,8 @@
-// ═══════════════════════════════════════════════════════════════
-// DASHBOARD DO MORADOR - SCRIPT PRINCIPAL
-// ═══════════════════════════════════════════════════════════════
+ 
+ 
+ 
 
-// Resumo 054: traduções independentes do idioma salvo em Configurações.
+ 
 const residentOverviewStrings = {
   pt: {dashboard:'PAINEL DO MORADOR',greeting:'Olá',subtitle:'Acompanhe o que é importante no seu condomínio.',condoFallback:'Meu condomínio',notices:'Mural de avisos',noticesDesc:'Informações e comunicados da administração.',reservations:'Minhas reservas',reservationsDesc:'Consulte ou agende áreas comuns.',assemblies:'Assembleias',assembliesDesc:'Confira reuniões e decisões do condomínio.',suggestionPrompt:'Tem uma sugestão para melhorar o condomínio?',suggestionCta:'Enviar sugestão'},
   en: {dashboard:'RESIDENT DASHBOARD',greeting:'Hello',subtitle:'Keep up with what matters in your condominium.',condoFallback:'My condominium',notices:'Notice board',noticesDesc:'News and announcements from management.',reservations:'My reservations',reservationsDesc:'View or book shared spaces.',assemblies:'Meetings',assembliesDesc:'Review meetings and condominium decisions.',suggestionPrompt:'Have a suggestion for your condominium?',suggestionCta:'Send suggestion'}
@@ -22,14 +22,14 @@ window.addEventListener('storage', event => { if (event.key === 'app-language') 
 
 document.addEventListener('DOMContentLoaded', async function() {
     applyResidentOverviewLanguage();
-    // Dados globais
+     
     let currentUser = null;
     let condominiumData = null;
     let userCondominiumData = null;
 
-    // ═══════════════════════════════════════════════════════════════
-    // FUNÇÕES UTILITÁRIAS
-    // ═══════════════════════════════════════════════════════════════
+     
+     
+     
 
     async function proxyFetch(path, options = {}) {
         const response = await fetch(path, options);
@@ -49,18 +49,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         return data;
     }
 
-    // Extrair primeiro nome a partir do nome completo
+     
     function getFirstName(fullName) {
         if (!fullName) return 'Morador';
         const parts = fullName.trim().split(' ');
         return parts[0];
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // EVENT LISTENERS - SIDEBAR
-    // ═══════════════════════════════════════════════════════════════
+     
+     
+     
 
-    // Navegação do sidebar
+     
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', function(e) {
             const href = this.getAttribute('href');
@@ -80,19 +80,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             e.preventDefault();
 
-            // Remover classe active anterior
+             
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             this.classList.add('active');
         });
     });
 
-    // ═══════════════════════════════════════════════════════════════
-    // VERIFICAÇÃO DE AUTENTICAÇÃO E VÍNCULO
-    // ═══════════════════════════════════════════════════════════════
+     
+     
+     
 
     async function checkAuthAndBind() {
         try {
-            // 1. Obter usuário logado do sessionStorage OU localStorage (persistent)
+             
             let raw = sessionStorage.getItem('condominiumUser');
             if (!raw) {
                 try {
@@ -114,15 +114,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             const loggedInUser = raw;
             
             if (!loggedInUser) {
-                // Se não há usuário logado, redirecionar para login
+                 
                 window.location.href = 'entrar.html';
                 return;
             }
 
             currentUser = JSON.parse(loggedInUser);
 
-            // Renderização imediata com dados já persistidos: evita a tela ficar
-            // aguardando chamadas de rede para exibir nome/avatar/condomínio.
+             
+             
             try {
                 const firstNameEl = document.getElementById('firstName');
                 if (firstNameEl) firstNameEl.textContent = getFirstName(currentUser.name);
@@ -136,8 +136,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 window.syncAllAvatars?.(currentUser);
             } catch (_) {}
 
-            // 1.1 Atualizar foto/nome/telefone do banco para este morador em
-            // segundo plano. A página já fica utilizável enquanto isso ocorre.
+             
+             
             try {
                 if (typeof refreshCurrentUserFromDb === 'function') {
                     const refreshed = await Promise.race([refreshCurrentUserFromDb(), new Promise(resolve => setTimeout(() => resolve(null), 900))]);
@@ -160,13 +160,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (typeof syncAllAvatars === 'function') syncAllAvatars(currentUser);
             } catch (_) {}
 
-            // 2. Verificar se o tipo é morador
+             
             if (currentUser.type !== 'morador') {
                 window.location.href = 'tipo-usuario.html';
                 return;
             }
 
-            // 3. Buscar registro na tabela user_condominiums
+             
             const userCondominiumResponse = await proxyFetch(
                 `/api/user_condominiums?user_email=eq.${encodeURIComponent(currentUser.email)}`
             );
@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (currentUser.condominium && currentUser.condominium.condominium_id) {
                     userCondominiumData = currentUser.condominium;
                 } else {
-                    // Se não existe vinculação, redirecionar para entrar-condominio
+                     
                     window.location.href = 'entrar-condominio.html';
                     return;
                 }
@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 userCondominiumData = userCondominiumResponse[0];
             }
 
-            // 4. Buscar dados do condomínio
+             
             const condominiumCep = userCondominiumData.condominium_id || userCondominiumData.condominiumId;
             const condominiumResponse = await proxyFetch(
                 `/api/condominiums?cep=eq.${encodeURIComponent(condominiumCep)}`
@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             condominiumData = condominiumResponse[0];
 
-            // 5. Renderizar dados na página
+             
             await renderDashboard();
         } catch (error) {
             console.error('Erro ao verificar autenticação e vínculo:', error);
@@ -204,20 +204,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // RENDERIZAÇÃO DA DASHBOARD
-    // ═══════════════════════════════════════════════════════════════
+     
+     
+     
 
     async function renderDashboard() {
         try {
-            // Exibir primeiro nome no cabeçalho
+             
             const firstName = getFirstName(currentUser.name);
             document.getElementById('firstName').textContent = firstName;
 
-            // Preencher nome do usuário no topbar
+             
             document.getElementById('profileNameTop').textContent = currentUser.name;
             
-            // Calcular iniciais para avatar
+             
             const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
             const avatarEl = document.getElementById('profileAvatarTop');
             if (avatarEl) {
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (condoName) { condoLabel.textContent = condoName; condoLabel.dataset.hasRealCondo = '1'; }
             }
 
-            // Exibir nome do condomínio na sidebar embaixo da logo
+             
             const sidebarApart = document.getElementById('sidebarApartment');
             if (sidebarApart) {
                 const condoName = condominiumData?.condominium_name || userCondominiumData?.condominium_name || "Seu Condomínio";
@@ -241,9 +241,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // INICIALIZAÇÃO
-    // ═══════════════════════════════════════════════════════════════
+     
+     
+     
 
     document.querySelectorAll('[data-resident-route]').forEach(link => link.addEventListener('click', event => {
         const route = link.dataset.residentRoute;

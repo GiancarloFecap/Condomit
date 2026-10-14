@@ -75,7 +75,7 @@ function getAssemblyScheduledStartMs(assembly) {
   const time = String(assembly.start_time || '00:00').slice(0, 5);
   if (!date) return null;
 
-  // Os horários cadastrados pela Condomit são horários locais do condomínio no Brasil.
+   
   const parsed = new Date(`${date}T${time}:00-03:00`);
   const ms = parsed.getTime();
   return Number.isNaN(ms) ? null : ms;

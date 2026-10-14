@@ -1,7 +1,7 @@
 
 (function () {
-  // A escolha do usuário é a única fonte de verdade nas páginas de autenticação.
-  // Mantém um valor em memória também quando o armazenamento do navegador está bloqueado.
+   
+   
   let activeChoice = null;
   function getChoice() {
     if (activeChoice !== null) return activeChoice;
@@ -211,6 +211,7 @@
     document.title = t.title;
     document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
     setAttr('.login-back', 'aria-label', t.back);
+    setAttr('.login-back', 'title', t.back);
     const back = document.querySelector('.login-back');
     if (back) {
       const label = [...back.childNodes].find(node => node.nodeType === 3 && node.textContent.trim());
@@ -226,21 +227,8 @@
     setText('.login-forgot', t.forgot);
     setText('#rememberMeLabel', t.remember);
     setText('.login-submit', t.submit);
-    const signup = document.querySelector('.login-signup');
-    if (signup) {
-      const a = signup.querySelector('a');
-      // Remove o texto original em português: ele não pode permanecer ao lado da tradução.
-      [...signup.childNodes].filter(node => node.nodeType === 3).forEach(node => node.remove());
-      // Não destrói e recria a âncora em toda mudança de idioma.
-      let label = signup.querySelector('[data-auth-signup-prefix]');
-      if (!label) {
-        label = document.createElement('span');
-        label.dataset.authSignupPrefix = 'true';
-        signup.insertBefore(label, a);
-      }
-      label.textContent = t.signupPrefix + ' ';
-      if (a) a.textContent = t.signupAction;
-    }
+    setText('[data-auth-signup-prefix]', t.signupPrefix);
+    setText('.login-signup a', t.signupAction);
     setText('.login-terms', t.terms);
     setAttr('.login-modern-logo', 'alt', lang === 'en' ? 'Condomit - Your condominium app' : 'Condomit - O app do seu condomínio');
   }
@@ -266,6 +254,7 @@
     setText('#loginActionText', t.loginAction);
     setAttr('.tipo-card-logo-link', 'aria-label', lang === 'en' ? 'Condomit - Home page' : 'Condomit - Página inicial');
     setAttr('.tipo-card-logo', 'alt', lang === 'en' ? 'Condomit - Your condominium app' : 'Condomit - O app do seu condomínio');
+    setAttr('.tipo-card-logo-link', 'title', lang === 'en' ? 'Condomit - Home page' : 'Condomit - Página inicial');
   }
 
   function applyCadastro(lang, typeKey) {
@@ -347,23 +336,31 @@
     const select = document.getElementById('landing-language-select');
     if (!select || select.dataset.authLanguageBound === 'true') return;
     select.dataset.authLanguageBound = 'true';
-    select.addEventListener('change', () => {
+    const onLanguageSelected = () => {
       const value = ['auto', 'pt', 'en'].includes(select.value) ? select.value : 'auto';
-      activeChoice = value; // O texto muda já neste evento, sem aguardar recarregar.
+      activeChoice = value;  
       try { localStorage.setItem('app-language', value); } catch (_) {}
       applyTranslations();
       window.dispatchEvent(new CustomEvent('condomit:language-changed', {
         detail: { language: getLang(), selection: value }
       }));
-    });
+    };
+    select.addEventListener('input', onLanguageSelected);
+    select.addEventListener('change', onLanguageSelected);
   }
 
   window.getCondomitAuthLanguage = getLang;
   window.getCondomitAuthTerms = function () { return text[getLang()].cadastroCommon; };
-  document.addEventListener('DOMContentLoaded', () => {
+  function bootAuthenticationLanguage() {
     bindLanguagePicker();
     applyTranslations();
-  });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootAuthenticationLanguage, { once: true });
+  } else {
+    bootAuthenticationLanguage();
+  }
+  window.addEventListener('pageshow', bootAuthenticationLanguage);
   window.addEventListener('storage', function (event) {
     if (event.key === 'app-language') {
       activeChoice = null;

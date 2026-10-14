@@ -1,8 +1,3 @@
-/* ============================================================
-   Condomit 035 - Camada global de UX
-   Melhorias não destrutivas: foco, toque, feedback, cards,
-   formulários, navegação e segurança de viewport móvel.
-============================================================ */
 :root {
     --ux-focus: rgba(37, 99, 235, .22);
     --ux-border: #e3e8ef;
@@ -181,13 +176,6 @@ html[data-theme="dark"] {
     --ux-border: #2d3b50;
     --ux-soft: #111827;
 }
-
-
-/* ============================================================
-   Condomit 045 - Refinamento visual e UX profissional
-   Escopo: páginas internas, autenticação e fluxos operacionais.
-   Evita alterações destrutivas na landing page inicial.
-============================================================ */
 :root {
     --ux-surface: #ffffff;
     --ux-surface-soft: #f8fbff;
@@ -827,11 +815,6 @@ body:not(.advanced-page) .payment-status-card {
         width: 100%;
     }
 }
-
-
-/* ============================================================
-   046 - Paleta interna mais suave e menos agressiva visualmente
-============================================================ */
 .condomit-app-page {
     --ux-surface: #ffffff;
     --ux-surface-soft: #f7f9fc;
@@ -938,11 +921,6 @@ html[data-theme="dark"] .condomit-app-page .top-bar {
 .condomit-app-page .file-upload:hover {
     border-color: #7f9eba !important;
 }
-
-
-/* ============================================================
-   047 - Paleta Condomit (#3360F2) para páginas internas
-============================================================ */
 .condomit-app-page {
     --ux-primary: #3360F2;
     --ux-primary-strong: #294FD8;
@@ -986,11 +964,6 @@ html[data-theme="dark"] .condomit-app-page {
 .condomit-app-page .quick-action-btn i,
 .condomit-app-page .status-item i,
 .condomit-app-page .detail-item i { color: #3360F2; }
-
-
-/* ============================================================
-   048 - Paleta Condomit mais clara + navegação com maior contraste
-============================================================ */
 .condomit-app-page {
     --ux-primary: #3360F2;
     --ux-primary-strong: #294FD8;
@@ -1039,11 +1012,6 @@ html[data-theme="dark"] .condomit-app-page {
 .condomit-app-page .quick-action-btn i,
 .condomit-app-page .status-item i,
 .condomit-app-page .detail-item i { color: #3360F2 !important; }
-
-
-/* ============================================================
-   049 - Identidade azul baseada no CTA de referência (#3360F2)
-============================================================ */
 .condomit-app-page {
     --ux-primary: #3360F2;
     --ux-primary-strong: #294FD8;
@@ -1067,11 +1035,6 @@ html[data-theme="dark"] .condomit-app-page {
 .condomit-app-page .quick-action-btn i,
 .condomit-app-page .status-item i,
 .condomit-app-page .detail-item i { color: #3360F2 !important; }
-
-/* ============================================================
-   050 - Refinamento visual das páginas internas
-   A landing page /inicio.html não usa .condomit-app-page e fica intacta.
-============================================================ */
 body.condomit-app-page:not(.advanced-page):not(.type-user-page) {
     background: #F5F7FB !important;
     color: #22304A;
@@ -1153,12 +1116,6 @@ html[data-theme="dark"] .condomit-app-page:not(.advanced-page):not(.type-user-pa
         padding: 14px 14px !important;
     }
 }
-
-
-/* ============================================================
-   Condomit 052 - Azul mais escuro nas páginas internas
-   Escopo: somente páginas internas com a classe .condomit-app-page
-============================================================ */
 body.condomit-app-page {
     --condomit-brand-500: #2252BD;
     --condomit-brand-600: #183B86;
@@ -1203,10 +1160,6 @@ html[data-theme="dark"] body.condomit-app-page {
     --condomit-brand-500: #1E40AF;
     --condomit-brand-600: #1E3A8A;
 }
-
-/* ============================================================
-   Condomit 053 - botão Sair da sidebar volta ao vermelho
-============================================================ */
 body.condomit-app-page .sidebar .btn-logout-sidebar{
     background:rgba(220,38,38,.14) !important;
     border:1px solid rgba(254,202,202,.24) !important;
@@ -1219,16 +1172,12 @@ body.condomit-app-page .sidebar .btn-logout-sidebar:hover{
     color:#fff !important;
 }
 body.condomit-app-page .sidebar .btn-logout-sidebar:hover i{color:#fff !important}
-
-/* 0.71.0 - foto/logo do condomínio */
 body:not(.advanced-page) .sidebar .sidebar-logo[data-condo-logo="true"]{
     width:92px!important;height:92px!important;max-width:92px!important;
     object-fit:cover!important;object-position:center!important;border-radius:50%!important;
     padding:4px!important;background:#fff!important;border:1px solid rgba(255,255,255,.45)!important;
     box-shadow:0 10px 28px rgba(0,0,0,.18)!important;filter:none!important;
 }
-
-/* 0.72.0 - logo/foto do condomínio sempre recortada em círculo */
 body:not(.advanced-page) .sidebar .sidebar-header .sidebar-logo[data-condo-logo="true"],
 body:not(.advanced-page) .sidebar.sindico-sidebar .sidebar-header .sidebar-logo[data-condo-logo="true"],
 body:not(.advanced-page) .sidebar.morador-sidebar .sidebar-header .sidebar-logo[data-condo-logo="true"],

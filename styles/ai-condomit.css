@@ -71,9 +71,6 @@
 .disclaimer { margin:9px 4px 0; color:#94a3b8; font-size:11px; text-align:center; line-height:1.5; }
 @media (max-width:1100px) { .ai-category-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
 @media (max-width:720px) { .ai-assistant-toolbar,.welcome-card,.chat-input-container{margin-left:14px;margin-right:14px}.chat-messages{padding-left:16px;padding-right:16px}.ai-category-grid{grid-template-columns:1fr}.ai-new-chat span{display:none}.message{max-width:96%} }
-
-
-/* 036 - Campo de pergunta maior e placeholder visualmente centralizado */
 .chat-input-container {
     padding: 18px 20px 14px;
 }
@@ -96,8 +93,6 @@
     .input-wrapper { min-height: 80px; padding-left: 14px; }
     #chatInput { min-height: 58px; padding: 16px 3px; }
 }
-
-/* Mantém a orientação central do convite sem centralizar o texto digitado. */
 #chatInput:placeholder-shown {
     text-align: center;
 }
@@ -105,9 +100,6 @@
 #chatInput:not(:placeholder-shown) {
     text-align: left;
 }
-
-
-/* 047 - Identidade visual da IA Condomit */
 .ai-assistant-logo {
     background: linear-gradient(145deg, #3360F2 0%, #294FD8 100%) !important;
     color: #fff !important;
@@ -118,11 +110,6 @@
 .ai-new-chat:hover { border-color: #3360F2 !important; color: #3360F2 !important; background: #F1F5FF !important; }
 .message.user .message-bubble { background: #3360F2 !important; border-color: #3360F2 !important; }
 .ai-action-link { color: #3360F2 !important; border-color: #C9D7F5 !important; background: #F1F5FF !important; }
-
-
-/* ============================================================
-   048 - Composer da IA no mesmo padrão compacto dos chats
-============================================================ */
 .condomit-app-page .chat-input-container {
     margin: 0 30px 14px !important;
     padding: 8px 10px 9px !important;
@@ -194,11 +181,6 @@ html[data-theme="dark"] .condomit-app-page #chatInput::placeholder { color:#B2BA
     .condomit-app-page #chatInput { min-height:28px !important; height:28px; padding:4px 7px !important; }
     .condomit-app-page .send-btn { width:31px !important; height:31px !important; min-height:31px !important; flex-basis:31px; }
 }
-
-
-/* ============================================================
-   053 - IA Condomit: dark mode completo e mensagens sem balões
-============================================================ */
 .condomit-app-page .message-bubble{
     padding:3px 0 !important;
     border:0 !important;
@@ -253,9 +235,6 @@ html[data-theme="dark"] .condomit-app-page .message.user .message-bubble{color:#
 html[data-theme="dark"] .condomit-app-page .message-time{color:#7f8ca3 !important}
 html[data-theme="dark"] .condomit-app-page .ai-action-link{background:transparent !important;color:#9db8ff !important;border-color:#334155 !important}
 html[data-theme="dark"] .condomit-app-page .disclaimer{color:#94a3b8 !important}
-
-
-/* 0.72.5 - histórico de conversas da IA */
 .ai-toolbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
 .ai-history-btn{background:#f8fafc}
 .ai-history-backdrop{position:fixed;inset:0;z-index:2300;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,23,42,.48);backdrop-filter:blur(4px)}

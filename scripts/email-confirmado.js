@@ -29,8 +29,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const confirmed = Boolean(user?.email_confirmed_at || user?.confirmed_at);
 
         if (!confirmed) {
-            // Em alguns fluxos o Supabase limpa os parâmetros logo após confirmar.
-            // Aguarda brevemente o evento de autenticação antes de classificar o link.
+             
+             
             const confirmedUser = await waitForConfirmedUser(supabase, 2500);
             if (!confirmedUser) {
                 throw new Error('O link de confirmação é inválido, expirou ou já foi utilizado.');
@@ -100,8 +100,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Para links implícitos (#access_token=...), detectSessionInUrl do
-        // supabase-auth.js consome automaticamente os tokens.
+         
+         
         await new Promise((resolve) => setTimeout(resolve, 250));
     }
 

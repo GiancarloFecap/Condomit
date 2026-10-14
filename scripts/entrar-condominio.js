@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Elementos do DOM
+     
     const form = document.getElementById('condominiumForm');
     const submitBtn = document.getElementById('submitBtn');
     const togglePassword = document.getElementById('togglePassword');
@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingOverlay = document.getElementById('loadingOverlay');
     const alertContainer = document.getElementById('alertContainer');
 
-    // Referência ao usuário logado
+     
     let currentUser = null;
 
     function normalizeCep(value) {
@@ -28,29 +28,29 @@ document.addEventListener('DOMContentLoaded', function() {
         return data;
     }
 
-    // Verificar se o usuário está autenticado
+     
     async function checkAuthAndRedirect() {
         try {
-            // Obter usuário do sessionStorage (demo) ou do Supabase (produção)
+             
             const loggedInUser = sessionStorage.getItem('condominiumUser');
             
             if (!loggedInUser) {
-                // Se não há usuário logado, redirecionar para login
+                 
                 window.location.href = 'entrar.html';
                 return;
             }
 
             currentUser = JSON.parse(loggedInUser);
 
-            // Aceita tanto morador quanto porteiro nesta página
+             
             const userType = String(currentUser.type || currentUser.user_type || '').toLowerCase();
             if (userType !== 'morador' && userType !== 'porteiro') {
                 window.location.href = 'tipo-usuario.html';
                 return;
             }
 
-            // Se o usuário já tem condomínio vinculado no sessionStorage,
-            // verificar também se o vínculo existe no banco de dados.
+             
+             
             if (currentUser.condominium) {
                 try {
                     const boundResponse = await proxyFetch(
@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.warn('Erro ao verificar vínculo existente:', err.message);
                 }
 
-                // Se o vínculo foi salvo na sessão mas ainda não foi retornado
-                // pela consulta, permitir o acesso imediato ao dashboard.
+                 
+                 
                 if (currentUser.condominium.condominium_id) {
                     window.location.href = userType === 'porteiro' ? 'index-porteiro.html' : 'index-morador.html';
                     return;
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Mostrar/ocultar senha
+     
     togglePassword.addEventListener('click', function(e) {
         e.preventDefault();
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
             : '<i class="fas fa-eye-slash"></i>';
     });
 
-    // Exibir alerta
+     
     function showAlert(message, type = 'info') {
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${type}`;
@@ -102,25 +102,25 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         alertContainer.appendChild(alertDiv);
 
-        // Auto-remover em 5 segundos se for sucesso
+         
         if (type === 'success') {
             setTimeout(() => alertDiv.remove(), 5000);
         }
     }
 
-    // Mostrar/ocultar loading
+     
     function toggleLoading(show = true) {
         loadingOverlay.style.display = show ? 'flex' : 'none';
         submitBtn.disabled = show;
     }
 
-    // Limpar erros
+     
     function clearErrors() {
         document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
         document.querySelectorAll('.form-group input').forEach(el => el.classList.remove('input-error'));
     }
 
-    // Mostrar erro em campo
+     
     function showFieldError(fieldId, message) {
         const errorElement = document.getElementById(fieldId + 'Error');
         const inputElement = document.getElementById(fieldId);
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Validações
+     
     async function validateForm() {
         clearErrors();
 
@@ -139,10 +139,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const rawCondominiumId = document.getElementById('condominiumId').value.trim();
         const password = document.getElementById('condominiumPassword').value.trim();
 
-        // Normalizar CEP para aceitar 04284070 e 04284-070
+         
         const condominiumId = normalizeCep(rawCondominiumId);
 
-        // Validação básica
+         
         if (!apartment || isNaN(apartment) || apartment < 1) {
             showFieldError('apartment', 'Apartamento inválido');
             return null;
@@ -171,8 +171,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return { apartment, block, condominiumId, password };
     }
 
-    // Validar e vincular no banco de dados em uma única RPC segura.
-    // O código nunca é comparado no navegador e seu hash não é exposto ao cliente.
+     
+     
     async function validateAgainstDatabase(data) {
         try {
             if (typeof window.supabaseFetch !== 'function') {
@@ -199,11 +199,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function saveToDatabaseAndUpdate() {
-        // A RPC condomit_join_condominium_secure já cria o vínculo e atualiza users.condominium.
+         
         return true;
     }
 
-    // Submissão do formulário
+     
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
@@ -211,28 +211,28 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleLoading(true);
             clearErrors();
 
-            // 1. Validar formulário localmente
+             
             const formData = await validateForm();
             if (!formData) {
                 toggleLoading(false);
                 return;
             }
 
-            // 2. Validar contra banco de dados
+             
             const condominium = await validateAgainstDatabase(formData);
             if (!condominium) {
                 toggleLoading(false);
                 return;
             }
 
-            // 3. Salvar no banco de dados
+             
             const savedSuccessfully = await saveToDatabaseAndUpdate(formData, condominium);
             if (!savedSuccessfully) {
                 toggleLoading(false);
                 return;
             }
 
-            // 4. Atualizar sessionStorage do usuário
+             
             currentUser.condominium = {
                 condominium_id: formData.condominiumId,
                 apartment: formData.apartment,
@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             sessionStorage.setItem('condominiumUser', JSON.stringify(currentUser));
 
-            // 5. Exibir sucesso e redirecionar conforme tipo de usuário
+             
             showAlert('Condomínio vinculado com sucesso!', 'success');
 
             const finalUserType = String(currentUser.type || currentUser.user_type || '').toLowerCase();
@@ -258,6 +258,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Verificar autenticação ao carregar
+     
     checkAuthAndRedirect();
 });

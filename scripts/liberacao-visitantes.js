@@ -24,14 +24,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     await loadVisitorsForRelease();
 
-    // Mantém a portaria sincronizada com cadastros feitos em outros dispositivos.
+     
     window.setInterval(() => {
         if (!document.hidden && !releaseState.busyCpf) loadVisitorsForRelease();
     }, 15000);
 });
 
 
-// 065: cadastro de visitante reutiliza validação e gravação já existentes no Supabase.
+ 
 function openVisitorRegistrationModal() {
     const overlay = document.getElementById('visitorRegistrationModal');
     if (!overlay || overlay.classList.contains('open')) return;
@@ -44,7 +44,7 @@ function openVisitorRegistrationModal() {
 function closeVisitorRegistrationModal(force = false) {
     const overlay = document.getElementById('visitorRegistrationModal');
     if (!overlay || !overlay.classList.contains('open')) return;
-    // Nunca interrompe um envio de formulário em andamento.
+     
     if (force !== true && overlay.querySelector('[data-action="submit-visitor"]')?.disabled) return;
     overlay.classList.remove('open');
     overlay.setAttribute('aria-hidden', 'true');

@@ -1,9 +1,3 @@
-/* ============================================================
-   Condomit 025 - Camada global de responsividade para celulares
-   Carregada por ultimo para neutralizar larguras/posicionamentos
-   de desktop sem alterar o layout em telas grandes.
-============================================================ */
-
 html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -32,8 +26,6 @@ svg {
 .main-content {
     width: 100%;
 }
-
-/* Elementos de dados largos devem rolar apenas dentro do bloco. */
 .table-responsive,
 .table-container,
 .table-wrapper,
@@ -52,8 +44,6 @@ svg {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
-
-/* Botao inserido por responsive-nav.js. */
 .mobile-menu-btn {
     display: none;
     width: 42px;
@@ -107,12 +97,6 @@ svg {
         min-width: 0 !important;
         min-height: 100dvh;
     }
-
-    /*
-      A regra antiga de theme.css tornava a sidebar sticky no mobile.
-      Isso fazia os 300px do menu ocuparem permanentemente a viewport.
-      Aqui ela vira drawer/off-canvas.
-    */
     .dashboard-sindico > .sidebar,
     .sidebar {
         position: fixed !important;
@@ -236,8 +220,6 @@ svg {
         flex: 0 0 38px !important;
         font-size: .88rem !important;
     }
-
-    /* Conteudo principal das telas autenticadas. */
     .dashboard-grid,
     .porteiro-page,
     .lost-found-page,
@@ -280,8 +262,6 @@ svg {
     .welcome-card {
         max-width: 100%;
     }
-
-    /* Formularios nunca devem extrapolar a largura do aparelho. */
     form,
     fieldset,
     input,
@@ -297,15 +277,11 @@ svg {
     textarea {
         width: 100%;
     }
-
-    /* 16px evita zoom automatico em browsers moveis baseados em WebKit. */
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
     select,
     textarea {
         font-size: 16px !important;
     }
-
-    /* Grids comuns passam a duas ou uma coluna quando necessario. */
     .overview-strip,
     .quick-grid,
     .support-layout,
@@ -318,8 +294,6 @@ svg {
     .maintenance-head {
         min-width: 0 !important;
     }
-
-    /* Tabelas grandes permanecem utilizaveis por scroll horizontal. */
     .maintenance-table,
     .access-table,
     .provider-table,
@@ -398,8 +372,6 @@ svg {
     .quick-chat-options {
         grid-template-columns: 1fr !important;
     }
-
-    /* Barra de acoes fixa/rodape deve respeitar notch e gestos. */
     .bottom-actions,
     .room-controls,
     .meeting-controls,
@@ -425,8 +397,6 @@ svg {
         flex-basis: 34px !important;
     }
 }
-
-/* Sala da assembleia em smartphones: preserva o palco e os controles. */
 @media (max-width: 640px) {
     .call-page {
         width: 100vw !important;
@@ -540,16 +510,6 @@ svg {
     }
 }
 
-
-/* ============================================================
-   Condomit 026 - Responsividade reforçada para celular/tablet
-   - conteúdos dinâmicos não extrapolam cards
-   - tabelas compactas no painel do síndico
-   - chats usam viewport estável (svh), evitando "pular" com a
-     barra do navegador móvel
-   - top bar encostada no topo útil da página
-============================================================ */
-
 :root {
     --condomit-mobile-topbar-h: 62px;
 }
@@ -561,10 +521,6 @@ svg {
         margin-top: 0 !important;
         padding-top: 0 !important;
     }
-
-    /* Algumas folhas antigas aplicam `main { padding: 1rem }` no mobile.
-       Como .main-content e um <main>, isso afastava a top bar do topo e das
-       laterais. O conteudo interno ja possui padding proprio. */
     .dashboard-sindico > .main-content,
     main.main-content {
         padding: 0 !important;
@@ -576,8 +532,6 @@ svg {
         margin-top: 0 !important;
         transform: none !important;
     }
-
-    /* Qualquer texto vindo do banco deve quebrar dentro do card. */
     .card,
     .card *,
     .status-item,
@@ -618,10 +572,6 @@ svg {
         white-space: normal !important;
         text-align: center;
     }
-
-    /* A lista do condomínio não deve empurrar o nome do proprietário
-       para fora da tela. No celular as três colunas passam a ocupar
-       percentuais fixos e o nome pode quebrar em mais de uma linha. */
     .residents-card,
     .residents-table {
         width: 100% !important;
@@ -650,8 +600,6 @@ svg {
     .residents-table td:nth-child(2) { width: 20%; }
     .residents-table th:nth-child(3),
     .residents-table td:nth-child(3) { width: 53%; }
-
-    /* Dúvidas do condomínio: nenhum card/chip fica cortado. */
     .ai-chat-container {
         width: 100% !important;
         max-width: 100% !important;
@@ -693,10 +641,6 @@ svg {
         padding: 9px 10px !important;
         line-height: 1.25 !important;
     }
-
-    /* Chats comuns: altura baseada em svh (viewport estável), não vh/dvh.
-       Assim a área de mensagens não cresce/encolhe quando a barra do
-       navegador aparece ou desaparece durante a rolagem. */
     .chat-page {
         height: calc(100svh - var(--condomit-mobile-topbar-h)) !important;
         min-height: calc(100svh - var(--condomit-mobile-topbar-h)) !important;
@@ -866,10 +810,6 @@ svg {
         padding: 8px 4px !important;
     }
 }
-
-/* 026 - Dúvidas do condomínio: o conteúdo inicial precisa poder rolar
-   dentro do espaço entre top bar e caixa de mensagem. Sem isso, em telas
-   baixas os últimos atalhos (como Assembleia/Notificações) eram cortados. */
 @media (max-width: 900px) {
     .ai-chat-container .chat-content-wrapper {
         overflow-y: auto !important;
@@ -905,12 +845,6 @@ svg {
         flex: 0 0 38px !important;
     }
 }
-
-/* ============================================================
-   Condomit 033 - Safe areas nativas sem alterar o layout mobile
-   Mantem o responsivo 029 (referencia Aplicativo - web) e aplica
-   apenas os insets do Android/iOS quando o app roda no Capacitor.
-============================================================ */
 :root {
     --condomit-safe-top: max(var(--safe-area-inset-top, 0px), env(safe-area-inset-top, 0px));
     --condomit-safe-right: max(var(--safe-area-inset-right, 0px), env(safe-area-inset-right, 0px));
@@ -919,16 +853,11 @@ svg {
 }
 
 @media (max-width: 900px) {
-    /* Cabeçalhos dos dashboards: conserva altura/layout antigo e só abre
-       espaço para a barra de status quando o WebView está edge-to-edge. */
     html.capacitor-native .top-bar {
         padding-top: calc(10px + var(--condomit-safe-top)) !important;
         padding-left: max(12px, var(--condomit-safe-left)) !important;
         padding-right: max(12px, var(--condomit-safe-right)) !important;
     }
-
-    /* Landing: os botões Entrar/Cadastre-se continuam lado a lado; somente
-       a margem superior leva em conta a barra de status. */
     html.capacitor-native .hero-section .header-content {
         padding-top: calc(10px + var(--condomit-safe-top)) !important;
     }
@@ -947,9 +876,6 @@ svg {
         height: auto !important;
         max-height: none !important;
     }
-
-    /* Telas centralizadas de autenticação/cadastro. Mantém o desenho antigo,
-       acrescentando somente o espaço ocupado pelas barras do sistema. */
     html.capacitor-native body:has(.login-page) {
         min-height: 100dvh !important;
         padding-top: calc(20px + var(--condomit-safe-top)) !important;
@@ -976,9 +902,6 @@ svg {
         padding-left: max(20px, var(--condomit-safe-left)) !important;
         padding-right: max(20px, var(--condomit-safe-right)) !important;
     }
-
-    /* Botões de voltar absolutos das telas públicas não podem ficar sob a
-       barra de status. */
     html.capacitor-native body:has(.login-page) > .btn-back,
     html.capacitor-native body:has(.signup-page) > .btn-back,
     html.capacitor-native .login-container > .btn-back,
@@ -986,9 +909,6 @@ svg {
     html.capacitor-native .porteiro-container > .btn-back {
         top: calc(20px + var(--condomit-safe-top)) !important;
     }
-
-    /* Chats: mantém o visual antigo, mas no app nativo usa a altura útil real
-       e reserva o inset inferior para o compositor. */
     html.capacitor-native body:has(.chat-page) {
         height: 100dvh;
         min-height: 100dvh;
@@ -1042,8 +962,6 @@ svg {
         flex: 0 0 auto;
         padding-bottom: max(12px, var(--condomit-safe-bottom)) !important;
     }
-
-    /* Rodapés/controles fixos. */
     html.capacitor-native .bottom-actions,
     html.capacitor-native .room-controls,
     html.capacitor-native .meeting-controls,

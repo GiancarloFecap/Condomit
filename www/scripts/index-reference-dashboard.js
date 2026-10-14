@@ -1,4 +1,4 @@
-/* Painel do condomínio: indicadores e gráficos baseados em registros reais. */
+ 
 (function () {
     'use strict';
     const $ = id => document.getElementById(id);
@@ -108,7 +108,7 @@
         const previous=series.m.at(-2).key;
         const joinedCurrent=residents.filter(r=>monthOf(r.joined_at||r.created_at)===last).length;
         const joinedPrevious=residents.filter(r=>monthOf(r.joined_at||r.created_at)===previous).length;
-        // Total de moradores não é volume mensal; comparar novos cadastros apenas na tendência.
+         
         trend('refResidentsTrend',joinedCurrent,joinedPrevious,t('total'));
         const r=series.reservations,o=series.occurrences,n=series.notices;
         $('refReservationsValue').textContent=fmt(r.at(-1));trend('refReservationsTrend',r.at(-1),r.at(-2));

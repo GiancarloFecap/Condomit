@@ -801,9 +801,9 @@
     const previousFacing = state.stream?.getVideoTracks?.()[0]?.getSettings?.().facingMode || getSelectedCameraFacing(previousDeviceId) || 'user';
     state.cameraDeviceId = newDeviceId;
 
-    // Libera a câmera atual ANTES de abrir a outra. Em vários Androids,
-    // tentar manter frontal e traseira abertas ao mesmo tempo causa
-    // "Could not start video source".
+     
+     
+     
     const oldVideoTracks = state.stream ? state.stream.getVideoTracks() : [];
     oldVideoTracks.forEach((track) => {
       try { track.stop(); } catch (_) {}
@@ -823,7 +823,7 @@
       console.warn('Troca de câmera falhou:', e);
       state.cameraDeviceId = previousDeviceId || '';
 
-      // Tenta restaurar a câmera anterior para não deixar o preview preto.
+       
       try {
         let restore = null;
         if (previousDeviceId) {

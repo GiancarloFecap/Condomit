@@ -1,4 +1,3 @@
-/* Condomit 055 - correções compartilhadas dos cadastros */
 .input-icon-wrapper { position:relative !important; display:flex !important; align-items:center !important; }
 .input-icon-wrapper > i:first-child {
     position:absolute !important;
@@ -41,9 +40,6 @@
 .password-strength { display:none; margin-top:10px; }
 .password-strength.is-visible { display:block; }
 html[data-theme="dark"] .input-icon-wrapper > i:first-child { color:#94a3b8 !important; }
-
-
-/* Condomit 0.71.9 - cadastro estável ao exibir força da senha */
 .signup-wrapper {
     align-items: stretch;
 }

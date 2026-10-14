@@ -200,7 +200,7 @@ async function insertSpeakingRequest(supabase, payload) {
 
   const firstMessage = String(result.error.message || '');
 
-  // Compatibilidade com tabelas sem identity.
+   
   if (/identity/i.test(firstMessage)) {
     const retryPayload = { ...payload };
     delete retryPayload.identity;
@@ -216,7 +216,7 @@ async function insertSpeakingRequest(supabase, payload) {
 
   const secondMessage = String(result.error.message || '');
 
-  // Compatibilidade com tabelas sem participant_role.
+   
   if (/participant_role/i.test(secondMessage)) {
     const retryPayload = { ...payload };
     delete retryPayload.identity;
@@ -301,12 +301,7 @@ exports.handler = async (event) => {
     assemblyCepDigits && auth.condominiumDigits.has(assemblyCepDigits)
   );
 
-  /*
-   * v0.64.0: quem já foi admitido/autenticado na própria assembleia não deve
-   * receber um falso "outro condomínio" por causa de vínculo/CEP legado.
-   * A presença é criada apenas pelo fluxo autenticado da sala, portanto serve
-   * como fallback seguro sem liberar a assembleia para usuários aleatórios.
-   */
+   
   if (!belongsToAssemblyCondominium) {
     const { data: attendance, error: attendanceError } = await supabase
       .from('assembly_attendance')
@@ -336,10 +331,7 @@ exports.handler = async (event) => {
     );
   }
 
-  /*
-   * A sala já pode estar aberta enquanto o registro ainda está "agendada".
-   * Por isso a mão fica disponível nos dois estados.
-   */
+   
   if (!isAllowedAssemblyStatus(assembly.status)) {
     return httpError(
       409,
@@ -377,20 +369,13 @@ exports.handler = async (event) => {
   const activeStatuses = new Set([
     'aguardando',
     'autorizado',
-    // Compatibilidade temporária com registros criados por versões antigas.
+     
     'raised'
   ]);
 
   const now = new Date().toISOString();
 
-  /*
-   * A tabela original do Condomit usa os estados:
-   * aguardando | autorizado | recusado | finalizado
-   *
-   * Portanto:
-   * - levantar mão  => INSERT com status "aguardando"
-   * - abaixar mão   => UPDATE da solicitação ativa para "finalizado"
-   */
+   
   if (latestRow && activeStatuses.has(currentStatus)) {
     let updateResult = await supabase
       .from('assembly_speaking_requests')
@@ -403,7 +388,7 @@ exports.handler = async (event) => {
       .select('*')
       .single();
 
-    // Compatibilidade com a versão original da tabela, que não tinha updated_at.
+     
     if (
       updateResult.error &&
       /updated_at/i.test(String(updateResult.error.message || ''))

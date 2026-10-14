@@ -127,8 +127,7 @@ function setupWallActions() {
 async function renderWallPage() {
     try {
         wallState.notices = await window.communityHub.getWallNotices(wallState.currentUser);
-        /* 027: mescla opções do feed (fixado/comentários/anexo) sem exigir
-           alteração do RPC legado condomit_list_wall_notices. */
+         
         try {
             const extras = await window.supabaseFetch('/condominium_notices?select=id,is_pinned,comments_enabled,attachment_url');
             const byId = new Map((Array.isArray(extras) ? extras : []).map(row => [Number(row.id), row]));

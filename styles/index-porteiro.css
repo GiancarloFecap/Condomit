@@ -1,4 +1,3 @@
-/* Condomit 063 | Painel de portaria compacto, inspirado na referência visual. */
 .porter-dashboard{--porter-ink:#0c2347;--porter-muted:#647792;--porter-line:#e7edf6;--porter-blue:#164c96;--porter-teal:#17b7a0;max-width:1540px;margin:0 auto;padding:76px 22px 26px;display:grid;gap:16px;min-width:0}
 .porter-dashboard *{box-sizing:border-box}
 .porter-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:stretch}

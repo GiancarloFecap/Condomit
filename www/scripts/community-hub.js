@@ -19,15 +19,11 @@
         outros: 'Outros'
     };
 
-    /*
-     * Cache usado pelas funções síncronas de notificações.
-     */
+     
     let notificationCache = [];
     let wallNoticeCache = [];
 
-    /* =========================================================
-       USUÁRIO / STORAGE
-    ========================================================= */
+     
 
     function parseStoredObject(raw) {
         if (!raw) {
@@ -213,9 +209,7 @@
         );
     }
 
-    /* =========================================================
-       CEP / CONDOMÍNIO
-    ========================================================= */
+     
 
     function normalizeCepDigits(
         value
@@ -243,10 +237,7 @@
                 value
             );
 
-        /*
-         * Não devolver texto qualquer
-         * quando não for CEP.
-         */
+         
         if (!digits) {
             return '';
         }
@@ -300,10 +291,7 @@
     async function resolveUserCepForDb(
         user = getCurrentUser()
     ) {
-        /*
-         * Primeiro procura no objeto
-         * já salvo no navegador.
-         */
+         
         const localCep =
             getUserCepForDb(
                 user
@@ -313,10 +301,7 @@
             return localCep;
         }
 
-        /*
-         * Depois utiliza o helper
-         * corrigido do supabase-client.js.
-         */
+         
         if (
             typeof window
                 .resolveUserCondominiumCep ===
@@ -346,10 +331,7 @@
             }
         }
 
-        /*
-         * Última tentativa:
-         * user_condominiums.
-         */
+         
         const email =
             String(
                 user?.email || ''
@@ -412,12 +394,7 @@
             return cep;
         }
 
-        /*
-         * E-mail só é utilizado para
-         * chave de localStorage.
-         *
-         * Nunca é usado como CEP do banco.
-         */
+         
         return (
             String(
                 user?.email ||
@@ -513,9 +490,7 @@
         }
     }
 
-    /* =========================================================
-       NOTIFICAÇÕES
-    ========================================================= */
+     
 
     function getNotificationsKey(
         user
@@ -604,12 +579,7 @@
                 user
             );
 
-        /*
-         * Não apague notificações locais ao carregar a página.
-         * Elas pertencem ao condomínio e devem continuar disponíveis
-         * mesmo após logout/login. Os registros do Supabase continuam
-         * sendo mesclados normalmente abaixo.
-         */
+         
         let localItems =
             getStorageJson(
                 key,
@@ -636,8 +606,8 @@
             serverReadIds.forEach((id) => mergedRead.add(id));
             setStorageJson(getReadNotificationsKey(user), Array.from(mergedRead));
         }
-        // Migra o histórico local das versões anteriores para o banco. Assim,
-        // uma notificação já lida não volta a aparecer como não lida em outro dispositivo.
+         
+         
         if (typeof window.supabaseFetch === 'function') {
             remoteItems.forEach((item) => {
                 if (item.read || !localReadIds.has(String(item.id))) return;
@@ -719,11 +689,7 @@
     function clearAllNotifications(
         user = getCurrentUser()
     ) {
-        /*
-         * 016: os avisos do mural são históricos do condomínio.
-         * Marcar como lido não deve removê-los e nenhum logout/troca
-         * de página pode limpar o feed.
-         */
+         
         console.warn(
             '[NOTIFICAÇÕES] A limpeza automática do mural foi desativada para preservar o histórico.'
         );
@@ -782,7 +748,7 @@
             metadata: data.metadata && typeof data.metadata === 'object' ? data.metadata : null
         };
 
-        // Mantém uma cópia local para leitura offline, mas o banco é a fonte de verdade.
+         
         localItems = localItems.filter((item) => item.id !== notification.id);
         localItems.unshift(notification);
         setStorageJson(key, localItems);
@@ -961,9 +927,7 @@
     }
 
 
-    /* =========================================================
-       MURAL DE AVISOS
-    ========================================================= */
+     
 
     async function fetchWallNoticesFromSupabase(
         user = getCurrentUser()
@@ -1057,8 +1021,8 @@
         wallNoticeCache = wallNoticeCache.filter((item) => item.dbId !== notice.dbId);
         wallNoticeCache.unshift(notice);
 
-        // A trigger do banco cria automaticamente a notificação de mudança do mural.
-        // Limpamos o cache de notificações para que a próxima abertura traga o evento novo.
+         
+         
         notificationCache = [];
 
         return notice;
@@ -1071,9 +1035,7 @@
         ) || null;
     }
 
-    /* =========================================================
-       MARKETPLACE
-    ========================================================= */
+     
 
     function getMarketplaceKey(
         user
@@ -1251,10 +1213,7 @@
             );
 
         return {
-            /*
-             * Mantém prefixo para não
-             * colidir com IDs locais antigos.
-             */
+             
             id:
                 `db-mp-${row?.id}`,
 
@@ -1273,13 +1232,7 @@
                     ''
                 ),
 
-            /*
-             * A interface utiliza:
-             * moveis, eletronicos...
-             *
-             * O banco utiliza:
-             * Móveis, Eletrônicos...
-             */
+             
             category:
                 categoryKey,
 
@@ -1410,11 +1363,7 @@
                 'Morador'
             ).trim();
 
-        /*
-         * Sempre converte a categoria
-         * da interface para uma categoria
-         * permitida pelo CHECK do banco.
-         */
+         
         const categoryKey =
             normalizeMarketplaceCategoryKey(
                 data?.category ||
@@ -1566,10 +1515,7 @@
             throw error;
         }
 
-        /*
-         * Prefer: return=representation
-         * deve devolver a linha criada.
-         */
+         
         if (
             !Array.isArray(
                 rows
@@ -1673,8 +1619,8 @@
             throw new Error('Não foi possível identificar o anunciante.');
         }
 
-        // 028: usa uma RPC que valida o proprietário no servidor. Isso evita
-        // inconsistências de DELETE/RETURNING com RLS em instalações antigas.
+         
+         
         try {
             const result = await window.supabaseFetch(
                 '/rpc/condomit_delete_marketplace_item',
@@ -1722,19 +1668,7 @@
     async function getMarketplaceItems(
         user = getCurrentUser()
     ) {
-        /*
-         * IMPORTANTE:
-         *
-         * O Supabase agora é a fonte
-         * de verdade do marketplace.
-         *
-         * Não misturamos mais anúncios
-         * do banco com anúncios do
-         * localStorage.
-         *
-         * Assim um item só aparece se
-         * realmente existir no banco.
-         */
+         
         const remoteItems =
             await fetchMarketplaceFromSupabase(
                 user
@@ -1759,20 +1693,14 @@
         data,
         user = getCurrentUser()
     ) {
-        /*
-         * Primeiro salva de verdade
-         * no Supabase.
-         */
+         
         const saved =
             await saveMarketplaceToSupabase(
                 data,
                 user
             );
 
-        /*
-         * Sem ID do banco:
-         * não considerar publicado.
-         */
+         
         if (
             !saved?.id
         ) {
@@ -1781,24 +1709,13 @@
             );
         }
 
-        /*
-         * Converte a linha retornada
-         * pelo banco para o formato
-         * usado pela interface.
-         */
+         
         const item =
             mapMarketplaceRowToItem(
                 saved
             );
 
-        /*
-         * A tabela marketplace_items
-         * não possui bloco/apartamento.
-         *
-         * Para o anúncio recém-criado
-         * podemos mostrar a unidade
-         * do usuário atual.
-         */
+         
         item.sellerUnit =
             buildUnitLabel(
                 user
@@ -1842,9 +1759,7 @@
         );
     }
 
-    /* =========================================================
-       FAVORITOS
-    ========================================================= */
+     
 
     function getFavoriteMarketplaceItems(
         user = getCurrentUser()
@@ -1865,11 +1780,7 @@
             return [];
         }
 
-        /*
-         * dataset sempre retorna string.
-         * Portanto os IDs de favoritos
-         * também ficam como string.
-         */
+         
         return stored.map(
             String
         );
@@ -1932,9 +1843,7 @@
         );
     }
 
-    /* =========================================================
-       FORMATAÇÃO
-    ========================================================= */
+     
 
     function formatCurrency(
         value
@@ -2070,9 +1979,7 @@
         );
     }
 
-    /* =========================================================
-       EXPORTAÇÕES
-    ========================================================= */
+     
 
     window.communityHub = {
         CATEGORY_IMAGES,

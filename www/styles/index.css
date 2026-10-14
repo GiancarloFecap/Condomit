@@ -570,10 +570,6 @@ body {
         padding: 0 20px 20px;
     }
 }
-
-/* ============================================================
-   Ajustes 011 - logo uniforme em todas as barras laterais
-============================================================ */
 .sidebar .sidebar-header .sidebar-logo,
 .sidebar.sindico-sidebar .sidebar-header .sidebar-logo,
 .sidebar.morador-sidebar .sidebar-header .sidebar-logo,
@@ -586,10 +582,6 @@ body {
     display: block;
     margin-inline: auto;
 }
-
-/* ============================================================
-   016 - Seletor rápido de chat no padrão do Controle de acesso
-============================================================ */
 .quick-chat-modal {
     position: fixed;
     inset: 0;
@@ -672,10 +664,6 @@ body {
     .quick-chat-options { grid-template-columns: 1fr; }
     .quick-chat-options button { min-height: 130px; }
 }
-
-
-
-/* 049 - resumo financeiro real, sem caixas individuais */
 .summary-card .summary-stats {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -698,10 +686,6 @@ body {
 html[data-theme="dark"] .summary-card .summary-stats .stat { background: transparent !important; border: 0 !important; box-shadow: none !important; }
 html[data-theme="dark"] .summary-card .stat-value { color: #8EA9FF; }
 @media(max-width:560px){.summary-card .summary-stats{grid-template-columns:1fr;gap:14px}.summary-card .summary-stats .stat+.stat{padding-top:14px;border-top:1px solid var(--border-color,#e2e8f0)!important}}
-
-/* ============================================================
-   050 - Resumo mensal compacto e legível
-============================================================ */
 .summary-card {
     min-width: 0;
     overflow: hidden;
@@ -765,9 +749,6 @@ html[data-theme="dark"] .summary-card .stat-value { color: #9CB3FF; }
 }
 
 .full-report-overlay{position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.62);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}.full-report-overlay.open{display:flex}.full-report-card{width:min(980px,100%);max-height:92vh;overflow:hidden;background:var(--card-bg,#fff);border-radius:22px;box-shadow:0 24px 70px rgba(15,23,42,.28);display:flex;flex-direction:column}.full-report-card>header,.full-report-card>footer{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid var(--border-color,#e2e8f0)}.full-report-card>footer{border-top:1px solid var(--border-color,#e2e8f0);border-bottom:0;justify-content:flex-end}.full-report-card>header h2{margin:0;color:var(--text-primary,#172033)}.full-report-card>header p{margin:4px 0 0;color:var(--text-secondary,#64748b)}.full-report-card>header button{width:42px;height:42px;border:1px solid #dbe2f0;border-radius:12px;background:transparent}.full-report-body{overflow:auto;padding:22px}.full-report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.full-report-grid section{padding:16px;border:1px solid var(--border-color,#dbe2f0);border-radius:16px}.full-report-grid h3{margin:0 0 12px}.full-report-grid p{margin:7px 0;color:var(--text-secondary,#475569)}.full-report-grid .report-wide{grid-column:1/-1}.report-loading{padding:60px;text-align:center;color:#64748b}@media(max-width:720px){.full-report-grid{grid-template-columns:1fr}.full-report-grid .report-wide{grid-column:auto}}@media print{body>*:not(#fullCondoReportModal){display:none!important}.full-report-overlay{position:static!important;display:block!important;background:#fff!important;padding:0!important}.full-report-card{max-height:none!important;box-shadow:none!important;width:100%!important}.full-report-card>header button,.full-report-card>footer{display:none!important}.full-report-body{overflow:visible!important}}
-
-
-/* ===== Dashboard V0.72.5 — layout horizontal e resumo gráfico ===== */
 .dashboard-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: stretch;
@@ -885,10 +866,6 @@ html[data-theme="dark"] .monthly-chart-track {
         margin-top: -2px;
     }
 }
-
-/* ============================================================
-   073 - Visão geral no padrão visual solicitado
-============================================================ */
 .overview-shell {
     padding: 34px 40px 42px;
     background: #f6f7fb;

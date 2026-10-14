@@ -1,4 +1,3 @@
-/* Profile Photo Editor Styles */
 .profile-photo-modal {
   display: none;
   position: fixed;
@@ -84,8 +83,6 @@
   padding: 20px;
   overflow-y: auto;
 }
-
-/* Selection Screen */
 .selection-screen {
   display: flex;
   flex-direction: column;
@@ -168,8 +165,6 @@
   height: 100%;
   object-fit: cover;
 }
-
-/* Editor Screen */
 .editor-screen {
   display: none;
   flex: 1;
@@ -275,8 +270,6 @@
 .modal-btn.choose:hover {
   background: #4752c4;
 }
-
-/* Zoom slider */
 .zoom-slider-container {
   position: absolute;
   bottom: -60px;
@@ -325,8 +318,6 @@
   cursor: pointer;
   border: none;
 }
-
-/* Error message */
 .error-message {
   position: fixed;
   top: 20px;
@@ -350,8 +341,6 @@
     transform: translateX(-50%) translateY(0);
   }
 }
-
-/* Responsive */
 @media (max-width: 480px) {
   .crop-area {
     width: 250px;
@@ -362,8 +351,6 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
-
-/* 015 - ação de reset da foto */
 .reset-profile-photo-btn {
   width: 100%;
   min-height: 46px;

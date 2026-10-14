@@ -19,7 +19,7 @@ for (const file of rootFiles) {
   await cp(join(root, file), join(out, file));
 }
 
-// Capacitor exige index.html no webDir; use o mesmo HTML público, inclusive SEO.
+ 
 const index = await readFile(join(root, 'index.html'), 'utf8');
 await writeFile(join(out, 'index.html'), index, 'utf8');
 

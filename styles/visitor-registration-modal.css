@@ -1,5 +1,4 @@
 
-/* 065 - modal único de cadastro de visitantes no painel de liberação. */
 .release-register-action { display:flex; justify-content:flex-end; margin-bottom:16px; }
 .release-register-button { display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:43px;padding:10px 17px;border:0;border-radius:12px;background:linear-gradient(135deg,#294FD8,#0ea5a4);color:#fff;font-size:.93rem;font-weight:700;cursor:pointer;white-space:nowrap; }
 .release-register-button:hover { filter:brightness(1.08); }

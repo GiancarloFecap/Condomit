@@ -242,8 +242,8 @@
       return;
     }
 
-    // O navegador só permite pedir permissão a partir de uma ação do usuário.
-    // Fazemos uma única tentativa no primeiro gesto, mantendo os switches ligados por padrão.
+     
+     
     if ('Notification' in window && Notification.permission === 'default') {
       const key = 'condomit.notification.permission.prompted';
       const firstInteraction = async () => {

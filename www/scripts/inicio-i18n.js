@@ -120,7 +120,7 @@
   function applyLanguage(choice, persist = true) {
     const lang = choice === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : (choice === 'en' ? 'en' : 'pt');
     document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
-    document.title = titlePt; // Título SEO fixo em pt-BR; traduções visuais continuam disponíveis.
+    document.title = titlePt;  
     translateTree(document.body, lang);
     const select = document.getElementById('landing-language-select');
     if (select) select.value = persist ? choice : (localStorage.getItem('app-language') || 'auto');

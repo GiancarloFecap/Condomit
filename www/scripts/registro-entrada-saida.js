@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     bindAccessPageControls();
     await loadAccessMovements();
 
-    // Atualiza o histórico quando outra aba/dispositivo libera ou revoga um acesso.
+     
     window.setInterval(() => {
         if (!document.hidden) loadAccessMovements();
     }, 10000);
@@ -134,18 +134,10 @@ async function loadAccessMovements() {
 
     let movements = buildMovementsFromDatabaseLogs(dbLogs);
 
-    /*
-     * Compatibilidade com registros criados antes da migration 010.
-     * Eles continuam visíveis, mas toda nova liberação/revogação passa a ser
-     * persistida no banco e compartilhada entre dispositivos.
-     */
+     
     const legacyGatehouse = getStoredAccessLogs(accessLogState.currentUser);
 
-    /*
-     * Cadastro não é entrada. O Registro de entrada e saída passa a mostrar
-     * somente mudanças reais de liberação/revogação/recusa do banco, mais
-     * o histórico legado já existente.
-     */
+     
     movements = [
         ...movements,
         ...buildMovementsFromLegacyGatehouseLogs(legacyGatehouse)

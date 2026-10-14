@@ -19,9 +19,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     currentUser = JSON.parse(loggedInUser);
 
-    // Recarrega o condomínio atual diretamente do banco. Isso é importante
-    // após a transferência de síndico, quando o objeto salvo na sessão pode
-    // ainda conter dados antigos/incompletos do período em que ele era morador.
+     
+     
+     
     await refreshCheckoutCondominiumContext();
 
     if (currentUser.type !== 'sindico') {
@@ -29,8 +29,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         return;
     }
 
-    // O botão é desenhado imediatamente pelo HTML/JS da própria Condomit.
-    // Ele não depende mais do carregamento tardio do SDK visual do Mercado Pago.
+     
+     
     renderDirectMercadoPagoButton('Selecione o plano e continue para o ambiente seguro do Mercado Pago.');
 
     const logoutBtn = document.getElementById('btn-logout-checkout');
@@ -44,9 +44,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     bindReturnListeners();
     bindAbandonedPaymentBackGuard();
 
-    // Plano e status de cobrança são consultados em paralelo. Isso reduz o tempo
-    // até o checkout ficar utilizável sem abrir mão do redirecionamento de quem
-    // já está com a mensalidade válida.
+     
+     
+     
     const [billingResult, plansResult] = await Promise.allSettled([
         fetchCondominiumBillingStatus(true),
         fetchPlans()
@@ -56,8 +56,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         const billing = billingResult.value;
         if (billing?.can_use) {
             persistApprovedPlan(billing);
-            // Condomínio administrativo é isento: nunca oferecer upgrade
-            // pago, nem mesmo se a URL contiver ?upgrade=1.
+             
+             
             const isBillingExempt = billing.billing_exempt === true || billing.status === 'exempt' ||
                 (String(currentUser?.email || '').trim().toLowerCase() === 'contato.condomit@gmail.com' && currentUser?.demo_access === true);
             if (isBillingExempt || !isUpgradeFlow) {
@@ -177,11 +177,11 @@ function renderPlans() {
         const normalizedPlanName = planName.trim().toLowerCase();
         if (normalizedPlanName.includes('premium')) {
             icon = 'fa-crown';
-            // Premium herda integralmente Essencial + Pro.
+             
             features = [...essentialFeatures, ...proFeatures, ...premiumFeatures];
         } else if (normalizedPlanName.includes('pro')) {
             icon = 'fa-rocket';
-            // Pro herda integralmente o Essencial.
+             
             features = [...essentialFeatures, ...proFeatures];
         }
 
@@ -625,7 +625,7 @@ function bindAbandonedPaymentBackGuard() {
             }
         } catch (_) {}
 
-        // Voltou do Mercado Pago sem concluir: a regra da Condomit é encerrar a sessão.
+         
         await logoutCheckoutUser();
     });
 }

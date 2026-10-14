@@ -1,9 +1,7 @@
 (function () {
   'use strict';
 
-  /**
-   * Lê e converte um valor JSON salvo no navegador.
-   */
+   
   function readStoredJson(storage, key) {
     try {
       const raw = storage.getItem(key);
@@ -14,9 +12,7 @@
     }
   }
 
-  /**
-   * Mantém apenas os números do CEP.
-   */
+   
   function normalizeCep(cep) {
     const digits = String(cep || '').replace(/\D/g, '');
 
@@ -25,9 +21,7 @@
       : '';
   }
 
-  /**
-   * Converte o CEP para o formato 00000-000.
-   */
+   
   function formatCep(cep) {
     const digits = normalizeCep(cep);
 
@@ -38,12 +32,7 @@
     return `${digits.slice(0, 5)}-${digits.slice(5)}`;
   }
 
-  /**
-   * Retorna o usuário atualmente autenticado.
-   *
-   * Prioriza condominiumUser porque esse objeto possui as
-   * informações do condomínio e do tipo de usuário.
-   */
+   
   function getCurrentUser() {
     const appUser =
       readStoredJson(sessionStorage, 'condominiumUser') ||
@@ -88,9 +77,7 @@
     return appUser || authUser || null;
   }
 
-  /**
-   * Procura o CEP diretamente dentro do objeto do usuário.
-   */
+   
   function getCepFromUserObject(user) {
     if (!user) {
       return '';
@@ -153,9 +140,7 @@
     return '';
   }
 
-  /**
-   * Obtém o access token atual do Supabase.
-   */
+   
   async function getAccessToken() {
     try {
       if (
@@ -193,9 +178,7 @@
     ) || '';
   }
 
-  /**
-   * Obtém o CEP do condomínio associado ao usuário.
-   */
+   
   async function getUserCep(user) {
     user = user || getCurrentUser();
 
@@ -203,10 +186,7 @@
       return '';
     }
 
-    /*
-     * Primeira tentativa:
-     * procurar o CEP diretamente no objeto salvo no navegador.
-     */
+     
     const storedCep = getCepFromUserObject(user);
 
     if (storedCep) {
@@ -221,10 +201,7 @@
       return '';
     }
 
-    /*
-     * Segunda tentativa:
-     * consultar diretamente a tabela user_condominiums.
-     */
+     
     if (
       window.supabase &&
       typeof window.supabase.from === 'function'
@@ -260,10 +237,7 @@
       }
     }
 
-    /*
-     * Terceira tentativa:
-     * consultar o vínculo pela API do Netlify.
-     */
+     
     try {
       const accessToken =
         await getAccessToken();
@@ -325,9 +299,7 @@
     return '';
   }
 
-  /**
-   * Verifica se o usuário possui perfil de síndico.
-   */
+   
   function isSindico(user) {
     user = user || getCurrentUser();
 
@@ -390,9 +362,7 @@
     return false;
   }
 
-  /**
-   * Verifica se o usuário é o organizador da assembleia.
-   */
+   
   function isOrganizer(user, assembly) {
     user = user || getCurrentUser();
 
@@ -455,10 +425,7 @@
     return false;
   }
 
-  /**
-   * Verifica se o usuário pertence ao mesmo condomínio
-   * da assembleia.
-   */
+   
   async function checkAssemblyAccess(
     user,
     assemblyCep
@@ -479,10 +446,7 @@
       };
     }
 
-    /*
-     * Não liberar automaticamente por ser síndico.
-     * O CEP do condomínio também precisa ser conferido.
-     */
+     
     const userCep =
       await getUserCep(user);
 

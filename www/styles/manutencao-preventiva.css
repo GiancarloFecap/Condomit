@@ -580,8 +580,6 @@
         gap: 4px;
     }
 }
-
-/* Ajustes 011 - calendário como filtro */
 .calendar-grid .calendar-filter-day {
     position: relative;
     width: 100%;
@@ -606,10 +604,6 @@
 .calendar-status-dot.red { background: #ef4444; }
 .calendar-status-dot.green { background: #22c55e; }
 .calendar-clear-filter { margin: 8px 0 10px; border: 0; background: transparent; color: #3360F2; cursor: pointer; font-weight: 700; }
-
-/* ============================================================
-   022 - Métricas, nova manutenção e pesquisa responsivas
-============================================================ */
 .maintenance-head {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -654,9 +648,6 @@
 }
 @media (max-width: 900px) { .maintenance-head { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .maintenance-head { grid-template-columns: 1fr; } }
-
-
-/* Revisão 060 — indicadores menores, filtros sob a busca e estilo de Sugestões. */
 body.condomit-no-topbar .maintenance-page {
     padding: 78px clamp(16px,2.2vw,30px) 30px;
 }
@@ -788,6 +779,5 @@ html[data-theme="dark"] .maintenance-main .toolbar-actions select {
     body.condomit-no-topbar .maintenance-page { padding:74px 14px 24px; }
 }
 @media(max-width:900px) {
-    /* A navegação mobile já reserva 58px para o sino e o botão de menu. */
     body.condomit-no-topbar .maintenance-page { padding-top:16px; }
 }

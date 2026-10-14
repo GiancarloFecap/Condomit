@@ -323,11 +323,6 @@
         align-items: stretch;
     }
 }
-
-
-/* ============================================================
-   GESTÃO DE MORADORES 013 - DETALHES
-============================================================ */
 body.resident-modal-open { overflow: hidden; }
 
 .resident-modal-overlay {
@@ -430,10 +425,6 @@ html[data-theme="dark"] .resident-detail { border-color: var(--border-color, #2d
     .resident-modal-grid { grid-template-columns: 1fr; }
     .resident-modal { padding: 18px; }
 }
-
-/* ============================================================
-   015 - Linha clicável e menu de gestão do morador
-============================================================ */
 .resident-table-row {
     cursor: pointer;
     transition: background .16s ease, transform .16s ease;

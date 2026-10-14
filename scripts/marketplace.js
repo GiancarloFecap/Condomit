@@ -62,13 +62,7 @@ async function loadMarketplaceUser() {
         return null;
     }
 
-    /*
-     * Tenta restaurar a sessão autenticada
-     * do Supabase.
-     *
-     * Isso é necessário porque marketplace_items
-     * está protegida por RLS.
-     */
+     
     if (
         typeof window.resolveSupabaseAccessToken ===
         'function'
@@ -290,9 +284,7 @@ function setupMarketplaceActions() {
             }
         );
 
-    /*
-     * PUBLICAR ANÚNCIO
-     */
+     
     document
         .getElementById(
             'marketplaceForm'
@@ -302,10 +294,7 @@ function setupMarketplaceActions() {
             async (event) => {
                 event.preventDefault();
 
-                /*
-                 * Evita dois INSERTS caso o
-                 * usuário clique várias vezes.
-                 */
+                 
                 if (
                     marketplaceState
                         .isSaving
@@ -363,9 +352,7 @@ function setupMarketplaceActions() {
                         ''
                     ).trim();
 
-                /*
-                 * Permite 10,50 e 10.50.
-                 */
+                 
                 const price =
                     Number(
                         String(
@@ -391,9 +378,7 @@ function setupMarketplaceActions() {
                     marketplaceState
                         .draftImage;
 
-                /*
-                 * VALIDAÇÕES
-                 */
+                 
                 if (!title) {
                     window.showToast?.(
                         'Informe o título do anúncio.',
@@ -452,10 +437,7 @@ function setupMarketplaceActions() {
                     .isSaving =
                     true;
 
-                /*
-                 * Guarda o conteúdo original
-                 * do botão.
-                 */
+                 
                 const oldButtonHtml =
                     submitButton
                         ?.tagName ===
@@ -483,13 +465,7 @@ function setupMarketplaceActions() {
                 }
 
                 try {
-                    /*
-                     * marketplace_items está
-                     * protegida por RLS.
-                     *
-                     * O INSERT deve utilizar
-                     * o JWT do usuário.
-                     */
+                     
                     if (
                         typeof window
                             .resolveSupabaseAccessToken ===
@@ -508,11 +484,7 @@ function setupMarketplaceActions() {
                         }
                     }
 
-                    /*
-                     * createMarketplaceItem()
-                     * deve realizar o INSERT
-                     * em marketplace_items.
-                     */
+                     
                     const wasEditing =
                         Boolean(
                             marketplaceState.editingDbId
@@ -539,11 +511,7 @@ function setupMarketplaceActions() {
                                 marketplaceState.currentUser
                             );
 
-                    /*
-                     * Se não houve retorno
-                     * de ID, não considerar
-                     * como salvo.
-                     */
+                     
                     if (
                         !item ||
                         item.id ===
@@ -620,13 +588,7 @@ function setupMarketplaceActions() {
         );
 }
 
-/*
- * Normaliza IDs.
- *
- * IDs vindos do Supabase podem ser
- * números, enquanto dataset retorna
- * sempre string.
- */
+ 
 function normalizeItemId(value) {
     if (
         value === undefined ||
@@ -638,10 +600,7 @@ function normalizeItemId(value) {
     return String(value);
 }
 
-/*
- * Transforma erros técnicos do
- * Supabase em mensagens mais claras.
- */
+ 
 function normalizeMarketplaceError(
     error
 ) {
@@ -733,10 +692,7 @@ async function renderMarketplacePage() {
             ? allItems
             : [];
 
-    /*
-     * Favoritos também são
-     * normalizados como string.
-     */
+     
     let favoriteIds = window.communityHub.getFavoriteMarketplaceItems(marketplaceState.currentUser);
     try {
         const dbFavorites = await window.supabaseFetch('/marketplace_favorites?select=item_id');
@@ -1690,10 +1646,7 @@ function handleMarketplaceImageChange(
         return;
     }
 
-    /*
-     * Evita inserir imagens gigantes
-     * como base64 no banco.
-     */
+     
     const maxSize =
         5 *
         1024 *

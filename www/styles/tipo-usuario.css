@@ -259,9 +259,6 @@ body{
   .tipo-option{min-height:auto}
   .continue{width:100%;max-width:320px}
 }
-
-
-/* 061 — controles espelhados e fluxo compacto para a página inteira caber na tela. */
 .tipo-language-control { left:auto; right:22px; }
 .tipo-floating-logo { right:auto; left:22px; }
 .tipo-back-button { right:auto; left:22px; }
@@ -318,8 +315,6 @@ body{
   .tipo-avatar {width:42px;height:42px;}
   .tipo-heading > p {font-size:.75rem;}
 }
-
-/* 067 — botão Voltar externo e identidade da Condomit no topo do cartão. */
 .tipo-back-floating{
   position:fixed;top:22px;left:22px;right:auto;z-index:10;
   min-height:48px; padding:0 20px;

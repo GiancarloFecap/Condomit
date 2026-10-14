@@ -63,8 +63,8 @@ function detectMercadoPagoCredentialMode(value) {
 }
 
 function getMercadoPagoEffectiveEnvironment() {
-  // A credencial é a fonte mais confiável. Isso evita abrir sandbox com token
-  // de produção (ou o inverso) quando MERCADO_PAGO_ENV estiver ausente/antigo.
+   
+   
   return detectMercadoPagoCredentialMode(MERCADO_PAGO_ACCESS_TOKEN) || MERCADO_PAGO_ENV;
 }
 
@@ -230,9 +230,9 @@ async function createMercadoPagoPreference({ event, userRecord, planRecord, paym
         failure: new URL('/pages/pagamento-falha.html', baseUrl).toString()
       },
       auto_return: 'approved',
-      // A Condomit libera recursos imediatamente após a confirmação do plano.
-      // O modo binário evita que novos pagamentos fiquem indefinidamente em
-      // `pending`/`in_process`: o Mercado Pago deverá aprová-los ou recusá-los.
+       
+       
+       
       binary_mode: true,
       notification_url: getMercadoPagoWebhookUrl(event),
       external_reference: externalReference,
@@ -305,9 +305,9 @@ async function confirmMercadoPagoPayment({ paymentId, externalReference, fallbac
   let normalizedStatus = normalizePaymentStatus(fallbackStatus);
   let resolvedMercadoPagoPaymentId = paymentId ? String(paymentId) : null;
 
-  // Quando o navegador volta pelo histórico, pode existir somente a
-  // external_reference. Nesse caso localizamos o pagamento real pela API do
-  // Mercado Pago em vez de confiar no status guardado no navegador.
+   
+   
+   
   if (!resolvedMercadoPagoPaymentId && externalReference) {
     mercadoPagoPayment = await searchMercadoPagoPaymentByExternalReference(externalReference);
     if (mercadoPagoPayment?.id) {
@@ -343,9 +343,9 @@ async function confirmMercadoPagoPayment({ paymentId, externalReference, fallbac
         ...(paymentRecord.plano_id ? {} : resolvedReference.planId ? { plano_id: resolvedReference.planId } : {})
       };
 
-      // A data que inicia a validade mensal só deve representar pagamento
-      // realmente aprovado. Enquanto estiver pendente/em análise, preservamos
-      // a data existente e aguardamos a confirmação oficial do Mercado Pago.
+       
+       
+       
       if (isApprovedPaymentStatus(normalizedStatus)) {
         paymentUpdates.data_pagamento = mercadoPagoPayment.date_approved || mercadoPagoPayment.date_last_updated || new Date().toISOString();
       }
@@ -421,10 +421,10 @@ function extractMercadoPagoNotificationData(query, body) {
 }
 
 async function handleMercadoPagoConfig() {
-  //#region debug-point mp-config-token-mode
+   
   const rawToken = String(MERCADO_PAGO_ACCESS_TOKEN || '');
   const accessTokenMode = detectMercadoPagoCredentialMode(rawToken) || (rawToken ? 'unknown' : 'missing');
-  //#endregion debug-point mp-config-token-mode
+   
 
   return {
     statusCode: isMercadoPagoConfigured() ? 200 : 503,
@@ -1289,9 +1289,9 @@ async function fetchSupabaseUsersByEmail(email) {
 }
 
 async function updateSupabasePassword(email, password) {
-  // Senhas pertencem exclusivamente ao Supabase Auth. Nunca gravamos a senha
-  // em public.users, pois isso duplicaria uma credencial sensível em uma tabela
-  // de perfil acessível pela API de dados.
+   
+   
+   
   const authUser = await fetchAuthAdminUserByEmail(email);
   if (!authUser?.id) return 0;
 
@@ -1480,9 +1480,9 @@ async function fetchAuthAdminUserByEmail(email) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   if (!normalizedEmail) return null;
 
-  // A API administrativa do GoTrue é paginada e nem todas as versões
-  // respeitam um filtro `?email=`. Fazemos a busca paginada e comparamos o
-  // e-mail explicitamente para evitar falso positivo/negativo.
+   
+   
+   
   const perPage = 200;
   for (let page = 1; page <= 50; page += 1) {
     const response = await fetch(
@@ -1519,9 +1519,9 @@ async function fetchAuthAdminUserByEmail(email) {
 
 async function reactivateSoftDeletedAuthUser({ uid, email }) {
   if (!uid) return { reactivated: false, reason: 'missing-uid' };
-  // Reativar uma conta não pode trocar a senha com um valor fornecido por uma
-  // requisição pública. A recuperação de senha continua sendo feita pelo link
-  // enviado ao endereço de e-mail do titular.
+   
+   
+   
   const patchPayload = { deleted_at: null, banned_until: null };
   const patchResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(uid)}`, {
     method: 'PUT',
@@ -2115,9 +2115,9 @@ async function handleCreateDemoAccount() {
     admin_profile_switch: true
   };
 
-  // O SDK oficial lida corretamente tanto com a chave secreta nova
-  // (sb_secret_...) quanto com a service_role legada. A conta de Auth e a
-  // senha são a única etapa obrigatória para permitir o login.
+   
+   
+   
   const admin = createClient(SUPABASE_URL, SUPABASE_ADMIN_KEY, {
     auth: {
       autoRefreshToken: false,
@@ -2194,10 +2194,10 @@ async function handleCreateDemoAccount() {
     };
   }
 
-  // O registro em public.users é útil para o restante da plataforma. Bancos
-  // antigos da Condomit podem exigir phone/cpf; por isso usamos valores técnicos
-  // exclusivos da conta administrativa. Não usamos upsert(onConflict=email), pois
-  // instalações legadas podem não ter a mesma constraint UNIQUE em email.
+   
+   
+   
+   
   let profileWarning = null;
   const condominiumSnapshot = {
     name: 'Condomit',
@@ -2238,9 +2238,9 @@ async function handleCreateDemoAccount() {
         .from('users')
         .insert(fullProfile);
       if (insertError) {
-        // Fallback para schemas em que as colunas adicionadas por migrations
-        // recentes ainda não existem. Os campos historicamente obrigatórios
-        // continuam presentes.
+         
+         
+         
         const { error: coreInsertError } = await admin
           .from('users')
           .insert({
@@ -2310,9 +2310,9 @@ exports.handler = async (event, context) => {
     if (pathname === '/esqueceu-senha' || pathname === '/forgot-password') {
 }
     if (pathname === '/register' && rawMethod === 'POST') {
-      // Endpoint legado desativado: ele inseria perfis via service role e podia
-      // aceitar campos de privilégio/credenciais vindos diretamente do cliente.
-      // O cadastro atual usa Supabase Auth e o fluxo de perfil protegido pelo banco.
+       
+       
+       
       return {
         statusCode: 410,
         headers,
@@ -2350,11 +2350,11 @@ exports.handler = async (event, context) => {
       }
       const result = await proxySupabaseRequest(null, pathSuffix, 'GET');
 
-      // Conta administrativa fixa: a autenticação no Supabase Auth é a fonte
-      // de identidade. Se um banco legado ainda não conseguiu materializar o
-      // registro em public.users, devolvemos um perfil administrativo seguro
-      // somente para a própria sessão autenticada. Isso evita bloquear o login
-      // por diferenças históricas do schema de perfil.
+       
+       
+       
+       
+       
       const signedEmail = String(authUser.email || '').trim().toLowerCase();
       const isFixedAdminLookup = requestedEmail === FIXED_ADMIN_EMAIL && signedEmail === FIXED_ADMIN_EMAIL;
       const hasRows = Array.isArray(result.data) && result.data.length > 0;
@@ -2417,9 +2417,9 @@ exports.handler = async (event, context) => {
       if (!authUser || String(authUser.email || '').trim().toLowerCase() !== normalizedEmail) {
         return { statusCode: 403, headers, body: JSON.stringify({ error: 'Você só pode excluir a própria conta.' }) };
       }
-      // Remove primeiro o vínculo do usuário com o condomínio. Bancos antigos
-      // possuem FK user_condominiums -> users com NO ACTION/RESTRICT, que era
-      // a principal causa do HTTP 409 ao excluir a conta.
+       
+       
+       
       const membershipDelete = await proxySupabaseRequest(
         null,
         `/user_condominiums?user_email=eq.${encodeURIComponent(normalizedEmail)}`,
@@ -2435,10 +2435,10 @@ exports.handler = async (event, context) => {
         };
       }
 
-      // Depois remove o perfil e os dados dependentes. Se houver alguma
-      // restrição de banco, a conta de autenticação permanece intacta e o
-      // usuário pode tentar novamente após a correção, evitando uma conta
-      // parcialmente excluída.
+       
+       
+       
+       
       const profileDelete = await proxySupabaseRequest(
         null,
         `/users?email=eq.${encodeURIComponent(normalizedEmail)}`,
@@ -2457,9 +2457,9 @@ exports.handler = async (event, context) => {
 
       let authDeleteResult = { skipped: true };
       try {
-        // O token já identifica inequivocamente a conta atual. Usar o ID da
-        // sessão evita procurar o usuário por e-mail na API administrativa e
-        // elimina o risco de remover uma conta diferente em listagens paginadas.
+         
+         
+         
         if (authUser?.id) {
           authDeleteResult = await deleteAuthAdminUserById(authUser.id);
         }

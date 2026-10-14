@@ -28,15 +28,15 @@
     function setupPhoneMask(phone) {
         if (!phone) return;
 
-        // Reaplica uma máscara determinística depois dos listeners legados.
+         
         phone.addEventListener('input', () => {
             const digits = digitsOnly(phone.value);
             const formatted = formatPhoneDigits(digits);
             if (phone.value !== formatted) phone.value = formatted;
         });
 
-        // Se o Backspace atingir um separador gerado pela máscara, remove o
-        // dígito anterior em vez de recriar o separador infinitamente.
+         
+         
         phone.addEventListener('keydown', (event) => {
             if (event.key !== 'Backspace' || phone.selectionStart == null || phone.selectionEnd == null) return;
             if (phone.selectionStart !== phone.selectionEnd || phone.selectionStart === 0) return;

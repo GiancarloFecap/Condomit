@@ -1,6 +1,6 @@
-// Condomit v0.72.5 - estado único da sala de assembleia.
-// Mesmo que o navegador ainda tenha algum módulo antigo em cache com outro
-// query string (?v=...), todas as importações reutilizam este mesmo objeto.
+ 
+ 
+ 
 const STATE_KEY = '__condomitAssemblyRoomState';
 
 function createInitialState() {

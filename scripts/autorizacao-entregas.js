@@ -101,15 +101,13 @@ function bindDeliveryControls() {
 
 async function loadPackages() {
     try {
-        /* Gera os avisos das encomendas antigas sem interromper a listagem
-           quando a migration 024 ainda não tiver sido aplicada. */
+         
         rpc('condomit_notify_old_packages').catch(() => {});
 
         const rows = await rpc('condomit_list_packages');
         deliveryState.packages = Array.isArray(rows) ? rows : [];
 
-        /* O RPC legado continua compatível com instalações antigas. Os campos
-           avançados são mesclados por uma consulta RLS-safe quando existem. */
+         
         try {
             const advanced = await window.supabaseFetch('/packages?select=id,pickup_code,package_photo_url,overdue_notified_at&order=received_at.desc');
             const byId = new Map((Array.isArray(advanced) ? advanced : []).map(item => [Number(item.id), item]));

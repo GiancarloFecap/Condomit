@@ -1,4 +1,3 @@
-/* Dark Theme variables and styles */
 :root {
     --bg-color: #f3f4f6;
     --card-bg: white;
@@ -20,8 +19,6 @@
     --topbar-bg: #1f2937;
     --form-group-color: #d1d5db;
 }
-
-/* Apply variables */
 body {
     background-color: var(--bg-color);
     color: var(--text-primary);
@@ -61,8 +58,6 @@ body {
 .top-bar-left h1 {
     color: var(--text-primary) !important;
 }
-
-/* Font Size styles */
 html {
     font-size: 16px;
     transition: none !important;
@@ -287,8 +282,6 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 .btn-delete-account:active {
     transform: translateY(0);
 }
-
-/* Modal de confirmação de exclusão */
 .delete-account-modal {
     position: fixed;
     inset: 0;
@@ -474,8 +467,6 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
     transform: translateY(-1px);
     box-shadow: 0 6px 14px rgba(220, 38, 38, 0.35);
 }
-
-/* Loader no botão */
 .dam-btn-confirm.loading {
     position: relative;
     color: transparent !important;
@@ -975,10 +966,6 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
         grid-template-columns: 1fr;
     }
 }
-
-/* ============================================================
-   Ajustes 011 - seletor de Controle de acesso
-============================================================ */
 .access-registration-modal { max-width: 760px; }
 .access-kind-selector {
     display: grid;
@@ -1008,10 +995,6 @@ html, body, .main-content, .dashboard-sindico, .sidebar, .top-bar, .config-card,
 .access-registration-form[hidden], .access-kind-selector[hidden] { display: none !important; }
 .access-back-btn { width: max-content; border: 0; background: transparent; color: #3360F2; font-weight: 700; cursor: pointer; padding: 0 0 6px; }
 @media (max-width: 720px) { .access-kind-selector { grid-template-columns: 1fr; } .access-kind-card { min-height: 130px; } }
-
-/* ============================================================
-   014 - Modais de conteúdo das Configurações
-============================================================ */
 .settings-modal-open {
     overflow: hidden;
 }
@@ -1326,11 +1309,6 @@ html[data-theme="dark"] .settings-document-section {
         justify-self: start;
     }
 }
-
-
-/* ============================================================
-   016 - Autenticação de dois fatores
-============================================================ */
 .two-factor-settings-card {
     display: grid;
     grid-template-columns: 74px 1fr;
@@ -1401,8 +1379,6 @@ html[data-theme="dark"] .settings-document-section {
     }
     .two-factor-settings-icon { margin-inline: auto; }
 }
-
-/* 022 - Botão de saída compacto */
 .profile-card-actions .btn-logout {
     width: auto;
     min-width: 0;
@@ -1415,11 +1391,6 @@ html[data-theme="dark"] .settings-document-section {
     flex: 0 0 auto;
 }
 .profile-card-actions .btn-logout i { font-size: 0.88rem; }
-
-
-/* ============================================================
-   044 - Contenção de texto + contraste consistente no modo escuro
-============================================================ */
 .config-content,
 .config-grid,
 .config-card,
@@ -1509,8 +1480,6 @@ html[data-theme="dark"] .settings-document-section {
     white-space: normal;
     overflow-wrap: anywhere;
 }
-
-/* Cores que antes estavam fixas para o tema claro agora acompanham o tema. */
 .config-card .form-group,
 .detail-item,
 .dam-confirm-input label,
@@ -1617,8 +1586,6 @@ html[data-theme="dark"] .settings-document-section {
         flex-basis: 58px;
     }
 }
-
-/* 044.1 - Contraste dos modais internos de Configurações */
 .settings-document-intro,
 .settings-company-hero,
 .settings-contact-card,
@@ -1690,11 +1657,6 @@ html[data-theme="dark"] .two-factor-settings-icon {
     background: #172554;
     color: #93C5FD;
 }
-
-
-/* ============================================================
-   046 - Seletor de idioma: uma única superfície visual
-============================================================ */
 .condomit-app-page .language-selector {
     display: grid;
     gap: 9px;
@@ -1773,9 +1735,6 @@ html[data-theme="dark"] .condomit-app-page .language-select {
     background: transparent !important;
     color: #eef3f8 !important;
 }
-
-
-/* 047 - Ícones de Configurações na paleta Condomit */
 .config-card .form-group i:first-of-type,
 .detail-item i,
 .access-kind-card i,
@@ -1795,11 +1754,6 @@ html[data-theme="dark"] .setting-icon,
 html[data-theme="dark"] .profile-details i {
     color: #8CAAF0 !important;
 }
-
-
-/* ============================================================
-   048 - Perfil do usuário: mais espaço e ações alinhadas
-============================================================ */
 @media (min-width: 980px) {
     .config-grid .profile-card {
         grid-column: span 2;
@@ -1908,11 +1862,6 @@ html[data-theme="dark"] .btn-logout {
     .profile-card .profile-details { display: block; }
     .profile-card .detail-item { margin-bottom: 10px; }
 }
-
-
-/* ============================================================
-   053 - Preferências de notificação e privacidade
-============================================================ */
 .notification-settings-hint{margin:-8px 0 14px;color:var(--text-secondary,#64748b);font-size:.88rem;line-height:1.5}
 .notification-preference-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--border-color,#e5e7eb)}
 .notification-preference-row:last-of-type{border-bottom:0}
@@ -1947,10 +1896,6 @@ html[data-theme="dark"] .device-notification-status.success{background:#052e2b;c
 html[data-theme="dark"] .device-notification-status.warning{background:#422006;color:#fbbf24}
 html[data-theme="dark"] .device-notification-status.error{background:#450a0a;color:#fca5a5}
 @media(max-width:560px){.notification-preference-row{align-items:flex-start}.notification-switch{margin-top:4px}.notification-preference-copy small{font-size:.78rem}}
-
-/* ============================================================
-   0.56.0 - Configurações: contraste, condomínio e reservas
-============================================================ */
 html[data-theme="dark"] .privacy-session-action-icon{
     background:#5b1018;
     color:#fecaca;
@@ -2036,8 +1981,6 @@ html[data-theme="dark"] .release-item>span{background:#172554}
  .reservation-management-tabs{overflow-x:auto}
  .reservation-management-footer>*{flex:1 1 100%}
 }
-
-/* 0.71.0 */
 .reserva-status-badge.confirmada{background:#dcfce7;color:#166534}
 .settings-content-footer .visitor-submit-btn i{margin-right:8px}
 .settings-resident-list{display:grid;gap:12px}
@@ -2045,9 +1988,6 @@ html[data-theme="dark"] .release-item>span{background:#172554}
 .settings-resident-avatar{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:#e8efff;color:#2252bd;font-weight:800;flex:0 0 auto}
 .settings-resident-copy{display:grid;gap:3px;min-width:0}.settings-resident-copy strong{color:var(--text-primary,#172033)}.settings-resident-copy span,.settings-resident-copy small{color:var(--text-secondary,#64748b)}
 .consent-management-list{display:grid;gap:12px}.consent-management-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px;border:1px solid var(--border-color,#dbe2f0);border-radius:14px}.consent-management-row>div{display:grid;gap:5px}.consent-management-row small{color:var(--text-secondary,#64748b);line-height:1.45}.consent-management-row.required{background:rgba(34,82,189,.05)}.consent-legal-note{display:flex;gap:9px;align-items:flex-start;padding:12px;border-radius:12px;background:rgba(34,82,189,.06);color:var(--text-secondary,#64748b)}
-
-
-/* Condomit Desktop - atualização do aplicativo */
 #desktopUpdateSettingsItem[hidden] { display: none !important; }
 .desktop-update-card { display:flex; flex-direction:column; gap:18px; }
 .desktop-update-version-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; border:1px solid #dbe4f0; border-radius:14px; background:#f8fafc; }
@@ -2068,9 +2008,6 @@ html[data-theme="dark"] .release-item>span{background:#172554}
 .desktop-update-progress-track span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg,#2252bd,#3d73ea); transition:width .22s ease; }
 .desktop-update-progress small { color:#64748b; }
 .btn-secondary-settings { border:1px solid #cdd8e8; background:#fff; color:#315078; border-radius:12px; padding:11px 18px; font-weight:700; cursor:pointer; }
-
-
-/* Configurações reorganizadas em abas, com conteúdo existente preservado. */
 .settings-tabs {
     display: flex;
     align-items: center;

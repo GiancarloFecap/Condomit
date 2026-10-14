@@ -638,10 +638,6 @@ body {
   }
 }
 
-/* =========================================================
-   Assembly Room - Chat send rounded button + add actions
-   ========================================================= */
-
 .chat-send-round {
   width: 40px !important;
   height: 40px !important;
@@ -676,8 +672,6 @@ body {
 .btn-inline-add i {
   font-size: 11px;
 }
-
-/* Timer badge for polls */
 .poll-timer {
   display: inline-flex;
   align-items: center;
@@ -694,8 +688,6 @@ body {
   background: rgba(148, 163, 184, 0.18);
   color: #94a3b8;
 }
-
-/* Poll results mini bar */
 .poll-result-row {
   display: flex;
   align-items: center;
@@ -719,8 +711,6 @@ body {
   background: linear-gradient(90deg, #3b82f6, #6366f1);
   transition: width 300ms ease;
 }
-
-/* Modal root styles for assembly modals */
 .modal-root .simple-modal-overlay {
   position: fixed;
   inset: 0;
@@ -811,10 +801,6 @@ body {
   outline: none;
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-
-/* ============================================================
-   ESTILOS GERAIS DE BOTÕES (fora do modal também)
-   ============================================================ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -936,8 +922,6 @@ body {
   border-radius: 50%;
   flex: 0 0 40px;
 }
-
-/* Form layouts */
 .modal-root .inline-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1097,9 +1081,6 @@ body {
   background: rgba(148, 163, 184, 0.16);
   color: #cbd5e1;
 }
-
-
-/* Ajustes 011 - logo da sala maior e sem distorção */
 .call-brand img {
     width: auto !important;
     height: 58px !important;
@@ -1110,8 +1091,6 @@ body {
 }
 .call-header { height: 74px !important; min-height: 74px; }
 .call-brand img { height: 62px !important; max-width: 120px !important; }
-
-/* 015 - Estado da transcrição automática */
 .call-transcription {
   display: inline-flex;
   align-items: center;
@@ -1136,9 +1115,6 @@ body {
   .call-transcription span { display: none; }
   .call-transcription { width: 36px; height: 36px; padding: 0; justify-content: center; }
 }
-
-
-/* 024 - alternância de câmera frontal/traseira em dispositivos móveis */
 .control-btn[hidden] {
   display: none !important;
 }
@@ -1148,9 +1124,6 @@ body {
   cursor: wait;
   transform: none;
 }
-
-
-/* 026 - Foto de perfil nos avatares da sala */
 .tile-avatar,
 .panel-item-avatar {
   overflow: hidden;
@@ -1167,8 +1140,6 @@ body {
 .panel-item-avatar.has-photo {
   background: #e2e8f0;
 }
-
-/* 026 - Fotos de perfil nos avatares da sala e do chat */
 .chat-msg-avatar {
   overflow: hidden;
 }
@@ -1182,8 +1153,6 @@ body {
   object-fit: cover;
   border-radius: inherit;
 }
-
-/* 059 - estados mais claros da transcrição automática */
 .call-transcription[data-status="starting"] {
   color: #bfdbfe;
   border-color: rgba(96,165,250,.40);
@@ -1196,9 +1165,6 @@ body {
 }
 .call-transcription[data-status="starting"] i { animation: transcriptionPulse 1.2s ease-in-out infinite; }
 @keyframes transcriptionPulse { 0%,100%{opacity:.55} 50%{opacity:1} }
-
-
-/* v0.65.0 - gravação da assembleia */
 .recording-status {
   position: fixed;
   top: 18px;

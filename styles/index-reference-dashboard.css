@@ -1,4 +1,3 @@
-/* Condomit — dashboard clean / spacious, updated to the supplied visual reference. */
 .reference-dashboard{--ref-navy:#102c57;--ref-blue:#315f9b;--ref-teal:#31a9a0;--ref-orange:#dc9952;--ref-violet:#8174ba;--ref-border:#e7ebf2;--ref-muted:#7d8a9f;--ref-card:#fff;--ref-text:#1c2b44;box-sizing:border-box;background:#f5f7fb;padding:26px 30px 36px;min-height:calc(100vh - 80px);color:var(--ref-text)}
 .reference-dashboard *{box-sizing:border-box}
 .reference-dashboard-title{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}

@@ -92,7 +92,7 @@
       ? {management:'Management',advanced:'Advanced Management',assembly:'Assembly'}
       : {management:'Gestão',advanced:'Gestão Avançada',assembly:'Assembleia'};
 
-    // Remove a seção antiga que criava um segundo botão e o título “Gestão inteligente”.
+     
     nav.querySelectorAll('.advanced-nav-section-027').forEach(el=>el.remove());
     [...nav.querySelectorAll('.nav-section-title')].forEach(title=>{
       if(/^gest[aã]o inteligente$/i.test(title.textContent.trim())) title.closest('.nav-section')?.remove();
@@ -108,7 +108,7 @@
       return;
     }
 
-    // Renomeia o grupo de moradores para “Gestão”.
+     
     const residentLink=[...nav.querySelectorAll('a.nav-item')].find(a=>/gestão de moradores|resident management/i.test(a.textContent||''));
     const managementSection=residentLink?.closest('.nav-section');
     if(managementSection){
@@ -116,7 +116,7 @@
       if(!title && !managementSection.matches('[data-accordion-section]')){ title=document.createElement('div'); title.className='nav-section-title'; managementSection.prepend(title); }
       if(title)title.textContent=labels.management;
 
-      // Mantém exatamente um botão Gestão Avançada logo abaixo de Gestão de Moradores.
+       
       const keep=advancedLinks.find(a=>a.closest('.nav-section')===managementSection) || advancedLinks[0] || document.createElement('a');
       advancedLinks.filter(a=>a!==keep).forEach(a=>a.remove());
       keep.href=page('gestao-avancada.html');
@@ -126,7 +126,7 @@
       residentLink.insertAdjacentElement('afterend',keep);
     }
 
-    // Adiciona o título “Assembleia” no grupo da assembleia quando a sidebar legada não o tiver.
+     
     const assemblyLink=[...nav.querySelectorAll('a.nav-item')].find(a=>/assembleia|assembly/i.test(a.textContent||'') && /assembleia\.html|assembleias/i.test(a.getAttribute('href')||a.textContent||''));
     const assemblySection=assemblyLink?.closest('.nav-section');
     if(assemblySection && !assemblySection.matches('[data-accordion-section]') && !assemblySection.querySelector(':scope > .nav-section-title')){
