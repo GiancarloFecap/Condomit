@@ -237,18 +237,30 @@
     const t = text[lang].tipo;
     document.title = t.title;
     document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
+
     setText('.tipo-back-label', t.back);
     setAttr('.tipo-back-button', 'aria-label', t.back);
+    setAttr('.tipo-back-button', 'title', t.back);
     setText('#tipoEyebrow', t.eyebrow);
     setText('#tipoTitle', t.heroTitle);
     setText('#tipoSubtitle', t.heroText);
     setAttr('.tipo-options', 'aria-label', t.groupLabel);
-    setText('.profile:nth-of-type(1) .tipo-role-title', t.residentTitle);
-    setText('.profile:nth-of-type(1) .tipo-role-subtitle', t.residentDesc);
-    setText('.profile:nth-of-type(2) .tipo-role-title', t.managerTitle);
-    setText('.profile:nth-of-type(2) .tipo-role-subtitle', t.managerDesc);
-    setText('.profile:nth-of-type(3) .tipo-role-title', t.porterTitle);
-    setText('.profile:nth-of-type(3) .tipo-role-subtitle', t.porterDesc);
+
+    const roleNames = {
+      morador: [t.residentTitle, t.residentDesc],
+      sindico: [t.managerTitle, t.managerDesc],
+      porteiro: [t.porterTitle, t.porterDesc]
+    };
+    for (const [role, [name, description]] of Object.entries(roleNames)) {
+      const card = document.querySelector(`.profile[data-profile="${role}"]`);
+      if (!card) continue;
+      const title = card.querySelector('.tipo-role-title');
+      const subtitle = card.querySelector('.tipo-role-subtitle');
+      if (title) title.textContent = name;
+      if (subtitle) subtitle.textContent = description;
+      card.setAttribute('aria-label', name);
+    }
+
     setText('#continueLabel', t.continue);
     setText('#hasAccountText', t.hasAccount);
     setText('#loginActionText', t.loginAction);
@@ -324,9 +336,9 @@
   function applyTranslations() {
     const lang = getLang();
     applyLanguagePicker(lang);
+    if (document.getElementById('tipoTitle') && document.querySelector('.tipo-options')) return applyTipo(lang);
+    if (document.getElementById('loginForm') && document.getElementById('loginTitle')) return applyLogin(lang);
     const path = window.location.pathname;
-    if (path.endsWith('/entrar.html') || path.endsWith('entrar.html')) return applyLogin(lang);
-    if (path.endsWith('/tipo-usuario.html') || path.endsWith('tipo-usuario.html')) return applyTipo(lang);
     if (path.endsWith('/cadastro-morador.html') || path.endsWith('cadastro-morador.html')) return applyCadastro(lang, 'cadastroMorador');
     if (path.endsWith('/cadastro-sindico.html') || path.endsWith('cadastro-sindico.html')) return applyCadastro(lang, 'cadastroSindico');
     if (path.endsWith('/cadastro-porteiro.html') || path.endsWith('cadastro-porteiro.html')) return applyCadastro(lang, 'cadastroPorteiro');
