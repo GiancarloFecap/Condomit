@@ -5,6 +5,51 @@ import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, s
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0724';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
 import { startIncrementalTranscription, stopIncrementalTranscription } from './incremental-transcription.js?v=075';
+const RECORDING_CHECK_MS = 15000;
+let recordingCheckTimer = null;
+let recordingSyncInFlight = false;
+let serverRecordingActive = false;
+
+function setRecordingStatus(message, isError = false) {
+  const indicator = document.getElementById('recording-status');
+  if (!indicator) return;
+  indicator.hidden = !message;
+  indicator.textContent = message || '';
+  indicator.dataset.status = isError ? 'error' : 'info';
+}
+
+function isAssemblyRunning() {
+  return String(state.assembly?.status || '').trim().toLowerCase() === 'em_andamento';
+}
+
+function mayStartAssembly() {
+  const user = state.tokenInfo?.user || {};
+  const role = String(user.type || user.user_type || user.role || '').toLowerCase();
+  const email = String(user.email || '').trim().toLowerCase();
+  const organizer = String(state.assembly?.created_by || '').trim().toLowerCase();
+  return role === 'sindico' || Boolean(email && organizer && email === organizer);
+}
+
+function hasScheduledStartPassed() {
+  const day = String(state.assembly?.date || '').slice(0, 10);
+  const time = String(state.assembly?.start_time || '00:00').slice(0, 5);
+  if (!day) return true;
+  const timestamp = new Date(`${day}T${time}:00-03:00`).getTime();
+  return Number.isFinite(timestamp) && Date.now() >= timestamp;
+}
+
+async function startAssemblyOnHostEntry() {
+  if (isAssemblyRunning() || String(state.assembly?.status || '') !== 'agendada' || !mayStartAssembly() || !hasScheduledStartPassed()) return;
+  try {
+    await window.AssemblyAPI.requestAssemblyAction('start', { assembly_id: Number(state.assemblyId) });
+  } catch (error) {
+    // Another manager may have started the meeting concurrently; refresh its status below.
+    console.warn('[Assembly] Não foi possível iniciar automaticamente:', error?.message || error);
+  }
+  await loadAssembly();
+  setHeader(state.assembly);
+}
+
 async function ensureServerRecording() {
   const token = await window.resolveSupabaseAccessToken?.();
   if (!token) throw new Error('Sua sessão expirou.');
@@ -14,10 +59,61 @@ async function ensureServerRecording() {
     body: JSON.stringify({ assembly_id: Number(state.assemblyId) })
   });
   const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || 'A gravação do servidor não foi iniciada.');
-  const indicator = document.getElementById('recording-status');
-  if (indicator) { indicator.hidden = false; indicator.textContent = '● REC · Gravação protegida no servidor'; }
-  return result;
+  if (!response.ok) {
+    const error = new Error(result.error || 'A gravação do servidor não foi iniciada.');
+    error.status = response.status;
+    throw error;
+  }
+  if (result.status === 'gravando') {
+    setRecordingStatus('● REC · Gravação no servidor');
+    return true;
+  }
+  setRecordingStatus('Preparando gravação no servidor…');
+  return false;
+}
+
+async function syncAssemblyRecording() {
+  if (recordingSyncInFlight || !state.connected || serverRecordingActive) return;
+  recordingSyncInFlight = true;
+  try {
+    await loadAssembly();
+    setHeader(state.assembly);
+    await startAssemblyOnHostEntry();
+    if (!isAssemblyRunning()) {
+      setRecordingStatus('');
+      return;
+    }
+    try {
+      serverRecordingActive = await ensureServerRecording();
+    } catch (error) {
+      if (error.status === 409) {
+        // The status can change between fetching the assembly and starting recording.
+        setRecordingStatus('');
+        return;
+      }
+      console.error('[Assembly Recording]', error);
+      setRecordingStatus('Gravação indisponível — verifique as configurações.', true);
+    }
+  } catch (error) {
+    console.warn('[Assembly] Não foi possível atualizar a situação da sala:', error);
+  } finally {
+    recordingSyncInFlight = false;
+    if (serverRecordingActive && recordingCheckTimer) {
+      clearInterval(recordingCheckTimer);
+      recordingCheckTimer = null;
+    }
+  }
+}
+
+function beginRecordingStatusWatch() {
+  if (recordingCheckTimer) clearInterval(recordingCheckTimer);
+  recordingCheckTimer = setInterval(() => syncAssemblyRecording().catch(console.error), RECORDING_CHECK_MS);
+  syncAssemblyRecording().catch(console.error);
+}
+
+function stopRecordingStatusWatch() {
+  if (recordingCheckTimer) clearInterval(recordingCheckTimer);
+  recordingCheckTimer = null;
 }
 
 function $(id) {
@@ -148,6 +244,7 @@ function bindControls() {
     const ok = await window.showConfirm({title:'Sair da assembleia', message:'Deseja sair? A gravação continuará no servidor enquanto houver participantes na sala.', confirmText:'Sair', cancelText:'Continuar na reunião'});
     if (!ok) return;
     stopIncrementalTranscription();
+    stopRecordingStatusWatch();
     presenceLeave().catch(() => {});
     await Promise.race([disconnectRoom().catch(() => {}), new Promise(resolve => setTimeout(resolve, 800))]);
     window.location.replace('assembleia.html');
@@ -614,20 +711,13 @@ async function init() {
     state.permissions = tokenInfo.permissions || {};
     await loadAssemblyProfilePhotos();
 
-    if (state.assembly?.status !== 'em_andamento') {
-      showBanner('A assembleia ainda não está em andamento. Aguarde o organizador iniciar.', 'warning');
-    }
-
     bindRoomActions();
 
     await connectToRoom(tokenInfo);
 
      
      
-    ensureServerRecording().catch((error) => {
-      console.error('[Assembly Recording]', error);
-      showBanner(error.message || 'Gravação no servidor indisponível.', 'error');
-    });
+    beginRecordingStatusWatch();
 
     const switchCameraButton = $('btn-switch-camera');
     if (switchCameraButton) {
@@ -654,6 +744,7 @@ async function init() {
 }
 
 window.addEventListener('beforeunload', (event) => {
+  stopRecordingStatusWatch();
    
    
    
