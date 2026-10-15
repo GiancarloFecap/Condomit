@@ -44,17 +44,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             desktopDownload.setAttribute('aria-hidden', 'true');
         }
     }
-    let pendingRedirect = false;
     if (typeof window.resumeCondomitSession === 'function') {
         try {
-            const result = await window.resumeCondomitSession({ redirect: true });
-            pendingRedirect = Boolean(result?.redirected);
+            await window.resumeCondomitSession({ redirect: true });
         } catch (error) {
             console.warn('[SESSION] Não foi possível restaurar automaticamente a sessão:', error?.message || error);
         }
-    }
-    if (!pendingRedirect) {
-        clearTimeout(window.__condomitResumeTimeout);
-        document.documentElement.classList.remove('condomit-session-check');
     }
 });
