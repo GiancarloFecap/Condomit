@@ -472,3 +472,68 @@ html[data-theme="dark"] .resident-actions-menu button { color: #d1d5db; }
 html[data-theme="dark"] .resident-actions-menu button:hover { background: #172554; color: #bfdbfe; }
 html[data-theme="dark"] .resident-actions-menu button.danger { color: #fca5a5; }
 html[data-theme="dark"] .resident-actions-menu button.danger:hover { background: #450a0a; }
+
+.residents-page .toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(170px, 210px);
+    align-items: end;
+    gap: 16px;
+}
+.residents-page .search-bar-group { min-width: 0; }
+.residents-page .search-bar {
+    position: relative;
+    display: block;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+}
+.residents-page .search-bar > i {
+    position: absolute;
+    top: 50%; left: 16px;
+    transform: translateY(-50%);
+    z-index: 1;
+    color: #94a3b8;
+    pointer-events: none;
+}
+.residents-page .search-bar #residentSearch {
+    width: 100%; min-height: 50px;
+    padding: 0 18px 0 46px !important;
+    border: 1.5px solid #e5e7eb !important;
+    border-radius: 12px !important;
+    background: #f9fafb !important;
+    color: #334155;
+    font: inherit;
+    box-sizing: border-box;
+    outline: none;
+}
+.residents-page .search-bar #residentSearch:focus {
+    border-color: #0ea5a4 !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 3px rgba(14,165,164,.1) !important;
+}
+.residents-page .toolbar-actions #residentBlockFilter {
+    width: 100%; min-width: 0; min-height: 50px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    background-color: #f9fafb;
+    color: #334155;
+    padding: 0 14px;
+}
+.residents-page .toolbar-actions #residentBlockFilter:focus {
+    border-color: #0ea5a4;
+    background: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(14,165,164,.1);
+}
+@media(max-width: 760px) {
+    .residents-page .toolbar { grid-template-columns: 1fr; }
+    .residents-page .toolbar-actions { width: 100%; }
+    .residents-page .search-bar-group, .residents-page #residentBlockFilter { width: 100%; }
+}
+html[data-theme="dark"] .residents-page .search-bar #residentSearch,
+html[data-theme="dark"] .residents-page .toolbar-actions #residentBlockFilter {
+    background: #111f31 !important;
+    color: #e2e8f0;
+    border-color: #334155 !important;
+}

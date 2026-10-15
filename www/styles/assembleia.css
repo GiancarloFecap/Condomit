@@ -1920,3 +1920,67 @@ body.assembly-dialog-open { overflow:hidden; }
 @media(max-width:900px) { .assembly-hub-actions{grid-template-columns:1fr;} .assembly-dialog-overlay{padding:12px;} .assembly-dialog .card{padding:16px!important;} .assembly-dialog-bar{padding:15px 18px;} }
 html[data-theme="dark"] .assembly-hub-action,html[data-theme="dark"] .assembly-dialog{background:#152236;color:#e2e8f0;border-color:#35445d}
 html[data-theme="dark"] .assembly-dialog-bar h2,html[data-theme="dark"] .assembly-hub-title h1{color:#f1f5f9}
+
+.assembly-hub-title.assembly-hero-card {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 28px;
+    min-height: 188px;
+    overflow: hidden;
+    margin: 0 0 22px;
+    padding: 28px 34px;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .06);
+    background: radial-gradient(circle at 88% 20%,rgba(37,99,235,.15),transparent 34%),linear-gradient(135deg,#fff,#f8fbff);
+}
+.assembly-hub-title.assembly-hero-card::after {
+    content: "";
+    position: absolute;
+    width: 210px;
+    height: 210px;
+    border: 42px solid rgba(37,99,235,.05);
+    border-radius: 50%;
+    right: -90px;
+    bottom: -120px;
+    pointer-events: none;
+}
+.assembly-hero-copy { max-width: 760px; position: relative; z-index: 1; }
+.assembly-hero-card .assembly-kicker { display: inline-flex; align-items: center; gap: 8px; color: #3360f2; }
+.assembly-hero-card h1 { font-size: clamp(1.45rem,2vw,2rem); margin: 8px 0; }
+.assembly-hero-card p { margin: 0; color: #64748b; line-height: 1.55; }
+.assembly-hero-icon {
+    display: grid; place-items: center;
+    flex: 0 0 102px;
+    width: 102px; height: 102px;
+    border-radius: 28px;
+    color: #fff;
+    background: linear-gradient(145deg,#3360f2,#294fd8);
+    font-size: 2.35rem;
+    box-shadow: 0 20px 45px rgba(37,99,235,.28);
+    position: relative; z-index: 1;
+}
+.assembly-hub-actions.occurrence-style-actions { gap: 16px; }
+.assembly-hub-action.occurrence-style-action {
+    min-height: 114px;
+    padding: 18px;
+    border-radius: 17px;
+    box-shadow: 0 8px 24px rgba(15,23,42,.04);
+}
+.occurrence-style-action .assembly-hub-icon {
+    border-radius: 14px; width: 50px; height: 50px; flex-basis: 50px;
+}
+.occurrence-style-action:nth-child(2) .assembly-hub-icon { background: #ecfdf3; color: #16a34a; }
+.occurrence-style-action:nth-child(3) .assembly-hub-icon { background: #fff7ed; color: #d97706; }
+.occurrence-style-action .assembly-hub-text strong { font-size: .98rem; }
+.occurrence-style-action .assembly-hub-text small { font-size: .85rem; }
+@media(max-width:700px) {
+    .assembly-hub-title.assembly-hero-card { padding: 24px; min-height: 0; }
+    .assembly-hero-icon { display: none; }
+}
+html[data-theme="dark"] .assembly-hub-title.assembly-hero-card {
+    background: #152236; color: #e2e8f0; border-color: #35445d;
+}
+html[data-theme="dark"] .assembly-hero-card h1 { color: #f1f5f9; }

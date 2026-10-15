@@ -28,8 +28,58 @@
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#2252BD">
     <link rel="stylesheet" href="styles/ux-polish.css?v=049">
+    <script>
+    (function () {
+        try {
+            if (localStorage.getItem('condomitRememberMe') !== '1' || localStorage.getItem('authExplicitLogoutAt')) return;
+            if (/type=recovery/i.test(location.hash + location.search)) return;
+            const cached = localStorage.getItem('condomitPersistentUserV2') || localStorage.getItem('condominiumPersistentUser');
+            if (!cached) return;
+            const profile = JSON.parse(cached);
+            if (!profile || !profile.email) return;
+            document.documentElement.classList.add('condomit-session-check');
+            window.__condomitResumeTimeout = setTimeout(function () {
+                document.documentElement.classList.remove('condomit-session-check');
+            }, 16000);
+        } catch (_) {}
+    })();
+    </script>
+    <style>
+      #condomit-resume-splash { display: none; }
+      html.condomit-session-check body > :not(#condomit-resume-splash) { display: none !important; }
+      html.condomit-session-check #condomit-resume-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        display: flex !important;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 20px;
+        background: linear-gradient(150deg, #f6fbff, #e6f3ff);
+        color: #153967;
+        font: 600 15px system-ui, sans-serif;
+      }
+      #condomit-resume-splash img { width: 164px; height: auto; object-fit: contain; }
+      #condomit-resume-splash .condomit-loading-indicator {
+        width: 28px;
+        height: 28px;
+        border: 3px solid #d2e5fa;
+        border-top-color: #1d4fd8;
+        border-radius: 50%;
+        animation: condomit-spin 0.85s linear infinite;
+      }
+      @keyframes condomit-spin { to { transform: rotate(360deg); } }
+      @media(prefers-reduced-motion:reduce){ #condomit-resume-splash .condomit-loading-indicator{animation:none} }
+    </style>
 </head>
 <body>
+    <div id="condomit-resume-splash" role="status" aria-live="polite">
+        <img src="assets/logo-condomit-auth-hq.png" alt="Condomit" />
+        <span class="condomit-loading-indicator" aria-hidden="true"></span>
+        <span id="condomit-resume-label">Acessando seu painel...</span>
+    </div>
+
     
             <header class="header">
                 <div class="header-content">
@@ -341,7 +391,7 @@
     <script type="module" src="scripts/supabase-auth.js?v=061"></script>
     <script src="scripts/session-resume.js?v=061"></script>
     <script src="scripts/inicio-i18n.js?v=058"></script>
-    <script src="scripts/inicio.js?v=0717"></script>
+    <script src="scripts/inicio.js?v=072"></script>
     <script src="scripts/condomit-alerts.js?v=014"></script>
     <script src="scripts/pwa-register.js?v=0712"></script>
 </body>

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
-    <link rel="stylesheet" href="../styles/gestao-moradores.css?v=015">
+    <link rel="stylesheet" href="../styles/gestao-moradores.css?v=072">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <link rel="stylesheet" href="../styles/ux-polish.css?v=0720">
@@ -85,8 +85,8 @@
                                     <h2>Lista de moradores</h2>
                                     <p id="residentCounter">0 moradores encontrados</p>
                                 </div>
-                                <button class="ghost-btn" type="button">
-                                    <i class="fas fa-download"></i>
+                                <button class="ghost-btn" type="button" id="exportResidentsBtn" aria-label="Exportar lista de moradores para Excel">
+                                    <i class="fas fa-file-excel"></i>
                                     Exportar lista
                                 </button>
                             </div>
@@ -130,7 +130,8 @@
 
     <script src="../scripts/supabase-client.js?v=065"></script>
     <script src="../scripts/sidebar-links.js?v=065"></script>
-    <script src="../scripts/gestao-moradores.js?v=018"></script>
+    <script src="../scripts/residents-excel.js?v=072"></script>
+    <script src="../scripts/gestao-moradores.js?v=072"></script>
     <script src="../scripts/topbar-actions.js?v=065"></script>
     <script src="../scripts/condomit-alerts.js?v=057"></script>
     <script src="../scripts/responsive-nav.js?v=025"></script>

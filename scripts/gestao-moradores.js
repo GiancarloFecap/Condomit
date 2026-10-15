@@ -82,6 +82,21 @@ function setupResidentsShell(currentUser) {
 }
 
 function setupResidentsFilters() {
+    document.getElementById('exportResidentsBtn')?.addEventListener('click', () => {
+        try {
+            if (!residentsState.currentUser || !Array.isArray(residentsState.residents)) {
+                throw new Error('Os moradores ainda não foram carregados.');
+            }
+            if (!residentsState.filteredResidents.length) {
+                throw new Error('Não há moradores para exportar com os filtros atuais.');
+            }
+            window.exportCondomitResidentsExcel(residentsState.filteredResidents);
+        } catch (error) {
+            if (typeof window.showError === 'function') window.showError(error.message);
+            else if (typeof window.condomitAlert === 'function') window.condomitAlert(error.message, 'error');
+            else console.error('Exportação de moradores:', error);
+        }
+    });
     document.getElementById('residentSearch')?.addEventListener('input', (event) => {
         residentsState.search = String(event.target.value || '').trim().toLowerCase();
         applyResidentsFilters();
