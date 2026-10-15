@@ -19,6 +19,10 @@
         speechActivities: [],
         condominium: null,
         signature: null,
+        signedDocuments: [],
+        minutesNumber: null,
+        minutesDraft: null,
+        generatedMinutes: "",
         commentProfiles: new Map(),
         commentVotes: [],
         replyComposerFor: null,
@@ -50,6 +54,7 @@
         try {
             await waitForAuthSession();
             await loadAll();
+            await loadMinutesReview();
             renderAll();
         } catch (error) {
             console.error('[ASSEMBLY SUMMARY]', error);
@@ -116,7 +121,7 @@
 
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
-        const playableRecordings = (recordings || []).filter((row) => String(row?.recording_url || '').trim());
+        const playableRecordings = (recordings || []).filter((row) => row?.status === 'concluido' && String(row?.recording_url || '').trim());
         Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings: playableRecordings, speechActivities, commentVotes });
         state.signature = signatures[0] || null;
 
@@ -131,6 +136,106 @@
             ? await fetchRows(`/assembly_poll_options?select=*&poll_id=in.(${pollIds.join(',')})&order=display_order.asc`)
             : [];
         await Promise.all([loadPollResults(), loadCommentProfiles()]);
+    }
+
+    async function loadMinutesReview() {
+        const [numbers, drafts, signedDocs] = await Promise.all([
+            fetchRows(`/assembly_minutes_numbers?select=minutes_number&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
+            fetchRows(`/assembly_minutes_drafts?select=assembly_id,body,status,reviewed_by,approved_at,updated_at&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
+            fetchRows(`/assembly_signed_documents?select=id,filename,sha256,storage_path,external_validation_status,uploaded_at&assembly_id=eq.${state.id}&order=uploaded_at.desc`).catch(() => [])
+        ]);
+        state.minutesNumber = numbers[0]?.minutes_number || null;
+        state.minutesDraft = drafts[0] || null;
+        state.signedDocuments = signedDocs;
+    }
+
+    async function saveMinutesReview(approve) {
+        const textarea = document.getElementById('assemblyMinutesEditor074');
+        const body = String(textarea?.value || '').trim();
+        if (body.length < 30) { window.showToast?.('Revise e preencha o conteúdo da ata antes de salvar.', 'warning'); return; }
+        if (approve) {
+            const ok = await window.showConfirm?.({
+                title:'Aprovar ata revisada',
+                message:'Confirma que conferiu presença, pautas, resultados e a transcrição com os registros da assembleia? A aprovação habilita a assinatura.',
+                confirmText:'Confirmar aprovação',cancelText:'Voltar à revisão'
+            });
+            if (!ok) return;
+        }
+        try {
+            const response = await window.supabaseFetch('/rpc/condomit_review_assembly_minutes_054', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({target_assembly_id:state.id,reviewed_text:body,approve_document:!!approve})
+            });
+            state.minutesDraft = Array.isArray(response) ? response[0] : response;
+            if (!approve) state.signature = null;
+            renderHero(); renderMinutes();
+            window.showToast?.(approve ? 'Ata aprovada após revisão. Assinatura habilitada.' : 'Minuta salva para revisão.', 'success');
+        } catch(error) { window.showToast?.(error?.message || 'Não foi possível salvar a revisão.', 'error'); }
+    }
+
+    async function openSignedDocument(path) {
+        try {
+            if (!path.startsWith(`${state.id}/signed-`) || !path.endsWith('.pdf') || path.includes('..')) throw new Error('Caminho do PDF inválido.');
+            const token = await window.resolveSupabaseAccessToken?.();
+            if (!token) throw new Error('Sua sessão expirou.');
+            const endpoint = `${window.SUPABASE_URL}/storage/v1/object/sign/condomit-assembly-documents/${path}`;
+            const res = await fetch(endpoint,{method:'POST',headers:{Authorization:`Bearer ${token}`,apikey:window.SUPABASE_ANON_KEY,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:300})});
+            if (!res.ok) throw new Error('Sem permissão para acessar o PDF.');
+            const data = await res.json();
+            const link = String(data.signedURL || data.signedUrl || '').trim();
+            if (!link) throw new Error('O armazenamento não disponibilizou o PDF.');
+            const normalized = link.startsWith('/object/') ? `${window.SUPABASE_URL}/storage/v1${link}` : link.startsWith('/storage/v1/') ? `${window.SUPABASE_URL}${link}` : link;
+            const url = new URL(normalized,window.SUPABASE_URL);
+            if (url.origin !== new URL(window.SUPABASE_URL).origin) throw new Error('URL não autorizada.');
+            window.open(url.href,'_blank','noopener,noreferrer');
+        } catch(error) { window.showToast?.(error.message || 'Não foi possível abrir o PDF.', 'error'); }
+    }
+
+    async function uploadSignedGovPdf() {
+        const input = document.getElementById('assemblyGovSignedFile074');
+        const file = input?.files?.[0];
+        if (!file) { window.showToast?.('Escolha o PDF assinado para anexar.', 'warning'); return; }
+        if (file.type !== 'application/pdf' || file.size > 50 * 1024 * 1024 || file.size === 0) {
+            window.showToast?.('O anexo precisa ser PDF de até 50 MB.', 'error'); return;
+        }
+        if (state.minutesDraft?.status !== 'aprovada') {
+            window.showToast?.('Aprove a ata revisada antes de anexar o documento assinado.', 'warning'); return;
+        }
+        try {
+            const token = await window.resolveSupabaseAccessToken?.();
+            if (!token) throw new Error('Sessão expirada. Entre novamente.');
+            const hash = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+            const sha256 = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+            const path = `${state.id}/signed-${crypto.randomUUID()}.pdf`;
+            const endpoint = `${window.SUPABASE_URL}/storage/v1/object/condomit-assembly-documents/${path}`;
+            const upload = await fetch(endpoint, {method:'POST',headers:{Authorization:`Bearer ${token}`,apikey:window.SUPABASE_ANON_KEY,'Content-Type':'application/pdf','x-upsert':'false'},body:file});
+            if (!upload.ok) throw new Error('Não foi possível salvar o PDF assinado.');
+            await window.supabaseFetch('/assembly_signed_documents', {
+                method:'POST',headers:{'Content-Type':'application/json',Prefer:'return=representation'},
+                body:JSON.stringify({assembly_id:state.id,cep:state.assembly.cep,filename:file.name.slice(0,160),storage_path:path,sha256,uploaded_by:state.user.email})
+            });
+            await loadMinutesReview();
+            renderMinutes();
+            window.showToast?.('PDF anexado. Valide a assinatura no serviço oficial do ITI.', 'success');
+        } catch(error) { window.showToast?.(error?.message || 'Falha ao anexar documento.', 'error'); }
+    }
+
+    async function requestMinutesAiSuggestions() {
+        const output = document.getElementById('assemblyMinutesAiSuggestions074');
+        if (!output) return;
+        output.hidden = false;
+        output.textContent = 'Selecionando trechos com base nos registros...';
+        try {
+            const token = await window.resolveSupabaseAccessToken?.();
+            const response = await fetch('/.netlify/functions/assembly-minutes-assist', {
+                method:'POST', headers:{Authorization:`Bearer ${token}`, 'Content-Type':'application/json'},
+                body:JSON.stringify({assembly_id:state.id})
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Não foi possível selecionar os trechos.');
+            const lines = (result.suggestions || []).map(item => `• ${item.text}\nFontes: ${item.sources.join(', ')}`);
+            output.textContent = `${result.warning || ''}\n\n${lines.join('\n\n') || 'Nenhum trecho adequado foi encontrado.'}\n\nRevise o áudio e os registros oficiais antes de incluir conteúdo na ata.`;
+        } catch(error) { output.textContent = error?.message || 'Não foi possível gerar sugestões.'; }
     }
 
     async function loadCommentProfiles() {
@@ -195,8 +300,8 @@
             </div>
             <div class="summary-hero-actions">
                 ${currentUserRole() === 'sindico' ? '<button type="button" id="generateAssemblyTasks027" class="summary-secondary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button>' : ''}
-                ${currentUserRole() === 'sindico' ? `<button type="button" id="signAssemblyMinutes049" class="summary-primary"><i class="fas fa-signature"></i> ${state.signature ? 'Corrigir assinatura' : 'Assinar ata'}</button>` : ''}
-                ${state.signature ? `<span class="summary-signed-chip"><i class="fas fa-circle-check"></i> Ata assinada por ${esc(state.signature.signer_name || state.signature.signer_email || 'Síndico')}</span>` : ''}
+                ${currentUserRole() === 'sindico' && state.minutesDraft?.status === 'aprovada' ? `<button type="button" id="signAssemblyMinutes049" class="summary-primary"><i class="fas fa-signature"></i> ${state.signature ? 'Corrigir assinatura' : 'Assinar ata'}</button>` : ''}
+                ${state.signature && state.minutesDraft?.status === 'aprovada' ? `<span class="summary-signed-chip"><i class="fas fa-circle-check"></i> Ata assinada por ${esc(state.signature.signer_name || state.signature.signer_email || 'Síndico')}</span>` : ''}
                 <button type="button" id="printAssemblyMinutes049" class="summary-secondary"><i class="fas fa-print"></i> Imprimir ata</button>
             </div>`;
         hero.querySelector('#generateAssemblyTasks027')?.addEventListener('click', generateAssemblyDecisionTasks);
@@ -257,28 +362,63 @@
             : 'Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, deu-se por encerrada a assembleia, sem horário final específico informado no cadastro.');
         paragraphs.push('Para constar, lavrou-se a presente ata com base nos registros eletrônicos de presença, pautas, transcrições e votações armazenados pelo Condomit, ficando o documento disponível para ciência dos participantes e assinatura eletrônica do síndico responsável pelo condomínio.');
 
+        state.generatedMinutes = paragraphs.join('\n\n');
+        const displayText = state.minutesDraft?.body || state.generatedMinutes;
+        const approved = state.minutesDraft?.status === 'aprovada';
         const chairSignature = chair?.name || 'Síndico / Presidente da Assembleia';
         container.innerHTML = `
             <article class="formal-minutes-document" aria-label="Ata formal da assembleia">
                 <header class="formal-minutes-heading">
                     <div class="formal-condo-name">${esc(condoName)}</div>
                     ${address ? `<div class="formal-condo-address">${esc(address)}</div>` : ''}
-                    <h3>ATA Nº ${esc(String(state.id))}/${esc(year)}</h3>
+                    <h3>ATA Nº ${esc(String(state.minutesNumber || "A DEFINIR"))}/${esc(year)}</h3>
                     <div class="formal-minutes-subtitle">${esc(title)} · ${esc(assemblyType)}</div>
                 </header>
-                <div class="formal-minutes-body">${paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('')}</div>
+                <div class="formal-minutes-body">${displayText.split(/\n\s*\n/).filter(Boolean).map(paragraph => `<p>${esc(paragraph)}</p>`).join('')}</div>
                 <footer class="formal-minutes-signatures">
-                    ${state.signature ? `
+                    ${state.signature && approved ? `
                     <div class="formal-signature formal-signature-electronic">
                         ${isSafeSignatureData(state.signature.signature_data) ? `<img class="assembly-signature-image" src="${esc(state.signature.signature_data)}" alt="Assinatura de ${esc(state.signature.signer_name || chairSignature)}">` : `<i class="fas fa-circle-check signature-verified-icon"></i>`}
                         <strong>${esc(state.signature.signer_name || chairSignature)}</strong>
-                        <small>Assinado eletronicamente pelo Síndico em ${esc(formatDateTime(state.signature.signed_at))}</small>
+                        <small>Assinatura interna Condomit (não certificada pelo gov.br) em ${esc(formatDateTime(state.signature.signed_at))}</small>
                         <small class="signature-code">Código de verificação: ${esc(String(state.signature.signature_code || '').slice(0, 18))}</small>
                     </div>` : `
                     <div class="formal-signature"><span class="signature-line"></span><strong>${esc(chairSignature)}</strong><small>Assinatura do Síndico / Presidência da Assembleia</small></div>`}
                 </footer>
-                <div class="formal-minutes-note"><i class="fas fa-shield-halved"></i> Documento gerado a partir dos registros persistidos da assembleia. Nenhuma informação não registrada foi presumida pelo sistema.</div>
-            </article>`;
+                <div class="formal-minutes-note"><i class="fas fa-shield-halved"></i> ${approved ? 'Ata revisada e aprovada por responsável identificado.' : 'MINUTA NÃO APROVADA: a redação automática e as transcrições precisam de conferência humana. Não use como ata oficial sem revisão.'}</div>
+            </article>
+            ${currentUserRole() === 'sindico' ? `<section class="minutes-review-editor074">
+              <h3><i class="fas fa-clipboard-check"></i> Revisão formal da ata</h3>
+              <p>A gravação e a transcrição são documentos de apoio. Confirme data, presença, discussões, deliberações, quóruns e responsáveis. A transcrição local pode conter erros.</p>
+              <textarea id="assemblyMinutesEditor074" rows="14" spellcheck="true" aria-label="Redigir ata para revisão">${esc(displayText)}</textarea>
+              <div class="minutes-review-actions074">
+                <button type="button" class="summary-secondary" id="minutesAiHelp074"><i class="fas fa-wand-magic-sparkles"></i> Selecionar trechos da transcrição</button>
+                <button type="button" class="summary-secondary" id="minutesSave074">Salvar minuta</button>
+                <button type="button" class="summary-primary" id="minutesApprove074">Aprovar ata revisada</button>
+              </div>
+              <div id="assemblyMinutesAiSuggestions074" class="minutes-ai-suggestions074" hidden></div>
+              <details class="minutes-evidence074"><summary>Conferir trechos de transcrição (${state.transcripts.length})</summary>
+                <p>As falas são material de apoio, podem conter erros e não substituem os resultados oficiais das votações.</p>
+                ${state.transcripts.slice(0,120).map(item=>`<p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>`).join('')}
+                ${state.transcripts.length>120 ? `<p>Exibindo 120 de ${state.transcripts.length} trechos. Consulte o registro original para os demais.</p>` : ''}
+              </details>
+              <div class="minutes-external-signature074">
+                <strong>Assinatura eletrônica gov.br — serviço externo</strong>
+                <p>Exporte o documento aprovado em PDF, assine no portal oficial e valide o PDF resultante pelo ITI. Este fluxo não é uma autenticação gov.br integrada à Condomit.</p>
+                <a href="https://assinador.iti.br/" target="_blank" rel="noopener noreferrer">Abrir assinador gov.br</a>
+                <a href="https://validar.iti.gov.br/" target="_blank" rel="noopener noreferrer">Validar assinatura no ITI</a>
+                <label for="assemblyGovSignedFile074" class="minutes-signed-file-label074">Anexar PDF assinado (até 50 MB)</label>
+                <input id="assemblyGovSignedFile074" type="file" accept="application/pdf" aria-label="PDF assinado externamente">
+                <button type="button" class="summary-secondary" id="assemblyAttachGovPdf074">Salvar PDF assinado</button>
+                <small>Arquivo anexado não significa que a assinatura foi validada. Verifique no portal VALIDAR do ITI.</small>
+                ${state.signedDocuments.map(doc => `<div class="minutes-signed-document074"><i class="fas fa-file-pdf"></i> ${esc(doc.filename)} · ${esc(formatDateTime(doc.uploaded_at))} · Validação externa pendente <button type="button" data-signed-path074="${esc(doc.storage_path)}">Abrir PDF</button></div>`).join('')}
+              </div>
+            </section>` : ''}`;
+        container.querySelector('#minutesSave074')?.addEventListener('click', () => saveMinutesReview(false));
+        container.querySelector('#minutesApprove074')?.addEventListener('click', () => saveMinutesReview(true));
+        container.querySelector('#minutesAiHelp074')?.addEventListener('click', requestMinutesAiSuggestions);
+        container.querySelector('#assemblyAttachGovPdf074')?.addEventListener('click', uploadSignedGovPdf);
+        container.querySelectorAll('[data-signed-path074]').forEach(button => button.addEventListener('click', () => openSignedDocument(button.dataset.signedPath074))); 
     }
     function uniqueParticipants() {
         const seen = new Map();
@@ -1176,6 +1316,10 @@
     }
 
     async function submitAssemblySignature() {
+        if (state.minutesDraft?.status !== 'aprovada') {
+            window.showToast?.('A ata precisa ser revisada e aprovada antes da assinatura.', 'warning');
+            return;
+        }
         if (!state.signaturePad.hasInk) {
             const errorEl = document.getElementById('assemblySignatureError');
             if (errorEl) errorEl.hidden = false;

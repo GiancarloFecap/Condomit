@@ -315,3 +315,17 @@ html[data-theme="dark"] .signature-modal-card .modal-actions{border-color:#33415
 
 .recording-access-note { display:flex; align-items:center; gap:7px; margin-top:9px; color:#64748b; font-size:.82rem; }
 .assembly-recording-player { width:100%; max-height:560px; border-radius:14px; background:#0b1220; }
+
+.minutes-review-editor074{margin-top:20px;padding:22px;border:1px solid #dbe3ef;border-radius:16px;background:var(--surface,#fff)}
+.minutes-review-editor074 h3{font-size:1.1rem;margin:0 0 8px}
+.minutes-review-editor074 p{font-size:.88rem;color:#66758c;line-height:1.6}
+.minutes-review-editor074 textarea{display:block;width:100%;box-sizing:border-box;resize:vertical;min-height:260px;margin:16px 0;padding:15px;border:1px solid #cbd5e1;border-radius:12px;background:var(--surface,#fff);color:var(--text,#21304c);font:inherit;line-height:1.65}
+.minutes-review-actions074{display:flex;gap:10px;flex-wrap:wrap}
+.minutes-review-actions074 button{cursor:pointer}
+.minutes-ai-suggestions074{margin-top:14px;padding:15px;border:1px solid #c5deeb;border-radius:12px;white-space:pre-wrap;line-height:1.5;font-size:.91rem}
+.minutes-external-signature074{margin-top:20px;padding:15px;background:rgba(22,121,180,.045);border:1px solid #bcd4e4;border-radius:12px}
+.minutes-external-signature074 a{display:inline-flex;margin:7px 14px 0 0;color:#195bcc;font-weight:650;text-decoration:underline}
+
+.minutes-external-signature074 input[type=file]{display:block;margin:12px 0;max-width:100%}.minutes-signed-file-label074{display:block;margin-top:14px;font-weight:650}.minutes-signed-document074{margin-top:8px;padding:8px 12px;border-radius:8px;background:rgba(20,80,160,.07)}
+
+.minutes-evidence074{padding:12px 15px;margin-top:16px;border:1px solid #dbe3ef;border-radius:12px}.minutes-evidence074 summary{cursor:pointer;font-weight:700}.minutes-evidence074 p{border-bottom:1px solid #edf1f5;padding-bottom:8px;white-space:pre-wrap;overflow-wrap:anywhere}

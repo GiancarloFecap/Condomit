@@ -74,8 +74,8 @@ export async function flushAssemblySpeechActivity() {
 export function startAssemblyTranscription() {
   setStatus(
     'active',
-    'Transcrição pela gravação',
-    'O texto da Ata será produzido somente depois que o vídeo oficial for salvo. A fonte da transcrição é a própria gravação armazenada na Ata.'
+    'Transcrição automática em trechos',
+    'As falas autorizadas são transcritas pelo modelo Whisper no próprio navegador e salvas no condomínio. Podem conter erros; consulte a gravação para revisão.'
   );
   return true;
 }

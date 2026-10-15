@@ -4,7 +4,21 @@ import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHan
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=0724';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0724';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
-import { startAssemblyRecording, stopAssemblyRecording, isRecordingSupported } from './recording.js?v=057';
+import { startIncrementalTranscription, stopIncrementalTranscription } from './incremental-transcription.js?v=075';
+async function ensureServerRecording() {
+  const token = await window.resolveSupabaseAccessToken?.();
+  if (!token) throw new Error('Sua sessão expirou.');
+  const response = await fetch('/.netlify/functions/assembly-recording', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ assembly_id: Number(state.assemblyId) })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'A gravação do servidor não foi iniciada.');
+  const indicator = document.getElementById('recording-status');
+  if (indicator) { indicator.hidden = false; indicator.textContent = '● REC · Gravação protegida no servidor'; }
+  return result;
+}
 
 function $(id) {
   return document.getElementById(id);
@@ -131,45 +145,13 @@ function bindControls() {
     setPanelOpen(!state.panelOpen);
   });
   $('btn-leave')?.addEventListener('click', async () => {
-  const ok = await window.showConfirm({title: 'Sair da assembleia', message: 'Deseja sair da assembleia? A gravação será salva antes de encerrar sua participação.', confirmText: 'Sair da assembleia', cancelText: 'Continuar na reunião'});
-
-  if (!ok) {
-    return;
-  }
-
-   
-   
-  try {
-    await stopAssemblyRecording();
-  } catch (error) {
-    console.warn('Não foi possível finalizar/salvar a gravação:', error);
-    toast(error?.message || 'Não foi possível salvar a gravação na Ata. Tente sair novamente.', 'error');
-    showBanner('A saída foi interrompida porque a gravação ainda não foi salva na Ata. Mantenha esta página aberta e tente novamente.', 'error');
-    return;
-  }
-
-  try {
-    await presenceLeave();
-  } catch (error) {
-    console.warn(
-      'Não foi possível registrar a saída:',
-      error
-    );
-  }
-
-  await stopAssemblyTranscription();
-
-  try {
-    await disconnectRoom();
-  } catch (error) {
-    console.warn(
-      'Não foi possível desconectar do LiveKit:',
-      error
-    );
-  }
-
-  window.location.href = 'assembleia.html';
-});
+    const ok = await window.showConfirm({title:'Sair da assembleia', message:'Deseja sair? A gravação continuará no servidor enquanto houver participantes na sala.', confirmText:'Sair', cancelText:'Continuar na reunião'});
+    if (!ok) return;
+    stopIncrementalTranscription();
+    presenceLeave().catch(() => {});
+    await Promise.race([disconnectRoom().catch(() => {}), new Promise(resolve => setTimeout(resolve, 800))]);
+    window.location.replace('assembleia.html');
+  });
   $('call-open-details')?.addEventListener('click', () => {
     window.location.href = `assembleia-detalhes.html?id=${encodeURIComponent(String(state.assemblyId))}`;
   });
@@ -642,20 +624,10 @@ async function init() {
 
      
      
-    if (isPrivilegedUser()) {
-      if (!isRecordingSupported()) {
-        showBanner('Este dispositivo não oferece suporte à gravação automática. Entre pelo navegador do computador do síndico para manter o registro audiovisual da assembleia.', 'error');
-      } else {
-        try {
-          await startAssemblyRecording();
-          // A comunicação sobre gravação é apresentada antes de entrar, na preparação.
-          // Mantém apenas o indicador discreto REC durante a reunião.
-        } catch (recordingError) {
-          console.error('Não foi possível iniciar a gravação automática:', recordingError);
-          showBanner(`Não foi possível iniciar a gravação automática: ${recordingError?.message || 'erro desconhecido'}`, 'error');
-        }
-      }
-    }
+    ensureServerRecording().catch((error) => {
+      console.error('[Assembly Recording]', error);
+      showBanner(error.message || 'Gravação no servidor indisponível.', 'error');
+    });
 
     const switchCameraButton = $('btn-switch-camera');
     if (switchCameraButton) {
@@ -663,6 +635,7 @@ async function init() {
     }
 
     startAssemblyTranscription();
+    startIncrementalTranscription();
 
     try { await presenceJoin(); } catch (_) {}
     startHeartbeat();

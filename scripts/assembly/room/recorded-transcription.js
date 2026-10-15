@@ -1,3 +1,4 @@
+import { getLocalWhisper } from './local-whisper.js?v=075';
  
  
  
@@ -8,7 +9,6 @@
  
  
 
-let transcriberPromise = null;
 
 function statusText(text, detail = '') {
   const label = document.getElementById('recording-status');
@@ -345,59 +345,8 @@ function compactEntriesForPayload(entries) {
   return limited;
 }
 
-async function loadTransformers() {
-   
-   
-  return await import('https://esm.sh/@huggingface/transformers@4.2.0?bundle');
-}
-
-async function createTranscriber() {
-  const { pipeline, env } = await loadTransformers();
-  if (env) {
-    env.allowLocalModels = false;
-    env.useBrowserCache = true;
-  }
-
-  const progress = (event) => {
-    const progressValue = Number(event?.progress);
-    if (Number.isFinite(progressValue)) {
-      statusText(`Preparando transcrição da gravação… ${Math.round(progressValue)}%`);
-    } else if (event?.status === 'ready') {
-      statusText('Modelo de transcrição pronto. Processando a gravação…');
-    }
-  };
-
-  const preferredOptions = {
-    progress_callback: progress
-  };
-  if (navigator?.gpu) preferredOptions.device = 'webgpu';
-
-  try {
-     
-    return await pipeline(
-      'automatic-speech-recognition',
-      'Xenova/whisper-base',
-      preferredOptions
-    );
-  } catch (baseError) {
-    console.warn('[Recorded transcription] Whisper base indisponível, usando tiny.', baseError);
-    statusText('Usando modelo de transcrição compatível com este dispositivo…');
-    return await pipeline(
-      'automatic-speech-recognition',
-      'Xenova/whisper-tiny',
-      { progress_callback: progress }
-    );
-  }
-}
-
 async function getTranscriber() {
-  if (!transcriberPromise) {
-    transcriberPromise = createTranscriber().catch((error) => {
-      transcriberPromise = null;
-      throw error;
-    });
-  }
-  return transcriberPromise;
+  return getLocalWhisper((message) => statusText(message));
 }
 
 async function persistEntries(assemblyId, entries) {
