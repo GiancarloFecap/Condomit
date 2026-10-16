@@ -4,8 +4,8 @@ import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHan
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=077';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0724';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
-import { startIncrementalTranscription, stopIncrementalTranscription } from './incremental-transcription.js?v=077';
-const RECORDING_CHECK_MS = 15000;
+import { startIncrementalTranscription, stopIncrementalTranscription } from './incremental-transcription.js?v=080';
+const RECORDING_CHECK_MS = 20000;
 let recordingCheckTimer = null;
 let recordingSyncInFlight = false;
 let serverRecordingActive = false;
@@ -68,12 +68,16 @@ async function ensureServerRecording() {
     setRecordingStatus('● REC · Gravação no servidor');
     return true;
   }
-  setRecordingStatus('Preparando gravação no servidor…');
+  if (result.status === 'falhou') {
+    setRecordingStatus(result.error || 'Gravação falhou. A próxima tentativa será automática.', true);
+  } else {
+    setRecordingStatus('Preparando gravação no servidor…');
+  }
   return false;
 }
 
 async function syncAssemblyRecording() {
-  if (recordingSyncInFlight || !state.connected || serverRecordingActive) return;
+  if (recordingSyncInFlight || !state.connected) return;
   recordingSyncInFlight = true;
   try {
     await loadAssembly();
@@ -92,16 +96,13 @@ async function syncAssemblyRecording() {
         return;
       }
       console.error('[Assembly Recording]', error);
-      setRecordingStatus('Gravação indisponível: confira LiveKit Egress, S3 e webhook na Netlify.', true);
+      setRecordingStatus(error?.message || 'Gravação indisponível: confira LiveKit Egress, S3 e webhook na Netlify.', true);
     }
   } catch (error) {
     console.warn('[Assembly] Não foi possível atualizar a situação da sala:', error);
   } finally {
     recordingSyncInFlight = false;
-    if (serverRecordingActive && recordingCheckTimer) {
-      clearInterval(recordingCheckTimer);
-      recordingCheckTimer = null;
-    }
+    // Nunca interrompa as verificações: o Egress pode falhar APÓS iniciar.
   }
 }
 
@@ -296,8 +297,11 @@ function bindControls() {
   $('btn-leave')?.addEventListener('click', async () => {
     const ok = await window.showConfirm({title:'Sair da assembleia', message:'Deseja sair? A gravação continuará no servidor enquanto houver participantes na sala.', confirmText:'Sair', cancelText:'Continuar na reunião'});
     if (!ok) return;
-    stopIncrementalTranscription();
     stopRecordingStatusWatch();
+    const flush = stopIncrementalTranscription();
+    setRecordingStatus('Finalizando trechos de transcrição…');
+    // A espera permite salvar áudio capturado antes de sair, sem impedir indefinidamente a saída.
+    await flush;
     presenceLeave().catch(() => {});
     await Promise.race([disconnectRoom().catch(() => {}), new Promise(resolve => setTimeout(resolve, 800))]);
     window.location.replace('assembleia.html');
@@ -795,7 +799,7 @@ async function init() {
 
 window.addEventListener('pagehide', () => {
   stopRecordingStatusWatch();
-  stopIncrementalTranscription();
+  stopIncrementalTranscription({waitForSave:false});
   clearInterval(state.documentsRefreshTimer);
   presenceLeave().catch(() => {});
 });

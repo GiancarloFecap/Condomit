@@ -14,7 +14,7 @@ exports.handler=async event=>{
     if(authError||!user?.email)return reply(401,{error:'Sessão inválida.'});
     const email=user.email.toLowerCase();
     const [{data:assembly},{data:profile},{data:links}]=await Promise.all([
-      admin.from('scheduled_assemblies').select('id,cep').eq('id',assemblyId).maybeSingle(),
+      admin.from('scheduled_assemblies').select('id,cep,status,ended_at').eq('id',assemblyId).maybeSingle(),
       admin.from('users').select('condominium').eq('email',email).maybeSingle(),
       admin.from('user_condominiums').select('condominium_id').eq('user_email',email)
     ]);
@@ -24,9 +24,8 @@ exports.handler=async event=>{
     if(![...(links||[]).map(x=>x.condominium_id),condo?.cep,condo?.condominium_id].some(x=>norm(x)===norm(assembly.cep)))return reply(403,{error:'Você não pertence a este condomínio.'});
     const {data:records,error:recordError}=await admin.from('assembly_recordings')
       .select('id,status,recording_url,started_at')
-      .eq('assembly_id',assemblyId).in('status',['gravando','pendente']).limit(20);
+      .eq('assembly_id',assemblyId).in('status',['gravando','pendente','falhou']).limit(50);
     if(recordError)throw recordError;
-    if(!records?.length)return reply(200,{ok:true,updated:0});
     const {data:files,error:listError}=await admin.storage.from('condomit-assembly-recordings').list(String(assemblyId),{limit:100});
     if(listError)throw listError;
     let updated=0;
@@ -36,11 +35,37 @@ exports.handler=async event=>{
       const expected=match[2];
       const file=(files||[]).find(x=>x.name===expected);
       const size=Number(file?.metadata?.size||file?.metadata?.contentLength||0);
-      if(!file || size<=0)continue;
+      if(!file || size<=8192)continue;
+      // A lista de objetos finalizados não implica o fim da sessão ativa.
+      if (assembly.status === 'em_andamento' && ['pendente','gravando'].includes(row.status)) continue;
       const {error:updateError}=await admin.from('assembly_recordings')
         .update({status:'concluido',file_size_bytes:size,ended_at:file.updated_at||new Date().toISOString()})
-        .eq('id',row.id).in('status',['gravando','pendente']);
+        .eq('id',row.id).in('status',['gravando','pendente','falhou']);
       if(!updateError)updated++;
+    }
+    // Se o webhook terminou sem criar uma linha, vincular somente vídeos comprovados
+    // no bucket da assembleia e somente após o encerramento da reunião.
+    if (assembly.status === 'encerrada') {
+      const {data:allRows,error:allError}=await admin.from('assembly_recordings')
+        .select('id,recording_url').eq('assembly_id',assemblyId).limit(500);
+      if(allError)throw allError;
+      const existing=new Set((allRows||[]).map(row=>String(row.recording_url||'')));
+      for(const file of files||[]) {
+        if(!/\.(mp4|webm)$/i.test(String(file.name||'')))continue;
+        const size=Number(file.metadata?.size||file.metadata?.contentLength||0);
+        if(!Number.isFinite(size)||size<=8192)continue;
+        const url=`storage://condomit-assembly-recordings/${assemblyId}/${file.name}`;
+        if(existing.has(url))continue;
+        const timestamp=file.created_at||file.updated_at||new Date().toISOString();
+        const {error:insertError}=await admin.from('assembly_recordings').insert({
+          assembly_id:assemblyId,cep:assembly.cep,recording_url:url,
+          recording_type:'room_composite',status:'concluido',
+          file_size_bytes:size,started_at:timestamp,ended_at:file.updated_at||timestamp,
+          started_by:email
+        });
+        if(insertError){console.error('[ASSEMBLY RECONCILE] Arquivo não vinculado:',insertError);continue;}
+        existing.add(url); updated++;
+      }
     }
     return reply(200,{ok:true,updated});
   }catch(error){console.error('[ASSEMBLY RECORDING RECONCILE]',error);return reply(500,{error:'Não foi possível conferir o Storage da gravação.'});}

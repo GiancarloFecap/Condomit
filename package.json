@@ -8,6 +8,7 @@
   },
   "scripts": {
     "check:project": "node tools/check-project.mjs",
+    "test:assembly": "node tools/tests/assembly-regression.cjs",
     "mobile:build": "node mobile/build-web.mjs",
     "mobile:configure-native": "node mobile/configure-native.mjs",
     "mobile:sync": "npm run mobile:build && npx cap sync && npm run mobile:configure-native",

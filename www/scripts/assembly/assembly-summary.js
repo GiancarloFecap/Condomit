@@ -112,8 +112,8 @@
             fetchRows(`/assembly_speaking_requests?select=*&assembly_id=eq.${state.id}&order=requested_at.asc`),
             fetchRows(`/assembly_event_logs?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
-            fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => []),
-            fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
+            fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`),
+            fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`),
             fetchRows(`/assembly_speech_activity?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
             fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code,signature_data&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
             fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => [])
@@ -121,7 +121,7 @@
 
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
-        if ((recordings || []).some(row => ['pendente','gravando'].includes(String(row?.status || '')))) {
+        { // Reconciliar inclusive vídeos sem linha em assembly_recordings.
           try {
             const token = await window.resolveSupabaseAccessToken?.();
             if (token) {
@@ -132,7 +132,7 @@
               if (result.ok) {
                 const checked = await result.json();
                 if (checked.updated > 0) {
-                  const fresh = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => null);
+                  const fresh = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`);
                   if (fresh) {recordings.splice(0,recordings.length,...fresh);}
                 }
               }

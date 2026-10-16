@@ -34,14 +34,59 @@ exports.handler = async event => {
     if (!ids.some(value => cep(value) === cep(assembly.cep))) return reply(403, {error:'Usuário não pertence ao condomínio desta assembleia.'});
     const roomName = String(assembly.livekit_room_name || `assembleia-${assembly.id}-${cep(assembly.cep)}`);
     const livekit = new EgressClient(env.LIVEKIT_URL.replace(/^wss:/,'https:').replace(/^ws:/,'http:'), env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET);
-    const {data: current} = await supabase.from('assembly_recordings').select('id,egress_id,status,started_at').eq('assembly_id',assemblyId).in('status',['pendente','gravando']).order('created_at',{ascending:false}).limit(1);
-    if (current?.length) {
-      const previous = current[0];
-      const stale = previous.status === 'pendente' && !previous.egress_id &&
-        Date.now() - new Date(previous.started_at || 0).getTime() > 120000;
-      if (!stale) return reply(200, {status:previous.status, recording_id:previous.id, active:true});
-      const {error: staleError} = await supabase.from('assembly_recordings').update({status:'falhou'}).eq('id',previous.id).eq('status','pendente');
-      if (staleError) throw staleError;
+    // EgressClient confirma se a gravação está REALMENTE ativa. Uma linha "gravando"
+    // pode permanecer no banco mesmo depois de falha ou webhook perdido.
+    const {data: current, error: currentError} = await supabase.from('assembly_recordings')
+      .select('id,egress_id,status,started_at,recording_url')
+      .eq('assembly_id',assemblyId).in('status',['pendente','gravando'])
+      .order('created_at',{ascending:false}).limit(2);
+    if (currentError) throw currentError;
+    const now = Date.now();
+    const recent = (current || [])[0];
+    if (recent) {
+      const elapsed = now - new Date(recent.started_at || now).getTime();
+      if (recent.status === 'gravando' && recent.egress_id) {
+        let activeEgress = false;
+        try {
+          const activeList = await livekit.listEgress({roomName});
+          activeEgress = (activeList || []).some(info => info.egressId === recent.egress_id);
+        } catch (healthError) {
+          console.error('[ASSEMBLY EGRESS HEALTH] Sem confirmação do LiveKit:', healthError);
+          // Se o LiveKit não responde, não iniciamos uma segunda gravação duplicada.
+          return reply(503, {error:'Não foi possível conferir se a gravação permanece ativa no LiveKit.'});
+        }
+        if (activeEgress) return reply(200,{status:'gravando',recording_id:recent.id,active:true});
+        if (elapsed < 90000) return reply(200,{status:'pendente',recording_id:recent.id,active:false});
+      } else if (elapsed < 90000) {
+        return reply(200,{status:'pendente',recording_id:recent.id,active:false});
+      }
+      // Antes de classificar como falha, verificar se existe o vídeo no Storage.
+      const match = String(recent.recording_url||'').match(/^storage:\/\/condomit-assembly-recordings\/(\d+)\/(.+)$/);
+      let existingFile = null;
+      if (match && Number(match[1]) === assemblyId) {
+        const {data:found,error:storageError} = await supabase.storage.from(bucket).list(String(assemblyId),{limit:100});
+        if (storageError) throw storageError;
+        existingFile = (found||[]).find(file=>file.name===match[2]);
+      }
+      const fileBytes = Number(existingFile?.metadata?.size||existingFile?.metadata?.contentLength||0);
+      if (fileBytes > 8192) {
+        const {error:recoveredError} = await supabase.from('assembly_recordings').update({status:'concluido',file_size_bytes:fileBytes,ended_at:existingFile.updated_at||new Date().toISOString()}).eq('id',recent.id).in('status',['pendente','gravando']);
+        if (recoveredError) throw recoveredError;
+      } else {
+        const {error:staleError} = await supabase.from('assembly_recordings').update({status:'falhou',ended_at:new Date().toISOString()}).eq('id',recent.id).in('status',['pendente','gravando']);
+        if (staleError) throw staleError;
+        console.warn('[ASSEMBLY EGRESS HEALTH] Gravação interrompida sem arquivo recuperável:', {assemblyId,recordingId:recent.id,egressId:recent.egress_id});
+      }
+    }
+    // Evita reinícios infinitos (e custos inesperados) se a configuração do Egress falhar.
+    const {data:failed, error:failedError} = await supabase.from('assembly_recordings')
+      .select('id,started_at').eq('assembly_id',assemblyId).eq('status','falhou')
+      .gte('started_at',new Date(now-60*60*1000).toISOString())
+      .order('started_at',{ascending:false}).limit(4);
+    if (failedError) throw failedError;
+    if ((failed||[]).length >= 3) return reply(503,{status:'falhou',error:'Três tentativas de gravação falharam nesta hora. Verifique o Egress e o S3 para evitar cobranças repetidas.'});
+    if (failed?.length && now - new Date(failed[0].started_at).getTime() < 110000) {
+      return reply(200,{status:'falhou',active:false,error:'A gravação falhou. Nova tentativa automática após intervalo de segurança.'});
     }
     const storagePath = `${assemblyId}/${crypto.randomUUID()}.mp4`;
     const {data: record, error: insertedError} = await supabase.from('assembly_recordings').insert({assembly_id:assemblyId,cep:assembly.cep,livekit_room_name:roomName,recording_url:`storage://${bucket}/${storagePath}`,recording_type:'room_composite',status:'pendente',started_by:email,started_at:new Date().toISOString()}).select('id').single();

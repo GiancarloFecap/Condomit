@@ -1,9 +1,13 @@
 import { state } from './state.js?v=0724';
-import { getLocalWhisper } from './local-whisper.js?v=077';
+import { getLocalWhisper } from './local-whisper.js?v=080';
 
-const SEGMENT_MS = 8000;
+const SEGMENT_MS = 12000;
 const MAX_PENDING_SEGMENTS = 16;
 let active = false;
+let finishing = false;
+let shutdownPromise = null;
+let lastError = '';
+let speechSegments = 0;
 let audioContext = null;
 let audioSource = null;
 let audioWorklet = null;
@@ -89,7 +93,7 @@ function resampleTo16K(chunks, sourceRate, sampleCount) {
 }
 
 function enqueueSegment(data) {
-  if (!active || !data) return;
+  if ((!active && !finishing) || !data) return;
   if (queue.length >= MAX_PENDING_SEGMENTS) {
     setStatus('Dispositivo sobrecarregado', 'Alguns trechos não poderão ser transcritos neste aparelho. O vídeo continua no servidor.');
     return;
@@ -177,12 +181,13 @@ async function processQueue() {
   if (processing || engineUnavailable) return;
   processing = true;
   try {
-    while (queue.length && active) {
+    while (queue.length && (active || finishing)) {
       const segment = queue.shift();
       try {
         setStatus('Transcrição local em andamento…', 'A voz é processada no dispositivo, sem API paga. A gravação continua no servidor.');
         const audio = segment.pcm ? resampleTo16K(segment.pcm,segment.sampleRate,segment.sampleCount) : await decodeTo16K(segment.blob);
         if (!hasSpeechSignal(audio)) continue;
+        speechSegments++;
         const model = await getLocalWhisper((message) => setStatus(message));
         const result = await model(audio, {
           language: 'portuguese', task: 'transcribe',
@@ -190,16 +195,26 @@ async function processQueue() {
         });
         const text = usefulText(result?.text || (typeof result === 'string' ? result : ''));
         if (text) {
-          await saveText(text, segment.identity);
+          let saved = false;
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try { await saveText(text, segment.identity); saved = true; break; }
+            catch (error) {
+              if (attempt === 3) throw error;
+              await new Promise(resolve => setTimeout(resolve, attempt * 700));
+            }
+          }
+          if (!saved) throw new Error('Transcrição não pôde ser salva.');
           processedCount++;
           setStatus(`Transcrição: ${processedCount} trecho${processedCount===1?'':'s'} salvo${processedCount===1?'':'s'}`, 'Falas transcritas no dispositivo e registradas no Supabase. Confira a ata.');
         }
       } catch (error) {
         console.warn('[Condomit transcrição local] Trecho não transcrito:', error);
-        setStatus('Trecho não transcrito: consulte a gravação.', 'A transcrição local não substitui a gravação integral nem a revisão da ata.');
+        lastError = String(error?.message || error);
+        setStatus('Falha de transcrição — consulte o diagnóstico', lastError);
         if (/modelo|pipeline|download|fetch|webgpu|wasm|memory/i.test(String(error?.message || ''))) {
           engineUnavailable = true;
-          queue.length = 0;
+          setStatus('Whisper indisponível neste dispositivo', lastError);
+          // Não apresentar detecção de fala como texto transcrito.
           break;
         }
       }
@@ -208,7 +223,11 @@ async function processQueue() {
     processing = false;
     if (active && !engineUnavailable) {
       if (!recorder && !audioContext) startSegment();
-      if (!queue.length) setStatus('Transcrição local ativada', 'Processamento Whisper no dispositivo; confira trechos e gravação antes de aprovar a ata.');
+      if (!queue.length && !lastError) setStatus(processedCount ? `Transcrição: ${processedCount} trecho(s) salvo(s)` : 'Whisper pronto — aguardando fala', 'O áudio de cada participante é processado no próprio dispositivo.');
+    } else if (finishing) {
+      finishing = false;
+      if (processedCount) setStatus(`${processedCount} trecho(s) registrado(s) na ata`);
+      else setStatus('Nenhum trecho de texto salvo', lastError || `${speechSegments} segmento(s) com sinal de voz. Verifique o reconhecimento de voz.`);
     }
   }
 }
@@ -233,7 +252,7 @@ function startSegment() {
   next.onstop = () => {
     clearTimeout(recordingTimeout);
     if (recorder === next) recorder = null;
-    if (chunks.length && active) {
+    if (chunks.length && (active || finishing)) {
       enqueueSegment({
         blob: new Blob(chunks, { type: next.mimeType || mime || 'audio/webm' }),
         identity: String(state.room?.localParticipant?.identity || '').trim()
@@ -246,14 +265,20 @@ function startSegment() {
 }
 
 export function startIncrementalTranscription() {
-  if (active) return;
+  if (active || finishing || shutdownPromise) return;
+  queue.length = 0;
   active = true;
   engineUnavailable = false;
   setStatus('Preparando transcrição local…', 'Whisper é executado no navegador sem créditos da OpenAI.');
   processedCount = 0;
-  getLocalWhisper(message => setStatus(message)).catch(error => {
+  speechSegments = 0;
+  lastError = '';
+  finishing = false;
+  getLocalWhisper(message => { if (active) setStatus(message); }).catch(error => {
     console.warn('[Condomit Whisper] Modelo não carregado:', error);
-    setStatus('Modelo de voz não carregado', 'Confira a conexão de internet e atualize a página. A gravação em vídeo é independente.');
+    lastError = String(error?.message || error);
+    engineUnavailable = true;
+    setStatus('Modelo Whisper não carregado', lastError);
   });
   const retry = async () => {
     if (!active || engineUnavailable) return;
@@ -268,15 +293,38 @@ export function startIncrementalTranscription() {
   retryTimer = setInterval(retry, 2000);
 }
 
-export function stopIncrementalTranscription() {
+export async function stopIncrementalTranscription({waitForSave = true} = {}) {
+  if (shutdownPromise) return waitForSave ? shutdownPromise : undefined;
+  if (!active && !finishing) return;
+  // Capture everything BEFORE changing the state, then process the already queued audio.
+  finishing = true;
   active = false;
   if (retryTimer) clearInterval(retryTimer);
   retryTimer = null;
   if (recordingTimeout) clearTimeout(recordingTimeout);
   cleanupPcm();
-  if (recorder?.state === 'recording') recorder.stop();
+  if (recorder?.state === 'recording') {
+    const pendingRecorder = recorder;
+    await new Promise(resolve => {
+      pendingRecorder.addEventListener('stop', resolve, {once:true});
+      try { pendingRecorder.stop(); } catch(_) {resolve();}
+    });
+  }
   recorder = null;
-  queue.length = 0;
+  if (queue.length && !processing && !engineUnavailable) processQueue();
+  shutdownPromise = (async () => {
+    const until = Date.now() + 25000;
+    while ((processing || queue.length) && Date.now() < until && !engineUnavailable) {
+      if (!processing) processQueue();
+      await new Promise(resolve => setTimeout(resolve, 180));
+    }
+    if ((processing || queue.length) && !engineUnavailable) {
+      setStatus('Trechos ainda processando: aguarde antes de fechar a página.');
+    }
+    finishing = false;
+    return {saved:processedCount, speechSegments, pending:queue.length, error:lastError};
+  })().finally(()=>{shutdownPromise=null;});
+  if (waitForSave) return shutdownPromise;
 }
 
 window.addEventListener('condomit:assembly-allow-audio', () => {
