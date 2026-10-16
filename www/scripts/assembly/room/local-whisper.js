@@ -8,7 +8,7 @@ const normalizeMessage = (event, onStatus) => {
 };
 
 async function initializeTranscriber(onStatus) {
-  const { pipeline, env } = await import('https://esm.sh/@huggingface/transformers@4.2.0?bundle');
+  const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
   if (env) {
     env.allowLocalModels = false;
     env.useBrowserCache = true;
@@ -20,7 +20,7 @@ async function initializeTranscriber(onStatus) {
       return await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', { progress_callback });
     }
     return await pipeline('automatic-speech-recognition', 'Xenova/whisper-base', {
-      device: 'webgpu',
+      device: 'webgpu', dtype: 'fp32',
       progress_callback
     });
   } catch (error) {

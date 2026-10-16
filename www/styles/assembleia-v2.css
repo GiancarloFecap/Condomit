@@ -3177,3 +3177,5 @@ textarea:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+.assembly-doc-download { width:100%; text-align:left; background:var(--surface,#fff); font:inherit; color:inherit; }

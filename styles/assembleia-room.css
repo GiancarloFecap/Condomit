@@ -1184,3 +1184,22 @@ body {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: .55; transform: scale(.88); }
 }
+
+/* Revisão 077: painel de assembleia recolhível, inclusive no computador. */
+@media (min-width: 1025px) {
+  .call-body.panel-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .call-body.panel-collapsed > .call-panel { display: none; }
+}
+.chat-msg.is-own { grid-template-columns: minmax(0,1fr) 34px; }
+.chat-msg.is-own .chat-msg-avatar { grid-column: 2; grid-row: 1; }
+.chat-msg.is-own .chat-msg-body { grid-column: 1; grid-row: 1; text-align: right; background: rgba(30,96,179,.22); }
+.chat-msg.is-own .chat-msg-header { justify-content: flex-end; }
+.panel-item { min-width: 0; }
+.panel-item-info { min-width: 0; overflow-wrap: anywhere; }
+
+.call-moderation-menu { position: fixed; z-index: 99999; width: 230px; padding: 6px; border: 1px solid rgba(148,163,184,.27); border-radius: 12px; box-shadow: 0 18px 45px rgba(0,0,0,.38); background: #152137; color: #f5f7fb; }
+.call-moderation-menu[hidden] { display: none!important; }
+.call-moderation-menu button { width:100%; padding: 11px 9px; border:0; background: transparent; color: inherit; text-align:left; display:flex; gap:10px; align-items:center; border-radius:8px; cursor:pointer; font-size:13px; }
+.call-moderation-menu button:hover { background:rgba(148,163,184,.2); }
+.call-moderation-menu button.danger { color:#fda4af; }
+.call-moderation-menu i { width:16px; text-align:center; }

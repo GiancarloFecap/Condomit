@@ -121,7 +121,26 @@
 
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
+        if ((recordings || []).some(row => ['pendente','gravando'].includes(String(row?.status || '')))) {
+          try {
+            const token = await window.resolveSupabaseAccessToken?.();
+            if (token) {
+              const result = await fetch('/.netlify/functions/assembly-recording-reconcile', {
+                method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+                body:JSON.stringify({assembly_id:Number(state.id)}), cache:'no-store'
+              });
+              if (result.ok) {
+                const checked = await result.json();
+                if (checked.updated > 0) {
+                  const fresh = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => null);
+                  if (fresh) {recordings.splice(0,recordings.length,...fresh);}
+                }
+              }
+            }
+          } catch(error) {console.warn('[ASSEMBLY RECORDINGS] Falha ao conferir arquivo de mídia:',error);}
+        }
         const playableRecordings = (recordings || []).filter((row) => row?.status === 'concluido' && String(row?.recording_url || '').trim());
+        state.recordingStatuses = recordings || [];
         Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings: playableRecordings, speechActivities, commentVotes });
         state.signature = signatures[0] || null;
 
@@ -924,7 +943,14 @@
         const container = document.getElementById('assemblyRecordings');
         if (!container) return;
         if (!state.recordings.length) {
-            container.innerHTML = '<div class="summary-empty">Nenhuma gravação concluída foi vinculada a esta assembleia.</div>';
+            const statuses = (state.recordingStatuses || []).map(row => String(row?.status || '').toLowerCase());
+            const waiting = statuses.some(status => ['pendente','gravando'].includes(status));
+            const failed = statuses.includes('falhou');
+            container.innerHTML = `<div class="summary-empty">${waiting
+              ? 'A gravação está em andamento ou em processamento. Volte a esta página após o encerramento do último participante.'
+              : failed
+                ? 'A gravação não foi concluída. Verifique os logs das Functions de gravação e o webhook do LiveKit na Netlify.'
+                : 'Nenhuma gravação registrada. Confira as variáveis do Egress, o bucket S3 e o webhook de conclusão.'}</div>`;
             return;
         }
         container.innerHTML = state.recordings.map((row, index) => `

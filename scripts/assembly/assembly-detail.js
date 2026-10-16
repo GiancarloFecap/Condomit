@@ -486,15 +486,27 @@
       if (doc.document_type) metaParts.push(getTypeLabelForDoc(doc.document_type));
       if (size) metaParts.push(size);
       var url = doc.document_url || doc.url || '#';
-      return '<a class="document-item" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' +
+      return '<button type="button" class="document-item assembly-doc-download" data-doc-id="' + esc(String(doc.id || '')) + '" aria-label="Baixar documento">' +
         '<div class="document-icon ' + iconClass + '"><i class="fas ' + faIcon + '"></i></div>' +
         '<div class="document-info">' +
         '<div class="document-name">' + esc(doc.title || doc.name || 'Documento') + '</div>' +
         '<div class="document-meta">' + esc(metaParts.join(' · ')) + '</div>' +
         (doc.description ? '<div class="document-meta" style="margin-top: 2px;">' + esc(doc.description) + '</div>' : '') +
         '</div>' +
-        '</a>';
+        '</button>';
     }).join('');
+    container.querySelectorAll('.assembly-doc-download').forEach(function(button) {
+      button.addEventListener('click', async function() {
+        var doc = docs.find(function(d){ return String(d.id || '') === String(button.dataset.docId); });
+        if (!doc) return;
+        button.disabled = true;
+        try {
+          var module = await import('../scripts/assembly/room/data.js?v=077');
+          await module.downloadAssemblyDocument(doc);
+        } catch (error) { window.AssemblyUtils?.showToast?.(error.message || 'Falha ao baixar documento.', 'error'); }
+        finally { button.disabled = false; }
+      });
+    });
   }
 
   function getTypeLabelForDoc(t) {

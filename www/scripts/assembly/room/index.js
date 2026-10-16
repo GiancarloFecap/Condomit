@@ -1,10 +1,10 @@
 import { state } from './state.js?v=0724';
 import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0724';
-import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=0724';
-import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=0724';
+import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=077';
+import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=077';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0724';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
-import { startIncrementalTranscription, stopIncrementalTranscription } from './incremental-transcription.js?v=075';
+import { startIncrementalTranscription, stopIncrementalTranscription } from './incremental-transcription.js?v=077';
 const RECORDING_CHECK_MS = 15000;
 let recordingCheckTimer = null;
 let recordingSyncInFlight = false;
@@ -92,7 +92,7 @@ async function syncAssemblyRecording() {
         return;
       }
       console.error('[Assembly Recording]', error);
-      setRecordingStatus('Gravação indisponível — verifique as configurações.', true);
+      setRecordingStatus('Gravação indisponível: confira LiveKit Egress, S3 e webhook na Netlify.', true);
     }
   } catch (error) {
     console.warn('[Assembly] Não foi possível atualizar a situação da sala:', error);
@@ -194,10 +194,63 @@ function bindTabs() {
         t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
       });
       const target = tab.dataset.tab;
+      if (target === 'docs') refreshDocuments().catch(() => {});
       panels.forEach((p) => {
         p.classList.toggle('active', p.dataset.panel === target);
       });
     });
+  });
+}
+
+function bindModeratorMenu() {
+  if (!state.permissions?.canManage && !state.permissions?.canRemoveParticipants) return;
+  const menu = document.createElement('div');
+  menu.className = 'call-moderation-menu';
+  menu.setAttribute('role','menu');
+  menu.hidden = true;
+  menu.innerHTML = `
+    <button type="button" role="menuitem" data-moderation="mute_microphone"><i class="fas fa-microphone-slash"></i> Silenciar microfone</button>
+    <button type="button" role="menuitem" data-moderation="mute_camera"><i class="fas fa-video-slash"></i> Desativar câmera</button>
+    <button type="button" role="menuitem" class="danger" data-moderation="remove"><i class="fas fa-user-xmark"></i> Retirar da assembleia</button>`;
+  document.body.appendChild(menu);
+  let identity = '';
+  const hide = () => { menu.hidden = true; identity = ''; };
+  for (const id of ['call-grid','participants-list']) {
+    $(id)?.addEventListener('contextmenu', event => {
+      const element = event.target.closest('[data-participant-identity]');
+      const selected = element?.dataset.participantIdentity;
+      if (!selected || selected === state.room?.localParticipant?.identity) return;
+      event.preventDefault();
+      identity = selected;
+      menu.hidden = false;
+      const width = 230, height = 148;
+      menu.style.left = `${Math.max(8,Math.min(event.clientX,window.innerWidth-width-8))}px`;
+      menu.style.top = `${Math.max(8,Math.min(event.clientY,window.innerHeight-height-8))}px`;
+    });
+  }
+  document.addEventListener('click', event => { if (!menu.contains(event.target)) hide(); });
+  document.addEventListener('keydown', event => {if(event.key==='Escape')hide();});
+  menu.addEventListener('click', async event => {
+    const button = event.target.closest('button[data-moderation]');
+    if (!button || !identity) return;
+    const targetIdentity = identity;
+    const action = button.dataset.moderation;
+    hide();
+    if (action === 'remove') {
+      const ok = await window.showConfirm({ title: 'Retirar participante', message: 'Deseja retirar este participante da chamada?',confirmText:'Retirar',cancelText:'Cancelar'});
+      if (!ok) return;
+    }
+    try {
+      const token = await window.resolveSupabaseAccessToken?.();
+      if (!token) throw new Error('Sua sessão expirou.');
+      const response = await fetch('/.netlify/functions/assembly-moderate',{
+        method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+        body:JSON.stringify({assembly_id:Number(state.assemblyId),identity:targetIdentity,action})
+      });
+      const result = await response.json().catch(()=>({}));
+      if (!response.ok) throw new Error(result.error || 'Falha ao moderar participante.');
+      toast(result.message || 'Ação concluída.','success');
+    } catch(error) { toast(error.message || 'Falha na moderação.','error'); }
   });
 }
 
@@ -287,7 +340,7 @@ async function initLists() {
     renderParticipantsList(state.room);
   };
   subscribeAgenda(refresh);
-  subscribeDocuments(refresh);
+  subscribeDocuments(() => refreshDocuments().catch(() => {}));
   subscribePolls(refresh);
   subscribeHands(refresh);
   startPollCountdownTick();
@@ -624,7 +677,7 @@ function openAddDocModal() {
       </div>
       <div class="field">
         <label for="doc-file">Arquivo *</label>
-        <input id="doc-file" type="file" accept="application/pdf,image/*,.doc,.docx,.txt,.csv" style="padding: 8px;" />
+        <input id="doc-file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.txt,.csv" style="padding: 8px;" />
       </div>
     </div>
     <div class="field">
@@ -639,25 +692,11 @@ function openAddDocModal() {
   const fileInput = body.querySelector('#doc-file');
   const previewWrap = body.querySelector('#doc-file-preview-wrap');
   const preview = body.querySelector('#doc-file-preview');
-  let selected = null;
   fileInput?.addEventListener('change', () => {
-    const file = fileInput.files?.[0] || null;
-    if (!file) { selected = null; previewWrap.style.display = 'none'; return; }
-    if (file.size > 5 * 1024 * 1024) {
-      toast('Arquivo muito grande. Use até 5MB.', 'warning');
-      fileInput.value = '';
-      selected = null;
-      previewWrap.style.display = 'none';
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      selected = { name: file.name, type: file.type || 'application/octet-stream', size: file.size, dataUrl: String(reader.result || '') };
-      previewWrap.style.display = 'flex';
-      previewWrap.style.flexDirection = 'column';
-      preview.textContent = `${selected.name} (${(selected.size / 1024).toFixed(1)} KB) Tipo: ${selected.type}`;
-    };
-    reader.readAsDataURL(file);
+    const file = fileInput.files?.[0];
+    if (!file) { previewWrap.style.display = 'none'; return; }
+    previewWrap.style.display = 'flex';
+    preview.textContent = `${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB) — limite de 50 MB`;
   });
 
   showSimpleModal({
@@ -669,13 +708,15 @@ function openAddDocModal() {
       const type = String(b.querySelector('#doc-type')?.value || 'outro').trim().toLowerCase();
       const description = String(b.querySelector('#doc-description')?.value || '').trim();
       if (!title) throw new Error('Informe o título do documento.');
-      if (!selected) throw new Error('Selecione um arquivo.');
+      const file = b.querySelector('#doc-file')?.files?.[0];
+      if (!file) throw new Error('Selecione um arquivo.');
+      const storageReference = await uploadAssemblyDocument(file);
       await createDocument({
         title,
         document_type: type,
         description: description || null,
-        document_url: selected.dataUrl,
-        file_size_bytes: selected.size
+        document_url: storageReference,
+        file_size_bytes: file.size
       });
       toast('Documento enviado com sucesso.', 'success');
       await refreshLists().catch(() => {});
@@ -712,6 +753,7 @@ async function init() {
     await loadAssemblyProfilePhotos();
 
     bindRoomActions();
+    bindModeratorMenu();
 
     await connectToRoom(tokenInfo);
 
@@ -726,12 +768,20 @@ async function init() {
 
     startAssemblyTranscription();
     startIncrementalTranscription();
+    document.addEventListener('pointerdown', () => {
+      window.dispatchEvent(new Event('condomit:assembly-allow-audio'));
+    }, {passive:true});
 
     try { await presenceJoin(); } catch (_) {}
     startHeartbeat();
 
     await initChat();
     await initLists();
+    state.documentsRefreshTimer = setInterval(() => {
+      if (!document.hidden && document.querySelector('.panel-section[data-panel="docs"]')?.classList.contains('active')) {
+        refreshDocuments().catch(() => {});
+      }
+    }, 12000);
 
     if (window.matchMedia('(max-width: 1024px)').matches) {
       setPanelOpen(false);
@@ -743,15 +793,11 @@ async function init() {
   }
 }
 
-window.addEventListener('beforeunload', (event) => {
+window.addEventListener('pagehide', () => {
   stopRecordingStatusWatch();
-   
-   
-   
-  if (isPrivilegedUser()) {
-    event.preventDefault();
-    event.returnValue = '';
-  }
+  stopIncrementalTranscription();
+  clearInterval(state.documentsRefreshTimer);
+  presenceLeave().catch(() => {});
 });
 
 document.addEventListener('DOMContentLoaded', init);

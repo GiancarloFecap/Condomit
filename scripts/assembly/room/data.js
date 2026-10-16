@@ -152,6 +152,11 @@ export async function loadDocuments() {
   return Array.isArray(data) ? data : [];
 }
 
+export async function refreshDocuments() {
+  const docs = await loadDocuments();
+  renderSimpleList('docs-list', 'docs-count', docs, buildDocItem);
+}
+
 export function subscribeDocuments(onChange) {
   const supabase = ensureSupabase();
   state.docsSubscription?.unsubscribe?.();
@@ -423,7 +428,9 @@ export function buildAgendaItem(item) {
   node.className = 'panel-item';
   const title = safeText(item?.title || 'Pauta');
   const desc = safeText(item?.description || '');
-  const status = safeText(item?.status || '');
+  const statusKey = safeText(item?.status || '').toLowerCase();
+  const statuses = {nao_iniciada:'Aguardando início', em_andamento:'Em discussão', concluida:'Concluída', finalizada:'Concluída', cancelada:'Cancelada'};
+  const status = statuses[statusKey] || statusKey.replace(/_/g, ' ');
 
   const info = document.createElement('div');
   info.className = 'panel-item-info';
@@ -443,40 +450,82 @@ export function buildAgendaItem(item) {
   return node;
 }
 
+const ASSEMBLY_DOC_BUCKET = 'condomit-assembly-documents';
+const ASSEMBLY_DOC_MAX_BYTES = 50 * 1024 * 1024;
+
+export async function uploadAssemblyDocument(file) {
+  if (!(file instanceof File) || !file.size) throw new Error('Selecione um arquivo válido.');
+  if (file.size > ASSEMBLY_DOC_MAX_BYTES) throw new Error('Tamanho máximo de 50 MB por documento.');
+  if (!/\.(pdf|png|jpe?g|webp|docx?|xlsx?|txt|csv)$/i.test(file.name)) {
+    throw new Error('Formato não permitido. Utilize PDF, imagem, Word, Excel, TXT ou CSV.');
+  }
+  const supabase = ensureSupabase();
+  const sanitized = file.name.normalize('NFKD').replace(/[^A-Za-z0-9._-]/g, '_').slice(-110);
+  const key = `${state.assemblyId}/${crypto.randomUUID()}-${sanitized}`;
+  const { error } = await supabase.storage.from(ASSEMBLY_DOC_BUCKET).upload(key, file, {
+    contentType: file.type || 'application/octet-stream', cacheControl: '3600', upsert: false
+  });
+  if (error) throw new Error(`Não foi possível armazenar o arquivo: ${error.message}. Confirme a migration 055 e os limites do Storage.`);
+  return `storage://${ASSEMBLY_DOC_BUCKET}/${key}`;
+}
+
+export async function downloadAssemblyDocument(item) {
+  const reference = safeText(item?.document_url || item?.file_url || item?.url || '');
+  if (!reference) throw new Error('Este documento não possui arquivo anexado.');
+  const originalName = safeText(item?.title || 'documento').replace(/[\/:*?"<>|]/g, '_').slice(0, 110);
+  const stored = reference.match(/^storage:\/\/([^/]+)\/(.+)$/);
+  let url = reference;
+  if (stored) {
+    const [, bucket, key] = stored;
+    if (bucket !== ASSEMBLY_DOC_BUCKET) throw new Error('Bucket de documento não autorizado.');
+    const { data, error } = await ensureSupabase().storage.from(bucket).createSignedUrl(key, 90);
+    if (error || !data?.signedUrl) throw new Error(error?.message || 'Sem permissão para baixar este documento.');
+    url = data.signedUrl;
+  }
+  if (!stored && !/^data:(application\/pdf|image\/(png|jpeg|webp)|application\/octet-stream|text\/plain|application\/vnd\.|application\/msword|text\/csv)/i.test(url)) {
+    throw new Error('O documento usa um formato antigo de link e não pode ser baixado com segurança. Solicite novo envio.');
+  }
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Não foi possível baixar o documento (${response.status}).`);
+  const blob = await response.blob();
+  const storageName = stored ? decodeURIComponent(stored[2]).split('/').pop().replace(/^[a-f0-9-]{36}-/i, '') : '';
+  const ext = storageName.match(/\.(pdf|png|jpe?g|webp|docx?|xlsx?|txt|csv)$/i)?.[0]
+    || ({'application/pdf':'.pdf','image/png':'.png','image/jpeg':'.jpg'}[blob.type] || '.pdf');
+  const name = stored ? storageName : `${originalName}${ext}`;
+  const localUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = localUrl; a.download = name; a.style.display = 'none';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(localUrl), 60000);
+}
+
 export function buildDocItem(item) {
   const node = document.createElement('div');
   node.className = 'panel-item';
-  const title = safeText(item?.title || 'Documento');
   const url = safeText(item?.document_url || item?.file_url || item?.url || '');
-  const type = safeText(item?.document_type || '');
-
   const info = document.createElement('div');
   info.className = 'panel-item-info';
-
   const name = document.createElement('div');
   name.className = 'panel-item-name';
-  name.textContent = title;
-
+  name.textContent = safeText(item?.title || 'Documento');
   const sub = document.createElement('div');
   sub.className = 'panel-item-sub';
-  sub.textContent = type || (url ? 'Arquivo disponível' : 'Sem link');
-
-  info.appendChild(name);
-  info.appendChild(sub);
-
+  const size = Number(item?.file_size_bytes || 0);
+  const humanSize = size ? ` · ${(size / (1024 * 1024)).toFixed(1).replace('.', ',')} MB` : '';
+  sub.textContent = `${safeText(item?.document_type || 'Documento')}${humanSize}`;
+  info.append(name, sub); node.appendChild(info);
   if (url) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.className = 'btn btn-outline btn-sm';
-    a.textContent = 'Abrir';
-    node.appendChild(info);
-    node.appendChild(a);
-    return node;
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'btn btn-outline btn-sm';
+    button.innerHTML = '<i class="fas fa-download" aria-hidden="true"></i> Baixar';
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try { await downloadAssemblyDocument(item); }
+      catch (error) { window.AssemblyUtils?.showToast?.(error?.message || 'Erro ao baixar documento.', 'error'); }
+      finally { button.disabled = false; }
+    });
+    node.appendChild(button);
   }
-
-  node.appendChild(info);
   return node;
 }
 

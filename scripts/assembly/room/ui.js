@@ -177,6 +177,7 @@ function renderTile(participant, isLocal) {
   const displayName = safeText(participant.name || meta?.user_name || meta?.user_email || identity);
   const tile = document.createElement('div');
   tile.className = 'call-tile';
+  tile.dataset.participantIdentity = safeText(participant.identity);
   tile.dataset.identity = identity;
 
   const media = document.createElement('div');
@@ -319,6 +320,7 @@ export function renderParticipantsList(room) {
     const displayName = safeText(p.name || meta?.user_name || meta?.user_email || p.identity);
     const item = document.createElement('div');
     item.className = 'panel-item';
+    item.dataset.participantIdentity = safeText(p.identity);
 
     const avatar = document.createElement('div');
     avatar.className = 'panel-item-avatar';
@@ -380,8 +382,13 @@ export function setPanelOpen(open) {
   state.panelOpen = !!open;
   const panel = el('call-panel');
   if (!panel) return;
-  if (window.matchMedia('(max-width: 1024px)').matches) {
-    panel.classList.toggle('hidden', !open);
+  panel.classList.toggle('hidden', !open);
+  document.querySelector('.call-body')?.classList.toggle('panel-collapsed', !open);
+  const button = el('btn-toggle-panel');
+  if (button) {
+    button.classList.toggle('active', open);
+    button.setAttribute('aria-expanded', String(open));
+    button.setAttribute('aria-controls', 'call-panel');
   }
 }
 
@@ -404,7 +411,12 @@ export function renderChatMessage(msg) {
   const time = msg?.created_at ? formatTimeBR(msg.created_at) : '';
 
   const row = document.createElement('div');
-  row.className = 'chat-msg';
+  const ownEmail = safeText(state.tokenInfo?.user?.email).toLowerCase();
+  const ownIdentity = safeText(state.room?.localParticipant?.identity || state.tokenInfo?.identity);
+  const authorEmail = safeText(msg?.user_email || msg?.participant_email).toLowerCase();
+  const authorIdentity = safeText(msg?.participant_identity || msg?.identity);
+  const isOwn = !!((ownEmail && authorEmail === ownEmail) || (ownIdentity && authorIdentity === ownIdentity));
+  row.className = isOwn ? 'chat-msg is-own' : 'chat-msg';
 
   const avatar = document.createElement('div');
   avatar.className = 'chat-msg-avatar';
