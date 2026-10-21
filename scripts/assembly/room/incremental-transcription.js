@@ -1,4 +1,4 @@
-import { state } from './state.js?v=0724';
+import { state } from './state.js?v=079';
 import { getLocalWhisper } from './local-whisper.js?v=078';
 
 const SEGMENT_MS = 8000;
@@ -213,19 +213,73 @@ function usefulText(input) {
   return text;
 }
 
-async function saveText(text, identity) {
-  if (typeof window.supabaseFetch !== 'function') throw new Error('Sessão do Supabase ainda não carregada.');
-  await window.supabaseFetch('/rpc/condomit_append_assembly_transcript', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      target_assembly_id: Number(state.assemblyId),
-      transcript_text: text,
-      participant_identity_value: identity || null,
-      transcript_source_value: 'whisper_browser_local',
-      confidence_value: null
-    })
+function createWav(audio) {
+  const buffer = new ArrayBuffer(44 + audio.length * 2);
+  const view = new DataView(buffer);
+  const write = (offset, value) => { for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i)); };
+  write(0, 'RIFF');
+  view.setUint32(4, buffer.byteLength - 8, true);
+  write(8, 'WAVE');
+  write(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, 16000, true);
+  view.setUint32(28, 32000, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  write(36, 'data');
+  view.setUint32(40, audio.length * 2, true);
+  for (let i = 0; i < audio.length; i++) {
+    const sample = Math.max(-1, Math.min(1, audio[i]));
+    view.setInt16(44 + i * 2, sample < 0 ? sample * 32768 : sample * 32767, true);
+  }
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+async function ensureAudioUploaded(segment, pcm) {
+  if (segment.audioPath) return segment.audioPath;
+  const supabase = window.supabase;
+  if (!supabase?.storage) throw new Error('Armazenamento de áudio indisponível.');
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const userId = userData?.user?.id;
+  if (userError || !userId) throw new Error('Sessão expirada ao salvar áudio.');
+  const audio = segment.blob || createWav(pcm);
+  const ext = segment.blob ? (audio.type.includes('mp4') ? 'mp4' : 'webm') : 'wav';
+  const path = `${Number(state.assemblyId)}/trechos/${userId}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from('condomit-assembly-recordings').upload(path, audio, {
+    contentType: ext === 'wav' ? 'audio/wav' : ext === 'mp4' ? 'audio/mp4' : 'audio/webm',
+    upsert: false,
+    cacheControl: '3600'
   });
+  if (error) throw new Error(`Não foi possível guardar o áudio da fala: ${error.message}`);
+  segment.audioPath = path;
+  return path;
+}
+
+async function saveText(text, identity, audioPath) {
+  if (typeof window.supabaseFetch !== 'function') throw new Error('Sessão do Supabase ainda não carregada.');
+  const payload = {
+    target_assembly_id: Number(state.assemblyId),
+    transcript_text: text,
+    participant_identity_value: identity || null,
+    transcript_source_value: 'whisper_browser_local',
+    confidence_value: null
+  };
+  try {
+    await window.supabaseFetch('/rpc/condomit_append_assembly_transcript_audio_055', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, audio_path_value: audioPath })
+    });
+  } catch (error) {
+    if (!/PGRST202|could not find the function|function.*does not exist|não encontr.*função/i.test(String(error?.message || ''))) throw error;
+    await window.supabaseFetch('/rpc/condomit_append_assembly_transcript', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    captureError = 'A migração 055 precisa ser aplicada para vincular áudio aos trechos.';
+    setStatus('Texto salvo · áudio sem vínculo', captureError, true);
+  }
 }
 
 async function processQueue() {
@@ -245,7 +299,8 @@ async function processQueue() {
           const text = usefulText(output?.text || (typeof output === 'string' ? output : ''));
           if (text) {
             setStatus(`Salvando texto · ${queue.length} pendente(s)`, 'Enviando trecho reconhecido ao banco de dados.');
-            await saveText(text, segment.identity);
+            const audioPath = await ensureAudioUploaded(segment, audio);
+            await saveText(text, segment.identity, audioPath);
             processedCount++;
             log('segment-saved', { saved: processedCount });
           }

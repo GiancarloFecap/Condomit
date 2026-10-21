@@ -225,15 +225,17 @@
       }
     };
 
-    const response =
-      await fetch(
-        path,
-        config
-      );
-
-    return handleResponse(
-      response
-    );
+    let response = await fetch(path, config);
+    if (response.status === 401 && typeof window.refreshSupabaseAccessToken === 'function') {
+      const updated = await window.refreshSupabaseAccessToken();
+      if (updated) {
+        response = await fetch(path, {
+          ...config,
+          headers: { ...config.headers, Authorization: `Bearer ${updated}` }
+        });
+      }
+    }
+    return handleResponse(response);
   }
 
   async function supabaseRpc(

@@ -1,15 +1,18 @@
-import { state } from './state.js?v=0724';
+import { state } from './state.js?v=079';
 import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0724';
-import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=077';
+import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=079';
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=077';
-import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0724';
+import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=079';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
-import { startIncrementalTranscription, stopIncrementalTranscription, getIncrementalTranscriptionState } from './incremental-transcription.js?v=078';
+import { startIncrementalTranscription, stopIncrementalTranscription, getIncrementalTranscriptionState } from './incremental-transcription.js?v=079';
 const RECORDING_CHECK_MS = 15000;
 let recordingCheckTimer = null;
 let recordingSyncInFlight = false;
 let recordingStartAttempted = false;
 let recordingRetrying = false;
+let recordingRetryCount = 0;
+let recordingRecoveryAttempts = 0;
+let nextRecordingRetryAt = 0;
 let leavingAssembly = false;
 
 function setRecordingStatus(message, isError = false, retry = false, detail = '') {
@@ -28,6 +31,7 @@ function setRecordingStatus(message, isError = false, retry = false, detail = ''
       button.disabled = true;
       try {
         recordingRetrying = true;
+        recordingRecoveryAttempts = 0;
         recordingStartAttempted = false;
         await ensureServerRecording(true);
         await syncAssemblyRecording();
@@ -76,12 +80,17 @@ async function startAssemblyOnHostEntry() {
 async function recordingRequest(action, extras = {}) {
   const token = await window.resolveSupabaseAccessToken?.();
   if (!token) throw new Error('Sua sessão expirou.');
-  const response = await fetch('/.netlify/functions/assembly-recording', {
+  const send = accessToken => fetch('/.netlify/functions/assembly-recording', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ assembly_id: Number(state.assemblyId), action, ...extras }),
     cache: 'no-store'
   });
+  let response = await send(token);
+  if (response.status === 401) {
+    const refreshed = await window.refreshSupabaseAccessToken?.();
+    if (refreshed) response = await send(refreshed);
+  }
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(result.error || 'Não foi possível consultar a gravação.');
@@ -93,15 +102,23 @@ async function recordingRequest(action, extras = {}) {
 
 async function ensureServerRecording(retry = false) {
   recordingStartAttempted = true;
-  const result = await recordingRequest('start', { retry_failed: retry });
-  if (result.status === 'falhou') {
-    setRecordingStatus('Gravação falhou · arquivo não confirmado', true, true, result.diagnostic);
-  } else if (result.status === 'gravando') {
-    setRecordingStatus('● REC · Egress ativo · arquivo pendente');
-  } else {
-    setRecordingStatus('Preparando gravação no servidor…');
+  nextRecordingRetryAt = Date.now() + Math.min(120000, 15000 * (2 ** Math.min(recordingRetryCount, 3)));
+  try {
+    const result = await recordingRequest('start', { retry_failed: retry });
+    if (result.status === 'falhou') {
+      setRecordingStatus('Gravação falhou · arquivo não confirmado', true, true, result.diagnostic);
+    } else if (['gravando', 'pendente'].includes(result.status)) {
+      recordingRetryCount = 0;
+      setRecordingStatus(result.status === 'gravando' ? '● REC · Egress ativo · arquivo pendente' : 'Preparando gravação no servidor…');
+    } else {
+      setRecordingStatus('Preparando gravação no servidor…');
+    }
+    return result;
+  } catch (error) {
+    recordingRetryCount++;
+    setRecordingStatus('Falha ao iniciar gravação · verifique o serviço', true, true, error.message);
+    throw error;
   }
-  return result;
 }
 
 function showRemoteRecordingStatus(result) {
@@ -139,14 +156,19 @@ async function syncAssemblyRecording() {
     setHeader(state.assembly);
     await startAssemblyOnHostEntry();
     const current = await recordingRequest('status');
-    if (!current.latest && isAssemblyRunning() && !recordingStartAttempted && !recordingRetrying) {
+    const latest = current.latest;
+    const mayRetry = isAssemblyRunning() && !recordingRetrying && Date.now() >= nextRecordingRetryAt && recordingRetryCount < 4;
+    if (!latest && mayRetry) {
       await ensureServerRecording();
+    } else if (latest?.status === 'falhou' && mayRetry && recordingRecoveryAttempts < 2) {
+      recordingRecoveryAttempts++;
+      await ensureServerRecording(true);
     } else {
       showRemoteRecordingStatus(current);
     }
   } catch (error) {
     console.error('[Assembly Recording]', { status: error.status, message: error.message });
-    setRecordingStatus(error.status === 409 ? 'Assembleia encerrada · aguardando gravação' : 'Falha ao verificar gravação · confira LiveKit e S3', true, false, error.message);
+    setRecordingStatus(error.status === 409 ? 'Assembleia encerrada · aguardando gravação' : 'Falha ao iniciar ou verificar gravação · confira LiveKit e S3', true, error.status !== 409 && isAssemblyRunning(), error.message);
   } finally {
     recordingSyncInFlight = false;
   }
@@ -341,34 +363,41 @@ function bindControls() {
     setPanelOpen(!state.panelOpen);
   });
   $('btn-leave')?.addEventListener('click', async () => {
-    const ok = await window.showConfirm({title:'Sair da assembleia', message:'Deseja sair? A gravação continuará no servidor enquanto houver participantes na sala.', confirmText:'Sair', cancelText:'Continuar na reunião'});
-    if (!ok) return;
     if (leavingAssembly) return;
+    const confirmed = typeof window.showConfirm === 'function'
+      ? await window.showConfirm({
+          title: 'Sair da assembleia',
+          message: 'Deseja sair da chamada? A assembleia continuará aberta para os demais participantes.',
+          confirmText: 'Sair da chamada', cancelText: 'Permanecer'
+        })
+      : window.confirm('Deseja sair da chamada?');
+    if (!confirmed) return;
     leavingAssembly = true;
     const button = $('btn-leave');
-    if (button) button.disabled = true;
+    if (button) { button.disabled = true; button.querySelector('span')?.replaceChildren('Saindo...'); }
+    stopRecordingStatusWatch();
+    clearInterval(state.heartbeatTimer);
+    clearInterval(state.documentsRefreshTimer);
+    clearInterval(state._countdownTimer);
+    const finish = () => window.location.replace('assembleia.html');
     try {
-      const result = await stopIncrementalTranscription({ timeoutMs: 30000 });
-      if (result.pending || result.failed || result.missed) {
-        const incomplete = await window.showConfirm({
-          title: 'A transcrição pode ficar incompleta',
-          message: `Há ${result.pending} trecho(s) sem salvar, ${result.failed} com falha e ${result.missed} sem processamento. Deseja sair mesmo assim? Se continuar na sala, novas tentativas serão feitas.`,
-          confirmText: 'Sair mesmo assim',
-          cancelText: 'Continuar e tentar salvar'
-        });
-        if (!incomplete) {
-          startIncrementalTranscription();
-          return;
-        }
+      const result = await Promise.race([
+        stopIncrementalTranscription({ timeoutMs: 4000 }),
+        new Promise(resolve => setTimeout(() => resolve({ pending: 1 }), 5500))
+      ]);
+      if (result?.pending || result?.failed || result?.missed) {
+        toast('Alguns trechos podem não ter sido salvos. Confira a gravação completa na ata.', 'warning');
       }
-      await Promise.race([stopAssemblyTranscription().catch(() => {}), new Promise(resolve => setTimeout(resolve, 1500))]);
-      stopRecordingStatusWatch();
-      presenceLeave().catch(() => {});
-      await Promise.race([disconnectRoom().catch(() => {}), new Promise(resolve => setTimeout(resolve, 1200))]);
-      window.location.replace('assembleia.html');
+      await Promise.allSettled([
+        Promise.race([stopAssemblyTranscription(), new Promise(resolve => setTimeout(resolve, 1000))]),
+        Promise.race([presenceLeave(), new Promise(resolve => setTimeout(resolve, 1300))]),
+        Promise.race([disconnectRoom(), new Promise(resolve => setTimeout(resolve, 1300))])
+      ]);
+    } catch (error) {
+      console.warn('[Assembly] Desconexão parcial:', error?.message || error);
+      await disconnectRoom().catch(() => {});
     } finally {
-      leavingAssembly = false;
-      if (button) button.disabled = false;
+      finish();
     }
   });
   $('call-open-details')?.addEventListener('click', () => {
@@ -852,9 +881,7 @@ async function init() {
       }
     }, 12000);
 
-    if (window.matchMedia('(max-width: 1024px)').matches) {
-      setPanelOpen(false);
-    }
+    setPanelOpen(false);
   } catch (e) {
     console.error(e);
     showBanner(e.message || 'Erro ao entrar na assembleia', 'error');

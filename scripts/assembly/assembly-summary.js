@@ -418,7 +418,7 @@
               <div id="assemblyMinutesAiSuggestions074" class="minutes-ai-suggestions074" hidden></div>
               <details class="minutes-evidence074"><summary>Conferir trechos de transcrição (${state.transcripts.length})</summary>
                 <p>As falas são material de apoio, podem conter erros e não substituem os resultados oficiais das votações.</p>
-                ${state.transcripts.slice(0,120).map(item=>`<p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>`).join('')}
+                ${state.transcripts.slice(0,120).map(item=>`<div class="minutes-audio-segment"><p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>${item.audio_storage_path ? `<audio controls preload="none" aria-label="Ouvir áudio do trecho ${esc(String(item.id))}" data-transcript-audio-path="${esc(item.audio_storage_path)}"></audio><small class="minutes-audio-status">Preparando áudio protegido...</small>` : '<small>Áudio individual não disponível para este trecho.</small>'}</div>`).join('')}
                 ${state.transcripts.length>120 ? `<p>Exibindo 120 de ${state.transcripts.length} trechos. Consulte o registro original para os demais.</p>` : ''}
               </details>
               <div class="minutes-external-signature074">
@@ -433,12 +433,39 @@
                 ${state.signedDocuments.map(doc => `<div class="minutes-signed-document074"><i class="fas fa-file-pdf"></i> ${esc(doc.filename)} · ${esc(formatDateTime(doc.uploaded_at))} · Validação externa pendente <button type="button" data-signed-path074="${esc(doc.storage_path)}">Abrir PDF</button></div>`).join('')}
               </div>
             </section>` : ''}`;
+        const evidence = container.querySelector('.minutes-evidence074');
+        evidence?.addEventListener('toggle', () => { if (evidence.open) prepareTranscriptAudio(evidence); });
         container.querySelector('#minutesSave074')?.addEventListener('click', () => saveMinutesReview(false));
         container.querySelector('#minutesApprove074')?.addEventListener('click', () => saveMinutesReview(true));
         container.querySelector('#minutesAiHelp074')?.addEventListener('click', requestMinutesAiSuggestions);
         container.querySelector('#assemblyAttachGovPdf074')?.addEventListener('click', uploadSignedGovPdf);
         container.querySelectorAll('[data-signed-path074]').forEach(button => button.addEventListener('click', () => openSignedDocument(button.dataset.signedPath074))); 
     }
+    async function prepareTranscriptAudio(section) {
+        const audios = Array.from(section.querySelectorAll('audio[data-transcript-audio-path]'));
+        let position = 0;
+        const worker = async () => {
+            while (position < audios.length) {
+                const audio = audios[position++];
+                if (audio.dataset.audioReady === 'true') continue;
+                const label = audio.nextElementSibling;
+                try {
+                    const path = audio.dataset.transcriptAudioPath || '';
+                    if (!new RegExp(`^${Number(state.id)}/trechos/[a-f0-9-]+/[a-f0-9-]+\\.(wav|webm|mp4)$`, 'i').test(path)) throw new Error('Referência de áudio inválida.');
+                    if (!window.supabase?.storage) throw new Error('Storage indisponível.');
+                    const { data, error } = await window.supabase.storage.from('condomit-assembly-recordings').createSignedUrl(path, 3600);
+                    if (error || !data?.signedUrl) throw new Error(error?.message || 'Não foi possível autorizar este áudio.');
+                    audio.src = data.signedUrl;
+                    audio.dataset.audioReady = 'true';
+                    if (label) label.textContent = 'Reproduza a fala correspondente ao trecho transcrito.';
+                } catch (error) {
+                    if (label) label.textContent = error?.message || 'Áudio temporariamente indisponível.';
+                }
+            }
+        };
+        await Promise.all(Array.from({ length: Math.min(4, audios.length) }, worker));
+    }
+
     function uniqueParticipants() {
         const seen = new Map();
         state.attendance.forEach((row) => {
@@ -953,7 +980,19 @@
                 ? 'O Egress registrou uma gravação, mas o arquivo não foi confirmado no Storage. Confira o bucket S3, a conclusão do Egress e o webhook.'
                 : failed
                 ? 'A gravação não foi concluída. Verifique os logs das Functions de gravação e o webhook do LiveKit na Netlify.'
-                : 'Nenhuma gravação registrada. Confira as variáveis do Egress, o bucket S3 e o webhook de conclusão.'}</div>`;
+                : 'Nenhuma gravação registrada. Confira as variáveis do Egress, o bucket S3 e o webhook de conclusão.'}</div><button class="summary-secondary" type="button" id="refreshAssemblyRecordings079"><i class="fas fa-rotate-right"></i> Verificar gravações novamente</button>`;
+            container.querySelector('#refreshAssemblyRecordings079')?.addEventListener('click', async event => {
+                const button = event.currentTarget;
+                button.disabled = true;
+                try {
+                    await loadAll();
+                    renderHero();
+                    renderRecordings();
+                } catch (error) {
+                    button.disabled = false;
+                    window.showToast?.(error?.message || 'Não foi possível atualizar a gravação.', 'error');
+                }
+            });
             return;
         }
         container.innerHTML = state.recordings.map((row, index) => `

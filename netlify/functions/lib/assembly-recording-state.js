@@ -86,6 +86,9 @@ async function reconcileRecording(admin, assemblyId, record, api = client()) {
   } else if (remotelyFinished && file?.stable) {
     nextStatus = 'concluido';
   } else if (remotelyFinished && !file?.stable) {
+    const endedAt = Number(remoteState.info?.endedAt || 0);
+    const endMs = endedAt > 1e15 ? endedAt / 1e6 : endedAt > 1e12 ? endedAt : endedAt > 1e9 ? endedAt * 1000 : 0;
+    if (endMs && Date.now() - endMs > 10 * 60 * 1000) nextStatus = 'falhou';
     diagnostic = 'O Egress terminou, mas o arquivo ainda não foi confirmado no Storage.';
   } else if (record.status === 'concluido' && !file?.stable) {
     diagnostic = 'Arquivo da gravação não localizado ou não estabilizado no Storage.';
