@@ -4,18 +4,42 @@ import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHan
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=077';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=0724';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
-import { startIncrementalTranscription, stopIncrementalTranscription } from './incremental-transcription.js?v=080';
-const RECORDING_CHECK_MS = 20000;
+import { startIncrementalTranscription, stopIncrementalTranscription, getIncrementalTranscriptionState } from './incremental-transcription.js?v=078';
+const RECORDING_CHECK_MS = 15000;
 let recordingCheckTimer = null;
 let recordingSyncInFlight = false;
-let serverRecordingActive = false;
+let recordingStartAttempted = false;
+let recordingRetrying = false;
+let leavingAssembly = false;
 
-function setRecordingStatus(message, isError = false) {
+function setRecordingStatus(message, isError = false, retry = false, detail = '') {
   const indicator = document.getElementById('recording-status');
   if (!indicator) return;
   indicator.hidden = !message;
   indicator.textContent = message || '';
   indicator.dataset.status = isError ? 'error' : 'info';
+  indicator.title = detail || message;
+  if (retry && !indicator.querySelector('button')) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'recording-retry-btn';
+    button.textContent = 'Tentar gravar novamente';
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        recordingRetrying = true;
+        recordingStartAttempted = false;
+        await ensureServerRecording(true);
+        await syncAssemblyRecording();
+      } catch (error) {
+        setRecordingStatus('Falha ao reiniciar gravação.', true, true, error?.message);
+      } finally {
+        recordingRetrying = false;
+        button.disabled = false;
+      }
+    });
+    indicator.append(document.createTextNode(' '), button);
+  }
 }
 
 function isAssemblyRunning() {
@@ -43,66 +67,88 @@ async function startAssemblyOnHostEntry() {
   try {
     await window.AssemblyAPI.requestAssemblyAction('start', { assembly_id: Number(state.assemblyId) });
   } catch (error) {
-    // Another manager may have started the meeting concurrently; refresh its status below.
-    console.warn('[Assembly] Não foi possível iniciar automaticamente:', error?.message || error);
+    console.warn('[Assembly] Falha ao iniciar automaticamente:', error?.message || error);
   }
   await loadAssembly();
   setHeader(state.assembly);
 }
 
-async function ensureServerRecording() {
+async function recordingRequest(action, extras = {}) {
   const token = await window.resolveSupabaseAccessToken?.();
   if (!token) throw new Error('Sua sessão expirou.');
   const response = await fetch('/.netlify/functions/assembly-recording', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ assembly_id: Number(state.assemblyId) })
+    body: JSON.stringify({ assembly_id: Number(state.assemblyId), action, ...extras }),
+    cache: 'no-store'
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(result.error || 'A gravação do servidor não foi iniciada.');
+    const error = new Error(result.error || 'Não foi possível consultar a gravação.');
     error.status = response.status;
     throw error;
   }
-  if (result.status === 'gravando') {
-    setRecordingStatus('● REC · Gravação no servidor');
-    return true;
-  }
+  return result;
+}
+
+async function ensureServerRecording(retry = false) {
+  recordingStartAttempted = true;
+  const result = await recordingRequest('start', { retry_failed: retry });
   if (result.status === 'falhou') {
-    setRecordingStatus(result.error || 'Gravação falhou. A próxima tentativa será automática.', true);
+    setRecordingStatus('Gravação falhou · arquivo não confirmado', true, true, result.diagnostic);
+  } else if (result.status === 'gravando') {
+    setRecordingStatus('● REC · Egress ativo · arquivo pendente');
   } else {
     setRecordingStatus('Preparando gravação no servidor…');
   }
-  return false;
+  return result;
+}
+
+function showRemoteRecordingStatus(result) {
+  const item = result.latest;
+  if (!item) {
+    if (!recordingStartAttempted && isAssemblyRunning()) return false;
+    setRecordingStatus(isAssemblyRunning() ? 'Aguardando início da gravação…' : 'Nenhuma gravação do servidor confirmada', true);
+    return true;
+  }
+  if (item.status === 'concluido' && item.storage_verified) {
+    setRecordingStatus('Gravação concluída · arquivo disponível');
+  } else if (item.status === 'concluido') {
+    setRecordingStatus('Gravação concluída · verificando arquivo', true, false, item.diagnostic);
+  } else if (item.status === 'falhou') {
+    setRecordingStatus('Gravação falhou · verifique Egress e S3', true, isAssemblyRunning(), item.diagnostic);
+  } else if (item.remote_status === 'concluido') {
+    setRecordingStatus('Egress finalizado · aguardando arquivo S3', true, false, item.diagnostic);
+  } else if (item.remote_status === 'consulta_indisponivel') {
+    setRecordingStatus('Gravação não verificada · LiveKit indisponível', true, false, item.diagnostic);
+  } else if (item.status === 'gravando' && item.remote_status === 'gravando') {
+    setRecordingStatus('● REC · Egress ativo · arquivo pendente');
+  } else if (item.status === 'gravando') {
+    setRecordingStatus('Gravação registrada · aguardando verificação do LiveKit', true, false, item.diagnostic);
+  } else {
+    setRecordingStatus('Preparando gravação no servidor…');
+  }
+  return true;
 }
 
 async function syncAssemblyRecording() {
-  if (recordingSyncInFlight || !state.connected) return;
+  if (recordingSyncInFlight || !state.connected || leavingAssembly) return;
   recordingSyncInFlight = true;
   try {
     await loadAssembly();
     setHeader(state.assembly);
     await startAssemblyOnHostEntry();
-    if (!isAssemblyRunning()) {
-      setRecordingStatus('');
-      return;
-    }
-    try {
-      serverRecordingActive = await ensureServerRecording();
-    } catch (error) {
-      if (error.status === 409) {
-        // The status can change between fetching the assembly and starting recording.
-        setRecordingStatus('');
-        return;
-      }
-      console.error('[Assembly Recording]', error);
-      setRecordingStatus(error?.message || 'Gravação indisponível: confira LiveKit Egress, S3 e webhook na Netlify.', true);
+    const current = await recordingRequest('status');
+    if (!current.latest && isAssemblyRunning() && !recordingStartAttempted && !recordingRetrying) {
+      await ensureServerRecording();
+    } else {
+      showRemoteRecordingStatus(current);
     }
   } catch (error) {
-    console.warn('[Assembly] Não foi possível atualizar a situação da sala:', error);
+    console.error('[Assembly Recording]', { status: error.status, message: error.message });
+    setRecordingStatus(error.status === 409 ? 'Assembleia encerrada · aguardando gravação' : 'Falha ao verificar gravação · confira LiveKit e S3', true, false, error.message);
   } finally {
     recordingSyncInFlight = false;
-    // Nunca interrompa as verificações: o Egress pode falhar APÓS iniciar.
   }
 }
 
@@ -297,14 +343,33 @@ function bindControls() {
   $('btn-leave')?.addEventListener('click', async () => {
     const ok = await window.showConfirm({title:'Sair da assembleia', message:'Deseja sair? A gravação continuará no servidor enquanto houver participantes na sala.', confirmText:'Sair', cancelText:'Continuar na reunião'});
     if (!ok) return;
-    stopRecordingStatusWatch();
-    const flush = stopIncrementalTranscription();
-    setRecordingStatus('Finalizando trechos de transcrição…');
-    // A espera permite salvar áudio capturado antes de sair, sem impedir indefinidamente a saída.
-    await flush;
-    presenceLeave().catch(() => {});
-    await Promise.race([disconnectRoom().catch(() => {}), new Promise(resolve => setTimeout(resolve, 800))]);
-    window.location.replace('assembleia.html');
+    if (leavingAssembly) return;
+    leavingAssembly = true;
+    const button = $('btn-leave');
+    if (button) button.disabled = true;
+    try {
+      const result = await stopIncrementalTranscription({ timeoutMs: 30000 });
+      if (result.pending || result.failed || result.missed) {
+        const incomplete = await window.showConfirm({
+          title: 'A transcrição pode ficar incompleta',
+          message: `Há ${result.pending} trecho(s) sem salvar, ${result.failed} com falha e ${result.missed} sem processamento. Deseja sair mesmo assim? Se continuar na sala, novas tentativas serão feitas.`,
+          confirmText: 'Sair mesmo assim',
+          cancelText: 'Continuar e tentar salvar'
+        });
+        if (!incomplete) {
+          startIncrementalTranscription();
+          return;
+        }
+      }
+      await Promise.race([stopAssemblyTranscription().catch(() => {}), new Promise(resolve => setTimeout(resolve, 1500))]);
+      stopRecordingStatusWatch();
+      presenceLeave().catch(() => {});
+      await Promise.race([disconnectRoom().catch(() => {}), new Promise(resolve => setTimeout(resolve, 1200))]);
+      window.location.replace('assembleia.html');
+    } finally {
+      leavingAssembly = false;
+      if (button) button.disabled = false;
+    }
   });
   $('call-open-details')?.addEventListener('click', () => {
     window.location.href = `assembleia-detalhes.html?id=${encodeURIComponent(String(state.assemblyId))}`;
@@ -797,9 +862,17 @@ async function init() {
   }
 }
 
+window.addEventListener('beforeunload', event => {
+  const status = getIncrementalTranscriptionState();
+  if (status.pending && !leavingAssembly) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+});
+
 window.addEventListener('pagehide', () => {
   stopRecordingStatusWatch();
-  stopIncrementalTranscription({waitForSave:false});
+  stopIncrementalTranscription();
   clearInterval(state.documentsRefreshTimer);
   presenceLeave().catch(() => {});
 });

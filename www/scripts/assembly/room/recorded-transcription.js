@@ -1,4 +1,4 @@
-import { getLocalWhisper } from './local-whisper.js?v=080';
+import { getLocalWhisper } from './local-whisper.js?v=075';
  
  
  

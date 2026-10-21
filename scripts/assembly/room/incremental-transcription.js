@@ -1,13 +1,11 @@
 import { state } from './state.js?v=0724';
-import { getLocalWhisper } from './local-whisper.js?v=080';
+import { getLocalWhisper } from './local-whisper.js?v=078';
 
-const SEGMENT_MS = 12000;
-const MAX_PENDING_SEGMENTS = 16;
+const SEGMENT_MS = 8000;
+const MAX_PENDING_SEGMENTS = 48;
+const RETRY_DELAY_MS = 12000;
 let active = false;
-let finishing = false;
-let shutdownPromise = null;
-let lastError = '';
-let speechSegments = 0;
+let closing = false;
 let audioContext = null;
 let audioSource = null;
 let audioWorklet = null;
@@ -19,19 +17,41 @@ let rawRate = 48000;
 let startingCapture = false;
 let processedCount = 0;
 let recorder = null;
+let recorderFinished = null;
 let recordingTimeout = null;
 let retryTimer = null;
 let processing = false;
-let engineUnavailable = false;
+let retryAfter = 0;
+let failedCount = 0;
+let missedCount = 0;
+let captureError = '';
+let modelReady = false;
+let lastStatus = '';
 const queue = [];
+const listeners = new Set();
 
-function setStatus(message, detail = '') {
+function log(event, detail = {}) {
+  console.info('[Condomit transcrição]', event, { queued: queue.length, processing, ...detail });
+}
+
+function setStatus(message, detail = '', warning = false) {
+  lastStatus = message;
   const el = document.getElementById('call-transcription-status');
   if (!el) return;
   const label = el.querySelector('span');
   if (label) label.textContent = message;
-  el.dataset.status = /falha|indisponível|não transcrit|aguardando/i.test(message) ? 'warning' : 'active';
+  el.dataset.status = warning || /falha|indisponível|não transcrit|aguardando|bloqueado|pendente|erro/i.test(message) ? 'warning' : 'active';
   el.title = detail || message;
+  el.setAttribute('aria-label', `${message}. ${detail}`);
+}
+
+function notify() {
+  const result = getIncrementalTranscriptionState();
+  for (const callback of listeners) callback(result);
+}
+
+export function getIncrementalTranscriptionState() {
+  return { pending: queue.length + Number(processing), saved: processedCount, failed: failedCount, missed: missedCount, active, closing, modelReady, captureError, status: lastStatus };
 }
 
 function microphoneTrack() {
@@ -47,19 +67,16 @@ function microphoneTrack() {
 async function decodeTo16K(blob) {
   const Context = window.AudioContext || window.webkitAudioContext;
   const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-  if (!Context || !Offline) throw new Error('Este navegador não oferece suporte à decodificação local de áudio.');
+  if (!Context || !Offline) throw new Error('Navegador sem decodificador de áudio.');
   const context = new Context();
   try {
-    const raw = await blob.arrayBuffer();
-    const audio = await context.decodeAudioData(raw);
-    const length = Math.max(1, Math.ceil(audio.duration * 16000));
-    const offline = new Offline(1, length, 16000);
+    const audio = await context.decodeAudioData(await blob.arrayBuffer());
+    const offline = new Offline(1, Math.max(1, Math.ceil(audio.duration * 16000)), 16000);
     const source = offline.createBufferSource();
     source.buffer = audio;
     source.connect(offline.destination);
     source.start(0);
-    const resampled = await offline.startRendering();
-    return new Float32Array(resampled.getChannelData(0));
+    return new Float32Array((await offline.startRendering()).getChannelData(0));
   } finally {
     await context.close().catch(() => {});
   }
@@ -75,30 +92,34 @@ function hasSpeechSignal(audio) {
 }
 
 function resampleTo16K(chunks, sourceRate, sampleCount) {
-  const merged = new Float32Array(sampleCount);
-  let index = 0;
-  for (const chunk of chunks) {merged.set(chunk,index); index+=chunk.length;}
   if (!Number.isFinite(sourceRate) || sourceRate < 8000) throw new Error('Frequência de áudio inválida.');
+  const merged = new Float32Array(sampleCount);
+  let position = 0;
+  for (const chunk of chunks) { merged.set(chunk, position); position += chunk.length; }
   if (sourceRate === 16000) return merged;
   const ratio = sourceRate / 16000;
   const output = new Float32Array(Math.ceil(merged.length / ratio));
-  for (let i=0;i<output.length;i++) {
-    const p = i*ratio;
-    const left = Math.min(merged.length-1,Math.floor(p));
-    const right = Math.min(merged.length-1,left+1);
-    const fract = p-left;
-    output[i] = merged[left]*(1-fract)+merged[right]*fract;
+  for (let i = 0; i < output.length; i++) {
+    const p = i * ratio;
+    const left = Math.min(merged.length - 1, Math.floor(p));
+    const right = Math.min(merged.length - 1, left + 1);
+    output[i] = merged[left] * (1 - (p - left)) + merged[right] * (p - left);
   }
   return output;
 }
 
 function enqueueSegment(data) {
-  if ((!active && !finishing) || !data) return;
+  if ((!active && !closing) || !data) return;
   if (queue.length >= MAX_PENDING_SEGMENTS) {
-    setStatus('Dispositivo sobrecarregado', 'Alguns trechos não poderão ser transcritos neste aparelho. O vídeo continua no servidor.');
+    missedCount++;
+    captureError = 'O dispositivo não conseguiu acompanhar todas as falas.';
+    setStatus(`${missedCount} trecho(s) sem processamento`, 'A transcrição está sobrecarregada. Confira o vídeo integral antes de aprovar a ata.', true);
+    log('capture-overload', { missed: missedCount });
+    notify();
     return;
   }
-  queue.push(data);
+  queue.push({ ...data, attempts: 0 });
+  notify();
   processQueue();
 }
 
@@ -114,45 +135,75 @@ function onPcmFrame(frame) {
 
 function flushRawAudio() {
   if (!rawLength) return;
-  const frames = rawFrames, length=rawLength, rate=rawRate;
-  rawFrames = [];rawLength=0;
+  const frames = rawFrames;
+  const length = rawLength;
+  const rate = rawRate;
+  rawFrames = [];
+  rawLength = 0;
   if (length < rate * 0.6) return;
-  enqueueSegment({pcm:frames, sampleRate:rate, sampleCount:length, identity:String(state.room?.localParticipant?.identity||'')});
-}
-
-async function tryPcmCapture() {
-  if (startingCapture || audioContext || !active) return;
-  const track = microphoneTrack();
-  if (!track) {setStatus('Aguardando microfone ativo…', 'Ative o microfone para transcrever sua fala.'); return;}
-  if (!window.AudioWorkletNode) return;
-  startingCapture = true;
-  try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx({latencyHint:'interactive'});
-    await ctx.audioWorklet.addModule(new URL('./transcription-worklet.js', import.meta.url));
-    const source = ctx.createMediaStreamSource(new MediaStream([track]));
-    const worklet = new AudioWorkletNode(ctx,'condomit-pcm-capture');
-    const sink = ctx.createGain(); sink.gain.value=0;
-    worklet.port.onmessage = event => onPcmFrame(event.data);
-    source.connect(worklet); worklet.connect(sink); sink.connect(ctx.destination);
-    audioContext=ctx; audioSource=source;audioWorklet=worklet;audioSink=sink;capturedTrack=track;
-    ctx.resume().then(() => {
-      if (audioContext === ctx && active) setStatus('Transcrição captando microfone…', 'Os trechos de áudio serão reconhecidos no próprio aparelho pelo Whisper.');
-    }).catch(error => console.warn('[Condomit] Contexto de áudio aguardando gesto:',error));
-    if (ctx.state === 'suspended') setStatus('Ative a transcrição tocando na tela', 'O navegador exige uma interação para liberar o processamento de áudio.');
-  } catch(error) {
-    console.warn('[Condomit] Worklet indisponível; tentando MediaRecorder.',error);
-    if (audioContext) { await audioContext.close().catch(()=>{}); audioContext=null; }
-  } finally {startingCapture = false;}
+  enqueueSegment({ pcm: frames, sampleRate: rate, sampleCount: length, identity: String(state.room?.localParticipant?.identity || '') });
 }
 
 function cleanupPcm() {
   flushRawAudio();
   audioWorklet?.port?.close?.();
-  audioSource?.disconnect?.();audioWorklet?.disconnect?.();audioSink?.disconnect?.();
-  audioContext?.close?.().catch(()=>{});
-  audioContext=null;audioSource=null;audioWorklet=null;audioSink=null;capturedTrack=null;
+  audioSource?.disconnect?.();
+  audioWorklet?.disconnect?.();
+  audioSink?.disconnect?.();
+  audioContext?.close?.().catch(() => {});
+  audioContext = null;
+  audioSource = null;
+  audioWorklet = null;
+  audioSink = null;
+  capturedTrack = null;
+}
+
+async function tryPcmCapture() {
+  if (startingCapture || audioContext || !active) return;
+  const track = microphoneTrack();
+  if (!track) {
+    captureError = 'Microfone não ativado ou sem permissão.';
+    setStatus('Aguardando microfone', 'Ative o microfone e autorize o navegador para registrar suas falas.', true);
+    return;
+  }
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx || !window.AudioWorkletNode) return;
+  startingCapture = true;
+  let ctx = null;
+  try {
+    ctx = new Ctx({ latencyHint: 'interactive' });
+    await Promise.race([
+      ctx.audioWorklet.addModule(new URL('./transcription-worklet.js', import.meta.url)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('AudioWorklet sem resposta')), 3500))
+    ]);
+    if (!active) return;
+    await Promise.race([
+      ctx.resume(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('AudioContext suspenso')), 1200))
+    ]);
+    if (ctx.state !== 'running') throw new Error('AudioContext suspenso');
+    const source = ctx.createMediaStreamSource(new MediaStream([track]));
+    const worklet = new AudioWorkletNode(ctx, 'condomit-pcm-capture');
+    const sink = ctx.createGain();
+    sink.gain.value = 0;
+    worklet.port.onmessage = event => onPcmFrame(event.data);
+    source.connect(worklet);
+    worklet.connect(sink);
+    sink.connect(ctx.destination);
+    audioContext = ctx;
+    audioSource = source;
+    audioWorklet = worklet;
+    audioSink = sink;
+    capturedTrack = track;
+    captureError = '';
+    setStatus('Microfone captado · preparando reconhecimento', 'O áudio está chegando ao dispositivo; a transcrição e o salvamento são etapas separadas.');
+  } catch (error) {
+    captureError = 'Captura PCM indisponível; tentando modo compatível.';
+    log('pcm-fallback', { reason: String(error?.message || error) });
+  } finally {
+    if (ctx && audioContext !== ctx) await ctx.close().catch(() => {});
+    startingCapture = false;
+  }
 }
 
 function usefulText(input) {
@@ -163,7 +214,7 @@ function usefulText(input) {
 }
 
 async function saveText(text, identity) {
-  if (typeof window.supabaseFetch !== 'function') throw new Error('A sessão do Supabase ainda não foi carregada.');
+  if (typeof window.supabaseFetch !== 'function') throw new Error('Sessão do Supabase ainda não carregada.');
   await window.supabaseFetch('/rpc/condomit_append_assembly_transcript', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -178,155 +229,152 @@ async function saveText(text, identity) {
 }
 
 async function processQueue() {
-  if (processing || engineUnavailable) return;
+  if (processing || Date.now() < retryAfter || !queue.length) return;
   processing = true;
+  notify();
   try {
-    while (queue.length && (active || finishing)) {
-      const segment = queue.shift();
+    while (queue.length) {
+      const segment = queue[0];
       try {
-        setStatus('Transcrição local em andamento…', 'A voz é processada no dispositivo, sem API paga. A gravação continua no servidor.');
-        const audio = segment.pcm ? resampleTo16K(segment.pcm,segment.sampleRate,segment.sampleCount) : await decodeTo16K(segment.blob);
-        if (!hasSpeechSignal(audio)) continue;
-        speechSegments++;
-        const model = await getLocalWhisper((message) => setStatus(message));
-        const result = await model(audio, {
-          language: 'portuguese', task: 'transcribe',
-          return_timestamps: false, chunk_length_s: 30, stride_length_s: 5
-        });
-        const text = usefulText(result?.text || (typeof result === 'string' ? result : ''));
-        if (text) {
-          let saved = false;
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            try { await saveText(text, segment.identity); saved = true; break; }
-            catch (error) {
-              if (attempt === 3) throw error;
-              await new Promise(resolve => setTimeout(resolve, attempt * 700));
-            }
+        setStatus(`Reconhecendo fala · ${queue.length} pendente(s)`, 'Áudio capturado; aguardando reconhecimento Whisper e confirmação do Supabase.');
+        const audio = segment.pcm ? resampleTo16K(segment.pcm, segment.sampleRate, segment.sampleCount) : await decodeTo16K(segment.blob);
+        if (hasSpeechSignal(audio)) {
+          const model = await getLocalWhisper(message => setStatus(message, 'Carregamento do modelo de reconhecimento.'));
+          modelReady = true;
+          const output = await model(audio, { language: 'portuguese', task: 'transcribe', return_timestamps: false, chunk_length_s: 30, stride_length_s: 5 });
+          const text = usefulText(output?.text || (typeof output === 'string' ? output : ''));
+          if (text) {
+            setStatus(`Salvando texto · ${queue.length} pendente(s)`, 'Enviando trecho reconhecido ao banco de dados.');
+            await saveText(text, segment.identity);
+            processedCount++;
+            log('segment-saved', { saved: processedCount });
           }
-          if (!saved) throw new Error('Transcrição não pôde ser salva.');
-          processedCount++;
-          setStatus(`Transcrição: ${processedCount} trecho${processedCount===1?'':'s'} salvo${processedCount===1?'':'s'}`, 'Falas transcritas no dispositivo e registradas no Supabase. Confira a ata.');
         }
+        queue.shift();
+        if (segment.reportedFailure) failedCount = Math.max(0, failedCount - 1);
+        notify();
       } catch (error) {
-        console.warn('[Condomit transcrição local] Trecho não transcrito:', error);
-        lastError = String(error?.message || error);
-        setStatus('Falha de transcrição — consulte o diagnóstico', lastError);
-        if (/modelo|pipeline|download|fetch|webgpu|wasm|memory/i.test(String(error?.message || ''))) {
-          engineUnavailable = true;
-          setStatus('Whisper indisponível neste dispositivo', lastError);
-          // Não apresentar detecção de fala como texto transcrito.
-          break;
+        segment.attempts++;
+        log('segment-error', { reason: String(error?.message || error), attempt: segment.attempts });
+        if (segment.attempts >= 3 && !segment.reportedFailure) {
+          segment.reportedFailure = true;
+          failedCount++;
+          captureError = 'Reconhecimento ou salvamento ainda indisponível.';
         }
+        modelReady = false;
+        retryAfter = Date.now() + RETRY_DELAY_MS;
+        setStatus(`${segment.reportedFailure ? 'Falha persistente' : 'Falha temporária'} · ${queue.length} pendente(s)`, 'O áudio ainda está na fila local. Uma nova tentativa será feita automaticamente enquanto a sala estiver aberta.', true);
+        notify();
+        break;
       }
     }
   } finally {
     processing = false;
-    if (active && !engineUnavailable) {
-      if (!recorder && !audioContext) startSegment();
-      if (!queue.length && !lastError) setStatus(processedCount ? `Transcrição: ${processedCount} trecho(s) salvo(s)` : 'Whisper pronto — aguardando fala', 'O áudio de cada participante é processado no próprio dispositivo.');
-    } else if (finishing) {
-      finishing = false;
-      if (processedCount) setStatus(`${processedCount} trecho(s) registrado(s) na ata`);
-      else setStatus('Nenhum trecho de texto salvo', lastError || `${speechSegments} segmento(s) com sinal de voz. Verifique o reconhecimento de voz.`);
+    if (!queue.length && !failedCount && !missedCount) {
+      setStatus(modelReady ? `Transcrição salva · ${processedCount} trecho(s)` : 'Capturando áudio · aguardando voz', 'A confirmação de salvamento é exibida somente após a resposta do Supabase.');
     }
+    notify();
   }
 }
 
 function startSegment() {
-  if (!active || engineUnavailable || recorder || typeof MediaRecorder === 'undefined') return;
-  if (queue.length >= MAX_PENDING_SEGMENTS) {
-    setStatus('Transcrição aguardando dispositivo…', 'O áudio integral segue sendo gravado no servidor.');
-    return;
-  }
+  if (!active || recorder || typeof MediaRecorder === 'undefined') return;
   const track = microphoneTrack();
   if (!track) return;
-  const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
-    .find((type) => MediaRecorder.isTypeSupported(type)) || '';
+  const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(type => MediaRecorder.isTypeSupported(type)) || '';
   let next;
-  try { next = new MediaRecorder(new MediaStream([track]), mime ? { mimeType: mime } : {}); }
-  catch (error) { console.warn('[Condomit transcrição local] Não foi possível iniciar microfone:', error); return; }
+  try {
+    next = new MediaRecorder(new MediaStream([track]), mime ? { mimeType: mime } : {});
+  } catch (error) {
+    captureError = 'Não foi possível iniciar o gravador de áudio local.';
+    setStatus('Falha na captura do microfone', 'Confira as permissões e a compatibilidade do navegador.', true);
+    log('recorder-error', { reason: String(error?.message || error) });
+    return;
+  }
   recorder = next;
   const chunks = [];
-  next.ondataavailable = (event) => { if (event.data?.size) chunks.push(event.data); };
-  next.onerror = () => { clearTimeout(recordingTimeout); if (recorder === next) recorder = null; };
-  next.onstop = () => {
-    clearTimeout(recordingTimeout);
-    if (recorder === next) recorder = null;
-    if (chunks.length && (active || finishing)) {
-      enqueueSegment({
-        blob: new Blob(chunks, { type: next.mimeType || mime || 'audio/webm' }),
-        identity: String(state.room?.localParticipant?.identity || '').trim()
-      });
-    }
-    if (active && !audioContext) startSegment();
-  };
-  next.start();
-  recordingTimeout = setTimeout(() => { if (next.state === 'recording') next.stop(); }, SEGMENT_MS);
+  recorderFinished = new Promise(resolve => {
+    next.ondataavailable = event => { if (event.data?.size) chunks.push(event.data); };
+    next.onerror = event => {
+      captureError = 'O navegador interrompeu a captura do microfone.';
+      setStatus('Falha no gravador de áudio', 'Verifique o microfone e tente novamente.', true);
+      log('recorder-error', { reason: String(event?.error?.message || 'Erro MediaRecorder') });
+      if (next.state === 'recording') next.stop();
+    };
+    next.onstop = () => {
+      clearTimeout(recordingTimeout);
+      if (recorder === next) recorder = null;
+      if (chunks.length) enqueueSegment({ blob: new Blob(chunks, { type: next.mimeType || mime || 'audio/webm' }), identity: String(state.room?.localParticipant?.identity || '') });
+      resolve();
+      if (active && !audioContext) startSegment();
+    };
+  });
+  try {
+    next.start();
+    captureError = '';
+    setStatus('Capturando microfone · modo compatível', 'O áudio está sendo segmentado e será salvo após reconhecimento.');
+    recordingTimeout = setTimeout(() => { if (next.state === 'recording') next.stop(); }, SEGMENT_MS);
+  } catch (error) {
+    recorder = null;
+    recorderFinished = Promise.resolve();
+    captureError = String(error?.message || error);
+    setStatus('Falha ao capturar microfone', captureError, true);
+  }
+}
+
+async function retry() {
+  if (!active) return;
+  const track = microphoneTrack();
+  if (!track) {
+    if (audioContext) cleanupPcm();
+    if (recorder?.state === 'recording') recorder.stop();
+    setStatus('Aguardando microfone', 'Ative o microfone para registrar sua fala.', true);
+  } else {
+    if (audioContext && (capturedTrack !== track || audioContext.state !== 'running')) cleanupPcm();
+    if (!audioContext && !startingCapture && !recorder) await tryPcmCapture();
+    if (!audioContext && !recorder && !startingCapture) startSegment();
+  }
+  if (queue.length) processQueue();
 }
 
 export function startIncrementalTranscription() {
-  if (active || finishing || shutdownPromise) return;
-  queue.length = 0;
+  if (active) return;
   active = true;
-  engineUnavailable = false;
-  setStatus('Preparando transcrição local…', 'Whisper é executado no navegador sem créditos da OpenAI.');
-  processedCount = 0;
-  speechSegments = 0;
-  lastError = '';
-  finishing = false;
-  getLocalWhisper(message => { if (active) setStatus(message); }).catch(error => {
-    console.warn('[Condomit Whisper] Modelo não carregado:', error);
-    lastError = String(error?.message || error);
-    engineUnavailable = true;
-    setStatus('Modelo Whisper não carregado', lastError);
-  });
-  const retry = async () => {
-    if (!active || engineUnavailable) return;
-    const track = microphoneTrack();
-    if (!track) { if (audioContext) cleanupPcm(); return; }
-    if (audioContext && capturedTrack !== track) cleanupPcm();
-    if (audioContext?.state === 'suspended') audioContext.resume().catch(() => {});
-    if (!audioContext && !startingCapture && !recorder) await tryPcmCapture();
-    if (!audioContext && !recorder && !startingCapture) startSegment();
-  };
+  closing = false;
+  retryAfter = 0;
+  setStatus('Iniciando captura do microfone…', 'Áudio, reconhecimento e salvamento serão acompanhados separadamente.');
   retry();
   retryTimer = setInterval(retry, 2000);
+  notify();
 }
 
-export async function stopIncrementalTranscription({waitForSave = true} = {}) {
-  if (shutdownPromise) return waitForSave ? shutdownPromise : undefined;
-  if (!active && !finishing) return;
-  // Capture everything BEFORE changing the state, then process the already queued audio.
-  finishing = true;
+export async function stopIncrementalTranscription({ timeoutMs = 30000 } = {}) {
+  if (closing) return getIncrementalTranscriptionState();
   active = false;
-  if (retryTimer) clearInterval(retryTimer);
+  closing = true;
+  clearInterval(retryTimer);
   retryTimer = null;
-  if (recordingTimeout) clearTimeout(recordingTimeout);
+  clearTimeout(recordingTimeout);
   cleanupPcm();
-  if (recorder?.state === 'recording') {
-    const pendingRecorder = recorder;
-    await new Promise(resolve => {
-      pendingRecorder.addEventListener('stop', resolve, {once:true});
-      try { pendingRecorder.stop(); } catch(_) {resolve();}
-    });
+  const stopping = recorderFinished;
+  if (recorder?.state === 'recording') recorder.stop();
+  if (stopping) await Promise.race([stopping, new Promise(resolve => setTimeout(resolve, 2000))]);
+  const deadline = Date.now() + Math.max(0, timeoutMs);
+  while ((queue.length || processing) && Date.now() < deadline) {
+    if (Date.now() >= retryAfter) processQueue();
+    await new Promise(resolve => setTimeout(resolve, 250));
   }
-  recorder = null;
-  if (queue.length && !processing && !engineUnavailable) processQueue();
-  shutdownPromise = (async () => {
-    const until = Date.now() + 25000;
-    while ((processing || queue.length) && Date.now() < until && !engineUnavailable) {
-      if (!processing) processQueue();
-      await new Promise(resolve => setTimeout(resolve, 180));
-    }
-    if ((processing || queue.length) && !engineUnavailable) {
-      setStatus('Trechos ainda processando: aguarde antes de fechar a página.');
-    }
-    finishing = false;
-    return {saved:processedCount, speechSegments, pending:queue.length, error:lastError};
-  })().finally(()=>{shutdownPromise=null;});
-  if (waitForSave) return shutdownPromise;
+  const outcome = getIncrementalTranscriptionState();
+  closing = false;
+  if (outcome.pending || outcome.failed || outcome.missed) {
+    setStatus(`Transcrição incompleta · ${outcome.pending} pendente(s)`, 'Você pode continuar na sala para tentar salvar os trechos. A gravação do servidor deve ser conferida.', true);
+  }
+  notify();
+  return outcome;
 }
 
 window.addEventListener('condomit:assembly-allow-audio', () => {
-  if (active && audioContext?.state === 'suspended') audioContext.resume().catch(() => {});
+  if (active && audioContext?.state === 'suspended') {
+    audioContext.resume().catch(() => {});
+  }
 });

@@ -1203,3 +1203,9 @@ body {
 .call-moderation-menu button:hover { background:rgba(148,163,184,.2); }
 .call-moderation-menu button.danger { color:#fda4af; }
 .call-moderation-menu i { width:16px; text-align:center; }
+
+.call-transcription[data-status="warning"] { color: #fde68a; border-color: rgba(245,158,11,.5); background: rgba(120,53,15,.4); }
+.recording-status[data-status="error"] { background: rgba(127,29,29,.96); }
+.recording-status[data-status="info"] { background: rgba(15,23,42,.96); }
+.recording-retry-btn { margin-left: 8px; border: 1px solid currentColor; border-radius: 999px; padding: 4px 9px; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+.recording-retry-btn:disabled { cursor: wait; opacity: .55; }

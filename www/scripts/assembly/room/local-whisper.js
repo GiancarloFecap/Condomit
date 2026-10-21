@@ -1,41 +1,38 @@
-// Whisper roda no dispositivo. Nenhum áudio é enviado a uma API paga.
 let transcriberPromise = null;
-const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
 
-function progressReport(event, status) {
-  if (!status) return;
-  if (event?.status === 'progress' && Number.isFinite(Number(event.progress))) {
-    status(`Preparando Whisper: ${Math.round(Number(event.progress))}%`);
-  } else if (event?.status === 'ready') status('Modelo Whisper pronto para transcrição.');
-}
+const normalizeMessage = (event, onStatus) => {
+  if (typeof onStatus !== 'function') return;
+  const progress = Number(event?.progress);
+  if (Number.isFinite(progress)) onStatus(`Baixando modelo local de voz: ${Math.round(progress)}%`);
+  else if (event?.status === 'ready') onStatus('Modelo de reconhecimento local pronto.');
+};
 
-async function loadPipeline() {
-  try { return await import(CDN); }
-  catch (error) {
-    console.warn('[Condomit Whisper] CDN primária indisponível; tentando fonte alternativa.', error);
-    return import('https://esm.sh/@huggingface/transformers@3.8.1?bundle');
+async function initializeTranscriber(onStatus) {
+  const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1');
+  if (env) {
+    env.allowLocalModels = false;
+    env.useBrowserCache = true;
   }
-}
-
-async function makePipeline(status) {
-  const { pipeline, env } = await loadPipeline();
-  env.allowLocalModels = false;
-  env.useBrowserCache = true;
-  // Tiny multilingue: executável em dispositivos modestos e suporta português.
-  const common = {progress_callback: event => progressReport(event, status)};
-  if (navigator.gpu) {
-    try {
-      status?.('Carregando Whisper com aceleração WebGPU…');
-      return await pipeline('automatic-speech-recognition', 'onnx-community/whisper-tiny', {...common, device:'webgpu', dtype:'fp32'});
-    } catch (error) { console.warn('[Condomit Whisper] WebGPU indisponível, tentando CPU.', error); }
+  const progress_callback = (event) => normalizeMessage(event, onStatus);
+  try {
+    if (!navigator?.gpu) {
+      onStatus?.('Preparando modelo Whisper leve para este dispositivo.');
+      return await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', { progress_callback });
+    }
+    return await pipeline('automatic-speech-recognition', 'Xenova/whisper-base', {
+      device: 'webgpu', dtype: 'fp32',
+      progress_callback
+    });
+  } catch (error) {
+    console.warn('[Condomit Whisper] Modelo base indisponível; usando tiny.', error);
+    onStatus?.('Usando o modelo local leve de transcrição.');
+    return pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', { progress_callback });
   }
-  status?.('Carregando Whisper na CPU…');
-  return pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', {...common, device:'wasm'});
 }
 
 export function getLocalWhisper(onStatus) {
   if (!transcriberPromise) {
-    transcriberPromise = makePipeline(onStatus).catch(error => {
+    transcriberPromise = initializeTranscriber(onStatus).catch((error) => {
       transcriberPromise = null;
       throw error;
     });

@@ -112,8 +112,8 @@
             fetchRows(`/assembly_speaking_requests?select=*&assembly_id=eq.${state.id}&order=requested_at.asc`),
             fetchRows(`/assembly_event_logs?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
-            fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`),
-            fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`),
+            fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => []),
+            fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
             fetchRows(`/assembly_speech_activity?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
             fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code,signature_data&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
             fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => [])
@@ -121,7 +121,8 @@
 
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
-        { // Reconciliar inclusive vídeos sem linha em assembly_recordings.
+        let recordingVerification = null;
+        if ((recordings || []).length) {
           try {
             const token = await window.resolveSupabaseAccessToken?.();
             if (token) {
@@ -131,16 +132,15 @@
               });
               if (result.ok) {
                 const checked = await result.json();
-                if (checked.updated > 0) {
-                  const fresh = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`);
-                  if (fresh) {recordings.splice(0,recordings.length,...fresh);}
-                }
+                recordingVerification = new Map((checked.recordings || []).map(item => [String(item.recording_id), item]));
+                const fresh = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => null);
+                if (fresh) recordings.splice(0, recordings.length, ...fresh);
               }
             }
           } catch(error) {console.warn('[ASSEMBLY RECORDINGS] Falha ao conferir arquivo de mídia:',error);}
         }
-        const playableRecordings = (recordings || []).filter((row) => row?.status === 'concluido' && String(row?.recording_url || '').trim());
-        state.recordingStatuses = recordings || [];
+        const playableRecordings = (recordings || []).filter(row => row?.status === 'concluido' && String(row?.recording_url || '').trim() && (recordingVerification === null || recordingVerification.get(String(row.id))?.storage_verified));
+        state.recordingStatuses = (recordings || []).map(row => ({ ...row, verification: recordingVerification?.get(String(row.id)) || null }));
         Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings: playableRecordings, speechActivities, commentVotes });
         state.signature = signatures[0] || null;
 
@@ -946,9 +946,12 @@
             const statuses = (state.recordingStatuses || []).map(row => String(row?.status || '').toLowerCase());
             const waiting = statuses.some(status => ['pendente','gravando'].includes(status));
             const failed = statuses.includes('falhou');
+            const unavailableFile = (state.recordingStatuses || []).some(row => row?.status === 'concluido' && row?.verification && !row.verification.storage_verified);
             container.innerHTML = `<div class="summary-empty">${waiting
               ? 'A gravação está em andamento ou em processamento. Volte a esta página após o encerramento do último participante.'
-              : failed
+              : unavailableFile
+                ? 'O Egress registrou uma gravação, mas o arquivo não foi confirmado no Storage. Confira o bucket S3, a conclusão do Egress e o webhook.'
+                : failed
                 ? 'A gravação não foi concluída. Verifique os logs das Functions de gravação e o webhook do LiveKit na Netlify.'
                 : 'Nenhuma gravação registrada. Confira as variáveis do Egress, o bucket S3 e o webhook de conclusão.'}</div>`;
             return;

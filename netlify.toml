@@ -115,3 +115,6 @@
 
 [functions."push-dispatch"]
   schedule = "* * * * *"
+
+[functions."assembly-recording-sync"]
+  schedule = "*/5 * * * *"
