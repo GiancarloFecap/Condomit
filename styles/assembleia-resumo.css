@@ -355,3 +355,8 @@ html[data-theme="dark"] .signature-modal-card .modal-actions{border-color:#33415
     body.printing-assembly-minutes .formal-minutes-heading,
     body.printing-assembly-minutes .formal-signature { break-inside: avoid; }
 }
+
+.summary-panel[data-summary-panel="ata"], .summary-panel[data-summary-panel="votacoes"], .summary-panel[data-summary-panel="gravacoes"], .summary-panel[data-summary-panel="comentarios"] { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.summary-panel > .summary-section { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+.poll-results-list, .comments-list, .recordings-list { width: 100%; min-width: 0; box-sizing: border-box; }
+.poll-result-card, .comment-card, .recording-card { min-width: 0; max-width: 100%; box-sizing: border-box; }

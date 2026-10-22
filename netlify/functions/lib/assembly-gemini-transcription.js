@@ -28,19 +28,39 @@ function verifyJob(body, signature) {
   return crypto.timingSafeEqual(expected, Buffer.from(signature, 'hex'));
 }
 
-async function enqueueTranscription(recordingId) {
-  if (!process.env.GEMINI_API_KEY || !signingSecret()) return false;
-  const base = process.env.DEPLOY_URL || process.env.URL;
-  if (!base || !/^https:\/\//i.test(base)) return false;
-  const body = JSON.stringify({ recording_id: recordingId, timestamp: Date.now() });
-  const response = await fetch(new URL('/.netlify/functions/assembly-gemini-transcribe-background', base), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-condomit-job-signature': signJob(body) },
-    body,
-    signal: AbortSignal.timeout(12000)
-  });
-  if (!response.ok) throw new Error(`Solicitação da transcrição recusada (${response.status}).`);
-  return true;
+async function enqueueTranscription(recordingId, { manual = false } = {}) {
+  if (!signingSecret()) throw new Error('Credenciais do Supabase não configuradas no servidor.');
+  if (!process.env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY não configurada nas variáveis de ambiente da Netlify.');
+  const base = process.env.URL || process.env.DEPLOY_URL;
+  if (!base || !/^https:\/\//i.test(base)) throw new Error('A URL pública da Netlify não está configurada.');
+  const admin = adminClient();
+  const { data: row, error } = await admin.from('assembly_recordings').select('id,status,transcription_status,transcription_attempts,transcription_started_at').eq('id', recordingId).maybeSingle();
+  if (error) throw error;
+  if (!row || row.status !== 'concluido') return false;
+  const expired = new Date(Date.now() - 18 * 60000).toISOString();
+  const status = row.transcription_status;
+  if (status === 'concluido') return false;
+  if (status === 'processando' && (!row.transcription_started_at || row.transcription_started_at >= expired)) return false;
+  if (status === 'enfileirado' && row.transcription_started_at && row.transcription_started_at >= new Date(Date.now() - 5 * 60000).toISOString()) return false;
+  if (status === 'falhou' && Number(row.transcription_attempts || 0) >= (manual ? 6 : 4)) return false;
+  const now = new Date().toISOString();
+  let claim = admin.from('assembly_recordings').update({ transcription_status: 'enfileirado', transcription_started_at: now, transcription_error: null }).eq('id', recordingId).eq('status', 'concluido').eq('transcription_status', status);
+  if (row.transcription_started_at && ['enfileirado', 'processando'].includes(status)) claim = claim.lt('transcription_started_at', status === 'enfileirado' ? new Date(Date.now() - 5 * 60000).toISOString() : expired);
+  const { data: updated, error: claimError } = await claim.select('id').maybeSingle();
+  if (claimError) throw claimError;
+  if (!updated) return false;
+  try {
+    const body = JSON.stringify({ recording_id: recordingId, timestamp: Date.now() });
+    const response = await fetch(new URL('/.netlify/functions/assembly-gemini-transcribe-background', base), {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-condomit-job-signature': signJob(body) }, body,
+      signal: AbortSignal.timeout(12000)
+    });
+    if (response.status !== 202 && !response.ok) throw new Error(`O processamento Gemini não pôde ser iniciado (HTTP ${response.status}).`);
+    return true;
+  } catch (error) {
+    await admin.from('assembly_recordings').update({ transcription_status: 'falhou', transcription_error: String(error.message).slice(0, 400) }).eq('id', recordingId).eq('transcription_status', 'enfileirado');
+    throw error;
+  }
 }
 
 async function readJson(response, stage) {
@@ -142,7 +162,7 @@ function normalizedEntries(payload, duration, offset) {
 }
 
 async function transcribeWindow(file, start, end) {
-  const prompt = `Transcreva literalmente somente o áudio falado em português (ou no idioma realmente falado) deste trecho de assembleia. Não resuma, não invente frases, não transforme diálogos em ata e não inclua elementos visuais. Retorne JSON com a lista segments, cada item com text, start_seconds, end_seconds e speaker. Timestamps em segundos ABSOLUTOS do vídeo original (este recorte começa em ${start}s). Use uma identificação genérica de voz como "Falante 1" ou "Falante 2" somente se conseguir distingui-las; jamais atribua nomes reais por suposição. Se não houver fala inteligível, retorne segments vazio. Preserve falas contínuas completas sem cortar frases.`;
+  const prompt = `Transcreva exclusivamente o que é audível nesta gravação de assembleia, palavra por palavra, sem resumir ou corrigir o sentido e sem completar trechos que não foram ouvidos. Preserve nomes e números somente se claramente audíveis. Mantenha hesitações e repetições relevantes. Se um trecho não estiver inteligível, use [inaudível] somente naquele ponto; nunca invente. Separe intervenções por mudança de falante ou pausa natural, mas não corte uma frase contínua. Retorne somente JSON com segments contendo text, start_seconds, end_seconds e speaker. Timestamps NUMÉRICOS em segundos ABSOLUTOS do vídeo original, entre ${start} e ${end}; mantenha o texto sincronizado com o áudio. Identifique falantes por Falante 1, Falante 2, etc., sem deduzir identidade pelo rosto ou voz. Em ausência de fala, retorne segments vazio.`;
   const response = await fetch(`${API}/v1beta/models/${encodeURIComponent(MODEL)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -170,13 +190,14 @@ async function transcribeWindow(file, start, end) {
 
 async function claimRecording(admin, row) {
   const now = new Date().toISOString();
-  const expired = new Date(Date.now() - 20 * 60000).toISOString();
-  const retryable = row.transcription_status === 'pendente' || (row.transcription_status === 'falhou' && row.transcription_attempts < 3) || (row.transcription_status === 'processando' && row.transcription_started_at < expired);
+  const expired = new Date(Date.now() - 18 * 60000).toISOString();
+  const status = row.transcription_status;
+  const retryable = status === 'enfileirado' || status === 'pendente' || (status === 'falhou' && Number(row.transcription_attempts || 0) < 6) || (status === 'processando' && row.transcription_started_at && row.transcription_started_at < expired);
   if (!retryable) return false;
   let request = admin.from('assembly_recordings').update({ transcription_status: 'processando', transcription_started_at: now,
-    transcription_attempts: Number(row.transcription_attempts || 0) + 1, transcription_error: null })
-    .eq('id', row.id).eq('status', 'concluido').eq('transcription_status', row.transcription_status);
-  if (row.transcription_status === 'processando') request = request.lt('transcription_started_at', expired);
+    transcription_attempts: Number(row.transcription_attempts || 0), transcription_error: null })
+    .eq('id', row.id).eq('status', 'concluido').eq('transcription_status', status);
+  if (status === 'processando') request = request.lt('transcription_started_at', expired);
   const { data, error } = await request.select('id').maybeSingle();
   if (error) throw error;
   return Boolean(data);
@@ -188,42 +209,66 @@ async function runTranscription(recordingId) {
   if (error) throw error;
   if (!row || row.status !== 'concluido' || !process.env.GEMINI_API_KEY) return false;
   if (!await claimRecording(admin, row)) return false;
-  let file = null;
+  let file = row.transcription_file_uri && row.transcription_file_name ? { uri: row.transcription_file_uri, name: row.transcription_file_name } : null;
+  const update = payload => admin.from('assembly_recordings').update(payload).eq('id', row.id).eq('status', 'concluido');
   try {
-    file = await uploadVideo(admin, row);
-    file = await waitForFile(file.name);
-    const duration = Number(row.duration_seconds) > 0 ? Number(row.duration_seconds) : null;
-    const windows = [];
+    if (file) {
+      try {
+        file = await waitForFile(file.name);
+      } catch (error) {
+        if (!/404|not found|não encontrad|expired/i.test(String(error?.message || ''))) throw error;
+        file = null;
+      }
+    }
+    if (!file) {
+      file = await uploadVideo(admin, row);
+      const { error: saveError } = await update({ transcription_file_name: file.name, transcription_file_uri: file.uri });
+      if (saveError) throw saveError;
+      file = await waitForFile(file.name);
+    }
+    const durationFromFile = Number.parseFloat(String(file.videoMetadata?.videoDuration || '').replace(/s$/, ''));
+    const duration = Math.max(0, Number(row.duration_seconds) || durationFromFile || 0);
     if (!duration) throw new Error('A duração da gravação não está disponível para transcrição.');
-    for (let from = 0; from < duration; from += 480) windows.push([from, Math.min(duration, from + 480)]);
-    if (windows.length > 24) throw new Error('Gravação acima do limite de 3h12 de transcrição por execução.');
-    const entries = [];
-    for (const [start, end] of windows) entries.push(...await transcribeWindow(file, start, end));
-    if (!entries.length) throw new Error('O Gemini não identificou nenhuma fala inteligível no vídeo.');
+    const from = Math.max(0, Number(row.transcription_cursor_seconds) || 0);
+    const end = Math.min(duration, from + 240);
+    if (from >= duration) {
+      const { error: finishError } = await update({ transcription_status: 'concluido', transcription_error: null, transcription_finished_at: new Date().toISOString(), transcription_model: MODEL, transcription_attempts: 0 });
+      if (finishError) throw finishError;
+      return true;
+    }
+    const entries = await transcribeWindow(file, from, end);
     const { data: assembly, error: assemblyError } = await admin.from('scheduled_assemblies').select('cep').eq('id', row.assembly_id).single();
     if (assemblyError) throw assemblyError;
+    const { error: deleteError } = await admin.from('assembly_transcripts').delete().eq('recording_id', row.id).eq('transcript_source', 'recording_gemini').gte('start_seconds', from).lt('start_seconds', end);
+    if (deleteError) throw deleteError;
     const transcriptRows = entries.map(item => ({ assembly_id: row.assembly_id, recording_id: row.id, cep: assembly.cep,
       participant_email: 'transcricao-video@condomit.invalid', participant_name: item.participant_name,
       participant_role: 'não identificado', participant_identity: null, transcript: item.transcript,
       source: 'recording_gemini', transcript_source: 'recording_gemini',
       spoken_at: new Date(new Date(row.started_at).getTime() + item.start_seconds * 1000).toISOString(),
       start_seconds: item.start_seconds, end_seconds: item.end_seconds }));
-    const { error: deleteError } = await admin.from('assembly_transcripts').delete().eq('recording_id', row.id).eq('transcript_source', 'recording_gemini');
-    if (deleteError) throw deleteError;
-    for (let offset = 0; offset < transcriptRows.length; offset += 100) {
-      const { error: insertError } = await admin.from('assembly_transcripts').insert(transcriptRows.slice(offset, offset + 100));
+    for (let offset = 0; offset < transcriptRows.length; offset += 75) {
+      const { error: insertError } = await admin.from('assembly_transcripts').insert(transcriptRows.slice(offset, offset + 75));
       if (insertError) throw insertError;
     }
-    const { error: updateError } = await admin.from('assembly_recordings').update({ transcription_status: 'concluido', transcription_error: null,
-      transcription_finished_at: new Date().toISOString(), transcription_model: MODEL }).eq('id', row.id);
-    if (updateError) throw updateError;
+    const complete = end >= duration;
+    const { error: progressError } = await update({ transcription_cursor_seconds: end, transcription_total_seconds: duration, transcription_status: complete ? 'concluido' : 'pendente',
+      transcription_error: null, transcription_attempts: 0, transcription_model: MODEL,
+      ...(complete ? { transcription_finished_at: new Date().toISOString() } : {}) });
+    if (progressError) throw progressError;
+    if (complete) {
+      try { await fetch(`${API}/v1beta/${file.name}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, { method: 'DELETE', signal: AbortSignal.timeout(12000) }); }
+      catch (error) { console.warn('[ASSEMBLY GEMINI CLEANUP]', String(error.message).slice(0, 140)); }
+      await update({ transcription_file_name: null, transcription_file_uri: null });
+    } else {
+      try { await enqueueTranscription(row.id); }
+      catch (error) { console.warn('[ASSEMBLY GEMINI NEXT WINDOW]', { recording: row.id, error: String(error.message).slice(0, 200) }); }
+    }
     return true;
   } catch (error) {
     const diagnostic = String(error?.message || 'Falha de transcrição').replace(/AIza[\w-]+/g, '[chave]').slice(0, 450);
-    await admin.from('assembly_recordings').update({ transcription_status: 'falhou', transcription_error: diagnostic }).eq('id', row.id);
+    await update({ transcription_status: 'falhou', transcription_error: diagnostic, transcription_attempts: Number(row.transcription_attempts || 0) + 1 });
     throw error;
-  } finally {
-    if (file?.name) await fetch(`${API}/v1beta/${file.name}?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`, { method: 'DELETE', signal: AbortSignal.timeout(12000) }).catch(() => {});
   }
 }
 

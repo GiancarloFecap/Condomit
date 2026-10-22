@@ -900,22 +900,6 @@
         retryButton.hidden = true;
 
         let retrying = false;
-        let blobFallbackTried = false;
-        let blobObjectUrl = '';
-
-        const loadRecordingAsBlob = async () => {
-            if (blobFallbackTried) return false;
-            blobFallbackTried = true;
-            const response = await fetch(video.src, { cache: 'no-store' });
-            if (!response.ok) throw new Error(`Não foi possível carregar os dados da gravação (${response.status}).`);
-            const blob = await response.blob();
-            if (!blob?.size) throw new Error('A gravação armazenada está vazia.');
-            if (blobObjectUrl) URL.revokeObjectURL(blobObjectUrl);
-            blobObjectUrl = URL.createObjectURL(blob);
-            video.src = blobObjectUrl;
-            video.load();
-            return true;
-        };
 
         const retryPlayback = async () => {
             if (retrying) return;
@@ -924,12 +908,7 @@
             errorBox.hidden = true;
             try {
                 const freshUrl = await createSignedRecordingUrl(row);
-                blobFallbackTried = false;
-                if (blobObjectUrl) { URL.revokeObjectURL(blobObjectUrl); blobObjectUrl = ''; }
-                video.src = freshUrl;
-                video.load();
-                 
-                 
+                if (video.src !== freshUrl) video.src = freshUrl;
                 await video.play().catch(() => {});
             } catch (error) {
                 errorBox.textContent = error?.message || 'Não foi possível renovar o acesso à gravação.';
@@ -941,44 +920,25 @@
             }
         };
 
-        video.addEventListener('error', async () => {
-            const mediaError = video.error;
-             
-             
-             
-            if (!blobFallbackTried && !String(video.src || '').startsWith('blob:')) {
-                try {
-                    errorBox.textContent = 'Preparando modo de reprodução compatível...';
-                    errorBox.hidden = false;
-                    if (await loadRecordingAsBlob()) return;
-                } catch (fallbackError) {
-                    console.warn('[Ata] Fallback Blob da gravação falhou:', fallbackError);
-                }
-            }
+        video.addEventListener('error', () => {
             const messages = {
                 1: 'A reprodução foi interrompida.',
                 2: 'Falha de rede ao carregar a gravação.',
                 3: 'O navegador não conseguiu decodificar esta gravação.',
                 4: 'O formato desta gravação não é compatível com este navegador.'
             };
-            errorBox.textContent = messages[mediaError?.code] || 'Não foi possível reproduzir esta gravação.';
+            errorBox.textContent = messages[video.error?.code] || 'Não foi possível reproduzir esta gravação.';
             errorBox.hidden = false;
             retryButton.hidden = false;
         });
         video.addEventListener('loadedmetadata', () => {
             errorBox.hidden = true;
             retryButton.hidden = true;
-            if (!Number.isFinite(video.duration) || video.duration === Infinity || video.duration === 0) {
-                const restore = () => { try { video.currentTime = 0; } catch (_) {} };
-                video.addEventListener('timeupdate', restore, { once: true });
-                try { video.currentTime = 1e10; } catch (_) {}
-            }
         });
         retryButton.addEventListener('click', retryPlayback);
 
         holder.append(video, note, errorBox, retryButton);
-        window.addEventListener('beforeunload', () => { if (blobObjectUrl) URL.revokeObjectURL(blobObjectUrl); }, { once: true });
-        video.load();
+
     }
 
     function formatBytes(bytes) {
@@ -996,33 +956,88 @@
 
     let recordingRefreshInFlight = false;
     let recordingRefreshTimer = null;
+    const transcriptionKickAt = new Map();
+    const recordingPlayersLoading = new Set();
 
-    async function refreshRecordingStatus() {
-        if (recordingRefreshInFlight || document.hidden) return;
-        if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando', 'falhou'].includes(row.status) || row.status === 'concluido' && ['pendente', 'processando', 'falhou'].includes(row.transcription_status))) return;
-        recordingRefreshInFlight = true;
+    function recordingNeedsRefresh(row) {
+        return ['pendente', 'gravando'].includes(row.status) || row.status === 'concluido' && ['pendente', 'enfileirado', 'processando', 'falhou'].includes(row.transcription_status);
+    }
+
+    function recordingTranscriptionLabel(row) {
+        const status = String(row.transcription_status || 'pendente');
+        if (status === 'concluido') return 'Transcrição Gemini disponível na ata.';
+        if (status === 'processando' || status === 'enfileirado') { const total = Number(row.transcription_total_seconds || row.duration_seconds || 0); const done = Number(row.transcription_cursor_seconds || 0); const progress = total > 0 && done > 0 ? ` (${Math.min(99, Math.floor(done * 100 / total))}% do vídeo analisado)` : ''; return status === 'processando' ? `Gemini transcrevendo o vídeo${progress}. A gravação já pode ser reproduzida.` : `Transcrição Gemini na fila${progress}. O vídeo já pode ser reproduzido.`; }
+        if (status === 'falhou') return `Não foi possível transcrever: ${row.transcription_error || 'verifique as credenciais e os registros do Gemini na Netlify.'}`;
+        return row.transcription_error || 'Transcrição aguardando inicialização automática.';
+    }
+
+    async function requestRecordingTranscription(row, force = false) {
+        if (row.status !== 'concluido') return;
+        const status = row.transcription_status || 'pendente';
+        const stale = Date.now() - new Date(row.transcription_started_at || 0).getTime();
+        if (!['pendente', 'falhou'].includes(status) && !(status === 'enfileirado' && stale > 6 * 60000) && !(status === 'processando' && stale > 20 * 60000)) return;
+        const id = String(row.id);
+        if (!force && Date.now() - (transcriptionKickAt.get(id) || 0) < 90000) return;
+        transcriptionKickAt.set(id, Date.now());
         try {
             const token = await window.resolveSupabaseAccessToken?.();
             if (!token) return;
-            const result = await fetch('/.netlify/functions/assembly-recording-reconcile', {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assembly_id: Number(state.id) }), cache: 'no-store'
+            const response = await fetch('/.netlify/functions/assembly-gemini-kick', {
+                method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ recording_id: Number(row.id) }), cache: 'no-store'
             });
-            if (!result.ok) return;
-            const verified = await result.json();
-            const rows = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []);
-            const statuses = new Map((verified.recordings || []).map(item => [String(item.recording_id), item]));
-            state.recordingStatuses = rows.map(row => ({ ...row, verification: statuses.get(String(row.id)) || null }));
-            state.recordings = rows.filter(row => row.status === 'concluido' && row.recording_url && (statuses.get(String(row.id))?.storage_verified || !statuses.has(String(row.id))));
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                row.transcription_error = String(result.error || `Falha ao iniciar Gemini (HTTP ${response.status}).`).slice(0, 250);
+                const card = document.querySelector(`[data-recording-id="${id}"]`);
+                const status = card?.querySelector('.recording-transcription-status');
+                if (status) status.textContent = recordingTranscriptionLabel({ ...row, transcription_status: 'falhou' });
+            } else if (result.queued) {
+                row.transcription_status = 'enfileirado';
+                const card = document.querySelector(`[data-recording-id="${id}"]`);
+                const status = card?.querySelector('.recording-transcription-status');
+                if (status) status.textContent = recordingTranscriptionLabel(row);
+            }
+        } catch (error) {
+            row.transcription_error = 'Não foi possível alcançar a função de transcrição da Netlify.';
+            const status = document.querySelector(`[data-recording-id="${id}"] .recording-transcription-status`);
+            if (status) status.textContent = row.transcription_error;
+        }
+    }
+
+    async function refreshRecordingStatus() {
+        if (recordingRefreshInFlight || document.hidden) return;
+        if (!(state.recordingStatuses || []).some(recordingNeedsRefresh)) return;
+        recordingRefreshInFlight = true;
+        try {
+            const incomplete = state.recordingStatuses.some(row => ['pendente', 'gravando', 'falhou'].includes(row.status));
+            let statuses = null;
+            if (incomplete) {
+                const token = await window.resolveSupabaseAccessToken?.();
+                if (token) {
+                    const result = await fetch('/.netlify/functions/assembly-recording-reconcile', {
+                        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ assembly_id: Number(state.id) }), cache: 'no-store'
+                    });
+                    if (result.ok) {
+                        const verified = await result.json();
+                        statuses = new Map((verified.recordings || []).map(item => [String(item.recording_id), item]));
+                    }
+                }
+            }
+            const rows = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`);
+            const previous = new Map(state.recordingStatuses.map(row => [String(row.id), row]));
+            state.recordingStatuses = rows.map(row => ({ ...row, verification: statuses?.get(String(row.id)) || previous.get(String(row.id))?.verification || null }));
+            state.recordings = rows.filter(row => row.status === 'concluido' && row.recording_url);
             const latestTranscripts = await fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => null);
-            if (latestTranscripts && (latestTranscripts.length !== state.transcripts.length || latestTranscripts.some((row, index) => row.id !== state.transcripts[index]?.id))) {
+            if (latestTranscripts && (latestTranscripts.length !== state.transcripts.length || latestTranscripts.some((row, index) => row.id !== state.transcripts[index]?.id || row.transcript !== state.transcripts[index]?.transcript))) {
                 state.transcripts = latestTranscripts;
                 renderMinutes();
             }
             renderHero();
             renderRecordings();
-            if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando'].includes(row.status) || row.status === 'concluido' && ['pendente', 'processando', 'falhou'].includes(row.transcription_status))) {
+            for (const row of state.recordings) requestRecordingTranscription(row);
+            if (!state.recordingStatuses.some(recordingNeedsRefresh)) {
                 clearInterval(recordingRefreshTimer);
                 recordingRefreshTimer = null;
             }
@@ -1036,64 +1051,73 @@
     function startRecordingRefresh() {
         clearInterval(recordingRefreshTimer);
         recordingRefreshTimer = null;
-        if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando'].includes(row.status) || row.status === 'concluido' && ['pendente', 'processando', 'falhou'].includes(row.transcription_status))) return;
-        setTimeout(() => refreshRecordingStatus().catch(() => {}), 1000);
+        for (const row of state.recordings) requestRecordingTranscription(row);
+        if (!(state.recordingStatuses || []).some(recordingNeedsRefresh)) return;
+        setTimeout(() => refreshRecordingStatus().catch(() => {}), 1200);
         recordingRefreshTimer = setInterval(() => refreshRecordingStatus().catch(() => {}), 8000);
     }
 
     function renderRecordings() {
         const container = document.getElementById('assemblyRecordings');
         if (!container) return;
-        if (!state.recordings.length) {
+        const rows = state.recordings || [];
+        const placeholders = container.querySelectorAll(':scope > .summary-empty, :scope > #refreshAssemblyRecordings079');
+        if (!rows.length) {
             const statuses = (state.recordingStatuses || []).map(row => String(row?.status || '').toLowerCase());
-            const failureDetail = (state.recordingStatuses || []).find(row => row?.status === 'falhou' && row?.verification?.diagnostic)?.verification?.diagnostic || '';
-            const waiting = statuses.some(status => ['pendente','gravando'].includes(status));
+            const waiting = statuses.some(status => ['pendente', 'gravando'].includes(status));
             const failed = statuses.includes('falhou');
-            const unavailableFile = (state.recordingStatuses || []).some(row => row?.status === 'concluido' && row?.verification && !row.verification.storage_verified);
-            container.innerHTML = `<div class="summary-empty">${waiting
-              ? 'A gravação está em andamento ou finalizando o upload para o armazenamento. A reprodução será liberada quando o arquivo estiver disponível.'
-              : unavailableFile
-                ? 'O Egress registrou uma gravação, mas o arquivo não foi confirmado no Storage. Confira o bucket S3, a conclusão do Egress e o webhook.'
-                : failed
-                ? 'O LiveKit Egress falhou e o vídeo MP4 não foi confirmado no Storage. Confira o diagnóstico do Egress, as permissões e credenciais S3 e os logs da Netlify. Os trechos de áudio salvos podem continuar disponíveis na conferência da transcrição.'
-                : 'Nenhuma gravação registrada. Confira as variáveis do Egress, o bucket S3 e o webhook de conclusão.'}</div><button class="summary-secondary" type="button" id="refreshAssemblyRecordings079"><i class="fas fa-rotate-right"></i> Verificar gravações novamente</button>`;
-            if (failed && failureDetail) {
-                const detail = document.createElement('p');
-                detail.className = 'summary-empty';
-                detail.textContent = failureDetail;
-                container.prepend(detail);
-            }
-            container.querySelector('#refreshAssemblyRecordings079')?.addEventListener('click', async event => {
-                const button = event.currentTarget;
-                button.disabled = true;
-                try {
-                    await loadAll({ verifyRecordings: true });
-                    renderHero();
-                    renderRecordings();
-                } catch (error) {
-                    button.disabled = false;
-                    window.showToast?.(error?.message || 'Não foi possível atualizar a gravação.', 'error');
-                }
-            });
+            const unavailable = state.recordingStatuses?.some(row => row.status === 'concluido');
+            const message = waiting ? 'A gravação está sendo finalizada no LiveKit. Ela aparecerá aqui automaticamente.' : failed
+                ? 'O LiveKit não concluiu esta gravação. Confira o Egress e o armazenamento S3.' : unavailable
+                ? 'Vídeo registrado no banco, mas ainda sem endereço de reprodução.' : 'Nenhuma gravação disponível até o momento.';
+            if (!container.querySelector(':scope > .summary-empty')) {
+                container.innerHTML = `<div class="summary-empty">${message}</div><button class="summary-secondary" type="button" id="refreshAssemblyRecordings079"><i class="fas fa-rotate-right"></i> Verificar gravações novamente</button>`;
+                container.querySelector('#refreshAssemblyRecordings079')?.addEventListener('click', () => refreshRecordingStatus().catch(() => {}));
+            } else container.querySelector(':scope > .summary-empty').textContent = message;
             return;
         }
-        container.innerHTML = state.recordings.map((row, index) => `
-            <article class="recording-card" data-recording-index="${index}">
-                <div class="recording-card-head"><div><strong><i class="fas fa-video"></i> Gravação ${index + 1}</strong><small>${row.started_at ? new Date(row.started_at).toLocaleString('pt-BR') : 'Horário não informado'} • ${formatDuration(row.duration_seconds)} • ${formatBytes(row.file_size_bytes)}</small></div></div>
-                <p class="recording-transcription-status">${row.transcription_status === 'concluido' ? 'Transcrição Gemini disponível na ata.' : row.transcription_status === 'processando' ? 'Vídeo disponível. Gemini está transcrevendo em segundo plano.' : row.transcription_status === 'falhou' ? 'Vídeo disponível. Falha na transcrição Gemini; uma nova tentativa será realizada quando possível.' : 'Vídeo disponível. Transcrição Gemini aguardando processamento.'}</p>
-              <div class="recording-player-loading"><i class="fas fa-spinner fa-spin"></i> Preparando reprodução segura...</div>
-            </article>`).join('');
-        state.recordings.forEach(async (row, index) => {
-            const card = container.querySelector(`[data-recording-index="${index}"]`);
-            if (!card) return;
+        placeholders.forEach(element => element.remove());
+        const wanted = new Set(rows.map(row => String(row.id)));
+        container.querySelectorAll(':scope > .recording-card[data-recording-id]').forEach(card => {
+            if (!wanted.has(card.dataset.recordingId)) card.remove();
+        });
+        rows.forEach((row, index) => {
+            const id = String(row.id);
+            let card = Array.from(container.querySelectorAll(':scope > .recording-card[data-recording-id]')).find(item => item.dataset.recordingId === id);
+            if (!card) {
+                card = document.createElement('article');
+                card.className = 'recording-card';
+                card.dataset.recordingId = id;
+                card.innerHTML = `<div class="recording-card-head"><div><strong><i class="fas fa-video"></i> Gravação ${index + 1}</strong><small class="recording-details"></small></div></div><p class="recording-transcription-status" role="status"></p><div class="recording-player-loading"><i class="fas fa-spinner fa-spin"></i> Preparando reprodução segura...</div>`;
+                container.append(card);
+            }
+            const details = card.querySelector('.recording-details');
+            if (details) details.textContent = `${row.started_at ? new Date(row.started_at).toLocaleString('pt-BR') : 'Horário não informado'} • ${formatDuration(row.duration_seconds)} • ${formatBytes(row.file_size_bytes)}`;
+            const status = card.querySelector('.recording-transcription-status');
+            if (status) status.textContent = recordingTranscriptionLabel(row);
             const holder = card.querySelector('.recording-player-loading');
-            if (!holder) return;
-            try {
-                const url = await createSignedRecordingUrl(row);
-                renderRecordingPlayer(card, row, url);
-            } catch (error) {
-                holder.className = 'recording-player-wrap';
-                holder.innerHTML = `<div class="summary-empty">${esc(error?.message || 'Não foi possível gerar o acesso temporário a esta gravação.')}</div>`;
+            if (holder && !recordingPlayersLoading.has(id)) {
+                recordingPlayersLoading.add(id);
+                createSignedRecordingUrl(row).then(url => {
+                    if (card.isConnected) renderRecordingPlayer(card, row, url);
+                }).catch(error => {
+                    if (card.isConnected) {
+                        holder.className = 'recording-player-wrap';
+                        const message = document.createElement('div');
+                        message.className = 'summary-empty';
+                        message.textContent = error?.message || 'Não foi possível autorizar a reprodução.';
+                        const retry = document.createElement('button');
+                        retry.type = 'button';
+                        retry.className = 'summary-secondary';
+                        retry.textContent = 'Tentar reproduzir';
+                        retry.addEventListener('click', async () => {
+                            retry.disabled = true;
+                            try { renderRecordingPlayer(card, row, await createSignedRecordingUrl(row)); }
+                            catch (problem) { message.textContent = problem.message || 'Falha na reprodução.'; retry.disabled = false; }
+                        });
+                        holder.replaceChildren(message, retry);
+                    }
+                }).finally(() => recordingPlayersLoading.delete(id));
             }
         });
     }
