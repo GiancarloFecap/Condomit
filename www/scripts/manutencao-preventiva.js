@@ -331,7 +331,7 @@ function renderMaintenanceTable(items) {
             <td>${escapeHtml(item.location)}</td>
             <td><span class="category-pill ${escapeHtml(normalizeToken(item.category))}">${escapeHtml(item.category)}</span></td>
             <td>${escapeHtml(item.frequency)}</td>
-            <td><div class="next-date">${escapeHtml(formatDatePt(item.nextDate))}<small class="${item.status === 'atrasada' ? 'atrasada' : ''}">${escapeHtml(formatDateHint(item.nextDate, item.status))}</small></div></td>
+            <td><div class="next-date">${escapeHtml(formatDatePt(item.nextDate))}${item.status === 'concluida' ? '' : `<small class="${item.status === 'atrasada' ? 'atrasada' : ''}">${escapeHtml(formatDateHint(item.nextDate, item.status))}</small>`}</div></td>
             <td><span class="status-pill ${escapeHtml(item.status)}">${escapeHtml(formatStatusLabel(item.status))}</span></td>
             <td><div class="action-list">
                 <button class="action-icon" type="button" data-action="complete" data-id="${escapeHtml(item.id)}" title="${item.storedStatus === 'concluida' ? 'Reabrir' : 'Marcar como concluída'}"><i class="fas ${item.storedStatus === 'concluida' ? 'fa-rotate-left' : 'fa-check'}"></i></button>

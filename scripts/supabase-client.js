@@ -3200,9 +3200,7 @@ async function performFullLogout(
 
         if (
           key &&
-          key.startsWith(
-            'condomit.notifications.'
-          )
+          (key.startsWith('condomit.notifications.') || key.startsWith('condomit:ai-conversations:') || key.startsWith('condomit:ai-deleted:'))
         ) {
            
           continue;

@@ -17,6 +17,7 @@ async function fetchCondominiumBillingStatus(force = false) {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
+    initSettingsTabs();
     setupDesktopUpdateSettings();
     let currentUser = null;
     try {

@@ -617,7 +617,6 @@ let audioUnlockInstalled = false;
 let audioUnlockInProgress = false;
 
 async function unlockRemoteAudioPlayback() {
-  if (state.chatOnly) return false;
   const room = state.room;
   if (!room || audioUnlockInProgress) return false;
 
@@ -668,7 +667,6 @@ function attachAudio(
   track,
   participant = null
 ) {
-  if (state.chatOnly) return;
   if (!track) {
     return;
   }
@@ -807,10 +805,6 @@ function removeAllAttachedAudio() {
 function syncRemoteAudio(
   room
 ) {
-  if (state.chatOnly) {
-    removeAllAttachedAudio();
-    return;
-  }
   if (!room) {
     return;
   }

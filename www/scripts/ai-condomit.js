@@ -1,7 +1,7 @@
 (() => {
     'use strict';
 
-    const state = { user: null, history: [], conversations: [], conversationId: null, restoring: false };
+    const state = { user: null, history: [], conversations: [], conversationId: null, restoring: false, pendingSaves: new Map(), activeSaves: new Set(), deleted: new Set(), saveTimers: new Map() };
     const $ = (id) => document.getElementById(id);
     const appLanguage = () => { try { return ((window.getCondomitResolvedLanguage?.() || ((localStorage.getItem('app-language') || 'auto') === 'auto' ? (/^pt(?:-|$)/i.test((navigator.languages || [navigator.language || 'pt'])[0]) ? 'pt' : 'en') : localStorage.getItem('app-language'))) === 'en' ? 'en' : 'pt'); } catch (_) { return 'pt'; } };
     const isEnglish = () => appLanguage() === 'en';
@@ -139,6 +139,7 @@
         bindEvents();
         loadConversationStore();
         resetConversation(false, false);
+        syncConversationsFromServer().catch(() => {});
     }
 
     function getStoredUser() {
@@ -251,6 +252,98 @@
         } catch (_) {
             state.conversations = [];
         }
+        loadDeletedConversations();
+        state.conversations = state.conversations.filter((item) => !state.deleted.has(item.id));
+    }
+
+    function deletedConversationStorageKey() {
+        return `condomit:ai-deleted:${String(state.user?.email || '').trim().toLowerCase()}`;
+    }
+
+    function loadDeletedConversations() {
+        try {
+            const ids = JSON.parse(localStorage.getItem(deletedConversationStorageKey()) || '[]');
+            state.deleted = new Set(Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : []);
+        } catch (_) {
+            state.deleted = new Set();
+        }
+    }
+
+    function saveDeletedConversations() {
+        try { localStorage.setItem(deletedConversationStorageKey(), JSON.stringify([...state.deleted])); } catch (_) {}
+    }
+
+    function scheduleRemoteSave(conversation) {
+        if (!conversation?.id || state.deleted.has(conversation.id)) return;
+        state.pendingSaves.set(conversation.id, conversation);
+        clearTimeout(state.saveTimers.get(conversation.id));
+        state.saveTimers.set(conversation.id, setTimeout(() => {
+            state.saveTimers.delete(conversation.id);
+            flushRemoteSave(conversation.id).catch(() => {});
+        }, 350));
+    }
+
+    async function flushRemoteSave(id) {
+        const conversation = state.pendingSaves.get(id);
+        if (!conversation || state.deleted.has(id) || typeof window.supabaseFetch !== 'function' || state.activeSaves.has(id)) return;
+        state.pendingSaves.delete(id);
+        state.activeSaves.add(id);
+        try {
+            await window.supabaseFetch('/condomit_ai_conversations?on_conflict=owner_uid,conversation_id', {
+                method: 'POST',
+                headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+                body: JSON.stringify({ conversation_id: conversation.id, title: conversation.title, messages: conversation.messages, updated_at: conversation.updatedAt })
+            });
+        } catch (error) {
+            const latest = state.conversations.find((item) => item.id === id);
+            if (latest && !state.deleted.has(id)) state.pendingSaves.set(id, latest);
+            console.warn('Não foi possível sincronizar o histórico da IA.', error?.message || error);
+        } finally {
+            state.activeSaves.delete(id);
+            if (state.deleted.has(id)) deleteRemoteConversation(id).catch(() => {});
+            else if (state.pendingSaves.has(id)) scheduleRemoteSave(state.pendingSaves.get(id));
+        }
+    }
+
+    async function deleteRemoteConversation(id) {
+        if (!id || typeof window.supabaseFetch !== 'function') return;
+        try {
+            await window.supabaseFetch(`/condomit_ai_conversations?conversation_id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' });
+            if (!state.activeSaves.has(id)) {
+                state.deleted.delete(id);
+                saveDeletedConversations();
+            }
+        } catch (error) {
+            console.warn('Não foi possível sincronizar a exclusão da conversa.', error?.message || error);
+        }
+    }
+
+    async function syncConversationsFromServer() {
+        if (typeof window.supabaseFetch !== 'function') return;
+        try {
+            const rows = await window.supabaseFetch('/condomit_ai_conversations?select=conversation_id,title,messages,updated_at&order=updated_at.desc&limit=50');
+            if (!Array.isArray(rows)) return;
+            const merged = new Map();
+            rows.forEach((row) => {
+                const id = String(row?.conversation_id || '');
+                if (!id || !Array.isArray(row.messages) || state.deleted.has(id)) return;
+                merged.set(id, { id, title: row.title, messages: row.messages, updatedAt: row.updated_at });
+            });
+            state.conversations.forEach((item) => {
+                if (!item?.id || state.deleted.has(item.id)) return;
+                const stored = merged.get(item.id);
+                if (!stored || new Date(item.updatedAt || 0).getTime() > new Date(stored.updatedAt || 0).getTime()) {
+                    merged.set(item.id, item);
+                    scheduleRemoteSave(item);
+                }
+            });
+            state.conversations = [...merged.values()].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, 50);
+            persistConversationStore();
+            state.deleted.forEach((id) => { deleteRemoteConversation(id).catch(() => {}); });
+            if ($('aiConversationHistoryModal')?.classList.contains('open')) renderConversationHistory();
+        } catch (error) {
+            console.warn('Histórico remoto indisponível; mantendo conversas locais.', error?.message || error);
+        }
     }
 
     function deriveConversationTitle(messages) {
@@ -282,6 +375,7 @@
         state.conversations.unshift(conversation);
         state.conversations = state.conversations.slice(0, 50);
         persistConversationStore();
+        scheduleRemoteSave(conversation);
     }
 
     function formatConversationDate(value) {
@@ -364,7 +458,13 @@
         const confirmed = await window.showConfirm({title: isEnglish() ? 'Delete chat' : 'Excluir chat',message: isEnglish() ? 'Delete this chat history?' : 'Excluir este chat do histórico?',confirmText: isEnglish() ? 'Delete' : 'Excluir',danger: true});
         if (!confirmed) return;
         state.conversations = state.conversations.filter((item) => item.id !== id);
+        state.pendingSaves.delete(id);
+        clearTimeout(state.saveTimers.get(id));
+        state.saveTimers.delete(id);
+        state.deleted.add(id);
+        saveDeletedConversations();
         persistConversationStore();
+        deleteRemoteConversation(id).catch(() => {});
         if (state.conversationId === id) resetConversation(false, false);
         renderConversationHistory();
         window.showToast?.(isEnglish() ? 'Chat deleted.' : 'Chat excluído.', 'success');

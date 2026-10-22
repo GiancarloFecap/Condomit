@@ -1,5 +1,5 @@
 import { state } from './state.js?v=079';
-import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0752';
+import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0753';
 import { setHeader, setPanelOpen, setConnectionConnecting, setConnectionConnected, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=079';
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, loadAgenda, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, startAgendaItem, formatCountdown, isPollOpen } from './data.js?v=0752';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=079';
@@ -942,7 +942,7 @@ async function init() {
       const switchCameraButton = $('btn-switch-camera');
       if (switchCameraButton) switchCameraButton.hidden = true;
       document.querySelector('.panel-tab[data-tab=chat]')?.click();
-      showBanner('Modo somente chat: câmera, microfone e som da chamada desativados. Participantes, pautas, documentos, votações e telas compartilhadas permanecem disponíveis.', 'info');
+      showBanner('Modo somente chat: seu microfone e sua câmera ficam desligados. Você pode ouvir os demais participantes, ver as câmeras ativas e acompanhar chat, documentos, votações, pautas e compartilhamentos de tela.', 'info');
     }
 
     beginRecordingStatusWatch();
