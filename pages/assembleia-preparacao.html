@@ -782,6 +782,56 @@
             font-size: 14px;
         }
 
+        .assembly-chat-entry-choice {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-top: 16px;
+            padding: 14px;
+            border: 1px solid var(--gray-200, #e5e7eb);
+            border-radius: 12px;
+            background: var(--gray-50, #f9fafb);
+            cursor: pointer;
+        }
+
+        .assembly-chat-entry-choice input {
+            width: 18px;
+            height: 18px;
+            margin: 3px 0 0;
+            flex-shrink: 0;
+            accent-color: var(--primary-blue, #294fd8);
+        }
+
+        .assembly-chat-entry-choice span {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            line-height: 1.4;
+        }
+
+        .assembly-chat-entry-choice strong {
+            font-size: 14px;
+            color: var(--gray-900, #111827);
+        }
+
+        .assembly-chat-entry-choice small {
+            font-size: 12px;
+            color: var(--gray-600, #4b5563);
+        }
+
+        html[data-theme="dark"] .assembly-chat-entry-choice {
+            background: #1f2937;
+            border-color: #334155;
+        }
+
+        html[data-theme="dark"] .assembly-chat-entry-choice strong {
+            color: #f8fafc;
+        }
+
+        html[data-theme="dark"] .assembly-chat-entry-choice small {
+            color: #cbd5e1;
+        }
+
         .prep-footer-note {
             text-align: center;
             font-size: 11px;
@@ -1185,7 +1235,6 @@
                             <button class="btn btn-outline" id="btn-back-footer">
                                 <i class="fas fa-arrow-left"></i> Voltar
                             </button>
-                            <button class="btn btn-secondary btn-lg" id="btn-enter-chat-only" type="button"><i class="fas fa-comment-dots"></i> Entrar somente pelo chat</button>
                             <button class="btn btn-primary btn-lg" id="btn-enter" disabled>
                                 <i class="fas fa-sign-in-alt"></i> Entrar na assembleia
                             </button>
@@ -1210,7 +1259,7 @@
     <script src="../scripts/assembly/auth.js"></script>
     <script src="../scripts/assembly/api.js"></script>
     <script src="../scripts/assembly/permissions.js"></script>
-    <script src="../scripts/assembly/assembly-prep.js?v=084"></script>
+    <script src="../scripts/assembly/assembly-prep.js?v=085"></script>
     <script src="../scripts/condomit-alerts.js?v=057"></script>
     <script src="../scripts/advanced-global.js?v=065"></script>
 </body>

@@ -1166,6 +1166,8 @@ function openPreJoin(assembly) {
     assemblyState.roomOpen = false;
     assemblyState.chatOpen = false;
     assemblyState.preJoinLastError = '';
+    const chatChoice = $('prejoin-chat-only-choice');
+    if (chatChoice) chatChoice.checked = false;
     stopAllLocalMedia();
     stopPreJoinAudioMeter();
     assemblyState.micOn = false;
@@ -1363,6 +1365,20 @@ function confirmJoinAssembly() {
 
     if (!assembly) {
         showToast('Nao foi possivel localizar essa assembleia. Atualize a pagina e tente novamente.', 'error');
+        return;
+    }
+
+    if ($('prejoin-chat-only-choice')?.checked) {
+        const id = String(assembly.id);
+        stopAllLocalMedia();
+        stopPreJoinAudioMeter();
+        try {
+            sessionStorage.setItem('condomit_current_assembly_id', id);
+            sessionStorage.setItem('prep_chat_only_assembly', id);
+            sessionStorage.setItem('prep_mic_on', '0');
+            sessionStorage.setItem('prep_camera_on', '0');
+        } catch (_) {}
+        window.location.href = `assembleia-sala.html?id=${encodeURIComponent(id)}`;
         return;
     }
 
@@ -2010,20 +2026,15 @@ function bindStaticEvents() {
         });
     }
 
-    const prejoinChatOnlyBtn = $('prejoin-chat-only-btn');
-    if (prejoinChatOnlyBtn) {
-        prejoinChatOnlyBtn.addEventListener('click', () => {
-            const id = String(assemblyState.preJoinAssemblyId || '');
-            if (!id) return;
+    const prejoinChatChoice = $('prejoin-chat-only-choice');
+    if (prejoinChatChoice) {
+        prejoinChatChoice.addEventListener('change', () => {
+            if (!prejoinChatChoice.checked) return;
             stopAllLocalMedia();
             stopPreJoinAudioMeter();
-            try {
-                sessionStorage.setItem('condomit_current_assembly_id', id);
-                sessionStorage.setItem('prep_chat_only_assembly', id);
-                sessionStorage.setItem('prep_mic_on', '0');
-                sessionStorage.setItem('prep_camera_on', '0');
-            } catch (_) {}
-            window.location.href = `assembleia-sala.html?id=${encodeURIComponent(id)}`;
+            assemblyState.micOn = false;
+            assemblyState.cameraOn = false;
+            updateControlsUI();
         });
     }
 

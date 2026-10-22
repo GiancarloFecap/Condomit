@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="../assets/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="../styles/index.css?v=053">
-    <link rel="stylesheet" href="../styles/assembleia.css?v=072">
+    <link rel="stylesheet" href="../styles/assembleia.css?v=073">
     <link rel="stylesheet" href="../styles/theme.css?v=044">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
@@ -208,13 +208,16 @@
                                 </label>
                             </div>
 
+                            <label class="prejoin-chat-choice" for="prejoin-chat-only-choice">
+                                <input type="checkbox" id="prejoin-chat-only-choice">
+                                <span><strong>Entrar somente pelo chat</strong><small>Sem câmera ou microfone, com participação apenas por mensagens.</small></span>
+                            </label>
                             <div class="prejoin-messages" id="prejoin-messages" aria-live="polite"></div>
                         </section>
                     </div>
 
                     <div class="prejoin-footer">
                         <button class="btn btn-secondary" id="prejoin-cancel-btn" type="button">Cancelar</button>
-                        <button class="btn btn-secondary" id="prejoin-chat-only-btn" type="button"><i class="fas fa-comment-dots"></i> Entrar somente pelo chat</button>
                         <button class="btn btn-primary" id="confirm-join-btn" type="button">
                             <i class="fas fa-right-to-bracket"></i> Entrar na assembleia
                         </button>
@@ -348,7 +351,7 @@
     <script src="../scripts/community-hub.js?v=065"></script>
     <script src="../scripts/sidebar-links.js?v=065"></script>
     <script src="../scripts/i18n.js"></script>
-    <script src="../scripts/assembleia.js?v=084"></script>
+    <script src="../scripts/assembleia.js?v=085"></script>
     <script src="../scripts/assembleia-dialogs.js?v=057"></script>
     <script src="../scripts/topbar-actions.js?v=065"></script>
     <script src="../scripts/condomit-alerts.js?v=057"></script>

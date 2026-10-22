@@ -1024,8 +1024,8 @@
     }
   }
 
-  function savePreferencesAndEnter(chatOnly = false) {
-    const enterRoom = () => {
+  function savePreferencesAndEnter() {
+    const enterRoom = (chatOnly = false) => {
       const audioOnly = !chatOnly && $('audio-only-check').checked;
       const devicesOff = chatOnly || $('devices-off-check').checked;
 
@@ -1058,14 +1058,25 @@
     const message = 'Esta assembleia será gravada em áudio e vídeo. A gravação poderá ser disponibilizada na Ata para consulta pelos usuários autorizados do condomínio. Ao entrar, você declara estar ciente da gravação.';
 
     if (typeof window.showModal === 'function') {
+      let chatChoice = null;
       window.showModal({
         title: 'Esta assembleia será gravada',
         message,
         type: 'warning',
         confirmText: 'Estou ciente e quero entrar',
         cancelText: 'Cancelar',
-        onConfirm: enterRoom
+        onConfirm: () => enterRoom(Boolean(chatChoice && chatChoice.checked))
       });
+      const dialogs = document.querySelectorAll('.modal-backdrop');
+      const dialog = dialogs[dialogs.length - 1];
+      const body = dialog && dialog.querySelector('.modal-body');
+      if (body) {
+        const option = document.createElement('label');
+        option.className = 'assembly-chat-entry-choice';
+        option.innerHTML = '<input type="checkbox" id="assembly-entry-chat-only"><span><strong>Entrar somente pelo chat</strong><small>Sem câmera e microfone. Você poderá participar pelo chat usando sua conta.</small></span>';
+        body.appendChild(option);
+        chatChoice = option.querySelector('input');
+      }
       return;
     }
 
@@ -1166,8 +1177,7 @@
     $('devices-off-check').addEventListener('change', (e) => handleDevicesOffCheck(e.target.checked));
 
     $('mic-test-btn').addEventListener('click', handleMicTestClick);
-    $('btn-enter').addEventListener('click', () => savePreferencesAndEnter(false));
-    $('btn-enter-chat-only').addEventListener('click', () => savePreferencesAndEnter(true));
+    $('btn-enter').addEventListener('click', savePreferencesAndEnter);
 
     if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
       navigator.mediaDevices.addEventListener('devicechange', enumerateAndPopulate);
