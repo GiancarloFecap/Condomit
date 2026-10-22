@@ -74,15 +74,15 @@ export async function flushAssemblySpeechActivity() {
 export function startAssemblyTranscription() {
   setStatus(
     'active',
-    'Transcrição automática em trechos',
-    'As falas autorizadas são transcritas pelo modelo Whisper no próprio navegador e salvas no condomínio. Podem conter erros; consulte a gravação para revisão.'
+    'Transcrição Gemini após a gravação',
+    'O vídeo da assembleia será transcrito pelo Gemini no servidor após a gravação ser concluída. O reconhecimento de voz não será executado neste navegador.'
   );
   return true;
 }
 
 export async function stopAssemblyTranscription() {
   await flushAssemblySpeechActivity();
-  setStatus('paused', 'Transcrição da gravação finalizada');
+  setStatus('paused', 'Gravação aguardando transcrição Gemini');
 }
 
 export function syncAssemblyTranscriptionWithMicrophone() {

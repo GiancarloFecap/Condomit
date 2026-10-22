@@ -411,7 +411,7 @@
             </article>
             ${currentUserRole() === 'sindico' ? `<section class="minutes-review-editor074">
               <h3><i class="fas fa-clipboard-check"></i> Revisão formal da ata</h3>
-              <p>A gravação e a transcrição são documentos de apoio. Confirme data, presença, discussões, deliberações, quóruns e responsáveis. A transcrição local pode conter erros.</p>
+              <p>A gravação e a transcrição são documentos de apoio. Confirme data, presença, discussões, deliberações, quóruns e responsáveis. A transcrição Gemini pode conter erros e deve ser revisada comparando com o vídeo.</p>
               <textarea id="assemblyMinutesEditor074" rows="14" spellcheck="true" aria-label="Redigir ata para revisão">${esc(displayText)}</textarea>
               <div class="minutes-review-actions074">
                 <button type="button" class="summary-secondary" id="minutesAiHelp074"><i class="fas fa-wand-magic-sparkles"></i> Selecionar trechos da transcrição</button>
@@ -421,7 +421,7 @@
               <div id="assemblyMinutesAiSuggestions074" class="minutes-ai-suggestions074" hidden></div>
               <details class="minutes-evidence074"><summary>Conferir trechos de transcrição (${state.transcripts.length})</summary>
                 <p>As falas são material de apoio, podem conter erros e não substituem os resultados oficiais das votações.</p>
-                ${state.transcripts.slice(0,120).map(item=>`<div class="minutes-audio-segment"><p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>${item.audio_storage_path ? `<audio controls preload="none" aria-label="Ouvir áudio do trecho ${esc(String(item.id))}" data-transcript-audio-path="${esc(item.audio_storage_path)}"></audio><small class="minutes-audio-status">Preparando áudio protegido...</small>` : '<small>Áudio individual não disponível para este trecho.</small>'}</div>`).join('')}
+                ${state.transcripts.slice(0,120).map(item=>`<div class="minutes-audio-segment"><p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>${item.audio_storage_path ? `<audio controls preload="none" aria-label="Ouvir áudio do trecho ${esc(String(item.id))}" data-transcript-audio-path="${esc(item.audio_storage_path)}"></audio><small class="minutes-audio-status">Preparando áudio protegido...</small>` : item.recording_id && item.start_seconds !== null && item.end_seconds !== null ? `<audio controls preload="none" aria-label="Ouvir fala no vídeo gravado" data-recording-clip-id="${esc(String(item.recording_id))}" data-clip-start="${esc(String(item.start_seconds))}" data-clip-end="${esc(String(item.end_seconds))}"></audio><small class="minutes-audio-status">Trecho retirado do vídeo da assembleia.</small>` : '<small>Áudio individual não disponível para este trecho.</small>'}</div>`).join('')}
                 ${state.transcripts.length>120 ? `<p>Exibindo 120 de ${state.transcripts.length} trechos. Consulte o registro original para os demais.</p>` : ''}
               </details>
               <div class="minutes-external-signature074">
@@ -467,6 +467,31 @@
             }
         };
         await Promise.all(Array.from({ length: Math.min(4, audios.length) }, worker));
+        const clips = Array.from(section.querySelectorAll('audio[data-recording-clip-id]'));
+        const signed = new Map();
+        for (const clip of clips) {
+            const recordingId = clip.dataset.recordingClipId;
+            const recording = (state.recordings || []).find(row => String(row.id) === recordingId);
+            const label = clip.nextElementSibling;
+            if (!recording) { if (label) label.textContent = 'Vídeo correspondente indisponível.'; continue; }
+            try {
+                if (!signed.has(recordingId)) signed.set(recordingId, await createSignedRecordingUrl(recording));
+                clip.src = signed.get(recordingId);
+                const start = Number(clip.dataset.clipStart);
+                const end = Number(clip.dataset.clipEnd);
+                clip.addEventListener('loadedmetadata', () => {
+                    if (Number.isFinite(start)) clip.currentTime = Math.max(0, start);
+                });
+                clip.addEventListener('play', () => {
+                    if (Number.isFinite(start) && (clip.currentTime < start || clip.currentTime >= end)) clip.currentTime = Math.max(0, start);
+                });
+                clip.addEventListener('timeupdate', () => {
+                    if (Number.isFinite(end) && clip.currentTime >= end) clip.pause();
+                });
+            } catch (error) {
+                if (label) label.textContent = error?.message || 'Não foi possível abrir o áudio do vídeo.';
+            }
+        }
     }
 
     function uniqueParticipants() {
@@ -505,7 +530,7 @@
 
         const recordingTranscripts = [...state.transcripts].filter((row) => {
             const source = String(row.transcript_source || row.source || '').trim().toLowerCase();
-            return source === 'recording_video_whisper' || source === 'recording_whisper_local';
+            return source === 'recording_gemini' || source === 'recording_video_whisper' || source === 'recording_whisper_local';
         });
         const transcriptSourceRows = recordingTranscripts.length ? recordingTranscripts : [...state.transcripts];
         const isInferredTranscript = (row) => String(row.participant_identity || '').startsWith('__condomit_inferred__:');
@@ -974,7 +999,7 @@
 
     async function refreshRecordingStatus() {
         if (recordingRefreshInFlight || document.hidden) return;
-        if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando', 'falhou'].includes(row.status))) return;
+        if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando', 'falhou'].includes(row.status) || row.status === 'concluido' && ['pendente', 'processando', 'falhou'].includes(row.transcription_status))) return;
         recordingRefreshInFlight = true;
         try {
             const token = await window.resolveSupabaseAccessToken?.();
@@ -989,10 +1014,15 @@
             const rows = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []);
             const statuses = new Map((verified.recordings || []).map(item => [String(item.recording_id), item]));
             state.recordingStatuses = rows.map(row => ({ ...row, verification: statuses.get(String(row.id)) || null }));
-            state.recordings = rows.filter(row => row.status === 'concluido' && row.recording_url && statuses.get(String(row.id))?.storage_verified);
+            state.recordings = rows.filter(row => row.status === 'concluido' && row.recording_url && (statuses.get(String(row.id))?.storage_verified || !statuses.has(String(row.id))));
+            const latestTranscripts = await fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => null);
+            if (latestTranscripts && (latestTranscripts.length !== state.transcripts.length || latestTranscripts.some((row, index) => row.id !== state.transcripts[index]?.id))) {
+                state.transcripts = latestTranscripts;
+                renderMinutes();
+            }
             renderHero();
             renderRecordings();
-            if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando'].includes(row.status))) {
+            if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando'].includes(row.status) || row.status === 'concluido' && ['pendente', 'processando', 'falhou'].includes(row.transcription_status))) {
                 clearInterval(recordingRefreshTimer);
                 recordingRefreshTimer = null;
             }
@@ -1006,9 +1036,9 @@
     function startRecordingRefresh() {
         clearInterval(recordingRefreshTimer);
         recordingRefreshTimer = null;
-        if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando'].includes(row.status))) return;
+        if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando'].includes(row.status) || row.status === 'concluido' && ['pendente', 'processando', 'falhou'].includes(row.transcription_status))) return;
         setTimeout(() => refreshRecordingStatus().catch(() => {}), 1000);
-        recordingRefreshTimer = setInterval(() => refreshRecordingStatus().catch(() => {}), 12000);
+        recordingRefreshTimer = setInterval(() => refreshRecordingStatus().catch(() => {}), 8000);
     }
 
     function renderRecordings() {
@@ -1016,6 +1046,7 @@
         if (!container) return;
         if (!state.recordings.length) {
             const statuses = (state.recordingStatuses || []).map(row => String(row?.status || '').toLowerCase());
+            const failureDetail = (state.recordingStatuses || []).find(row => row?.status === 'falhou' && row?.verification?.diagnostic)?.verification?.diagnostic || '';
             const waiting = statuses.some(status => ['pendente','gravando'].includes(status));
             const failed = statuses.includes('falhou');
             const unavailableFile = (state.recordingStatuses || []).some(row => row?.status === 'concluido' && row?.verification && !row.verification.storage_verified);
@@ -1026,6 +1057,12 @@
                 : failed
                 ? 'O LiveKit Egress falhou e o vídeo MP4 não foi confirmado no Storage. Confira o diagnóstico do Egress, as permissões e credenciais S3 e os logs da Netlify. Os trechos de áudio salvos podem continuar disponíveis na conferência da transcrição.'
                 : 'Nenhuma gravação registrada. Confira as variáveis do Egress, o bucket S3 e o webhook de conclusão.'}</div><button class="summary-secondary" type="button" id="refreshAssemblyRecordings079"><i class="fas fa-rotate-right"></i> Verificar gravações novamente</button>`;
+            if (failed && failureDetail) {
+                const detail = document.createElement('p');
+                detail.className = 'summary-empty';
+                detail.textContent = failureDetail;
+                container.prepend(detail);
+            }
             container.querySelector('#refreshAssemblyRecordings079')?.addEventListener('click', async event => {
                 const button = event.currentTarget;
                 button.disabled = true;
@@ -1043,7 +1080,8 @@
         container.innerHTML = state.recordings.map((row, index) => `
             <article class="recording-card" data-recording-index="${index}">
                 <div class="recording-card-head"><div><strong><i class="fas fa-video"></i> Gravação ${index + 1}</strong><small>${row.started_at ? new Date(row.started_at).toLocaleString('pt-BR') : 'Horário não informado'} • ${formatDuration(row.duration_seconds)} • ${formatBytes(row.file_size_bytes)}</small></div></div>
-                <div class="recording-player-loading"><i class="fas fa-spinner fa-spin"></i> Preparando reprodução segura...</div>
+                <p class="recording-transcription-status">${row.transcription_status === 'concluido' ? 'Transcrição Gemini disponível na ata.' : row.transcription_status === 'processando' ? 'Vídeo disponível. Gemini está transcrevendo em segundo plano.' : row.transcription_status === 'falhou' ? 'Vídeo disponível. Falha na transcrição Gemini; uma nova tentativa será realizada quando possível.' : 'Vídeo disponível. Transcrição Gemini aguardando processamento.'}</p>
+              <div class="recording-player-loading"><i class="fas fa-spinner fa-spin"></i> Preparando reprodução segura...</div>
             </article>`).join('');
         state.recordings.forEach(async (row, index) => {
             const card = container.querySelector(`[data-recording-index="${index}"]`);

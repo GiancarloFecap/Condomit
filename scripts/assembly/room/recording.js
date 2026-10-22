@@ -1,5 +1,4 @@
 import { state } from './state.js?v=0724';
-import { transcribeRecordedAssembly } from './recorded-transcription.js?v=075';
 
 const recording = {
   recorder: null,
@@ -498,38 +497,6 @@ async function uploadRecordingBlob(blob, startedAt, endedAt) {
   };
 }
 
-async function downloadSavedRecordingBlob(savedRecording) {
-  const bucket = String(savedRecording?.bucket || '').trim();
-  const storagePath = String(savedRecording?.storagePath || '').trim();
-  if (!bucket || !storagePath) {
-    throw new Error('A gravação salva na Ata não possui um endereço válido para transcrição.');
-  }
-
-  const token = await window.resolveSupabaseAccessToken?.().catch(() => null);
-  if (!token) throw new Error('Sessão expirada ao preparar a transcrição da gravação salva.');
-
-  const encodedPath = storagePath.split('/').map(encodeURIComponent).join('/');
-  const url = `${window.SUPABASE_URL}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${encodedPath}`;
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      apikey: window.SUPABASE_ANON_KEY
-    },
-    cache: 'no-store'
-  });
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    throw new Error(detail || `Não foi possível ler a gravação salva na Ata (${response.status}).`);
-  }
-
-  const blob = await response.blob();
-  if (!blob?.size) throw new Error('A gravação salva na Ata está vazia e não pode ser transcrita.');
-  return blob;
-}
-
-
 async function persistPendingRecording() {
   const pending = recording.pendingUpload;
   if (!pending?.blob?.size) return null;
@@ -549,30 +516,8 @@ async function persistPendingRecording() {
        
        
        
-      try {
-        const label = document.getElementById('recording-status');
-        if (label) {
-          label.hidden = false;
-          label.textContent = 'Preparando a gravação salva na Ata para transcrição…';
-        }
-        const savedVideoBlob = await downloadSavedRecordingBlob(result);
-        if (label) label.textContent = 'Gerando transcrição a partir do vídeo salvo na Ata…';
-        await transcribeRecordedAssembly({
-          blob: savedVideoBlob,
-          assemblyId: Number(state.assemblyId),
-          startedAt: pending.startedAt,
-          speakerTimeline: pending.speakerTimeline || [],
-          participantDirectory: pending.participantDirectory || {}
-        });
-      } catch (transcriptionError) {
-        console.warn('[Assembly Recording] Gravação salva, mas a transcrição do vídeo não foi concluída.', transcriptionError);
-        const label = document.getElementById('recording-status');
-        if (label) {
-          label.hidden = false;
-          label.textContent = 'Gravação salva. A transcrição automática do vídeo não pôde ser concluída neste dispositivo.';
-          label.title = transcriptionError?.message || '';
-        }
-      }
+      const label = document.getElementById('recording-status');
+      if (label) label.textContent = 'Gravação salva. O Gemini processará o vídeo no servidor após sua finalização.';
 
       recording.pendingUpload = null;
       return result;

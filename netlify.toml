@@ -117,4 +117,7 @@
   schedule = "* * * * *"
 
 [functions."assembly-recording-sync"]
-  schedule = "*/5 * * * *"
+  schedule = "* * * * *"
+
+[functions."assembly-gemini-dispatch"]
+  schedule = "* * * * *"
