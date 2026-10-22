@@ -561,7 +561,8 @@ exports.handler = async (event) => {
       );
     }
 
-    const canPublish = true;
+    const chatOnly = body.chat_only === true;
+    const canPublish = !chatOnly || isSindico || isOrganizer;
     const canSubscribe = true;
 
     const canManage =
@@ -571,16 +572,13 @@ exports.handler = async (event) => {
       canManage;
 
      
-    const canPublishSources = [
-      TrackSource.CAMERA,
-      TrackSource.MICROPHONE,
-    ];
+    const canPublishSources = chatOnly
+      ? []
+      : [TrackSource.CAMERA, TrackSource.MICROPHONE];
 
-     
-    const canPublishSourceNames = [
-      'camera',
-      'microphone',
-    ];
+    const canPublishSourceNames = chatOnly
+      ? []
+      : ['camera', 'microphone'];
 
     if (canScreenShare) {
       canPublishSources.push(
@@ -649,6 +647,7 @@ exports.handler = async (event) => {
         is_organizer: isOrganizer,
         is_sindico: isSindico,
         can_manage: canManage,
+        chat_only: chatOnly,
       });
 
     let livekitAccessToken;
@@ -810,6 +809,7 @@ exports.handler = async (event) => {
       permissions: {
         canPublish,
         canSubscribe,
+        chatOnly,
 
         canPublishSources:
           canPublishSourceNames,

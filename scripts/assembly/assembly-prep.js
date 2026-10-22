@@ -1073,7 +1073,7 @@
       if (body) {
         const option = document.createElement('label');
         option.className = 'assembly-chat-entry-choice';
-        option.innerHTML = '<input type="checkbox" id="assembly-entry-chat-only"><span><strong>Entrar somente pelo chat</strong><small>Sem câmera e microfone. Você poderá participar pelo chat usando sua conta.</small></span>';
+        option.innerHTML = '<input type="checkbox" id="assembly-entry-chat-only"><span><strong>Entrar somente pelo chat</strong><small>Sem câmera nem microfone, com acesso às pautas, votações, documentos e compartilhamento de tela conforme seu perfil.</small></span>';
         body.appendChild(option);
         chatChoice = option.querySelector('input');
       }

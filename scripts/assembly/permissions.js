@@ -84,7 +84,7 @@
   function canManageAgenda(user, assembly) {
     user = resolveUser(user);
     if (!user || !assembly) return false;
-    return isPrivileged(user, assembly);
+    return String(user.user_type || user.type || user.role || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === 'sindico';
   }
 
   function canSendMessages(user, assembly) {

@@ -1,7 +1,7 @@
 import { state } from './state.js?v=079';
-import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0724';
+import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0752';
 import { setHeader, setPanelOpen, setConnectionConnecting, setConnectionConnected, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=079';
-import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, loadAgenda, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, startAgendaItem, formatCountdown, isPollOpen } from './data.js?v=084';
+import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, loadAgenda, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, startAgendaItem, formatCountdown, isPollOpen } from './data.js?v=0752';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=079';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
 import { startIncrementalTranscription, stopIncrementalTranscription, getIncrementalTranscriptionState } from './incremental-transcription.js?v=083';
@@ -238,9 +238,9 @@ function toast(msg, type) {
   console.log('[Assembly Toast]', type ? `[${type}]` : '', msg);
 }
 
-async function getTokenInfo() {
+async function getTokenInfo(chatOnly = false) {
   if (!window.AssemblyAPI?.requestLivekitToken) throw new Error('AssemblyAPI indisponível');
-  return await window.AssemblyAPI.requestLivekitToken(state.assemblyId);
+  return await window.AssemblyAPI.requestLivekitToken(state.assemblyId, chatOnly);
 }
 
 
@@ -493,11 +493,16 @@ function startPollCountdownTick() {
   }, 1000);
 }
 
+function isSindicoUser() {
+  const user = state.tokenInfo?.user || {};
+  return String(user.type || user.user_type || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === 'sindico';
+}
+
 function isPrivilegedUser() {
   const user = state.tokenInfo?.user || null;
   const assembly = state.assembly || null;
-  if (window.AssemblyPermissions?.canManageAgenda) {
-    return !!window.AssemblyPermissions.canManageAgenda(user, assembly);
+  if (state.permissions && typeof state.permissions.canManage === 'boolean') {
+    return state.permissions.canManage;
   }
   if (!user || !assembly) return false;
   const userType = String(user.type || user.role || '').toLowerCase();
@@ -600,8 +605,8 @@ function showSimpleModal({ title, bodyHtml, onMount, onSubmit, submitLabel, canc
 }
 
 function bindRoomActions() {
-  const canManage = !state.chatOnly && isPrivilegedUser();
-  state.canManageAgenda = canManage;
+  const canManage = isPrivilegedUser();
+  state.canManageAgenda = isSindicoUser();
   if (canManage) {
     const btnAgenda = $('btn-add-agenda');
     const btnPoll = $('btn-add-poll');
@@ -906,11 +911,6 @@ async function init() {
     await loadAssembly();
     setHeader(state.assembly);
 
-    const tokenInfo = await getTokenInfo();
-    state.tokenInfo = tokenInfo;
-    state.permissions = tokenInfo.permissions || {};
-    await loadAssemblyProfilePhotos();
-
     state.chatOnly = (() => {
       try {
         const mode = sessionStorage.getItem('prep_chat_only_assembly') === String(state.assemblyId);
@@ -918,32 +918,34 @@ async function init() {
         return mode;
       } catch (_) { return false; }
     })();
+    const tokenInfo = await getTokenInfo(state.chatOnly);
+    state.tokenInfo = tokenInfo;
+    state.permissions = tokenInfo.permissions || {};
+    await loadAssemblyProfilePhotos();
     bindRoomActions();
-    if (!state.chatOnly) bindModeratorMenu();
+    bindModeratorMenu();
 
-    if (!state.chatOnly) await connectToRoom(tokenInfo);
-    else {
-      state.connected = true;
-      setConnectionConnected();
+    await connectToRoom(tokenInfo);
+    if (state.chatOnly) {
       document.body.classList.add('assembly-chat-only');
-      const stage = $('call-grid');
-      if (stage) {
-        const message = document.createElement('div');
-        message.className = 'chat-only-info';
-        message.textContent = 'Modo somente chat: microfone, câmera, áudio e vídeo desativados. Você pode acompanhar e enviar mensagens pelo chat.';
-        stage.replaceChildren(message);
-      }
-      for (const id of ['btn-mic','btn-camera','btn-switch-camera','btn-screen','btn-hand','btn-stop-screen-share']) {
+      for (const id of ['btn-mic', 'btn-camera', 'btn-switch-camera']) {
         const control = $(id);
-        if (control) { control.disabled = true; control.hidden = true; control.style.display = 'none'; }
+        if (!control) continue;
+        control.disabled = true;
+        control.classList.remove('active');
+        control.setAttribute('aria-disabled', 'true');
+        control.title = 'Desativado no modo somente chat';
+        control.setAttribute('aria-label', id === 'btn-mic' ? 'Microfone desligado' : 'Câmera desligada');
       }
-      document.querySelectorAll('.panel-tab:not([data-tab=chat])').forEach(tab => tab.hidden = true);
+      $('btn-mic')?.querySelector('i')?.classList.replace('fa-microphone', 'fa-microphone-slash');
+      $('btn-camera')?.querySelector('i')?.classList.replace('fa-video', 'fa-video-slash');
+      const switchCameraButton = $('btn-switch-camera');
+      if (switchCameraButton) switchCameraButton.hidden = true;
       document.querySelector('.panel-tab[data-tab=chat]')?.click();
+      showBanner('Modo somente chat: câmera, microfone e som da chamada desativados. Participantes, pautas, documentos, votações e telas compartilhadas permanecem disponíveis.', 'info');
     }
 
-     
-     
-    if (!state.chatOnly) beginRecordingStatusWatch();
+    beginRecordingStatusWatch();
 
     const switchCameraButton = $('btn-switch-camera');
     if (switchCameraButton && !state.chatOnly) {
@@ -969,7 +971,7 @@ async function init() {
       }
     }, 12000);
 
-    setPanelOpen(state.chatOnly);
+    setPanelOpen(false);
   } catch (e) {
     console.error(e);
     showBanner(e.message || 'Erro ao entrar na assembleia', 'error');

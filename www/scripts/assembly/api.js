@@ -283,7 +283,8 @@
   }
 
   async function requestLivekitToken(
-    assemblyId
+    assemblyId,
+    chatOnly = false
   ) {
     const normalizedAssemblyId =
       Number.parseInt(
@@ -316,7 +317,8 @@
           body:
             JSON.stringify({
               assembly_id:
-                normalizedAssemblyId
+                normalizedAssemblyId,
+              chat_only: chatOnly === true
             })
         }
       );

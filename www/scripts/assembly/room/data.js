@@ -878,7 +878,6 @@ export async function refreshLists({ includeDocuments = false } = {}) {
   renderSimpleList('polls-list', 'polls-count', polls, (poll) => {
     const opts = optionsByPoll.get(poll.id) || [];
     const item = buildPollItem(poll, opts, async (_poll, opt) => {
-      if (state.chatOnly) throw new Error('No modo somente chat não é possível votar.');
       const key = `${String(poll.id)}::${currentUserEmail}`;
       if (currentUserEmail && votesByPollAndUser.has(key)) {
         if (window.AssemblyUtils?.showToast) window.AssemblyUtils.showToast('Você já votou nesta votação.', 'warning');

@@ -617,6 +617,7 @@ let audioUnlockInstalled = false;
 let audioUnlockInProgress = false;
 
 async function unlockRemoteAudioPlayback() {
+  if (state.chatOnly) return false;
   const room = state.room;
   if (!room || audioUnlockInProgress) return false;
 
@@ -667,6 +668,7 @@ function attachAudio(
   track,
   participant = null
 ) {
+  if (state.chatOnly) return;
   if (!track) {
     return;
   }
@@ -805,6 +807,10 @@ function removeAllAttachedAudio() {
 function syncRemoteAudio(
   room
 ) {
+  if (state.chatOnly) {
+    removeAllAttachedAudio();
+    return;
+  }
   if (!room) {
     return;
   }
@@ -1163,10 +1169,10 @@ async function enableCameraWithFallback(room, preferredDeviceId = '') {
 function getInitialDevicePrefs() {
   const preferences = {
     cameraOn:
-      true,
+      !state.chatOnly,
 
     micOn:
-      true,
+      !state.chatOnly,
 
     cameraDeviceId:
       null,
@@ -1206,8 +1212,12 @@ function getInitialDevicePrefs() {
     );
   }
 
+  if (state.chatOnly) {
+    preferences.cameraOn = false;
+    preferences.micOn = false;
+  }
+
   if (isMobileCameraDevice()) {
-     
     state.mobileCameraFacing = 'user';
   }
 
@@ -1973,6 +1983,7 @@ export async function connectToRoom(
 }
 
 export async function toggleMicrophone() {
+  if (state.chatOnly) return;
   const room =
     state.room;
 
@@ -2039,6 +2050,7 @@ export async function canSwitchMobileCamera() {
 }
 
 export async function switchMobileCamera() {
+  if (state.chatOnly) return false;
   const room = state.room;
   if (!room || !state.connected || !isMobileCameraDevice()) return false;
 
@@ -2140,6 +2152,7 @@ export async function switchMobileCamera() {
 }
 
 export async function toggleCamera() {
+  if (state.chatOnly) return;
   const room =
     state.room;
 
