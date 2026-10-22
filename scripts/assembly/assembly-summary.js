@@ -100,7 +100,7 @@
         window.syncAllAvatars?.(state.user);
     }
 
-    async function loadAll() {
+    async function loadAll({ verifyRecordings = false } = {}) {
         if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase não inicializado.');
 
         const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings, speechActivities, signatures, commentVotes] = await Promise.all([
@@ -122,7 +122,7 @@
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
         let recordingVerification = null;
-        if ((recordings || []).length) {
+        if (verifyRecordings && (recordings || []).length) {
           try {
             const token = await window.resolveSupabaseAccessToken?.();
             if (token) {
@@ -298,6 +298,7 @@
         renderMinutes();
         renderPolls();
         renderRecordings();
+        startRecordingRefresh();
         renderComments();
     }
 
@@ -966,6 +967,48 @@
         return h ? `${h}h ${String(m).padStart(2, '0')}min` : `${m}min ${String(sec).padStart(2, '0')}s`;
     }
 
+    let recordingRefreshInFlight = false;
+    let recordingRefreshTimer = null;
+
+    async function refreshRecordingStatus() {
+        if (recordingRefreshInFlight || document.hidden) return;
+        if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando', 'falhou'].includes(row.status))) return;
+        recordingRefreshInFlight = true;
+        try {
+            const token = await window.resolveSupabaseAccessToken?.();
+            if (!token) return;
+            const result = await fetch('/.netlify/functions/assembly-recording-reconcile', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assembly_id: Number(state.id) }), cache: 'no-store'
+            });
+            if (!result.ok) return;
+            const verified = await result.json();
+            const rows = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []);
+            const statuses = new Map((verified.recordings || []).map(item => [String(item.recording_id), item]));
+            state.recordingStatuses = rows.map(row => ({ ...row, verification: statuses.get(String(row.id)) || null }));
+            state.recordings = rows.filter(row => row.status === 'concluido' && row.recording_url && statuses.get(String(row.id))?.storage_verified);
+            renderHero();
+            renderRecordings();
+            if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando'].includes(row.status))) {
+                clearInterval(recordingRefreshTimer);
+                recordingRefreshTimer = null;
+            }
+        } catch (error) {
+            console.warn('[ASSEMBLY RECORDING REFRESH]', String(error?.message || error));
+        } finally {
+            recordingRefreshInFlight = false;
+        }
+    }
+
+    function startRecordingRefresh() {
+        clearInterval(recordingRefreshTimer);
+        recordingRefreshTimer = null;
+        if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando'].includes(row.status))) return;
+        setTimeout(() => refreshRecordingStatus().catch(() => {}), 1000);
+        recordingRefreshTimer = setInterval(() => refreshRecordingStatus().catch(() => {}), 12000);
+    }
+
     function renderRecordings() {
         const container = document.getElementById('assemblyRecordings');
         if (!container) return;
@@ -975,7 +1018,7 @@
             const failed = statuses.includes('falhou');
             const unavailableFile = (state.recordingStatuses || []).some(row => row?.status === 'concluido' && row?.verification && !row.verification.storage_verified);
             container.innerHTML = `<div class="summary-empty">${waiting
-              ? 'A gravação está em andamento ou em processamento. Volte a esta página após o encerramento do último participante.'
+              ? 'A gravação está em andamento ou finalizando o upload para o armazenamento. A reprodução será liberada quando o arquivo estiver disponível.'
               : unavailableFile
                 ? 'O Egress registrou uma gravação, mas o arquivo não foi confirmado no Storage. Confira o bucket S3, a conclusão do Egress e o webhook.'
                 : failed
@@ -985,7 +1028,7 @@
                 const button = event.currentTarget;
                 button.disabled = true;
                 try {
-                    await loadAll();
+                    await loadAll({ verifyRecordings: true });
                     renderHero();
                     renderRecordings();
                 } catch (error) {

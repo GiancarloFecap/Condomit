@@ -1,9 +1,10 @@
 import { state } from './state.js?v=079';
-import { getLocalWhisper } from './local-whisper.js?v=078';
+import { getLocalWhisper } from './local-whisper.js?v=081';
 
 const SEGMENT_MS = 8000;
 const MAX_PENDING_SEGMENTS = 48;
 const RETRY_DELAY_MS = 12000;
+const MAX_AUDIO_JOBS = 32;
 let active = false;
 let closing = false;
 let audioContext = null;
@@ -27,6 +28,9 @@ let missedCount = 0;
 let captureError = '';
 let modelReady = false;
 let lastStatus = '';
+let audioUploadFailures = 0;
+let audioUploading = 0;
+const audioJobs = [];
 const queue = [];
 const listeners = new Set();
 
@@ -51,7 +55,7 @@ function notify() {
 }
 
 export function getIncrementalTranscriptionState() {
-  return { pending: queue.length + Number(processing), saved: processedCount, failed: failedCount, missed: missedCount, active, closing, modelReady, captureError, status: lastStatus };
+  return { pending: queue.length + Number(processing), saved: processedCount, failed: failedCount, missed: missedCount, audioPending: audioJobs.length + audioUploading, audioFailed: audioUploadFailures, active, closing, modelReady, captureError, status: lastStatus };
 }
 
 function microphoneTrack() {
@@ -88,7 +92,7 @@ function hasSpeechSignal(audio) {
   const stride = Math.max(1, Math.floor(audio.length / 30000));
   let samples = 0;
   for (let i = 0; i < audio.length; i += stride) { sum += audio[i] * audio[i]; samples++; }
-  return Math.sqrt(sum / Math.max(samples, 1)) > 0.002;
+  return Math.sqrt(sum / Math.max(samples, 1)) > 0.0008;
 }
 
 function resampleTo16K(chunks, sourceRate, sampleCount) {
@@ -257,7 +261,7 @@ async function ensureAudioUploaded(segment, pcm) {
   return path;
 }
 
-async function saveText(text, identity, audioPath) {
+async function saveText(text, identity) {
   if (typeof window.supabaseFetch !== 'function') throw new Error('Sessão do Supabase ainda não carregada.');
   const payload = {
     target_assembly_id: Number(state.assemblyId),
@@ -266,20 +270,58 @@ async function saveText(text, identity, audioPath) {
     transcript_source_value: 'whisper_browser_local',
     confidence_value: null
   };
+  const saved = await window.supabaseFetch('/rpc/condomit_append_assembly_transcript', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const row = Array.isArray(saved) ? saved[0] : saved;
+  if (!Number.isSafeInteger(Number(row?.id)) || Number(row.id) <= 0) throw new Error('O banco não confirmou o identificador do trecho transcrito.');
+  return Number(row.id);
+}
+
+async function uploadTranscriptAudio(job) {
+  const audioPath = await ensureAudioUploaded(job.segment, job.pcm);
+  await window.supabaseFetch('/rpc/condomit_attach_assembly_transcript_audio_056', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target_transcript_id: job.transcriptId, audio_path_value: audioPath })
+  });
+}
+
+async function runAudioJobs() {
+  if (audioUploading || !audioJobs.length) return;
+  audioUploading = 1;
+  notify();
   try {
-    await window.supabaseFetch('/rpc/condomit_append_assembly_transcript_audio_055', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload, audio_path_value: audioPath })
-    });
-  } catch (error) {
-    if (!/PGRST202|could not find the function|function.*does not exist|não encontr.*função/i.test(String(error?.message || ''))) throw error;
-    await window.supabaseFetch('/rpc/condomit_append_assembly_transcript', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    captureError = 'A migração 055 precisa ser aplicada para vincular áudio aos trechos.';
-    setStatus('Texto salvo · áudio sem vínculo', captureError, true);
+    while (audioJobs.length) {
+      const job = audioJobs[0];
+      try {
+        await uploadTranscriptAudio(job);
+      } catch (error) {
+        audioUploadFailures++;
+        captureError = 'Texto salvo; áudio individual não vinculado. Verifique as migrações 056 e 057 e as permissões do Storage.';
+        setStatus('Texto salvo · falha ao anexar áudio', String(error?.message || error), true);
+        log('audio-attachment-error', { transcriptId: job.transcriptId, reason: String(error?.message || error) });
+      }
+      audioJobs.shift();
+      notify();
+    }
+  } finally {
+    audioUploading = 0;
+    notify();
   }
+}
+
+function queueAudioUpload(segment, pcm, transcriptId) {
+  if (audioJobs.length >= MAX_AUDIO_JOBS) {
+    audioUploadFailures++;
+    captureError = 'Texto salvo, mas a fila de áudios individuais está sobrecarregada.';
+    log('audio-attachment-overload', { transcriptId });
+    notify();
+    return;
+  }
+  audioJobs.push({ segment, pcm, transcriptId });
+  runAudioJobs();
+  notify();
 }
 
 async function processQueue() {
@@ -299,10 +341,10 @@ async function processQueue() {
           const text = usefulText(output?.text || (typeof output === 'string' ? output : ''));
           if (text) {
             setStatus(`Salvando texto · ${queue.length} pendente(s)`, 'Enviando trecho reconhecido ao banco de dados.');
-            const audioPath = await ensureAudioUploaded(segment, audio);
-            await saveText(text, segment.identity, audioPath);
+            const transcriptId = await saveText(text, segment.identity);
             processedCount++;
-            log('segment-saved', { saved: processedCount });
+            queueAudioUpload(segment, audio, transcriptId);
+            log('segment-saved', { saved: processedCount, transcriptId });
           }
         }
         queue.shift();
@@ -326,7 +368,8 @@ async function processQueue() {
   } finally {
     processing = false;
     if (!queue.length && !failedCount && !missedCount) {
-      setStatus(modelReady ? `Transcrição salva · ${processedCount} trecho(s)` : 'Capturando áudio · aguardando voz', 'A confirmação de salvamento é exibida somente após a resposta do Supabase.');
+      if (audioUploadFailures) setStatus(`Texto salvo · ${audioUploadFailures} áudio(s) sem vínculo`, captureError, true);
+      else setStatus(modelReady ? `Transcrição salva · ${processedCount} trecho(s)` : 'Capturando áudio · aguardando voz', 'O texto é persistido independentemente do armazenamento dos arquivos de áudio.');
     }
     notify();
   }
@@ -399,6 +442,14 @@ export function startIncrementalTranscription() {
   retryAfter = 0;
   setStatus('Iniciando captura do microfone…', 'Áudio, reconhecimento e salvamento serão acompanhados separadamente.');
   retry();
+  getLocalWhisper(message => {
+    if (active && !queue.length) setStatus(message, 'Preparando reconhecimento local enquanto o microfone é capturado.');
+  }).then(() => { modelReady = true; notify(); }).catch(error => {
+    modelReady = false;
+    captureError = `Modelo de reconhecimento indisponível: ${String(error?.message || error)}`;
+    setStatus('Falha ao carregar modelo de voz', captureError, true);
+    notify();
+  });
   retryTimer = setInterval(retry, 2000);
   notify();
 }
@@ -415,14 +466,15 @@ export async function stopIncrementalTranscription({ timeoutMs = 30000 } = {}) {
   if (recorder?.state === 'recording') recorder.stop();
   if (stopping) await Promise.race([stopping, new Promise(resolve => setTimeout(resolve, 2000))]);
   const deadline = Date.now() + Math.max(0, timeoutMs);
-  while ((queue.length || processing) && Date.now() < deadline) {
+  while ((queue.length || processing || audioJobs.length || audioUploading) && Date.now() < deadline) {
     if (Date.now() >= retryAfter) processQueue();
+    if (audioJobs.length && !audioUploading) runAudioJobs();
     await new Promise(resolve => setTimeout(resolve, 250));
   }
   const outcome = getIncrementalTranscriptionState();
   closing = false;
-  if (outcome.pending || outcome.failed || outcome.missed) {
-    setStatus(`Transcrição incompleta · ${outcome.pending} pendente(s)`, 'Você pode continuar na sala para tentar salvar os trechos. A gravação do servidor deve ser conferida.', true);
+  if (outcome.pending || outcome.failed || outcome.missed || outcome.audioPending || outcome.audioFailed) {
+    setStatus(`Transcrição: ${outcome.saved} salva(s), ${outcome.pending} pendente(s), ${outcome.audioPending} áudio(s) aguardando`, 'O texto salvo permanece na ata. Confira os trechos de áudio após a conclusão do upload.', true);
   }
   notify();
   return outcome;

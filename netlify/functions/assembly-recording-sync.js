@@ -1,6 +1,6 @@
 'use strict';
 const { createClient } = require('@supabase/supabase-js');
-const { reconcileRecording, client } = require('./lib/assembly-recording-state');
+const { reconcileRecording, client, stopAssemblyEgress } = require('./lib/assembly-recording-state');
 
 exports.handler = async () => {
   try {
@@ -14,6 +14,17 @@ exports.handler = async () => {
       .limit(20);
     if (error) throw error;
     const api = client();
+    const ids = [...new Set((data || []).filter(row => row.egress_id).map(row => row.assembly_id))];
+    if (ids.length) {
+      const { data: assemblies, error: assemblyError } = await admin.from('scheduled_assemblies').select('id,status').in('id', ids);
+      if (assemblyError) throw assemblyError;
+      for (const assembly of assemblies || []) {
+        if (['encerrada', 'cancelada'].includes(assembly.status)) {
+          try { await stopAssemblyEgress(admin, assembly.id, api); }
+          catch (error) { console.warn('[ASSEMBLY RECORDING AUTO STOP]', { assembly: assembly.id, message: String(error?.message || error) }); }
+        }
+      }
+    }
     let updated = 0;
     for (const record of data || []) {
       try {

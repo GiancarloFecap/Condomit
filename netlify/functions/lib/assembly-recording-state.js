@@ -18,24 +18,39 @@ function storagePath(url, assemblyId) {
   return path && !path.includes('/') && !path.includes('..') ? path : '';
 }
 
-const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-
 async function checkFile(admin, assemblyId, filename) {
   if (!filename) return { exists: false, stable: false, size: 0 };
-  const list = async () => {
-    const { data, error } = await admin.storage.from(BUCKET).list(String(assemblyId), { limit: 1000, search: filename });
-    if (error) throw error;
-    const file = (data || []).find(item => item.name === filename);
-    const size = Number(file?.metadata?.size || file?.metadata?.contentLength || 0);
-    const modified = new Date(file?.updated_at || file?.created_at || 0).getTime();
-    return { exists: Boolean(file), size, modified };
-  };
-  const first = await list();
-  if (!first.exists || first.size <= 0) return { exists: false, stable: false, size: 0 };
-  if (!first.modified || Date.now() - first.modified < 10000) return { exists: true, stable: false, size: first.size };
-  await pause(650);
-  const second = await list();
-  return { exists: second.exists, stable: second.exists && second.size === first.size && second.size > 0, size: second.size };
+  const { data, error } = await admin.storage.from(BUCKET).list(String(assemblyId), { limit: 1000, search: filename });
+  if (error) throw error;
+  const object = (data || []).find(item => item.name === filename);
+  const size = Number(object?.metadata?.size || object?.metadata?.contentLength || object?.size || 0);
+  return { exists: Boolean(object), stable: Boolean(object && size > 0), size };
+}
+
+async function stopAssemblyEgress(admin, assemblyId, api = client()) {
+  if (!api) return { requested: 0, errors: ['LiveKit não configurado'] };
+  const { data, error } = await admin.from('assembly_recordings')
+    .select('id,egress_id,status')
+    .eq('assembly_id', assemblyId).in('status', ['pendente', 'gravando'])
+    .not('egress_id', 'is', null).limit(20);
+  if (error) throw error;
+  let requested = 0;
+  const errors = [];
+  for (const record of data || []) {
+    try {
+      const list = await api.listEgress({ egressId: record.egress_id });
+      const live = list.find(info => info.egressId === record.egress_id);
+      if (live && [0, 1, 'EGRESS_STARTING', 'EGRESS_ACTIVE'].includes(live.status)) {
+        await api.stopEgress(record.egress_id);
+        requested++;
+      }
+    } catch (error) {
+      const message = String(error?.message || error);
+      console.warn('[ASSEMBLY EGRESS STOP]', { recording: record.id, message });
+      errors.push(message);
+    }
+  }
+  return { requested, errors };
 }
 
 function safeStatus(record, remoteState, file, diagnostic) {
@@ -70,7 +85,7 @@ async function reconcileRecording(admin, assemblyId, record, api = client()) {
   }
   const remotelyFinished = remoteState.value === 'concluido';
   const remotelyFailed = remoteState.value === 'falhou';
-  const shouldCheckFile = remotelyFinished || ['concluido', 'falhou'].includes(record.status);
+  const shouldCheckFile = remotelyFinished || ['concluido', 'falhou'].includes(record.status) || (Boolean(record.egress_id) && ['desconhecido', 'consulta_indisponivel'].includes(remoteState.value));
   if (shouldCheckFile && filename) {
     try {
       file = await checkFile(admin, assemblyId, filename);
@@ -83,7 +98,7 @@ async function reconcileRecording(admin, assemblyId, record, api = client()) {
   if (remotelyFailed && !file?.stable) {
     nextStatus = 'falhou';
     diagnostic = 'O LiveKit Egress encerrou com erro. Verifique os registros do serviço.';
-  } else if (remotelyFinished && file?.stable) {
+  } else if (file?.stable && (remotelyFinished || ['concluido', 'falhou'].includes(record.status) || ['desconhecido', 'consulta_indisponivel'].includes(remoteState.value))) {
     nextStatus = 'concluido';
   } else if (remotelyFinished && !file?.stable) {
     const endedAt = Number(remoteState.info?.endedAt || 0);
@@ -138,4 +153,4 @@ async function reconcileAssembly(admin, assemblyId, { limit = 10 } = {}) {
   return records;
 }
 
-module.exports = { reconcileAssembly, reconcileRecording, checkFile, client };
+module.exports = { reconcileAssembly, reconcileRecording, checkFile, stopAssemblyEgress, client };

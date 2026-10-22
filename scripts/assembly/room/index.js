@@ -4,7 +4,7 @@ import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHan
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=077';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=079';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
-import { startIncrementalTranscription, stopIncrementalTranscription, getIncrementalTranscriptionState } from './incremental-transcription.js?v=079';
+import { startIncrementalTranscription, stopIncrementalTranscription, getIncrementalTranscriptionState } from './incremental-transcription.js?v=081';
 const RECORDING_CHECK_MS = 15000;
 let recordingCheckTimer = null;
 let recordingSyncInFlight = false;
@@ -385,7 +385,7 @@ function bindControls() {
         stopIncrementalTranscription({ timeoutMs: 4000 }),
         new Promise(resolve => setTimeout(() => resolve({ pending: 1 }), 5500))
       ]);
-      if (result?.pending || result?.failed || result?.missed) {
+      if (result?.pending || result?.failed || result?.missed || result?.audioPending || result?.audioFailed) {
         toast('Alguns trechos podem não ter sido salvos. Confira a gravação completa na ata.', 'warning');
       }
       await Promise.allSettled([

@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const { stopAssemblyEgress } = require('./lib/assembly-recording-state');
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -24,6 +25,10 @@ exports.handler = async () => {
     .map((row) => row?.assembly_id ?? row)
     .filter(Boolean);
 
+  for (const id of endedIds) {
+    try { await stopAssemblyEgress(supabase, Number(id)); }
+    catch (error) { console.error('[auto-end-assemblies] Finalização de gravação:', { assemblyId: id, message: String(error?.message || error) }); }
+  }
   console.log('[auto-end-assemblies] Assembleias encerradas:', endedIds);
   return { statusCode: 200, body: JSON.stringify({ ok: true, ended: endedIds }) };
 };

@@ -1,4 +1,4 @@
-const CACHE='condomit-shell-v079-20261021';
+const CACHE='condomit-shell-v081-20261021';
 const CORE=['/favicon.ico','/inicio.html','/pages/entrar.html','/pages/tipo-usuario.html','/styles/theme.css','/styles/responsive-mobile.css','/styles/ux-polish.css','/scripts/device-notifications.js','/assets/favicon.png','/assets/logo-nova-condomit.png','/assets/icon-192.png','/assets/icon-512.png','/manifest.webmanifest','/privacidade.html','/suporte.html','/excluir-conta.html'];
 
 self.addEventListener('install',event=>{

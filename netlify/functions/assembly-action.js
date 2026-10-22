@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const { stopAssemblyEgress } = require('./lib/assembly-recording-state');
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -263,12 +264,18 @@ async function handleEnd(assembly, userEmail, userCEP) {
     ended_at: now,
   }, userEmail);
 
+  const recording = await stopAssemblyEgress(supabase, assembly.id).catch(error => {
+    console.error('[ASSEMBLY EGRESS FINALIZATION]', error);
+    return { requested: 0, errors: [String(error?.message || error)] };
+  });
+
   return successResponse({
     action: 'end',
     assembly_id: assembly.id,
     previous_status: assembly.status,
     new_status: ASSEMBLY_STATUS.ENDED,
     ended_at: now,
+    recording_finalization: recording.errors.length ? 'pendente' : 'solicitada',
   });
 }
 
@@ -301,12 +308,18 @@ async function handleCancel(assembly, userEmail, userCEP, reason) {
     reason: reason || null,
   }, userEmail);
 
+  const recording = await stopAssemblyEgress(supabase, assembly.id).catch(error => {
+    console.error('[ASSEMBLY EGRESS FINALIZATION]', error);
+    return { requested: 0, errors: [String(error?.message || error)] };
+  });
+
   return successResponse({
     action: 'cancel',
     assembly_id: assembly.id,
     previous_status: assembly.status,
     new_status: ASSEMBLY_STATUS.CANCELED,
     canceled_at: now,
+    recording_finalization: recording.errors.length ? 'pendente' : 'solicitada',
   });
 }
 
