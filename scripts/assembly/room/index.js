@@ -1,10 +1,10 @@
 import { state } from './state.js?v=079';
 import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0724';
-import { setHeader, setPanelOpen, setConnectionConnecting, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=079';
-import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, formatCountdown, isPollOpen } from './data.js?v=077';
+import { setHeader, setPanelOpen, setConnectionConnecting, setConnectionConnected, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=079';
+import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, loadAgenda, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, startAgendaItem, formatCountdown, isPollOpen } from './data.js?v=084';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=079';
 import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
-import { startIncrementalTranscription, stopIncrementalTranscription, getIncrementalTranscriptionState } from './incremental-transcription.js?v=082';
+import { startIncrementalTranscription, stopIncrementalTranscription, getIncrementalTranscriptionState } from './incremental-transcription.js?v=083';
 const RECORDING_CHECK_MS = 15000;
 let recordingCheckTimer = null;
 let recordingSyncInFlight = false;
@@ -14,6 +14,30 @@ let recordingRetryCount = 0;
 let recordingRecoveryAttempts = 0;
 let nextRecordingRetryAt = 0;
 let leavingAssembly = false;
+let listsRefreshTimer = null;
+let listsRefreshInFlight = false;
+let listsRefreshRequested = false;
+
+function scheduleListsRefresh() {
+  listsRefreshRequested = true;
+  if (listsRefreshInFlight || listsRefreshTimer || leavingAssembly) return;
+  listsRefreshTimer = setTimeout(async () => {
+    listsRefreshTimer = null;
+    if (!listsRefreshRequested || leavingAssembly) return;
+    listsRefreshRequested = false;
+    listsRefreshInFlight = true;
+    try {
+      await refreshLists();
+      updateHandIndicators(state.room);
+      renderParticipantsList(state.room);
+    } catch (error) {
+      console.warn('[Assembly] Falha ao atualizar listas:', error?.message || error);
+    } finally {
+      listsRefreshInFlight = false;
+      if (listsRefreshRequested && !leavingAssembly) scheduleListsRefresh();
+    }
+  }, 280);
+}
 
 function setRecordingStatus(message, isError = false, retry = false, detail = '') {
   const indicator = document.getElementById('recording-status');
@@ -379,9 +403,11 @@ function bindControls() {
     clearInterval(state.heartbeatTimer);
     clearInterval(state.documentsRefreshTimer);
     clearInterval(state._countdownTimer);
+    clearTimeout(listsRefreshTimer);
+    listsRefreshRequested = false;
     const finish = () => window.location.replace('assembleia.html');
     try {
-      const result = await Promise.race([
+      const result = state.chatOnly ? { pending: 0 } : await Promise.race([
         stopIncrementalTranscription({ timeoutMs: 4000 }),
         new Promise(resolve => setTimeout(() => resolve({ pending: 1 }), 5500))
       ]);
@@ -431,16 +457,11 @@ async function initChat() {
 }
 
 async function initLists() {
-  await refreshLists().catch(() => {});
-  const refresh = async () => {
-    await refreshLists().catch(() => {});
-    updateHandIndicators(state.room);
-    renderParticipantsList(state.room);
-  };
-  subscribeAgenda(refresh);
+  await refreshLists({ includeDocuments: true }).catch(() => {});
+  subscribeAgenda(scheduleListsRefresh);
   subscribeDocuments(() => refreshDocuments().catch(() => {}));
-  subscribePolls(refresh);
-  subscribeHands(refresh);
+  subscribePolls(scheduleListsRefresh);
+  subscribeHands(scheduleListsRefresh);
   startPollCountdownTick();
 }
 
@@ -467,7 +488,7 @@ function startPollCountdownTick() {
         }
     });
     if (needsRefresh) {
-      refreshLists().catch(() => {});
+      scheduleListsRefresh();
     }
   }, 1000);
 }
@@ -533,30 +554,54 @@ function showSimpleModal({ title, bodyHtml, onMount, onSubmit, submitLabel, canc
   overlay.appendChild(modal);
   root.appendChild(overlay);
 
-  const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+  let submitting = false;
+  const close = (force = false) => {
+    if (submitting && !force) return;
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
 
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  closeBtn.addEventListener('click', close);
-  cancel.addEventListener('click', close);
+  closeBtn.addEventListener('click', () => close());
+  cancel.addEventListener('click', () => close());
 
   if (typeof onMount === 'function') {
-    try { onMount(body, { submit, close }); } catch (_) {}
+    try { onMount(body, { submit, close: () => close() }); } catch (_) {}
   }
   if (submit && typeof onSubmit === 'function') {
+    const originalLabel = submit.textContent;
+    const progress = document.createElement('span');
+    progress.setAttribute('role', 'status');
+    progress.setAttribute('aria-live', 'polite');
+    progress.hidden = true;
+    progress.textContent = 'Salvando…';
+    footer.prepend(progress);
     submit.addEventListener('click', async () => {
+      if (submitting) return;
+      submitting = true;
+      submit.disabled = true;
+      submit.textContent = 'Salvando…';
+      progress.hidden = false;
+      modal.setAttribute('aria-busy', 'true');
       try {
-        const result = await onSubmit(body, { close });
-        if (result !== false) close();
+        const result = await onSubmit(body, { close: () => close(true) });
+        if (result !== false) close(true);
       } catch (err) {
-          toast(err?.message || String(err || 'Erro'), 'error');
-        }
+        toast(err?.message || String(err || 'Erro'), 'error');
+      } finally {
+        submitting = false;
+        submit.disabled = false;
+        submit.textContent = originalLabel;
+        progress.hidden = true;
+        modal.removeAttribute('aria-busy');
+      }
     });
   }
   return { overlay, body, submit, close };
 }
 
 function bindRoomActions() {
-  const canManage = isPrivilegedUser();
+  const canManage = !state.chatOnly && isPrivilegedUser();
+  state.canManageAgenda = canManage;
   if (canManage) {
     const btnAgenda = $('btn-add-agenda');
     const btnPoll = $('btn-add-poll');
@@ -606,12 +651,12 @@ function openAddAgendaModal() {
       const display_order = orderRaw && Number(orderRaw) >= 0 ? Number(orderRaw) : 0;
       await createAgendaItem({ title, description, estimated_minutes: estimated, display_order });
       toast('Pauta criada com sucesso.', 'success');
-      await refreshLists().catch(() => {});
+      scheduleListsRefresh();
     }
   });
 }
 
-function openAddPollModal() {
+async function openAddPollModal() {
   const body = document.createElement('div');
   body.innerHTML = `
     <div class="field">
@@ -619,6 +664,10 @@ function openAddPollModal() {
       <select id="poll-kind"><option value="regular">Votação geral</option><option value="sindico">Eleição de síndico</option></select>
     </div>
     <div class="field" id="poll-candidates-status" hidden role="status"></div>
+    <div class="field">
+      <label for="poll-agenda">Vincular a uma pauta (opcional)</label>
+      <select id="poll-agenda"><option value="">Nenhuma pauta vinculada</option></select>
+    </div>
     <div class="field">
       <label for="poll-title">Título da votação *</label>
       <input id="poll-title" type="text" maxlength="255" placeholder="Ex: Aprovação orçamento anual 2026" />
@@ -651,6 +700,18 @@ function openAddPollModal() {
     </div>
   `;
 
+  const agendaSelect = body.querySelector('#poll-agenda');
+  try {
+    const agendas = await loadAgenda();
+    agendas.forEach(item => {
+      const option = document.createElement('option');
+      option.value = String(item.id);
+      option.textContent = item.title + (item.status === 'concluida' ? ' (concluída)' : '');
+      agendaSelect.appendChild(option);
+    });
+  } catch (error) {
+    toast(error.message || 'Não foi possível carregar as pautas.', 'warning');
+  }
   const list = body.querySelector('#poll-options-list');
   const addOptionRow = (initialValue) => {
     const row = document.createElement('div');
@@ -746,9 +807,9 @@ function openAddPollModal() {
       }
       const duration = Number(durationRaw);
       if (!duration || duration <= 0) throw new Error('Duração inválida.');
-      await createPollWithDuration({ title, description: description || null, options }, duration);
+      await createPollWithDuration({ title, description: description || null, options, agenda_item_id: b.querySelector('#poll-agenda')?.value || null }, duration);
       toast(`Votação criada. Duração: ${duration} minuto${duration === 1 ? '' : 's'}.`, 'success');
-      await refreshLists().catch(() => {});
+      scheduleListsRefresh();
     }
   });
 }
@@ -817,7 +878,7 @@ function openAddDocModal() {
         file_size_bytes: file.size
       });
       toast('Documento enviado com sucesso.', 'success');
-      await refreshLists().catch(() => {});
+      refreshDocuments().catch(() => {});
     }
   });
 }
@@ -850,23 +911,50 @@ async function init() {
     state.permissions = tokenInfo.permissions || {};
     await loadAssemblyProfilePhotos();
 
+    state.chatOnly = (() => {
+      try {
+        const mode = sessionStorage.getItem('prep_chat_only_assembly') === String(state.assemblyId);
+        sessionStorage.removeItem('prep_chat_only_assembly');
+        return mode;
+      } catch (_) { return false; }
+    })();
     bindRoomActions();
-    bindModeratorMenu();
+    if (!state.chatOnly) bindModeratorMenu();
 
-    await connectToRoom(tokenInfo);
+    if (!state.chatOnly) await connectToRoom(tokenInfo);
+    else {
+      state.connected = true;
+      setConnectionConnected();
+      document.body.classList.add('assembly-chat-only');
+      const stage = $('call-grid');
+      if (stage) {
+        const message = document.createElement('div');
+        message.className = 'chat-only-info';
+        message.textContent = 'Modo somente chat: microfone, câmera, áudio e vídeo desativados. Você pode acompanhar e enviar mensagens pelo chat.';
+        stage.replaceChildren(message);
+      }
+      for (const id of ['btn-mic','btn-camera','btn-switch-camera','btn-screen','btn-hand','btn-stop-screen-share']) {
+        const control = $(id);
+        if (control) { control.disabled = true; control.hidden = true; control.style.display = 'none'; }
+      }
+      document.querySelectorAll('.panel-tab:not([data-tab=chat])').forEach(tab => tab.hidden = true);
+      document.querySelector('.panel-tab[data-tab=chat]')?.click();
+    }
 
      
      
-    beginRecordingStatusWatch();
+    if (!state.chatOnly) beginRecordingStatusWatch();
 
     const switchCameraButton = $('btn-switch-camera');
-    if (switchCameraButton) {
+    if (switchCameraButton && !state.chatOnly) {
       switchCameraButton.hidden = !(await canSwitchMobileCamera());
     }
 
-    startAssemblyTranscription();
-    startIncrementalTranscription();
-    document.addEventListener('pointerdown', () => {
+    if (!state.chatOnly) {
+      startAssemblyTranscription();
+      startIncrementalTranscription();
+    }
+    if (!state.chatOnly) document.addEventListener('pointerdown', () => {
       window.dispatchEvent(new Event('condomit:assembly-allow-audio'));
     }, {passive:true});
 
@@ -881,7 +969,7 @@ async function init() {
       }
     }, 12000);
 
-    setPanelOpen(false);
+    setPanelOpen(state.chatOnly);
   } catch (e) {
     console.error(e);
     showBanner(e.message || 'Erro ao entrar na assembleia', 'error');
@@ -890,7 +978,7 @@ async function init() {
 }
 
 window.addEventListener('beforeunload', event => {
-  const status = getIncrementalTranscriptionState();
+  const status = state.chatOnly ? { pending: 0 } : getIncrementalTranscriptionState();
   if (status.pending && !leavingAssembly) {
     event.preventDefault();
     event.returnValue = '';
@@ -899,7 +987,9 @@ window.addEventListener('beforeunload', event => {
 
 window.addEventListener('pagehide', () => {
   stopRecordingStatusWatch();
-  stopIncrementalTranscription();
+  clearTimeout(listsRefreshTimer);
+  listsRefreshRequested = false;
+  if (!state.chatOnly) stopIncrementalTranscription();
   clearInterval(state.documentsRefreshTimer);
   presenceLeave().catch(() => {});
 });

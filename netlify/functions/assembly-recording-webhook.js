@@ -15,6 +15,11 @@ exports.handler = async event => {
     if (lookupError) throw lookupError;
     if (!row || verified.event !== 'egress_ended') return { statusCode: 200, body: 'ok' };
     const failed = [4, 5, 6].includes(Number(info.status)) || Boolean(info.error);
+    if (failed) {
+      const detail = String(info.error || '').toLowerCase();
+      const category = /s3|storage|bucket|upload|credential|signature|access.denied/.test(detail) ? 'storage' : /codec|encode|decode|media|track/.test(detail) ? 'media' : /room|participant|disconnect|empty/.test(detail) ? 'room' : 'unknown';
+      console.error('[ASSEMBLY EGRESS FAILED]', { egressId: info.egressId, code: info.errorCode || Number(info.status), category });
+    }
     const finished = Number(info.status) === 3;
     const path = `storage://condomit-assembly-recordings/${row.assembly_id}/`;
     const fileName = String(row.recording_url || '').startsWith(path) ? String(row.recording_url).slice(path.length) : '';

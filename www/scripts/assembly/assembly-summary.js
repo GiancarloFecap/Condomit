@@ -1024,7 +1024,7 @@
               : unavailableFile
                 ? 'O Egress registrou uma gravação, mas o arquivo não foi confirmado no Storage. Confira o bucket S3, a conclusão do Egress e o webhook.'
                 : failed
-                ? 'A gravação não foi concluída. Verifique os logs das Functions de gravação e o webhook do LiveKit na Netlify.'
+                ? 'O LiveKit Egress falhou e o vídeo MP4 não foi confirmado no Storage. Confira o diagnóstico do Egress, as permissões e credenciais S3 e os logs da Netlify. Os trechos de áudio salvos podem continuar disponíveis na conferência da transcrição.'
                 : 'Nenhuma gravação registrada. Confira as variáveis do Egress, o bucket S3 e o webhook de conclusão.'}</div><button class="summary-secondary" type="button" id="refreshAssemblyRecordings079"><i class="fas fa-rotate-right"></i> Verificar gravações novamente</button>`;
             container.querySelector('#refreshAssemblyRecordings079')?.addEventListener('click', async event => {
                 const button = event.currentTarget;

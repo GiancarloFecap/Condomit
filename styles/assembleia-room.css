@@ -1212,3 +1212,5 @@ body {
 .recording-status[data-status="info"] { background: rgba(15,23,42,.96); }
 .recording-retry-btn { margin-left: 8px; border: 1px solid currentColor; border-radius: 999px; padding: 4px 9px; color: inherit; background: transparent; font: inherit; cursor: pointer; }
 .recording-retry-btn:disabled { cursor: wait; opacity: .55; }
+
+.agenda-select{background:transparent;border:0;color:var(--call-primary,#3b82f6);cursor:pointer;padding:6px 0;text-align:left;font:inherit;font-size:.83rem}.agenda-actions{padding:8px 0}.agenda-actions[hidden]{display:none}.chat-only-info{margin:auto;padding:24px;max-width:550px;text-align:center;line-height:1.6;color:var(--text-secondary,#b0b7c5)}.assembly-chat-only .call-transcription,.assembly-chat-only .call-screen-share,.assembly-chat-only .call-connection .dot{display:none}.assembly-chat-only .panel-tab[hidden]{display:none}

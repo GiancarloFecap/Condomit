@@ -12,6 +12,8 @@ function createInitialState() {
     user: null,
     permissions: null,
     connected: false,
+    chatOnly: false,
+    canManageAgenda: false,
     activeSpeakers: new Set(),
     cameraTracks: new Map(),
     mobileCameraFacing: 'user',

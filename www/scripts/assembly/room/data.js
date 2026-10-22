@@ -207,12 +207,12 @@ export function subscribePolls(onChange) {
     )
     .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'assembly_poll_options' },
+      { event: '*', schema: 'public', table: 'assembly_poll_options', filter: `cep=eq.${requireAssemblyCep()}` },
       () => onChange?.()
     )
     .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'assembly_votes' },
+      { event: '*', schema: 'public', table: 'assembly_votes', filter: `assembly_id=eq.${state.assemblyId}` },
       () => onChange?.()
     );
   state.pollsSubscription = channel;
@@ -304,6 +304,17 @@ export async function createAgendaItem(payload) {
   return Array.isArray(data) && data.length ? data[0] : null;
 }
 
+export async function startAgendaItem(agendaId) {
+  const id = Number(agendaId);
+  if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Pauta inválida.');
+  const { data, error } = await ensureSupabase().rpc('condomit_start_assembly_agenda_058', {
+    target_assembly_id: Number(state.assemblyId),
+    target_agenda_id: id
+  });
+  if (error) throw new Error(error.message || 'Não foi possível iniciar a pauta.');
+  return data;
+}
+
 export async function createDocument(payload) {
   if (!state.assemblyId) throw new Error('Assembly ausente');
   const cep = requireAssemblyCep();
@@ -347,6 +358,12 @@ export async function createPollWithDuration(payload, durationMinutes) {
     throw new Error('Informe uma duração válida para a votação.');
   }
   const description = payload?.description != null ? safeText(payload.description) : null;
+  const agendaItemId = payload?.agenda_item_id ? Number(payload.agenda_item_id) : null;
+  if (agendaItemId) {
+    if (!Number.isSafeInteger(agendaItemId) || agendaItemId <= 0) throw new Error('Pauta inválida.');
+    const agendas = await loadAgenda();
+    if (!agendas.some(item => Number(item.id) === agendaItemId)) throw new Error('A pauta não pertence a esta assembleia.');
+  }
   const createdBy = state.tokenInfo?.user?.email || null;
   const startAt = new Date();
   const endAt = new Date(startAt.getTime() + Math.round(duration * 60 * 1000));
@@ -357,6 +374,7 @@ export async function createPollWithDuration(payload, durationMinutes) {
     cep,
     title,
     description,
+    agenda_item_id: agendaItemId,
     status: 'aberta',
     created_by: createdBy,
     start_at: startAt.toISOString(),
@@ -423,13 +441,13 @@ export function subscribeHands(onChange) {
   channel.subscribe();
 }
 
-export function buildAgendaItem(item) {
+export function buildAgendaItem(item, onStart = null) {
   const node = document.createElement('div');
   node.className = 'panel-item';
   const title = safeText(item?.title || 'Pauta');
   const desc = safeText(item?.description || '');
   const statusKey = safeText(item?.status || '').toLowerCase();
-  const statuses = {nao_iniciada:'Aguardando início', em_andamento:'Em discussão', concluida:'Concluída', finalizada:'Concluída', cancelada:'Cancelada'};
+  const statuses = {nao_iniciada:'Aguardando início', em_discussao:'Em discussão', em_votacao:'Em votação', em_andamento:'Em discussão', concluida:'Concluída', finalizada:'Concluída', cancelada:'Cancelada'};
   const status = statuses[statusKey] || statusKey.replace(/_/g, ' ');
 
   const info = document.createElement('div');
@@ -447,6 +465,44 @@ export function buildAgendaItem(item) {
   info.appendChild(sub);
 
   node.appendChild(info);
+  if (typeof onStart === 'function') {
+    const details = document.createElement('div');
+    details.className = 'agenda-actions';
+    details.hidden = true;
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'agenda-select';
+    toggle.textContent = 'Selecionar pauta';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.addEventListener('click', () => {
+      details.hidden = !details.hidden;
+      toggle.setAttribute('aria-expanded', String(!details.hidden));
+    });
+    node.append(toggle, details);
+    node.addEventListener('click', event => {
+      if (event.target.closest('button')) return;
+      toggle.click();
+    });
+    if (statusKey === 'nao_iniciada') {
+      const start = document.createElement('button');
+      start.type = 'button';
+      start.className = 'btn btn-primary btn-sm';
+      start.textContent = 'Iniciar pauta';
+      start.addEventListener('click', async () => {
+        start.disabled = true;
+        start.textContent = 'Iniciando…';
+        try { await onStart(item); }
+        catch (error) {
+          window.AssemblyUtils?.showToast?.(error?.message || 'Erro ao iniciar pauta', 'error');
+          start.disabled = false;
+          start.textContent = 'Iniciar pauta';
+        }
+      });
+      details.appendChild(start);
+    } else {
+      details.textContent = statusKey === 'em_discussao' || statusKey === 'em_votacao' ? 'Pauta em andamento' : 'Pauta concluída';
+    }
+  }
   return node;
 }
 
@@ -679,16 +735,18 @@ export async function loadVotes(pollIds) {
   }
 }
 
-export async function refreshLists() {
+export async function refreshLists({ includeDocuments = false } = {}) {
   const [agenda, docs, polls, hands] = await Promise.all([
     loadAgenda().catch(() => []),
-    loadDocuments().catch(() => []),
+    includeDocuments ? loadDocuments().catch(() => []) : Promise.resolve(null),
     loadPolls().catch(() => []),
     loadHands().catch(() => [])
   ]);
 
-  const pollOptions = await loadPollOptions(polls.map(p => p.id)).catch(() => []);
-  const votes = await loadVotes(polls.map(p => p.id)).catch(() => []);
+  const [pollOptions, votes] = await Promise.all([
+    loadPollOptions(polls.map(p => p.id)).catch(() => []),
+    loadVotes(polls.map(p => p.id)).catch(() => [])
+  ]);
 
   const optionsByPoll = new Map();
   pollOptions.forEach((opt) => {
@@ -809,13 +867,18 @@ export async function refreshLists() {
     }
   });
 
-  renderSimpleList('agenda-list', 'agenda-count', agenda, buildAgendaItem);
-  renderSimpleList('docs-list', 'docs-count', docs, buildDocItem);
+  renderSimpleList('agenda-list', 'agenda-count', agenda, item => buildAgendaItem(item, state.canManageAgenda ? async selected => {
+    await startAgendaItem(selected.id);
+    window.AssemblyUtils?.showToast?.('Pauta iniciada. A pauta anterior foi concluída automaticamente.', 'success');
+    await refreshLists();
+  } : null));
+  if (docs) renderSimpleList('docs-list', 'docs-count', docs, buildDocItem);
 
   const votedBadgeAdded = new Set();
   renderSimpleList('polls-list', 'polls-count', polls, (poll) => {
     const opts = optionsByPoll.get(poll.id) || [];
     const item = buildPollItem(poll, opts, async (_poll, opt) => {
+      if (state.chatOnly) throw new Error('No modo somente chat não é possível votar.');
       const key = `${String(poll.id)}::${currentUserEmail}`;
       if (currentUserEmail && votesByPollAndUser.has(key)) {
         if (window.AssemblyUtils?.showToast) window.AssemblyUtils.showToast('Você já votou nesta votação.', 'warning');
@@ -826,6 +889,12 @@ export async function refreshLists() {
       votesByPollAndUser.set(key, true);
     }, getCurrentVotes);
 
+    const linkedAgenda = agenda.find(entry => String(entry.id) === String(poll.agenda_item_id || ''));
+    if (linkedAgenda) {
+      const info = item.querySelector('.panel-item-info');
+      const sub = info?.querySelector('.panel-item-sub');
+      if (sub) sub.textContent += ` • Pauta: ${linkedAgenda.title}`;
+    }
     if (currentUserEmail) {
       const key = `${String(poll.id)}::${currentUserEmail}`;
       if (votesByPollAndUser.has(key) && !votedBadgeAdded.has(poll.id)) {

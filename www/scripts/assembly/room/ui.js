@@ -474,18 +474,19 @@ export function renderSimpleList(containerId, badgeId, items, builder) {
   const container = el(containerId);
   const badge = el(badgeId);
   if (!container) return;
-  clearElement(container);
   const list = Array.isArray(items) ? items : [];
+  const fragment = document.createDocumentFragment();
   if (badge) badge.textContent = String(list.length);
   if (!list.length) {
     const empty = document.createElement('div');
     empty.className = 'panel-item';
     empty.textContent = 'Nenhum item disponível';
-    container.appendChild(empty);
-    return;
+    fragment.appendChild(empty);
+  } else {
+    list.forEach((item) => {
+      const node = builder(item);
+      if (node) fragment.appendChild(node);
+    });
   }
-  list.forEach((item) => {
-    const node = builder(item);
-    if (node) container.appendChild(node);
-  });
+  container.replaceChildren(fragment);
 }

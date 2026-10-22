@@ -1024,10 +1024,10 @@
     }
   }
 
-  function savePreferencesAndEnter() {
+  function savePreferencesAndEnter(chatOnly = false) {
     const enterRoom = () => {
-      const audioOnly = $('audio-only-check').checked;
-      const devicesOff = $('devices-off-check').checked;
+      const audioOnly = !chatOnly && $('audio-only-check').checked;
+      const devicesOff = chatOnly || $('devices-off-check').checked;
 
       let finalCameraOn = state.cameraOn;
       let finalMicOn = state.micOn;
@@ -1040,6 +1040,7 @@
       }
 
       try {
+        sessionStorage.setItem('prep_chat_only_assembly', chatOnly ? String(state.assemblyId) : '');
         sessionStorage.setItem('prep_camera_on', finalCameraOn ? '1' : '0');
         sessionStorage.setItem('prep_mic_on', finalMicOn ? '1' : '0');
         sessionStorage.setItem('prep_camera_dev', state.cameraDeviceId || '');
@@ -1165,7 +1166,8 @@
     $('devices-off-check').addEventListener('change', (e) => handleDevicesOffCheck(e.target.checked));
 
     $('mic-test-btn').addEventListener('click', handleMicTestClick);
-    $('btn-enter').addEventListener('click', savePreferencesAndEnter);
+    $('btn-enter').addEventListener('click', () => savePreferencesAndEnter(false));
+    $('btn-enter-chat-only').addEventListener('click', () => savePreferencesAndEnter(true));
 
     if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
       navigator.mediaDevices.addEventListener('devicechange', enumerateAndPopulate);

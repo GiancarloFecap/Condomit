@@ -1,5 +1,5 @@
 import { state } from './state.js?v=079';
-import { getLocalWhisper } from './local-whisper.js?v=081';
+import { getLocalWhisper } from './local-whisper.js?v=083';
 
 const SPEECH_PAUSE_MS = 1250;
 const MIN_SPEECH_SEGMENT_MS = 2600;

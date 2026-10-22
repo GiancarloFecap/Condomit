@@ -2010,6 +2010,23 @@ function bindStaticEvents() {
         });
     }
 
+    const prejoinChatOnlyBtn = $('prejoin-chat-only-btn');
+    if (prejoinChatOnlyBtn) {
+        prejoinChatOnlyBtn.addEventListener('click', () => {
+            const id = String(assemblyState.preJoinAssemblyId || '');
+            if (!id) return;
+            stopAllLocalMedia();
+            stopPreJoinAudioMeter();
+            try {
+                sessionStorage.setItem('condomit_current_assembly_id', id);
+                sessionStorage.setItem('prep_chat_only_assembly', id);
+                sessionStorage.setItem('prep_mic_on', '0');
+                sessionStorage.setItem('prep_camera_on', '0');
+            } catch (_) {}
+            window.location.href = `assembleia-sala.html?id=${encodeURIComponent(id)}`;
+        });
+    }
+
     const prejoinSilentBtn = $('prejoin-silent-btn');
     if (prejoinSilentBtn) {
         prejoinSilentBtn.addEventListener('click', async () => {

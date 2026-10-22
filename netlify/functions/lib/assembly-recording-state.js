@@ -97,7 +97,11 @@ async function reconcileRecording(admin, assemblyId, record, api = client()) {
   let diagnostic = '';
   if (remotelyFailed && !file?.stable) {
     nextStatus = 'falhou';
-    diagnostic = 'O LiveKit Egress encerrou com erro. Verifique os registros do serviço.';
+    const reason = String(remoteState.info?.error || '').toLowerCase();
+    if (/s3|storage|bucket|upload|access.denied|signature|credential/.test(reason)) diagnostic = 'O Egress falhou ao enviar o vídeo ao Storage. Verifique credenciais, endpoint, permissões e bucket S3.';
+    else if (/room|participant|empty|disconnect/.test(reason)) diagnostic = 'O Egress foi interrompido por encerramento da sala ou desconexão. Confira a duração da gravação e os logs LiveKit.';
+    else if (/codec|encode|decode|media|track/.test(reason)) diagnostic = 'O Egress falhou ao codificar a gravação. Verifique codecs, recursos e logs do LiveKit.';
+    else diagnostic = 'O LiveKit Egress encerrou com erro e não entregou um vídeo válido. Consulte o status do Egress e o bucket S3.';
   } else if (file?.stable && (remotelyFinished || ['concluido', 'falhou'].includes(record.status) || ['desconhecido', 'consulta_indisponivel'].includes(remoteState.value))) {
     nextStatus = 'concluido';
   } else if (remotelyFinished && !file?.stable) {
