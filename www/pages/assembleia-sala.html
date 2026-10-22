@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../styles/index.css?v=053">
   <link rel="stylesheet" href="../styles/theme.css?v=044">
-  <link rel="stylesheet" href="../styles/assembleia-room.css?v=078">
+  <link rel="stylesheet" href="../styles/assembleia-room.css?v=079">
     <link rel="stylesheet" href="../styles/responsive-mobile.css?v=035">
     <link rel="manifest" href="../manifest.webmanifest">
     <meta name="robots" content="noindex, nofollow">
@@ -39,7 +39,7 @@
       </div>
     </header>
 
-    <div class="call-body">
+    <div class="call-body panel-collapsed">
       <main class="call-stage" aria-label="Sala de chamada">
         <div class="call-banner" id="call-banner" style="display:none;"></div>
         <div class="call-screen-share" id="call-screen-share" style="display:none;">
@@ -56,7 +56,7 @@
         <div class="call-grid" id="call-grid"></div>
       </main>
 
-      <aside class="call-panel" id="call-panel" aria-label="Painel lateral">
+      <aside class="call-panel hidden" id="call-panel" aria-label="Painel lateral">
         <div class="panel-tabs" role="tablist" aria-label="Abas">
           <button class="panel-tab active" type="button" data-tab="participants" role="tab" aria-selected="true">
             <i class="fas fa-users"></i>
@@ -171,7 +171,7 @@
         <i class="fas fa-hand-paper"></i>
         <span>Mão</span>
       </button>
-      <button class="control-btn" id="btn-toggle-panel" type="button" aria-label="Mostrar ou ocultar painel" aria-controls="call-panel" aria-expanded="true">
+      <button class="control-btn" id="btn-toggle-panel" type="button" aria-label="Mostrar ou ocultar painel" aria-controls="call-panel" aria-expanded="false">
         <i class="fas fa-columns"></i>
         <span>Painel</span>
       </button>
@@ -187,13 +187,13 @@
     <script src="../scripts/platform-config.js?v=035"></script>
 
 
-  <script src="../scripts/supabase-client.js?v=065"></script>
+  <script src="../scripts/supabase-client.js?v=079"></script>
   <script type="module" src="../scripts/supabase-auth.js?v=061"></script>
   <script src="../scripts/assembly/utils.js"></script>
   <script src="../scripts/assembly/auth.js"></script>
-  <script src="../scripts/assembly/api.js"></script>
+  <script src="../scripts/assembly/api.js?v=079"></script>
   <script src="../scripts/assembly/permissions.js"></script>
-  <script type="module" src="../scripts/assembly/room/index.js?v=078"></script>
+  <script type="module" src="../scripts/assembly/room/index.js?v=081"></script>
     <script src="../scripts/condomit-alerts.js?v=057"></script>
     <script src="../scripts/advanced-global.js?v=065"></script>
 </body>

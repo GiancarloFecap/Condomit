@@ -100,7 +100,7 @@
         window.syncAllAvatars?.(state.user);
     }
 
-    async function loadAll() {
+    async function loadAll({ verifyRecordings = false } = {}) {
         if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase não inicializado.');
 
         const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings, speechActivities, signatures, commentVotes] = await Promise.all([
@@ -122,7 +122,7 @@
         state.assembly = assemblyRows[0] || null;
         if (!state.assembly) throw new Error('Assembleia não encontrada ou sem acesso.');
         let recordingVerification = null;
-        if ((recordings || []).length) {
+        if (verifyRecordings && (recordings || []).length) {
           try {
             const token = await window.resolveSupabaseAccessToken?.();
             if (token) {
@@ -298,6 +298,7 @@
         renderMinutes();
         renderPolls();
         renderRecordings();
+        startRecordingRefresh();
         renderComments();
     }
 
@@ -322,10 +323,12 @@
                 ${currentUserRole() === 'sindico' && state.minutesDraft?.status === 'aprovada' ? `<button type="button" id="signAssemblyMinutes049" class="summary-primary"><i class="fas fa-signature"></i> ${state.signature ? 'Corrigir assinatura' : 'Assinar ata'}</button>` : ''}
                 ${state.signature && state.minutesDraft?.status === 'aprovada' ? `<span class="summary-signed-chip"><i class="fas fa-circle-check"></i> Ata assinada por ${esc(state.signature.signer_name || state.signature.signer_email || 'Síndico')}</span>` : ''}
                 <button type="button" id="printAssemblyMinutes049" class="summary-secondary"><i class="fas fa-print"></i> Imprimir ata</button>
+                <button type="button" id="saveAssemblyMinutesPdf082" class="summary-secondary"><i class="fas fa-file-pdf"></i> Salvar em PDF</button>
             </div>`;
         hero.querySelector('#generateAssemblyTasks027')?.addEventListener('click', generateAssemblyDecisionTasks);
         hero.querySelector('#signAssemblyMinutes049')?.addEventListener('click', signAssemblyMinutes);
         hero.querySelector('#printAssemblyMinutes049')?.addEventListener('click', printAssemblyMinutes);
+        hero.querySelector('#saveAssemblyMinutesPdf082')?.addEventListener('click', saveAssemblyMinutesPdf);
     }
 
     function renderMinutes() {
@@ -418,7 +421,7 @@
               <div id="assemblyMinutesAiSuggestions074" class="minutes-ai-suggestions074" hidden></div>
               <details class="minutes-evidence074"><summary>Conferir trechos de transcrição (${state.transcripts.length})</summary>
                 <p>As falas são material de apoio, podem conter erros e não substituem os resultados oficiais das votações.</p>
-                ${state.transcripts.slice(0,120).map(item=>`<p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>`).join('')}
+                ${state.transcripts.slice(0,120).map(item=>`<div class="minutes-audio-segment"><p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>${item.audio_storage_path ? `<audio controls preload="none" aria-label="Ouvir áudio do trecho ${esc(String(item.id))}" data-transcript-audio-path="${esc(item.audio_storage_path)}"></audio><small class="minutes-audio-status">Preparando áudio protegido...</small>` : '<small>Áudio individual não disponível para este trecho.</small>'}</div>`).join('')}
                 ${state.transcripts.length>120 ? `<p>Exibindo 120 de ${state.transcripts.length} trechos. Consulte o registro original para os demais.</p>` : ''}
               </details>
               <div class="minutes-external-signature074">
@@ -433,12 +436,39 @@
                 ${state.signedDocuments.map(doc => `<div class="minutes-signed-document074"><i class="fas fa-file-pdf"></i> ${esc(doc.filename)} · ${esc(formatDateTime(doc.uploaded_at))} · Validação externa pendente <button type="button" data-signed-path074="${esc(doc.storage_path)}">Abrir PDF</button></div>`).join('')}
               </div>
             </section>` : ''}`;
+        const evidence = container.querySelector('.minutes-evidence074');
+        evidence?.addEventListener('toggle', () => { if (evidence.open) prepareTranscriptAudio(evidence); });
         container.querySelector('#minutesSave074')?.addEventListener('click', () => saveMinutesReview(false));
         container.querySelector('#minutesApprove074')?.addEventListener('click', () => saveMinutesReview(true));
         container.querySelector('#minutesAiHelp074')?.addEventListener('click', requestMinutesAiSuggestions);
         container.querySelector('#assemblyAttachGovPdf074')?.addEventListener('click', uploadSignedGovPdf);
         container.querySelectorAll('[data-signed-path074]').forEach(button => button.addEventListener('click', () => openSignedDocument(button.dataset.signedPath074))); 
     }
+    async function prepareTranscriptAudio(section) {
+        const audios = Array.from(section.querySelectorAll('audio[data-transcript-audio-path]'));
+        let position = 0;
+        const worker = async () => {
+            while (position < audios.length) {
+                const audio = audios[position++];
+                if (audio.dataset.audioReady === 'true') continue;
+                const label = audio.nextElementSibling;
+                try {
+                    const path = audio.dataset.transcriptAudioPath || '';
+                    if (!new RegExp(`^${Number(state.id)}/trechos/[a-f0-9-]+/[a-f0-9-]+\\.(wav|webm|mp4)$`, 'i').test(path)) throw new Error('Referência de áudio inválida.');
+                    if (!window.supabase?.storage) throw new Error('Storage indisponível.');
+                    const { data, error } = await window.supabase.storage.from('condomit-assembly-recordings').createSignedUrl(path, 3600);
+                    if (error || !data?.signedUrl) throw new Error(error?.message || 'Não foi possível autorizar este áudio.');
+                    audio.src = data.signedUrl;
+                    audio.dataset.audioReady = 'true';
+                    if (label) label.textContent = 'Reproduza a fala correspondente ao trecho transcrito.';
+                } catch (error) {
+                    if (label) label.textContent = error?.message || 'Áudio temporariamente indisponível.';
+                }
+            }
+        };
+        await Promise.all(Array.from({ length: Math.min(4, audios.length) }, worker));
+    }
+
     function uniqueParticipants() {
         const seen = new Map();
         state.attendance.forEach((row) => {
@@ -939,6 +969,48 @@
         return h ? `${h}h ${String(m).padStart(2, '0')}min` : `${m}min ${String(sec).padStart(2, '0')}s`;
     }
 
+    let recordingRefreshInFlight = false;
+    let recordingRefreshTimer = null;
+
+    async function refreshRecordingStatus() {
+        if (recordingRefreshInFlight || document.hidden) return;
+        if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando', 'falhou'].includes(row.status))) return;
+        recordingRefreshInFlight = true;
+        try {
+            const token = await window.resolveSupabaseAccessToken?.();
+            if (!token) return;
+            const result = await fetch('/.netlify/functions/assembly-recording-reconcile', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assembly_id: Number(state.id) }), cache: 'no-store'
+            });
+            if (!result.ok) return;
+            const verified = await result.json();
+            const rows = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []);
+            const statuses = new Map((verified.recordings || []).map(item => [String(item.recording_id), item]));
+            state.recordingStatuses = rows.map(row => ({ ...row, verification: statuses.get(String(row.id)) || null }));
+            state.recordings = rows.filter(row => row.status === 'concluido' && row.recording_url && statuses.get(String(row.id))?.storage_verified);
+            renderHero();
+            renderRecordings();
+            if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando'].includes(row.status))) {
+                clearInterval(recordingRefreshTimer);
+                recordingRefreshTimer = null;
+            }
+        } catch (error) {
+            console.warn('[ASSEMBLY RECORDING REFRESH]', String(error?.message || error));
+        } finally {
+            recordingRefreshInFlight = false;
+        }
+    }
+
+    function startRecordingRefresh() {
+        clearInterval(recordingRefreshTimer);
+        recordingRefreshTimer = null;
+        if (!(state.recordingStatuses || []).some(row => ['pendente', 'gravando'].includes(row.status))) return;
+        setTimeout(() => refreshRecordingStatus().catch(() => {}), 1000);
+        recordingRefreshTimer = setInterval(() => refreshRecordingStatus().catch(() => {}), 12000);
+    }
+
     function renderRecordings() {
         const container = document.getElementById('assemblyRecordings');
         if (!container) return;
@@ -948,12 +1020,24 @@
             const failed = statuses.includes('falhou');
             const unavailableFile = (state.recordingStatuses || []).some(row => row?.status === 'concluido' && row?.verification && !row.verification.storage_verified);
             container.innerHTML = `<div class="summary-empty">${waiting
-              ? 'A gravação está em andamento ou em processamento. Volte a esta página após o encerramento do último participante.'
+              ? 'A gravação está em andamento ou finalizando o upload para o armazenamento. A reprodução será liberada quando o arquivo estiver disponível.'
               : unavailableFile
                 ? 'O Egress registrou uma gravação, mas o arquivo não foi confirmado no Storage. Confira o bucket S3, a conclusão do Egress e o webhook.'
                 : failed
                 ? 'A gravação não foi concluída. Verifique os logs das Functions de gravação e o webhook do LiveKit na Netlify.'
-                : 'Nenhuma gravação registrada. Confira as variáveis do Egress, o bucket S3 e o webhook de conclusão.'}</div>`;
+                : 'Nenhuma gravação registrada. Confira as variáveis do Egress, o bucket S3 e o webhook de conclusão.'}</div><button class="summary-secondary" type="button" id="refreshAssemblyRecordings079"><i class="fas fa-rotate-right"></i> Verificar gravações novamente</button>`;
+            container.querySelector('#refreshAssemblyRecordings079')?.addEventListener('click', async event => {
+                const button = event.currentTarget;
+                button.disabled = true;
+                try {
+                    await loadAll({ verifyRecordings: true });
+                    renderHero();
+                    renderRecordings();
+                } catch (error) {
+                    button.disabled = false;
+                    window.showToast?.(error?.message || 'Não foi possível atualizar a gravação.', 'error');
+                }
+            });
             return;
         }
         container.innerHTML = state.recordings.map((row, index) => `
@@ -1387,12 +1471,37 @@
         openAssemblySignatureModal();
     }
 
+    function getPrintableMinutes() {
+        const documentNode = document.querySelector('#assemblyMinutes .formal-minutes-document');
+        if (!documentNode?.querySelector('.formal-minutes-body p')) {
+            window.showToast?.('Não foi possível encontrar o texto da ata.', 'warning');
+            return null;
+        }
+        return documentNode;
+    }
+
     function printAssemblyMinutes() {
+        if (!getPrintableMinutes()) return;
         document.body.classList.add('printing-assembly-minutes');
-        const cleanup = () => document.body.classList.remove('printing-assembly-minutes');
-        window.addEventListener('afterprint', cleanup, { once: true });
+        window.addEventListener('afterprint', () => document.body.classList.remove('printing-assembly-minutes'), { once: true });
         window.print();
-        window.setTimeout(cleanup, 1200);
+    }
+
+    async function saveAssemblyMinutesPdf(event) {
+        const documentNode = getPrintableMinutes();
+        if (!documentNode) return;
+        const button = event?.currentTarget;
+        if (button) button.disabled = true;
+        try {
+            const { saveMinutesAsPdf } = await import('./minutes-pdf.js?v=082');
+            const minutesNumber = String(state.minutesNumber || state.id).replace(/[^\dA-Za-z_-]/g, '');
+            const year = String(state.assembly?.date || new Date().toISOString()).slice(0, 4);
+            await saveMinutesAsPdf(documentNode, `Ata_Assembleia_${minutesNumber}_${year}.pdf`);
+        } catch (error) {
+            window.showToast?.(error?.message || 'Não foi possível gerar o PDF.', 'error');
+        } finally {
+            if (button?.isConnected) button.disabled = false;
+        }
     }
 
     async function logout() {

@@ -992,6 +992,21 @@ function getSupabaseAccessToken() {
   return null;
 }
 
+async function refreshSupabaseAccessToken() {
+  const client = window.supabase?.auth;
+  if (!client || typeof client.refreshSession !== 'function') return null;
+  try {
+    const { data, error } = await client.refreshSession();
+    const token = data?.session?.access_token || null;
+    if (error || !isUsableSupabaseUserToken(token)) return null;
+    try {
+      sessionStorage.setItem('sb-access-token', token);
+      sessionStorage.setItem('sb-session', JSON.stringify(data.session));
+    } catch (_) {}
+    return token;
+  } catch (_) { return null; }
+}
+
 async function resolveSupabaseAccessToken() {
   try {
     const authClient =
@@ -3688,6 +3703,9 @@ window.getSupabaseAccessToken =
 
 window.resolveSupabaseAccessToken =
   resolveSupabaseAccessToken;
+
+window.refreshSupabaseAccessToken =
+  refreshSupabaseAccessToken;
 
 window.supabaseFetch =
   supabaseFetch;

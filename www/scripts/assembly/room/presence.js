@@ -1,30 +1,23 @@
-import { state } from './state.js?v=0724';
+import { state } from './state.js?v=079';
 
-function getAccessToken() {
-  try {
-    const t = sessionStorage.getItem('sb-access-token') || localStorage.getItem('sb-access-token');
-    if (t) return t;
-  } catch (_) {}
-  try {
-    const s = sessionStorage.getItem('sb-session') || localStorage.getItem('sb-session');
-    if (s) {
-      const session = JSON.parse(s);
-      if (session?.access_token) return session.access_token;
-    }
-  } catch (_) {}
-  return null;
+async function getAccessToken() {
+  return await window.resolveSupabaseAccessToken?.() || null;
 }
 
 async function postPresence(payload) {
-  const token = getAccessToken();
-  const res = await fetch('/.netlify/functions/assembly-presence', {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Sessão expirada. Entre novamente na sua conta.');
+  const send = accessToken => fetch('/.netlify/functions/assembly-presence', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify(payload)
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(payload),
+    keepalive: payload.event === 'leave'
   });
+  let res = await send(token);
+  if (res.status === 401) {
+    const refreshed = await window.refreshSupabaseAccessToken?.();
+    if (refreshed) res = await send(refreshed);
+  }
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }

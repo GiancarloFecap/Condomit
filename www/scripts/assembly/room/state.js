@@ -19,7 +19,7 @@ function createInitialState() {
     screenShareTrack: null,
     screenShareOwner: null,
     raisedHands: new Map(),
-    panelOpen: true,
+    panelOpen: false,
     chatSubscription: null,
     handSubscription: null,
     agendaSubscription: null,

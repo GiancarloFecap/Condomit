@@ -1,7 +1,11 @@
 import { state } from './state.js?v=079';
 import { getLocalWhisper } from './local-whisper.js?v=081';
 
-const SEGMENT_MS = 8000;
+const SPEECH_PAUSE_MS = 1250;
+const MIN_SPEECH_SEGMENT_MS = 2600;
+const QUIET_BUFFER_MS = 12000;
+const MAX_SPEECH_SEGMENT_MS = 150000;
+const FALLBACK_LIMIT_MS = 90000;
 const MAX_PENDING_SEGMENTS = 48;
 const RETRY_DELAY_MS = 12000;
 const MAX_AUDIO_JOBS = 32;
@@ -15,6 +19,13 @@ let capturedTrack = null;
 let rawFrames = [];
 let rawLength = 0;
 let rawRate = 48000;
+let rawSpeechDetected = false;
+let rawSilentSamples = 0;
+let rawNoiseLevel = 0.00025;
+let fallbackMonitor = null;
+let fallbackContext = null;
+let fallbackSource = null;
+let fallbackAnalyser = null;
 let startingCapture = false;
 let processedCount = 0;
 let recorder = null;
@@ -127,14 +138,50 @@ function enqueueSegment(data) {
   processQueue();
 }
 
+function signalLevel(buffer) {
+  if (!buffer?.length) return 0;
+  let total = 0;
+  for (let i = 0; i < buffer.length; i += 4) total += buffer[i] * buffer[i];
+  return Math.sqrt(total / Math.ceil(buffer.length / 4));
+}
+
+function isSpeechLevel(level, previousSpeech) {
+  const threshold = Math.max(0.00075, rawNoiseLevel * (previousSpeech ? 2.0 : 3.0));
+  if (level < threshold) rawNoiseLevel = Math.max(0.00015, rawNoiseLevel * 0.985 + level * 0.015);
+  return level >= threshold;
+}
+
+function resetRawCapture() {
+  rawFrames = [];
+  rawLength = 0;
+  rawSpeechDetected = false;
+  rawSilentSamples = 0;
+}
+
 function onPcmFrame(frame) {
   if (!active || !frame?.buffer?.length) return;
   const rate = Number(frame.rate || 48000);
   if (rawLength && rate !== rawRate) flushRawAudio();
   rawRate = rate;
+  const level = signalLevel(frame.buffer);
+  const speaking = isSpeechLevel(level, rawSpeechDetected && rawSilentSamples < rate * SPEECH_PAUSE_MS / 1000);
   rawFrames.push(frame.buffer);
   rawLength += frame.buffer.length;
-  if (rawLength >= SEGMENT_MS * rawRate / 1000) flushRawAudio();
+  if (speaking) {
+    rawSpeechDetected = true;
+    rawSilentSamples = 0;
+  } else if (rawSpeechDetected) {
+    rawSilentSamples += frame.buffer.length;
+  }
+  if (!rawSpeechDetected && rawLength >= QUIET_BUFFER_MS * rawRate / 1000) {
+    resetRawCapture();
+    return;
+  }
+  if (rawSpeechDetected && rawSilentSamples >= SPEECH_PAUSE_MS * rawRate / 1000 && rawLength >= MIN_SPEECH_SEGMENT_MS * rawRate / 1000) {
+    flushRawAudio();
+  } else if (rawLength >= MAX_SPEECH_SEGMENT_MS * rawRate / 1000) {
+    flushRawAudio();
+  }
 }
 
 function flushRawAudio() {
@@ -142,9 +189,9 @@ function flushRawAudio() {
   const frames = rawFrames;
   const length = rawLength;
   const rate = rawRate;
-  rawFrames = [];
-  rawLength = 0;
-  if (length < rate * 0.6) return;
+  const detected = rawSpeechDetected;
+  resetRawCapture();
+  if (length < rate * 0.6 || !detected) return;
   enqueueSegment({ pcm: frames, sampleRate: rate, sampleCount: length, identity: String(state.room?.localParticipant?.identity || '') });
 }
 
@@ -200,7 +247,7 @@ async function tryPcmCapture() {
     audioSink = sink;
     capturedTrack = track;
     captureError = '';
-    setStatus('Microfone captado · preparando reconhecimento', 'O áudio está chegando ao dispositivo; a transcrição e o salvamento são etapas separadas.');
+    setStatus('Microfone captado · aguardando pausas naturais', 'O áudio está chegando ao dispositivo; a transcrição e o salvamento são etapas separadas.');
   } catch (error) {
     captureError = 'Captura PCM indisponível; tentando modo compatível.';
     log('pcm-fallback', { reason: String(error?.message || error) });
@@ -375,6 +422,55 @@ async function processQueue() {
   }
 }
 
+function stopFallbackMonitor() {
+  clearInterval(fallbackMonitor);
+  fallbackMonitor = null;
+  fallbackSource?.disconnect?.();
+  fallbackAnalyser?.disconnect?.();
+  fallbackContext?.close?.().catch(() => {});
+  fallbackContext = null;
+  fallbackSource = null;
+  fallbackAnalyser = null;
+}
+
+function startFallbackMonitor(track, currentRecorder) {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+  try {
+    const context = new Ctx();
+    const source = context.createMediaStreamSource(new MediaStream([track]));
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 2048;
+    source.connect(analyser);
+    fallbackContext = context;
+    fallbackSource = source;
+    fallbackAnalyser = analyser;
+    const samples = new Float32Array(analyser.fftSize);
+    const startedAt = Date.now();
+    let lastSpeech = startedAt;
+    let speechDetected = false;
+    let noise = 0.00025;
+    context.resume().catch(() => {});
+    fallbackMonitor = setInterval(() => {
+      if (recorder !== currentRecorder || currentRecorder.state !== 'recording' || context.state !== 'running') return;
+      analyser.getFloatTimeDomainData(samples);
+      const level = signalLevel(samples);
+      const threshold = Math.max(0.00075, noise * (speechDetected ? 2 : 3));
+      if (level >= threshold) {
+        speechDetected = true;
+        lastSpeech = Date.now();
+      } else {
+        noise = Math.max(0.00015, noise * 0.985 + level * 0.015);
+      }
+      const elapsed = Date.now() - startedAt;
+      if (speechDetected && elapsed >= MIN_SPEECH_SEGMENT_MS && Date.now() - lastSpeech >= SPEECH_PAUSE_MS) currentRecorder.stop();
+      else if (!speechDetected && elapsed >= QUIET_BUFFER_MS) currentRecorder.stop();
+    }, 180);
+  } catch (_) {
+    stopFallbackMonitor();
+  }
+}
+
 function startSegment() {
   if (!active || recorder || typeof MediaRecorder === 'undefined') return;
   const track = microphoneTrack();
@@ -401,6 +497,7 @@ function startSegment() {
     };
     next.onstop = () => {
       clearTimeout(recordingTimeout);
+      stopFallbackMonitor();
       if (recorder === next) recorder = null;
       if (chunks.length) enqueueSegment({ blob: new Blob(chunks, { type: next.mimeType || mime || 'audio/webm' }), identity: String(state.room?.localParticipant?.identity || '') });
       resolve();
@@ -409,11 +506,13 @@ function startSegment() {
   });
   try {
     next.start();
+    startFallbackMonitor(track, next);
     captureError = '';
-    setStatus('Capturando microfone · modo compatível', 'O áudio está sendo segmentado e será salvo após reconhecimento.');
-    recordingTimeout = setTimeout(() => { if (next.state === 'recording') next.stop(); }, SEGMENT_MS);
+    setStatus('Capturando microfone · modo compatível', 'Os trechos são finalizados após pausas na fala, evitando cortes por tempo fixo.');
+    recordingTimeout = setTimeout(() => { if (next.state === 'recording') next.stop(); }, FALLBACK_LIMIT_MS);
   } catch (error) {
     recorder = null;
+    stopFallbackMonitor();
     recorderFinished = Promise.resolve();
     captureError = String(error?.message || error);
     setStatus('Falha ao capturar microfone', captureError, true);
@@ -462,6 +561,7 @@ export async function stopIncrementalTranscription({ timeoutMs = 30000 } = {}) {
   retryTimer = null;
   clearTimeout(recordingTimeout);
   cleanupPcm();
+  if (!recorder) stopFallbackMonitor();
   const stopping = recorderFinished;
   if (recorder?.state === 'recording') recorder.stop();
   if (stopping) await Promise.race([stopping, new Promise(resolve => setTimeout(resolve, 2000))]);
@@ -481,7 +581,6 @@ export async function stopIncrementalTranscription({ timeoutMs = 30000 } = {}) {
 }
 
 window.addEventListener('condomit:assembly-allow-audio', () => {
-  if (active && audioContext?.state === 'suspended') {
-    audioContext.resume().catch(() => {});
-  }
+  if (active && audioContext?.state === 'suspended') audioContext.resume().catch(() => {});
+  if (active && fallbackContext?.state === 'suspended') fallbackContext.resume().catch(() => {});
 });

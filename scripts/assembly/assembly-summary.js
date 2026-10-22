@@ -323,10 +323,12 @@
                 ${currentUserRole() === 'sindico' && state.minutesDraft?.status === 'aprovada' ? `<button type="button" id="signAssemblyMinutes049" class="summary-primary"><i class="fas fa-signature"></i> ${state.signature ? 'Corrigir assinatura' : 'Assinar ata'}</button>` : ''}
                 ${state.signature && state.minutesDraft?.status === 'aprovada' ? `<span class="summary-signed-chip"><i class="fas fa-circle-check"></i> Ata assinada por ${esc(state.signature.signer_name || state.signature.signer_email || 'Síndico')}</span>` : ''}
                 <button type="button" id="printAssemblyMinutes049" class="summary-secondary"><i class="fas fa-print"></i> Imprimir ata</button>
+                <button type="button" id="saveAssemblyMinutesPdf082" class="summary-secondary"><i class="fas fa-file-pdf"></i> Salvar em PDF</button>
             </div>`;
         hero.querySelector('#generateAssemblyTasks027')?.addEventListener('click', generateAssemblyDecisionTasks);
         hero.querySelector('#signAssemblyMinutes049')?.addEventListener('click', signAssemblyMinutes);
         hero.querySelector('#printAssemblyMinutes049')?.addEventListener('click', printAssemblyMinutes);
+        hero.querySelector('#saveAssemblyMinutesPdf082')?.addEventListener('click', saveAssemblyMinutesPdf);
     }
 
     function renderMinutes() {
@@ -1469,12 +1471,37 @@
         openAssemblySignatureModal();
     }
 
+    function getPrintableMinutes() {
+        const documentNode = document.querySelector('#assemblyMinutes .formal-minutes-document');
+        if (!documentNode?.querySelector('.formal-minutes-body p')) {
+            window.showToast?.('Não foi possível encontrar o texto da ata.', 'warning');
+            return null;
+        }
+        return documentNode;
+    }
+
     function printAssemblyMinutes() {
+        if (!getPrintableMinutes()) return;
         document.body.classList.add('printing-assembly-minutes');
-        const cleanup = () => document.body.classList.remove('printing-assembly-minutes');
-        window.addEventListener('afterprint', cleanup, { once: true });
+        window.addEventListener('afterprint', () => document.body.classList.remove('printing-assembly-minutes'), { once: true });
         window.print();
-        window.setTimeout(cleanup, 1200);
+    }
+
+    async function saveAssemblyMinutesPdf(event) {
+        const documentNode = getPrintableMinutes();
+        if (!documentNode) return;
+        const button = event?.currentTarget;
+        if (button) button.disabled = true;
+        try {
+            const { saveMinutesAsPdf } = await import('./minutes-pdf.js?v=082');
+            const minutesNumber = String(state.minutesNumber || state.id).replace(/[^\dA-Za-z_-]/g, '');
+            const year = String(state.assembly?.date || new Date().toISOString()).slice(0, 4);
+            await saveMinutesAsPdf(documentNode, `Ata_Assembleia_${minutesNumber}_${year}.pdf`);
+        } catch (error) {
+            window.showToast?.(error?.message || 'Não foi possível gerar o PDF.', 'error');
+        } finally {
+            if (button?.isConnected) button.disabled = false;
+        }
     }
 
     async function logout() {

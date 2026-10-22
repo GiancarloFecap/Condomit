@@ -316,6 +316,9 @@ body {
   color: rgba(253, 230, 138, 0.95);
 }
 
+.call-panel.hidden { display: none; }
+.call-body.panel-collapsed { grid-template-columns: minmax(0, 1fr); }
+
 .call-panel {
   border-left: 1px solid var(--call-border);
   background: rgba(15, 23, 42, 0.86);
