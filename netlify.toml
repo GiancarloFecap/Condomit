@@ -119,5 +119,4 @@
 [functions."assembly-recording-sync"]
   schedule = "* * * * *"
 
-[functions."assembly-gemini-dispatch"]
-  schedule = "* * * * *"
+# A transcrição de vídeo é realizada pelo worker independente (worker-transcricao/).

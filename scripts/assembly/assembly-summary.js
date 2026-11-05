@@ -172,6 +172,11 @@
         const textarea = document.getElementById('assemblyMinutesEditor074');
         const body = String(textarea?.value || '').trim();
         if (body.length < 30) { window.showToast?.('Revise e preencha o conteúdo da ata antes de salvar.', 'warning'); return; }
+        if (approve && (state.recordingStatuses || []).some(row => row.status === 'concluido'
+            && (row.transcription_status !== 'concluido' || !String(row.transcription_model || '').startsWith('faster-whisper:')))) {
+            window.showToast?.('Aguarde a transcrição do vídeo em segundo plano e confira os trechos antes de aprovar a ata.', 'warning');
+            return;
+        }
         if (approve) {
             const ok = await window.showConfirm?.({
                 title:'Aprovar ata revisada',
@@ -316,7 +321,7 @@
                 <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
                 <span><i class="fas fa-video"></i> ${state.recordings.length} ${state.recordings.length === 1 ? 'gravação' : 'gravações'}</span>
-                <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.length ? `${state.transcripts.length} trecho${state.transcripts.length === 1 ? '' : 's'} transcrito${state.transcripts.length === 1 ? '' : 's'}` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
+                <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').length ? `${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').length} trechos do vídeo transcritos` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
             </div>
             <div class="summary-hero-actions">
                 ${currentUserRole() === 'sindico' ? '<button type="button" id="generateAssemblyTasks027" class="summary-secondary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button>' : ''}
@@ -411,7 +416,7 @@
             </article>
             ${currentUserRole() === 'sindico' ? `<section class="minutes-review-editor074">
               <h3><i class="fas fa-clipboard-check"></i> Revisão formal da ata</h3>
-              <p>A gravação e a transcrição são documentos de apoio. Confirme data, presença, discussões, deliberações, quóruns e responsáveis. A transcrição Gemini pode conter erros e deve ser revisada comparando com o vídeo.</p>
+              <p>A gravação e a transcrição são documentos de apoio. Confirme data, presença, discussões, deliberações, quóruns e responsáveis. A transcrição automática é gerada em segundo plano diretamente do vídeo. Ela pode conter erros e deve ser conferida com o áudio original.</p>
               <textarea id="assemblyMinutesEditor074" rows="14" spellcheck="true" aria-label="Redigir ata para revisão">${esc(displayText)}</textarea>
               <div class="minutes-review-actions074">
                 <button type="button" class="summary-secondary" id="minutesAiHelp074"><i class="fas fa-wand-magic-sparkles"></i> Selecionar trechos da transcrição</button>
@@ -419,10 +424,10 @@
                 <button type="button" class="summary-primary" id="minutesApprove074">Aprovar ata revisada</button>
               </div>
               <div id="assemblyMinutesAiSuggestions074" class="minutes-ai-suggestions074" hidden></div>
-              <details class="minutes-evidence074"><summary>Conferir trechos de transcrição (${state.transcripts.length})</summary>
-                <p>As falas são material de apoio, podem conter erros e não substituem os resultados oficiais das votações.</p>
-                ${state.transcripts.slice(0,120).map(item=>`<div class="minutes-audio-segment"><p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>${item.audio_storage_path ? `<audio controls preload="none" aria-label="Ouvir áudio do trecho ${esc(String(item.id))}" data-transcript-audio-path="${esc(item.audio_storage_path)}"></audio><small class="minutes-audio-status">Preparando áudio protegido...</small>` : item.recording_id && item.start_seconds !== null && item.end_seconds !== null ? `<audio controls preload="none" aria-label="Ouvir fala no vídeo gravado" data-recording-clip-id="${esc(String(item.recording_id))}" data-clip-start="${esc(String(item.start_seconds))}" data-clip-end="${esc(String(item.end_seconds))}"></audio><small class="minutes-audio-status">Trecho retirado do vídeo da assembleia.</small>` : '<small>Áudio individual não disponível para este trecho.</small>'}</div>`).join('')}
-                ${state.transcripts.length>120 ? `<p>Exibindo 120 de ${state.transcripts.length} trechos. Consulte o registro original para os demais.</p>` : ''}
+              <details class="minutes-evidence074"><summary>Conferir trechos de transcrição do vídeo (${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').length})</summary>
+                <p>Reconhecimento automático do áudio do MP4: os textos não são necessariamente literais e os falantes não são identificados com segurança. Confira o áudio original antes de aprovar a ata. Resultados de votação são registros independentes.</p>
+                ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').slice(0,120).map(item=>`<div class="minutes-audio-segment"><p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>${item.audio_storage_path ? `<audio controls preload="none" aria-label="Ouvir áudio do trecho ${esc(String(item.id))}" data-transcript-audio-path="${esc(item.audio_storage_path)}"></audio><small class="minutes-audio-status">Preparando áudio protegido...</small>` : item.recording_id && item.start_seconds !== null && item.end_seconds !== null ? `<audio controls preload="none" aria-label="Ouvir fala no vídeo gravado" data-recording-clip-id="${esc(String(item.recording_id))}" data-clip-start="${esc(String(item.start_seconds))}" data-clip-end="${esc(String(item.end_seconds))}"></audio><small class="minutes-audio-status">Trecho retirado do vídeo da assembleia.</small>` : '<small>Áudio individual não disponível para este trecho.</small>'}</div>`).join('')}
+                ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').length>120 ? `<p>Exibindo 120 de ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').length} trechos. Consulte o registro original para os demais.</p>` : ''}
               </details>
               <div class="minutes-external-signature074">
                 <strong>Assinatura eletrônica gov.br — serviço externo</strong>
@@ -528,11 +533,16 @@
             paragraphs.push(`Quanto ao item “${item.title}”, ficou registrado em ata o seguinte teor de discussão: ${sentenceFragment(item.notes)}.`);
         });
 
-        const recordingTranscripts = [...state.transcripts].filter((row) => {
-            const source = String(row.transcript_source || row.source || '').trim().toLowerCase();
-            return source === 'recording_gemini' || source === 'recording_video_whisper' || source === 'recording_whisper_local';
-        });
-        const transcriptSourceRows = recordingTranscripts.length ? recordingTranscripts : [...state.transcripts];
+        // Só a transcrição do áudio do MP4 participa da minuta automática.
+        // Resultados antigos do navegador/Gemini nunca são declarados como falas verificadas.
+        const completedVideoIds = new Set((state.recordingStatuses || [])
+            .filter(row => row.status === 'concluido' && row.transcription_status === 'concluido'
+                && String(row.transcription_model || '').startsWith('faster-whisper:'))
+            .map(row => String(row.id)));
+        const transcriptSourceRows = state.transcripts.filter((row) =>
+            String(row.transcript_source || row.source || '').trim().toLowerCase() === 'recording_video_whisper'
+            && completedVideoIds.has(String(row.recording_id)));
+
         const isInferredTranscript = (row) => String(row.participant_identity || '').startsWith('__condomit_inferred__:');
         const confidentTranscripts = transcriptSourceRows
             .filter((row) => cleanFormalText(row.transcript || '') && !isInferredTranscript(row))
@@ -544,7 +554,7 @@
         if (confidentTranscripts.length) {
             confidentTranscripts.forEach((row) => {
                 const name = cleanFormalText(row.participant_name || row.participant_email || 'Participante');
-                const text = ensureTerminalPunctuation(row.transcript || '');
+                const text = String(row.transcript || '').replace(/\s+/g, ' ').trim();
                 const time = row.spoken_at ? new Date(row.spoken_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
                 paragraphs.push(`${time ? `Às ${time}, ` : ''}${name} declarou: “${text}”`);
             });
@@ -562,7 +572,7 @@
         if (inferredTranscripts.length) {
             paragraphs.push('Como parte do conteúdo não pôde ser reconhecida com segurança suficiente, o sistema apresenta abaixo uma interpretação provável do que foi dito. Consulte a gravação audiovisual disponível nesta Ata para confirmar o conteúdo e obter maior clareza sobre o que foi discutido.');
             inferredTranscripts.forEach((row) => {
-                const text = ensureTerminalPunctuation(row.transcript || '');
+                const text = String(row.transcript || '').replace(/\s+/g, ' ').trim();
                 const time = row.spoken_at ? new Date(row.spoken_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
                 paragraphs.push(`${time ? `Por volta das ${time}, ` : ''}conteúdo presumido da gravação: “${text}”`);
             });
@@ -570,7 +580,7 @@
             const speakers = uniqueSpeechParticipants();
             if (speakers.length) {
                 const names = speakers.map((speaker) => speaker.name).filter(Boolean);
-                paragraphs.push(`Foram detectadas manifestações orais de ${formatHumanList(names)}. O sistema tentou reconstruir o conteúdo a partir da gravação, mas não obteve texto utilizável. Consulte a gravação audiovisual disponível nesta Ata para verificar o que foi discutido.`);
+                paragraphs.push(`Foram detectadas manifestações orais de ${formatHumanList(names)}. A transcrição pode ainda estar pendente ou não ter produzido texto inteligível. Consulte a gravação audiovisual disponível nesta Ata para verificar o que foi discutido.`);
             } else {
                 paragraphs.push('Não foram localizadas transcrições textuais, anotações formais de discussão ou registros técnicos de atividade de fala vinculados a esta assembleia.');
             }
@@ -956,53 +966,35 @@
 
     let recordingRefreshInFlight = false;
     let recordingRefreshTimer = null;
-    const transcriptionKickAt = new Map();
     const recordingPlayersLoading = new Set();
 
     function recordingNeedsRefresh(row) {
-        return ['pendente', 'gravando'].includes(row.status) || row.status === 'concluido' && ['pendente', 'enfileirado', 'processando', 'falhou'].includes(row.transcription_status);
+        return ['pendente', 'gravando'].includes(row.status) || row.status === 'concluido'
+            && (row.transcription_status !== 'concluido' || !String(row.transcription_model || '').startsWith('faster-whisper:'));
     }
 
     function recordingTranscriptionLabel(row) {
         const status = String(row.transcription_status || 'pendente');
-        if (status === 'concluido') return 'Transcrição Gemini disponível na ata.';
-        if (status === 'processando' || status === 'enfileirado') { const total = Number(row.transcription_total_seconds || row.duration_seconds || 0); const done = Number(row.transcription_cursor_seconds || 0); const progress = total > 0 && done > 0 ? ` (${Math.min(99, Math.floor(done * 100 / total))}% do vídeo analisado)` : ''; return status === 'processando' ? `Gemini transcrevendo o vídeo${progress}. A gravação já pode ser reproduzida.` : `Transcrição Gemini na fila${progress}. O vídeo já pode ser reproduzido.`; }
-        if (status === 'falhou') return `Não foi possível transcrever: ${row.transcription_error || 'verifique as credenciais e os registros do Gemini na Netlify.'}`;
-        return row.transcription_error || 'Transcrição aguardando inicialização automática.';
-    }
-
-    async function requestRecordingTranscription(row, force = false) {
-        if (row.status !== 'concluido') return;
-        const status = row.transcription_status || 'pendente';
-        const stale = Date.now() - new Date(row.transcription_started_at || 0).getTime();
-        if (!['pendente', 'falhou'].includes(status) && !(status === 'enfileirado' && stale > 6 * 60000) && !(status === 'processando' && stale > 20 * 60000)) return;
-        const id = String(row.id);
-        if (!force && Date.now() - (transcriptionKickAt.get(id) || 0) < 90000) return;
-        transcriptionKickAt.set(id, Date.now());
-        try {
-            const token = await window.resolveSupabaseAccessToken?.();
-            if (!token) return;
-            const response = await fetch('/.netlify/functions/assembly-gemini-kick', {
-                method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ recording_id: Number(row.id) }), cache: 'no-store'
-            });
-            const result = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                row.transcription_error = String(result.error || `Falha ao iniciar Gemini (HTTP ${response.status}).`).slice(0, 250);
-                const card = document.querySelector(`[data-recording-id="${id}"]`);
-                const status = card?.querySelector('.recording-transcription-status');
-                if (status) status.textContent = recordingTranscriptionLabel({ ...row, transcription_status: 'falhou' });
-            } else if (result.queued) {
-                row.transcription_status = 'enfileirado';
-                const card = document.querySelector(`[data-recording-id="${id}"]`);
-                const status = card?.querySelector('.recording-transcription-status');
-                if (status) status.textContent = recordingTranscriptionLabel(row);
-            }
-        } catch (error) {
-            row.transcription_error = 'Não foi possível alcançar a função de transcrição da Netlify.';
-            const status = document.querySelector(`[data-recording-id="${id}"] .recording-transcription-status`);
-            if (status) status.textContent = row.transcription_error;
+        const model = String(row.transcription_model || '');
+        if (status === 'concluido') {
+            return model.startsWith('faster-whisper:')
+                ? 'Transcrição automática do vídeo concluída. Confira cada fala com o áudio original.'
+                : 'Há uma transcrição antiga. O novo processamento local será realizado em segundo plano.';
         }
+        if (status === 'processando') {
+            const total = Number(row.transcription_total_seconds || row.duration_seconds || 0);
+            const done = Number(row.transcription_cursor_seconds || 0);
+            const progress = total > 0 ? ` (${Math.min(99, Math.floor(100 * done / total))}%)` : '';
+            return `Transcrevendo o MP4 em segundo plano${progress}. Você pode fechar esta página.`;
+        }
+        if (status === 'enfileirado') return 'Vídeo disponível. Transcrição agendada no servidor; não é necessário manter esta página aberta.';
+        if (status === 'falhou') {
+            if (/Gemini|PERMISSION_DENIED|denied access|upload Gemini|HTTP 403/i.test(row.transcription_error || '')) {
+                return 'A falha antiga do Gemini será corrigida pelo processador local de vídeo, quando estiver ativo.';
+            }
+            return `Falha no processamento automático: ${String(row.transcription_error || 'verifique os logs do worker no servidor.').slice(0, 200)}`;
+        }
+        return 'Gravação pronta. Transcrição automática será iniciada no servidor, sem depender do navegador.';
     }
 
     async function refreshRecordingStatus() {
@@ -1036,7 +1028,6 @@
             }
             renderHero();
             renderRecordings();
-            for (const row of state.recordings) requestRecordingTranscription(row);
             if (!state.recordingStatuses.some(recordingNeedsRefresh)) {
                 clearInterval(recordingRefreshTimer);
                 recordingRefreshTimer = null;
@@ -1051,10 +1042,9 @@
     function startRecordingRefresh() {
         clearInterval(recordingRefreshTimer);
         recordingRefreshTimer = null;
-        for (const row of state.recordings) requestRecordingTranscription(row);
         if (!(state.recordingStatuses || []).some(recordingNeedsRefresh)) return;
-        setTimeout(() => refreshRecordingStatus().catch(() => {}), 1200);
-        recordingRefreshTimer = setInterval(() => refreshRecordingStatus().catch(() => {}), 8000);
+        setTimeout(() => refreshRecordingStatus().catch(() => {}), 700);
+        recordingRefreshTimer = setInterval(() => refreshRecordingStatus().catch(() => {}), 4000);
     }
 
     function renderRecordings() {
@@ -1067,7 +1057,7 @@
             const waiting = statuses.some(status => ['pendente', 'gravando'].includes(status));
             const failed = statuses.includes('falhou');
             const unavailable = state.recordingStatuses?.some(row => row.status === 'concluido');
-            const message = waiting ? 'A gravação está sendo finalizada no LiveKit. Ela aparecerá aqui automaticamente.' : failed
+            const message = waiting ? 'O vídeo MP4 está sendo finalizado pelo LiveKit. Esta tela se atualiza automaticamente, independentemente da transcrição.' : failed
                 ? 'O LiveKit não concluiu esta gravação. Confira o Egress e o armazenamento S3.' : unavailable
                 ? 'Vídeo registrado no banco, mas ainda sem endereço de reprodução.' : 'Nenhuma gravação disponível até o momento.';
             if (!container.querySelector(':scope > .summary-empty')) {

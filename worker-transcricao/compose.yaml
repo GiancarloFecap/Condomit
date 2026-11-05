@@ -1,0 +1,21 @@
+services:
+  transcritor:
+    build: .
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      HF_HOME: /models
+    volumes:
+      - modelos:/models
+    # O MP4 e WAV temporários nunca são gravados em volumes persistentes.
+    tmpfs:
+      - /tmp:size=3g,mode=1777
+    mem_limit: 5g
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  modelos:

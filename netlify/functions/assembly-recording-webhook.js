@@ -2,7 +2,6 @@
 const { WebhookReceiver } = require('livekit-server-sdk');
 const { createClient } = require('@supabase/supabase-js');
 const { checkFile } = require('./lib/assembly-recording-state');
-const { enqueueTranscription } = require('./lib/assembly-gemini-transcription');
 
 exports.handler = async event => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: '' };
@@ -32,10 +31,8 @@ exports.handler = async event => {
       const { error } = await admin.from('assembly_recordings').update(update).eq('id', row.id).in('status', ['gravando', 'pendente', 'falhou']);
       if (error) throw error;
     }
-    if (nextStatus === 'concluido') {
-      try { await enqueueTranscription(row.id); }
-      catch (error) { console.warn('[ASSEMBLY GEMINI QUEUE]', { recording: row.id, message: String(error?.message || error) }); }
-    }
+    // O worker externo detecta automaticamente registros com status 'concluido'.
+    // O webhook apenas finaliza o vídeo: nunca aguarda, chama ou reprocessa um serviço de IA.
     return { statusCode: 200, body: 'ok' };
   } catch (error) {
     console.error('[ASSEMBLY EGRESS WEBHOOK]', error);

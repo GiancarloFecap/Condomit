@@ -360,3 +360,35 @@ html[data-theme="dark"] .signature-modal-card .modal-actions{border-color:#33415
 .summary-panel > .summary-section { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
 .poll-results-list, .comments-list, .recordings-list { width: 100%; min-width: 0; box-sizing: border-box; }
 .poll-result-card, .comment-card, .recording-card { min-width: 0; max-width: 100%; box-sizing: border-box; }
+
+/* v0.75.7 — layout unificado das quatro abas da revisão */
+.assembly-summary-page {
+  display: block;
+  width: 100%;
+  max-width: 1400px;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-inline: auto;
+}
+.assembly-summary-page > .summary-back-row,
+.assembly-summary-page > .summary-hero,
+.assembly-summary-page > .summary-tabs,
+.assembly-summary-page > .summary-panel,
+.assembly-summary-page > .summary-panel > .summary-section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-left: 0;
+  margin-right: 0;
+  box-sizing: border-box;
+}
+.assembly-summary-page > .summary-panel:not(.active) { display: none; }
+.assembly-summary-page > .summary-panel.active { display: block; }
+.assembly-summary-page :is(.post-comment-form, .poll-results-list, .recordings-list,
+  .comments-list, #assemblyMinutes, #assemblyPostComments, #assemblyPollResults,
+  #assemblyRecordings) { max-width: 100%; min-width: 0; box-sizing: border-box; }
+.assembly-summary-page .post-comment-form { grid-template-columns: minmax(0, 1fr) auto; }
+.assembly-summary-page .post-comment-form textarea { min-width: 0; box-sizing: border-box; }
+@media (max-width: 720px) {
+  .assembly-summary-page .post-comment-form { grid-template-columns: minmax(0, 1fr); }
+}
