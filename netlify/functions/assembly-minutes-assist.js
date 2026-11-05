@@ -31,11 +31,11 @@ exports.handler = async (event) => {
     const videoIds = (completedVideos || []).map(row => row.id);
     if (!videoIds.length) return response(200,{warning:'A transcrição automática do vídeo ainda não foi concluída. Aguarde o processo em segundo plano e revise o MP4 original.',suggestions:[]});
     const {data: transcripts, error: transcriptError} = await supabase.from('assembly_transcripts')
-      .select('id,transcript,participant_name,spoken_at,confidence').eq('assembly_id',id)
+      .select('id,recording_id,participant_identity,participant_email,participant_name,start_seconds,end_seconds,transcript,spoken_at,confidence').eq('assembly_id',id)
       .eq('transcript_source','recording_video_deepgram').in('recording_id',videoIds)
-      .order('spoken_at',{ascending:true}).limit(180);
+      .order('spoken_at',{ascending:true}).limit(800);
     if (transcriptError) throw transcriptError;
-    const items = (transcripts || []).filter(item=>String(item.transcript||'').trim().length>8).map(item=>({id:item.id,name:String(item.participant_name||'Participante').slice(0,90),text:String(item.transcript).slice(0,450),confidence:item.confidence}));
+    const items = groupRows(transcripts || []).filter(item=>String(item.text||'').trim().length>8).map(item=>({id:item.source_ids[0],ids:item.source_ids,name:String(item.participant_name||'Participante não identificado').slice(0,90),text:String(item.text).slice(0,900)}));
     if (!items.length) return response(200,{warning:'Não foram encontradas transcrições úteis para revisão. Consulte a gravação original.',suggestions:[]});
     const stopwords = new Set('para como seja ainda muito menos mais sobre desta deste daquele aquela falou disse vamos temos somos vocês deles delas neste nessa nesse entre nosso nossa vocês foi foram aqui agora então isso aquilo apenas mesma mesmo onde porque quando também todos todas essas esses pelo pela pelos pelas está estão será serão essa esse isso uma uns umas com sem aos nas nos por que não sim hoje gente pessoal obrigado obrigada'.split(' '));
     const scoreText = (value) => {
@@ -47,7 +47,7 @@ exports.handler = async (event) => {
       const words = scoreText(text);
       const unique = [...new Set(words)];
       const signals = /or[çc]ament|reforma|manuten[çc][aã]o|prazo|proposta|seguran[çc]a|aprova|despesa|receita|prestador|reserva|cot[ae]|servi[çc]o|obra|condom[ií]ni|assembleia|contrato|pauta/i.test(text) ? 3 : 0;
-      return {id:item.id, name:item.name,text,words:unique,score:unique.length+signals};
+      return {id:item.id, ids:item.ids, name:item.name,text,words:unique,score:unique.length+signals};
     }).filter(item=>item.words.length>=3 && item.text.length>=25);
     pool.sort((a,b)=>b.score-a.score);
     const selected = [];
@@ -62,7 +62,7 @@ exports.handler = async (event) => {
     selected.sort((a,b) => items.findIndex(x=>String(x.id)===String(a.id)) - items.findIndex(x=>String(x.id)===String(b.id)));
     const suggestions = selected.map(item=>({
       text:`Trecho para conferência (${item.name}): “${item.text}”`,
-      sources:[String(item.id)]
+      sources:item.ids.map(String)
     }));
     return response(200,{
       method:'extractive_local_rules',

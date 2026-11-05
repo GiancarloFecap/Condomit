@@ -17,6 +17,7 @@
         transcripts: [],
         recordings: [],
         speechActivities: [],
+        speakerAssignments: [],
         condominium: null,
         signature: null,
         signedDocuments: [],
@@ -108,7 +109,7 @@
             renderRecordings();
             return rows;
         });
-        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings, speechActivities, signatures, commentVotes] = await Promise.all([
+        const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings, speechActivities, speakerAssignments, signatures, commentVotes] = await Promise.all([
             fetchRows(`/scheduled_assemblies?select=*&id=eq.${state.id}&limit=1`),
             fetchRows(`/assembly_attendance?select=*&assembly_id=eq.${state.id}&order=joined_at.asc`),
             fetchRows(`/assembly_chat_messages?select=*&assembly_id=eq.${state.id}&order=created_at.asc`),
@@ -120,6 +121,7 @@
             fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => []),
             recordingsPromise.catch(() => []),
             fetchRows(`/assembly_speech_activity?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
+            Promise.resolve([]),
             fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code,signature_data&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
             fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => [])
         ]);
@@ -147,6 +149,7 @@
         const playableRecordings = (recordings || []).filter(row => row?.status === 'concluido' && String(row?.recording_url || '').trim() && (recordingVerification === null || recordingVerification.get(String(row.id))?.storage_verified));
         state.recordingStatuses = (recordings || []).map(row => ({ ...row, verification: recordingVerification?.get(String(row.id)) || null }));
         Object.assign(state, { attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings: playableRecordings, speechActivities, commentVotes });
+        state.speakerAssignments = await loadSpeakerAssignments();
         state.signature = signatures[0] || null;
 
          
@@ -160,6 +163,84 @@
             ? await fetchRows(`/assembly_poll_options?select=*&poll_id=in.(${pollIds.join(',')})&order=display_order.asc`)
             : [];
         await Promise.all([loadPollResults(), loadCommentProfiles()]);
+    }
+
+    async function loadSpeakerAssignments() {
+        const ids = (state.recordingStatuses || []).map(row => Number(row.id)).filter(id => Number.isSafeInteger(id) && id > 0);
+        if (!ids.length) return [];
+        return fetchRows(`/assembly_deepgram_speakers?select=*&recording_id=in.(${ids.join(',')})`).catch(() => []);
+    }
+
+    function completedDeepgramTranscripts() {
+        const completedIds = new Set((state.recordingStatuses || []).filter(row => row.status === 'concluido'
+            && row.transcription_status === 'concluido' && row.transcription_model === 'deepgram:nova-3').map(row => String(row.id)));
+        return state.transcripts.filter(row => String(row.transcript_source || row.source || '').trim().toLowerCase() === 'recording_video_deepgram'
+            && completedIds.has(String(row.recording_id)));
+    }
+
+    function groupedDeepgramTranscripts() {
+        return window.CondomitMinutesSpeech?.groupRows(completedDeepgramTranscripts()) || [];
+    }
+
+    function speakerOptions() {
+        const users = new Map();
+        state.attendance.concat(state.speechActivities).forEach(row => {
+            const email = String(row.user_email || row.participant_email || '').trim().toLowerCase();
+            const name = cleanFormalText(row.participant_name || row.name || email);
+            if (email && !email.endsWith('@condomit.invalid') && !users.has(email)) users.set(email, {email, name});
+        });
+        return Array.from(users.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    }
+
+    function speakerMappingControls(groups) {
+        if (currentUserRole() !== 'sindico') return '';
+        const voices = new Map();
+        groups.forEach(group => {
+            if (group.speakerIndex != null) voices.set(`${group.recordingId}:${group.speakerIndex}`, group);
+        });
+        if (!voices.size) return '';
+        const people = speakerOptions();
+        return `<div class="minutes-speaker-mapping074"><strong>Identificação das vozes</strong>
+            <p>Quando a atividade do microfone permitir uma correspondência consistente, o nome é preenchido automaticamente. Confirme as vozes ouvindo o áudio antes de atribuí-las a uma pessoa.</p>
+            ${Array.from(voices.values()).map(group => {
+                const mapping = state.speakerAssignments.find(row => String(row.recording_id) === group.recordingId && Number(row.speaker_index) === group.speakerIndex);
+                const selected = String(mapping?.participant_email || group.participant_email || '').toLowerCase();
+                return `<label class="minutes-speaker-label074">Voz ${group.speakerIndex + 1}
+                  <select data-speaker-recording="${esc(group.recordingId)}" data-speaker-index="${group.speakerIndex}" aria-label="Identificar voz ${group.speakerIndex + 1}">
+                    <option value="">Não identificada</option>
+                    ${people.map(person => `<option value="${esc(person.email)}" ${person.email === selected ? 'selected' : ''}>${esc(person.name)}</option>`).join('')}
+                  </select>
+                  <small>${mapping?.assignment_source === 'reviewed' ? 'Identificação confirmada na revisão' : mapping?.assignment_source === 'speech_activity' ? 'Sugerido pela atividade do microfone; confirme pelo áudio' : 'Identidade não confirmada'}</small>
+                </label>`;
+            }).join('')}
+        </div>`;
+    }
+
+    async function updateSpeakerMapping(select) {
+        const recordingId = Number(select.dataset.speakerRecording);
+        const speakerIndex = Number(select.dataset.speakerIndex);
+        const email = select.value || null;
+        select.disabled = true;
+        try {
+            await window.supabaseFetch('/rpc/condomit_assign_deepgram_speaker_064', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({target_recording_id: recordingId, target_speaker_index: speakerIndex, selected_participant_email: email})
+            });
+            const previousEditor = document.getElementById('assemblyMinutesEditor074');
+            const wasEdited = previousEditor && previousEditor.value !== (state.minutesDraft?.body || state.generatedMinutes);
+            const editedValue = wasEdited ? previousEditor.value : null;
+            state.transcripts = await fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`);
+            state.speakerAssignments = await loadSpeakerAssignments();
+            renderMinutes();
+            if (editedValue !== null) {
+                const editor = document.getElementById('assemblyMinutesEditor074');
+                if (editor) editor.value = editedValue;
+            }
+            window.showToast?.('Autoria atualizada. Confira a nova redação da ATA antes de salvá-la.', 'success');
+        } catch (error) {
+            window.showToast?.(error?.message || 'Não foi possível identificar esta voz.', 'error');
+            select.disabled = false;
+        }
     }
 
     async function loadMinutesReview() {
@@ -326,7 +407,7 @@
                 <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
                 <span><i class="fas fa-video"></i> ${state.recordings.length} ${state.recordings.length === 1 ? 'gravação' : 'gravações'}</span>
-                <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').length ? `${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').length} trechos do vídeo transcritos` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
+                <span><i class="fas fa-microphone-lines"></i> ${groupedDeepgramTranscripts().length ? `${groupedDeepgramTranscripts().length} manifestações registradas` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
             </div>
             <div class="summary-hero-actions">
                 ${currentUserRole() === 'sindico' ? '<button type="button" id="generateAssemblyTasks027" class="summary-secondary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button>' : ''}
@@ -424,15 +505,17 @@
               <p>A gravação e a transcrição são documentos de apoio. Confirme data, presença, discussões, deliberações, quóruns e responsáveis. A transcrição automática é gerada em segundo plano diretamente do vídeo. Ela pode conter erros e deve ser conferida com o áudio original.</p>
               <textarea id="assemblyMinutesEditor074" rows="14" spellcheck="true" aria-label="Redigir ata para revisão">${esc(displayText)}</textarea>
               <div class="minutes-review-actions074">
+                ${!approved ? `<button type="button" class="summary-secondary" id="minutesRegenerate07510"><i class="fas fa-rotate"></i> Atualizar texto com falas agrupadas</button>` : ''}
                 <button type="button" class="summary-secondary" id="minutesAiHelp074"><i class="fas fa-wand-magic-sparkles"></i> Selecionar trechos da transcrição</button>
                 <button type="button" class="summary-secondary" id="minutesSave074">Salvar minuta</button>
                 <button type="button" class="summary-primary" id="minutesApprove074">Aprovar ata revisada</button>
               </div>
               <div id="assemblyMinutesAiSuggestions074" class="minutes-ai-suggestions074" hidden></div>
-              <details class="minutes-evidence074"><summary>Conferir trechos de transcrição do vídeo (${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').length})</summary>
-                <p>Reconhecimento automático do áudio do MP4: os textos não são necessariamente literais e os falantes não são identificados com segurança. Confira o áudio original antes de aprovar a ata. Resultados de votação são registros independentes.</p>
-                ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').slice(0,120).map(item=>`<div class="minutes-audio-segment"><p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>${item.audio_storage_path ? `<audio controls preload="none" aria-label="Ouvir áudio do trecho ${esc(String(item.id))}" data-transcript-audio-path="${esc(item.audio_storage_path)}"></audio><small class="minutes-audio-status">Preparando áudio protegido...</small>` : item.recording_id && item.start_seconds !== null && item.end_seconds !== null ? `<audio controls preload="none" aria-label="Ouvir fala no vídeo gravado" data-recording-clip-id="${esc(String(item.recording_id))}" data-clip-start="${esc(String(item.start_seconds))}" data-clip-end="${esc(String(item.end_seconds))}"></audio><small class="minutes-audio-status">Trecho retirado do vídeo da assembleia.</small>` : '<small>Áudio individual não disponível para este trecho.</small>'}</div>`).join('')}
-                ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').length>120 ? `<p>Exibindo 120 de ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').length} trechos. Consulte o registro original para os demais.</p>` : ''}
+              <details class="minutes-evidence074"><summary>Conferir transcrição do vídeo (${groupedDeepgramTranscripts().length} manifestações)</summary>
+                <p>Trechos consecutivos da mesma voz foram reunidos em manifestações contínuas. Os registros originais e os pontos da gravação permanecem disponíveis para conferência. A identificação de usuários deve ser confirmada.</p>
+                ${speakerMappingControls(groupedDeepgramTranscripts())}
+                ${groupedDeepgramTranscripts().slice(0,120).map((item, index) => `<div class="minutes-audio-segment"><p><strong>Manifestação ${index + 1}</strong> · ${esc(item.participant_name)}: ${esc(item.text)}</p>${item.audio_storage_path ? `<audio controls preload="none" aria-label="Ouvir áudio da manifestação ${index + 1}" data-transcript-audio-path="${esc(item.audio_storage_path)}"></audio><small class="minutes-audio-status">Preparando áudio protegido...</small>` : item.recordingId && item.start_seconds !== null && item.end_seconds !== null ? `<audio controls preload="none" aria-label="Ouvir fala no vídeo gravado" data-recording-clip-id="${esc(item.recordingId)}" data-clip-start="${esc(String(item.start_seconds))}" data-clip-end="${esc(String(item.end_seconds))}"></audio><small class="minutes-audio-status">Trecho retirado do vídeo da assembleia.</small>` : '<small>Áudio individual não disponível para este trecho.</small>'}</div>`).join('')}
+                ${groupedDeepgramTranscripts().length > 120 ? `<p>Exibindo 120 de ${groupedDeepgramTranscripts().length} manifestações. Consulte o registro original para as demais.</p>` : ''}
               </details>
               <div class="minutes-external-signature074">
                 <strong>Assinatura eletrônica gov.br — serviço externo</strong>
@@ -448,6 +531,21 @@
             </section>` : ''}`;
         const evidence = container.querySelector('.minutes-evidence074');
         evidence?.addEventListener('toggle', () => { if (evidence.open) prepareTranscriptAudio(evidence); });
+        evidence?.querySelectorAll('select[data-speaker-recording]')?.forEach(select => select.addEventListener('change', () => updateSpeakerMapping(select)));
+        container.querySelector('#minutesRegenerate07510')?.addEventListener('click', async () => {
+            const editor = document.getElementById('assemblyMinutesEditor074');
+            if (!editor) return;
+            if (editor.value.trim() && editor.value.trim() !== state.generatedMinutes.trim()) {
+                const ok = await window.showConfirm?.({
+                    title: 'Atualizar redação da minuta',
+                    message: 'Substituir o texto atual pela minuta gerada com as falas agrupadas? As alterações manuais ainda não salvas serão perdidas. A ata aprovada não é modificada.',
+                    confirmText: 'Atualizar texto', cancelText: 'Cancelar'
+                });
+                if (!ok) return;
+            }
+            editor.value = state.generatedMinutes;
+            window.showToast?.('Texto atualizado no editor. Confira as falas e clique em Salvar minuta.', 'success');
+        });
         container.querySelector('#minutesSave074')?.addEventListener('click', () => saveMinutesReview(false));
         container.querySelector('#minutesApprove074')?.addEventListener('click', () => saveMinutesReview(true));
         container.querySelector('#minutesAiHelp074')?.addEventListener('click', requestMinutesAiSuggestions);
@@ -538,52 +636,27 @@
             paragraphs.push(`Quanto ao item “${item.title}”, ficou registrado em ata o seguinte teor de discussão: ${sentenceFragment(item.notes)}.`);
         });
 
-        const completedVideoIds = new Set((state.recordingStatuses || [])
-            .filter(row => row.status === 'concluido' && row.transcription_status === 'concluido'
-                && String(row.transcription_model || '') === 'deepgram:nova-3')
-            .map(row => String(row.id)));
-        const transcriptSourceRows = state.transcripts.filter((row) =>
-            String(row.transcript_source || row.source || '').trim().toLowerCase() === 'recording_video_deepgram'
-            && completedVideoIds.has(String(row.recording_id)));
+        const groups = groupedDeepgramTranscripts();
+        const strongGroups = groups.filter(group => cleanFormalText(group.text));
+        const isInferredTranscript = row => String(row.participant_identity || '').startsWith('__condomit_inferred__:');
+        const inferredTranscripts = completedDeepgramTranscripts().filter(row => isInferredTranscript(row));
 
-        const isInferredTranscript = (row) => String(row.participant_identity || '').startsWith('__condomit_inferred__:');
-        const confidentTranscripts = transcriptSourceRows
-            .filter((row) => cleanFormalText(row.transcript || '') && !isInferredTranscript(row))
-            .sort((a, b) => new Date(a.spoken_at || a.created_at || 0) - new Date(b.spoken_at || b.created_at || 0));
-        const inferredTranscripts = transcriptSourceRows
-            .filter((row) => cleanFormalText(row.transcript || '') && isInferredTranscript(row))
-            .sort((a, b) => new Date(a.spoken_at || a.created_at || 0) - new Date(b.spoken_at || b.created_at || 0));
-
-        if (confidentTranscripts.length) {
-            confidentTranscripts.forEach((row) => {
-                const name = cleanFormalText(row.participant_name || row.participant_email || 'Participante');
-                const text = String(row.transcript || '').replace(/\s+/g, ' ').trim();
-                const time = row.spoken_at ? new Date(row.spoken_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
-                paragraphs.push(`${time ? `Às ${time}, ` : ''}${name} declarou: “${text}”`);
+        if (strongGroups.length) {
+            strongGroups.forEach(group => {
+                const formal = window.CondomitMinutesSpeech?.formalParagraph(group);
+                if (formal) paragraphs.push(formal);
             });
-
-            const transcribedKeys = new Set(confidentTranscripts.map((row) => String(row.participant_email || row.participant_name || '').trim().toLowerCase()).filter(Boolean));
-            const untranscribedSpeakers = uniqueSpeechParticipants().filter((speaker) => {
-                const key = String(speaker.email || speaker.name || '').trim().toLowerCase();
-                return key && !transcribedKeys.has(key);
-            });
-            if (untranscribedSpeakers.length && !inferredTranscripts.length) {
-                paragraphs.push(`Também foram detectadas manifestações orais de ${formatHumanList(untranscribedSpeakers.map((speaker) => speaker.name))}, sem transcrição textual automática disponível. Consulte a gravação audiovisual da assembleia para conferência do conteúdo.`);
+            if (strongGroups.some(group => !group.participant_email)) {
+                paragraphs.push('A autoria de algumas manifestações não foi confirmada. O síndico deverá identificar as vozes com auxílio da gravação antes da aprovação da ata.');
             }
         }
-
         if (inferredTranscripts.length) {
-            paragraphs.push('Como parte do conteúdo não pôde ser reconhecida com segurança suficiente, o sistema apresenta abaixo uma interpretação provável do que foi dito. Consulte a gravação audiovisual disponível nesta Ata para confirmar o conteúdo e obter maior clareza sobre o que foi discutido.');
-            inferredTranscripts.forEach((row) => {
-                const text = String(row.transcript || '').replace(/\s+/g, ' ').trim();
-                const time = row.spoken_at ? new Date(row.spoken_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
-                paragraphs.push(`${time ? `Por volta das ${time}, ` : ''}conteúdo presumido da gravação: “${text}”`);
-            });
-        } else if (!confidentTranscripts.length && !agendaNotes.length) {
+            paragraphs.push('Alguns trechos foram sinalizados como interpretação provável do áudio. Consulte a gravação original para confirmar os detalhes antes da aprovação.');
+        }
+        if (!strongGroups.length && !agendaNotes.length) {
             const speakers = uniqueSpeechParticipants();
             if (speakers.length) {
-                const names = speakers.map((speaker) => speaker.name).filter(Boolean);
-                paragraphs.push(`Foram detectadas manifestações orais de ${formatHumanList(names)}. A transcrição pode ainda estar pendente ou não ter produzido texto inteligível. Consulte a gravação audiovisual disponível nesta Ata para verificar o que foi discutido.`);
+                paragraphs.push('Foram detectadas manifestações orais durante a reunião, mas a transcrição do vídeo não está disponível ou não produziu texto inteligível. Consulte a gravação audiovisual.');
             } else {
                 paragraphs.push('Não foram localizadas transcrições textuais, anotações formais de discussão ou registros técnicos de atividade de fala vinculados a esta assembleia.');
             }
@@ -1034,8 +1107,9 @@
             state.recordings = rows.filter(row => row.status === 'concluido' && row.recording_url);
             const latestTranscripts = await fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => null);
             const transcriptsChanged = latestTranscripts && (latestTranscripts.length !== state.transcripts.length
-                || latestTranscripts.some((row, index) => row.id !== state.transcripts[index]?.id || row.transcript !== state.transcripts[index]?.transcript));
+                || latestTranscripts.some((row, index) => row.id !== state.transcripts[index]?.id || row.transcript !== state.transcripts[index]?.transcript || row.participant_name !== state.transcripts[index]?.participant_name || row.participant_email !== state.transcripts[index]?.participant_email));
             if (transcriptsChanged) state.transcripts = latestTranscripts;
+            if (recordingChanged || transcriptsChanged) state.speakerAssignments = await loadSpeakerAssignments();
             if (recordingChanged || transcriptsChanged) {
                 const editor = document.getElementById('assemblyMinutesEditor074');
                 const previousEditorValue = editor && editor.value !== (state.minutesDraft?.body || state.generatedMinutes)

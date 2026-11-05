@@ -392,3 +392,36 @@ html[data-theme="dark"] .signature-modal-card .modal-actions{border-color:#33415
 @media (max-width: 720px) {
   .assembly-summary-page .post-comment-form { grid-template-columns: minmax(0, 1fr); }
 }
+
+.minutes-speaker-mapping074 {
+    margin: 16px 0 20px;
+    padding: 15px 18px;
+    border: 1px solid var(--border-color, #dce3ee);
+    border-radius: 12px;
+}
+.minutes-speaker-mapping074 > p {
+    font-size: .88rem;
+    line-height: 1.55;
+    margin: 8px 0 12px;
+}
+.minutes-speaker-label074 {
+    display: grid;
+    gap: 5px;
+    max-width: 480px;
+    margin: 12px 0;
+    font-weight: 600;
+}
+.minutes-speaker-label074 select {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #dce3ee);
+    background: var(--card-background, #fff);
+    color: var(--text-color, #243044);
+    font: inherit;
+}
+.minutes-speaker-label074 small {
+    font-weight: 400;
+    opacity: .8;
+}

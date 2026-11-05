@@ -109,6 +109,7 @@ test('callback autenticado grava transcrição apenas via transação do banco',
       }) }) }) };
     },
     rpc: async (name, args) => {
+      if (name === 'condomit_auto_identify_deepgram_064') return { data: 1, error: null };
       commits++;
       assert.equal(name, 'condomit_finish_deepgram_063');
       assert.equal(args.target_recording_id, 7);
@@ -138,4 +139,22 @@ test('callback rejeita segredo inválido sem alterar dados', async () => {
     metadata: { extra: { recording_id: 7, callback_secret: 'invalid' } }, results: {}
   }) });
   assert.equal(response.statusCode, 403);
+});
+
+
+test('junta utterances da mesma voz mesmo quando há pausas breves no meio da frase', () => {
+  const input = {
+    results: { utterances: [
+      {start: 1, end: 2, speaker: 0, transcript: 'Foi apresentada uma proposta'},
+      {start: 3, end: 4, speaker: 0, transcript: 'no valor de oito mil'},
+      {start: 5, end: 6, speaker: 0, transcript: 'e quinhentos reais.'},
+      {start: 7, end: 9, speaker: 1, transcript: 'Gostaria de comentar.'}
+    ] }
+  };
+  const rows = core.parseSegments(input);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].text, 'Foi apresentada uma proposta no valor de oito mil e quinhentos reais.');
+  assert.equal(rows[0].start, 1);
+  assert.equal(rows[0].end, 6);
+  assert.equal(rows[1].speaker, 1);
 });

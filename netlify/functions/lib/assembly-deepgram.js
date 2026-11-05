@@ -171,10 +171,40 @@ function splitUtterance(utterance) {
   });
 }
 
+function joinUtteranceText(previous, next) {
+  let left = cleanText(previous);
+  let right = cleanText(next);
+  if (!left) return right;
+  if (!right) return left;
+  if (/\b(?:e|ou|mas|que|para|de|do|da|dos|das|em|na|no|com|sem|enquanto|se|por|sobre|um|uma|os|as|o|a)[,.!?;:]*$/i.test(left)) {
+    left = left.replace(/[,.!?;:]+$/, '');
+    right = right.charAt(0).toLocaleLowerCase('pt-BR') + right.slice(1);
+  }
+  return `${left}${/^[,.;:!?]/.test(right) ? '' : ' '}${right}`;
+}
+
+function mergeConsecutiveUtterances(segments) {
+  const merged = [];
+  for (const segment of segments.slice().sort((a, b) => a.start - b.start)) {
+    const last = merged[merged.length - 1];
+    if (last && segment.speaker != null && last.speaker === segment.speaker
+      && segment.start >= last.end - 0.5 && segment.start - last.end <= 12
+      && segment.end - last.start <= 180
+      && last.text.length + segment.text.length <= 2400) {
+      last.text = joinUtteranceText(last.text, segment.text);
+      last.end = segment.end;
+      if (segment.confidence != null) last.confidence = last.confidence == null ? segment.confidence : Math.min(last.confidence, segment.confidence);
+    } else {
+      merged.push({ ...segment });
+    }
+  }
+  return merged;
+}
+
 function parseSegments(payload) {
   const utterances = payload?.results?.utterances;
   if (Array.isArray(utterances) && utterances.length) {
-    return utterances.flatMap(splitUtterance).sort((a, b) => a.start - b.start);
+    return mergeConsecutiveUtterances(utterances.flatMap(splitUtterance));
   }
   const alt = payload?.results?.channels?.[0]?.alternatives?.[0];
   const words = Array.isArray(alt?.words) ? alt.words : [];
@@ -196,10 +226,10 @@ function parseSegments(payload) {
         current.confidence = Math.min(Number(current.confidence) || 1, Number(word.confidence) || 1);
       }
     }
-    return utteranceGroups.flatMap(splitUtterance);
+    return mergeConsecutiveUtterances(utteranceGroups.flatMap(splitUtterance));
   }
   if (cleanText(alt?.transcript)) return splitUtterance({ transcript: alt.transcript, start: 0, end: Number(payload?.metadata?.duration || 0) });
   return [];
 }
 
-module.exports = { MODEL, SOURCE, MAX_ATTEMPTS, adminClient, storagePath, secretHash, shouldProcess, callbackUrl, claim, markFailure, sendToDeepgram, dispatch, parseSegments };
+module.exports = { MODEL, SOURCE, MAX_ATTEMPTS, adminClient, storagePath, secretHash, shouldProcess, callbackUrl, claim, markFailure, sendToDeepgram, dispatch, parseSegments, mergeConsecutiveUtterances };
