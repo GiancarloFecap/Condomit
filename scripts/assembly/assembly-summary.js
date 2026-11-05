@@ -24,6 +24,10 @@
         minutesNumber: null,
         minutesDraft: null,
         generatedMinutes: "",
+        detailsReleased: true,
+        indirectDiscussion: null,
+        indirectSummaryError: "",
+        indirectSummaryRunning: false,
         commentProfiles: new Map(),
         commentVotes: [],
         replyComposerFor: null,
@@ -54,8 +58,23 @@
 
         try {
             await waitForAuthSession();
-            await Promise.all([loadAll(), loadMinutesReview()]);
+            const visible = await window.supabaseFetch('/rpc/condomit_assembly_details_visible_065', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({target_assembly_id: state.id})
+            });
+            if (visible !== true) {
+                state.detailsReleased = false;
+                renderAwaitingSignature();
+                return;
+            }
+            await loadAll();
+            await loadMinutesReview();
             renderAll();
+            const needsSummary = !state.minutesDraft || (state.minutesDraft.status === 'rascunho'
+                && /registrando os seguintes pontos:|Falante\s*\d+\s*declarou/i.test(state.minutesDraft.body || ''));
+            if (currentUserRole() === 'sindico' && needsSummary && groupedDeepgramTranscripts().length) {
+                generateIndirectSummary({automatic:true}).catch(() => {});
+            }
         } catch (error) {
             console.error('[ASSEMBLY SUMMARY]', error);
             renderFatal(error?.message || 'Não foi possível carregar a ata da assembleia.');
@@ -78,7 +97,7 @@
 
     function currentUserRole() {
         const role = String(state.user?.type || state.user?.user_type || 'morador').toLowerCase();
-        if (role.startsWith('sind')) return 'sindico';
+        if (role.startsWith('sind') || role === 'admin') return 'sindico';
         if (role.startsWith('porteir')) return 'porteiro';
         return 'morador';
     }
@@ -231,12 +250,13 @@
             const editedValue = wasEdited ? previousEditor.value : null;
             state.transcripts = await fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`);
             state.speakerAssignments = await loadSpeakerAssignments();
+            state.indirectDiscussion = null;
             renderMinutes();
             if (editedValue !== null) {
                 const editor = document.getElementById('assemblyMinutesEditor074');
                 if (editor) editor.value = editedValue;
             }
-            window.showToast?.('Autoria atualizada. Confira a nova redação da ATA antes de salvá-la.', 'success');
+            window.showToast?.('Identificação alterada. Gere novamente o resumo em discurso indireto para refletir a autoria correta.', 'success');
         } catch (error) {
             window.showToast?.(error?.message || 'Não foi possível identificar esta voz.', 'error');
             select.disabled = false;
@@ -258,6 +278,9 @@
         const textarea = document.getElementById('assemblyMinutesEditor074');
         const body = String(textarea?.value || '').trim();
         if (body.length < 30) { window.showToast?.('Revise e preencha o conteúdo da ata antes de salvar.', 'warning'); return; }
+        if (approve && /síntese narrativa das manifestações está pendente|não foi possível consolidar as manifestações/i.test(body)) {
+            window.showToast?.('Preencha o resumo em discurso indireto antes de aprovar a ata.', 'warning'); return;
+        }
         if (approve && (state.recordingStatuses || []).some(row => row.status === 'concluido'
             && (row.transcription_status !== 'concluido' || String(row.transcription_model || '') !== 'deepgram:nova-3'))) {
             window.showToast?.('Aguarde a transcrição do vídeo em segundo plano e confira os trechos antes de aprovar a ata.', 'warning');
@@ -334,7 +357,7 @@
         const output = document.getElementById('assemblyMinutesAiSuggestions074');
         if (!output) return;
         output.hidden = false;
-        output.textContent = 'Selecionando trechos com base nos registros...';
+        output.textContent = 'Selecionando trechos para conferência dos registros...';
         try {
             const token = await window.resolveSupabaseAccessToken?.();
             const response = await fetch('/.netlify/functions/assembly-minutes-assist', {
@@ -382,6 +405,70 @@
     async function fetchRows(path) {
         const data = await window.supabaseFetch(path);
         return Array.isArray(data) ? data : (data ? [data] : []);
+    }
+
+    function renderAwaitingSignature() {
+        const hero = document.getElementById('assemblySummaryHero');
+        if (hero) hero.innerHTML = `<div class="summary-pending-publication" role="status">
+            <i class="fas fa-lock" aria-hidden="true"></i>
+            <h2>Ata em revisão</h2>
+            <p>Os detalhes, as gravações, as votações e os comentários desta assembleia estarão disponíveis aos moradores somente após a revisão, aprovação e assinatura da ata pelo síndico.</p>
+            <button type="button" class="summary-secondary" id="retryAssemblyPublication0761"><i class="fas fa-rotate-right"></i> Verificar publicação</button>
+        </div>`;
+        hero?.querySelector('#retryAssemblyPublication0761')?.addEventListener('click', () => location.reload());
+        const tabs = document.querySelector('.summary-tabs');
+        if (tabs) { tabs.hidden = true; tabs.style.display = 'none'; }
+        document.querySelectorAll('[data-summary-panel]').forEach(panel => { panel.hidden = true; panel.style.display = 'none'; });
+    }
+
+    async function generateIndirectSummary({automatic = false} = {}) {
+        if (state.indirectSummaryRunning || currentUserRole() !== 'sindico' || !state.detailsReleased) return;
+        if (!automatic) {
+            const editor = document.getElementById('assemblyMinutesEditor074');
+            if (editor?.value.trim() && editor.value.trim() !== (state.minutesDraft?.body || state.generatedMinutes).trim()) {
+                const confirmed = await window.showConfirm?.({title:'Refazer resumo narrativo',message:'O novo resumo substituirá a redação atual do editor. Deseja prosseguir?',confirmText:'Gerar resumo',cancelText:'Cancelar'});
+                if (confirmed === false) return;
+            }
+        }
+        state.indirectSummaryRunning = true;
+        state.indirectSummaryError = '';
+        const currentEditor = document.getElementById('assemblyMinutesEditor074');
+        const initialValue = currentEditor?.value || '';
+        const initialBaseline = state.minutesDraft?.body || state.generatedMinutes;
+        const hadChanges = initialValue.trim() !== initialBaseline.trim();
+        const status = document.getElementById('assemblyMinutesIndirectStatus0761');
+        if (status) status.textContent = 'Preparando resumo em discurso indireto a partir do Deepgram...';
+        try {
+            const token = await window.resolveSupabaseAccessToken?.();
+            if (!token) throw new Error('Sessão expirada. Entre novamente.');
+            const resp = await fetch('/.netlify/functions/assembly-minutes-indirect', {
+                method:'POST', headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+                body:JSON.stringify({assembly_id: state.id}),cache:'no-store'
+            });
+            const json = await resp.json();
+            if (!resp.ok) throw new Error(json.error || 'Não foi possível resumir a assembleia.');
+            if (!Array.isArray(json.paragraphs) || !json.paragraphs.length) throw new Error('Nenhuma síntese foi produzida.');
+            state.indirectDiscussion = json.paragraphs.map(value => cleanFormalText(value)).filter(Boolean);
+            if (!state.indirectDiscussion.length) throw new Error('Resumo vazio.');
+            const editorBeforeRender = document.getElementById('assemblyMinutesEditor074');
+            const latestUserText = editorBeforeRender?.value || initialValue;
+            const userChangedText = hadChanges || latestUserText !== initialValue;
+            renderMinutes();
+            const nextEditor = document.getElementById('assemblyMinutesEditor074');
+            if (nextEditor && userChangedText) nextEditor.value = latestUserText;
+            else if (nextEditor && (!automatic || state.minutesDraft?.status === 'rascunho')) nextEditor.value = state.generatedMinutes;
+            state.indirectSummaryError = '';
+            const nextStatus = document.getElementById('assemblyMinutesIndirectStatus0761');
+            if (nextStatus) nextStatus.textContent = 'Síntese produzida em discurso indireto. Confira as informações antes de salvar e assinar.';
+            if (!automatic) window.showToast?.('Resumo em discurso indireto gerado. Revise a minuta antes da aprovação.', 'success');
+        } catch (err) {
+            state.indirectSummaryError = err?.message || 'Erro ao elaborar a síntese.';
+            const output = document.getElementById('assemblyMinutesIndirectStatus0761');
+            if (output) output.textContent = state.indirectSummaryError;
+            if (!automatic) window.showToast?.(state.indirectSummaryError, 'warning');
+        } finally {
+            state.indirectSummaryRunning = false;
+        }
     }
 
     function renderAll() {
@@ -473,11 +560,12 @@
         paragraphs.push(closingTime
             ? `Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, a assembleia foi encerrada às ${formatClockFormal(closingTime)}.`
             : 'Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, deu-se por encerrada a assembleia, sem horário final específico informado no cadastro.');
-        paragraphs.push('Para constar, lavrou-se a presente ata com base nos registros eletrônicos de presença, pautas, transcrições e votações armazenados pelo Condomit, ficando o documento disponível para ciência dos participantes e assinatura eletrônica do síndico responsável pelo condomínio.');
+        paragraphs.push('Para constar, lavrou-se a presente minuta com base nos registros eletrônicos de presença, pautas, transcrições e votações mantidos pelo Condomit. Sua divulgação aos moradores dependerá da revisão, aprovação e assinatura do síndico.');
 
         state.generatedMinutes = paragraphs.join('\n\n');
         const displayText = state.minutesDraft?.body || state.generatedMinutes;
         const approved = state.minutesDraft?.status === 'aprovada';
+        const published = approved && Boolean(state.signature);
         const chairSignature = chair?.name || 'Síndico / Presidente da Assembleia';
         container.innerHTML = `
             <article class="formal-minutes-document" aria-label="Ata formal da assembleia">
@@ -498,18 +586,20 @@
                     </div>` : `
                     <div class="formal-signature"><span class="signature-line"></span><strong>${esc(chairSignature)}</strong><small>Assinatura do Síndico / Presidência da Assembleia</small></div>`}
                 </footer>
-                <div class="formal-minutes-note"><i class="fas fa-shield-halved"></i> ${approved ? 'Ata revisada e aprovada por responsável identificado.' : 'MINUTA NÃO APROVADA: a redação automática e as transcrições precisam de conferência humana. Não use como ata oficial sem revisão.'}</div>
+                <div class="formal-minutes-note"><i class="fas fa-shield-halved"></i> ${published ? 'Ata revisada, aprovada e assinada pelo síndico.' : approved ? 'Ata aprovada, aguardando assinatura do síndico para publicação aos moradores.' : 'MINUTA NÃO APROVADA: resumo narrativo e registros precisam de conferência humana.'}</div>
             </article>
             ${currentUserRole() === 'sindico' ? `<section class="minutes-review-editor074">
               <h3><i class="fas fa-clipboard-check"></i> Revisão formal da ata</h3>
               <p>A gravação e a transcrição são documentos de apoio. Confirme data, presença, discussões, deliberações, quóruns e responsáveis. A transcrição automática é gerada em segundo plano diretamente do vídeo. Ela pode conter erros e deve ser conferida com o áudio original.</p>
               <textarea id="assemblyMinutesEditor074" rows="14" spellcheck="true" aria-label="Redigir ata para revisão">${esc(displayText)}</textarea>
               <div class="minutes-review-actions074">
-                ${!approved ? `<button type="button" class="summary-secondary" id="minutesRegenerate07510"><i class="fas fa-rotate"></i> Atualizar texto com falas agrupadas</button>` : ''}
+                ${!approved ? `<button type="button" class="summary-secondary" id="minutesIndirect0761"><i class="fas fa-wand-magic-sparkles"></i> Gerar resumo em discurso indireto</button>` : ''}
+                ${!approved ? `<button type="button" class="summary-secondary" id="minutesRegenerate07510"><i class="fas fa-rotate"></i> Atualizar minuta resumida</button>` : ''}
                 <button type="button" class="summary-secondary" id="minutesAiHelp074"><i class="fas fa-wand-magic-sparkles"></i> Selecionar trechos da transcrição</button>
                 <button type="button" class="summary-secondary" id="minutesSave074">Salvar minuta</button>
                 <button type="button" class="summary-primary" id="minutesApprove074">Aprovar ata revisada</button>
               </div>
+              <div id="assemblyMinutesIndirectStatus0761" class="minutes-ai-suggestions074" role="status">${esc(state.indirectSummaryError || (state.indirectDiscussion ? 'Síntese narrativa gerada. Revise as informações antes de aprovar.' : 'Use o resumo automático para redigir a discussão em discurso indireto, ou redija manualmente.'))}</div>
               <div id="assemblyMinutesAiSuggestions074" class="minutes-ai-suggestions074" hidden></div>
               <details class="minutes-evidence074"><summary>Conferir transcrição do vídeo (${groupedDeepgramTranscripts().length} manifestações)</summary>
                 <p>Trechos consecutivos da mesma voz foram reunidos em manifestações contínuas. Os registros originais e os pontos da gravação permanecem disponíveis para conferência. A identificação de usuários deve ser confirmada.</p>
@@ -532,13 +622,14 @@
         const evidence = container.querySelector('.minutes-evidence074');
         evidence?.addEventListener('toggle', () => { if (evidence.open) prepareTranscriptAudio(evidence); });
         evidence?.querySelectorAll('select[data-speaker-recording]')?.forEach(select => select.addEventListener('change', () => updateSpeakerMapping(select)));
+        container.querySelector('#minutesIndirect0761')?.addEventListener('click', () => generateIndirectSummary({automatic:false}));
         container.querySelector('#minutesRegenerate07510')?.addEventListener('click', async () => {
             const editor = document.getElementById('assemblyMinutesEditor074');
             if (!editor) return;
             if (editor.value.trim() && editor.value.trim() !== state.generatedMinutes.trim()) {
                 const ok = await window.showConfirm?.({
                     title: 'Atualizar redação da minuta',
-                    message: 'Substituir o texto atual pela minuta gerada com as falas agrupadas? As alterações manuais ainda não salvas serão perdidas. A ata aprovada não é modificada.',
+                    message: 'Substituir o texto atual pela minuta com o resumo em discurso indireto? Alterações manuais não salvas serão perdidas.',
                     confirmText: 'Atualizar texto', cancelText: 'Cancelar'
                 });
                 if (!ok) return;
@@ -627,39 +718,18 @@
 
     function buildFormalDiscussionParagraphs() {
         const paragraphs = [];
-        const agendaNotes = state.agenda.map((item) => ({
+        const agendaNotes = state.agenda.map(item => ({
             title: cleanFormalText(item.title || 'Item de pauta'),
             notes: cleanFormalText(item.discussion_notes || '')
-        })).filter((item) => item.notes);
-
-        agendaNotes.forEach((item) => {
-            paragraphs.push(`Quanto ao item “${item.title}”, ficou registrado em ata o seguinte teor de discussão: ${sentenceFragment(item.notes)}.`);
-        });
-
-        const groups = groupedDeepgramTranscripts();
-        const strongGroups = groups.filter(group => cleanFormalText(group.text));
-        const isInferredTranscript = row => String(row.participant_identity || '').startsWith('__condomit_inferred__:');
-        const inferredTranscripts = completedDeepgramTranscripts().filter(row => isInferredTranscript(row));
-
-        if (strongGroups.length) {
-            strongGroups.forEach(group => {
-                const formal = window.CondomitMinutesSpeech?.formalParagraph(group);
-                if (formal) paragraphs.push(formal);
-            });
-            if (strongGroups.some(group => !group.participant_email)) {
-                paragraphs.push('A autoria de algumas manifestações não foi confirmada. O síndico deverá identificar as vozes com auxílio da gravação antes da aprovação da ata.');
-            }
-        }
-        if (inferredTranscripts.length) {
-            paragraphs.push('Alguns trechos foram sinalizados como interpretação provável do áudio. Consulte a gravação original para confirmar os detalhes antes da aprovação.');
-        }
-        if (!strongGroups.length && !agendaNotes.length) {
-            const speakers = uniqueSpeechParticipants();
-            if (speakers.length) {
-                paragraphs.push('Foram detectadas manifestações orais durante a reunião, mas a transcrição do vídeo não está disponível ou não produziu texto inteligível. Consulte a gravação audiovisual.');
-            } else {
-                paragraphs.push('Não foram localizadas transcrições textuais, anotações formais de discussão ou registros técnicos de atividade de fala vinculados a esta assembleia.');
-            }
+        })).filter(item => item.notes);
+        if (Array.isArray(state.indirectDiscussion) && state.indirectDiscussion.length) {
+            paragraphs.push(...state.indirectDiscussion);
+        } else if (groupedDeepgramTranscripts().length) {
+            paragraphs.push('A síntese narrativa das manifestações está pendente de processamento ou revisão. O síndico deverá redigir ou gerar o resumo em discurso indireto com base na gravação antes de aprovar esta ata.');
+        } else if (agendaNotes.length) {
+            agendaNotes.forEach(item => paragraphs.push(`A pauta referente a ${item.title} foi registrada para apreciação, devendo o síndico confirmar as manifestações e eventuais deliberações a partir dos registros.`));
+        } else {
+            paragraphs.push('Não foi possível consolidar as manifestações dos participantes com segurança. A revisão da gravação e o preenchimento da síntese pelo síndico são necessários.');
         }
         return paragraphs;
     }

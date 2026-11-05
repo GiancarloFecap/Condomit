@@ -54,10 +54,7 @@
   });
   overlay?.querySelectorAll('[data-adv-dialog-close]').forEach(button => button.addEventListener('click', close));
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && opened) { event.preventDefault(); close(); } });
-  document.querySelectorAll('.adv-dialog-source form').forEach(form => {
-    form.addEventListener('submit', () => {
-      // Submission handlers are owned by gestao-avancada.js; wait until they complete.
-      window.setTimeout(() => { if (opened?.node.contains(form)) close(); }, 1800);
-    });
+  document.addEventListener('condomit:advanced-form-saved', event => {
+    if (opened?.node.querySelector('form')?.id === event.detail?.formId) close();
   });
 })();

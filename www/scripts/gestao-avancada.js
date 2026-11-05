@@ -247,7 +247,7 @@
       if (button) button.disabled = true;
       try {
         const payload = payloadFromForm(form); const row = await action(payload);
-        form.reset(); toast(success,'success'); audit('create', id.replace('Form',''), row?.id || '', payload); await reload?.(); await loadMetrics(); renderReferenceDashboard();
+        form.reset(); toast(success,'success'); document.dispatchEvent(new CustomEvent('condomit:advanced-form-saved', { detail: { formId: id } })); audit('create', id.replace('Form',''), row?.id || '', payload); await reload?.(); await loadMetrics(); renderReferenceDashboard();
       } catch(err){ console.error(err); toast(errorText(err),'error'); }
       finally { if (button) button.disabled = false; }
     });

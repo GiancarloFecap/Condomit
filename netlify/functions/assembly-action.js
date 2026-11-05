@@ -1,5 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
-const { stopAssemblyEgress } = require('./lib/assembly-recording-state');
+const { stopAssemblyEgress, hasConnectedAssemblyParticipants } = require('./lib/assembly-recording-state');
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -244,6 +244,24 @@ async function handleEnd(assembly, userEmail, userCEP) {
     return httpError(409, `Status atual (${assembly.status}) não permite encerrar a assembleia.`);
   }
 
+  const recording = await stopAssemblyEgress(supabase, assembly.id).catch(error => ({
+    requested: 0, pending: 1, errors: [String(error?.message || error)]
+  }));
+  if (recording.errors.length || recording.pending) {
+    console.warn('[ASSEMBLY EGRESS FINALIZATION PENDING]', { assemblyId: assembly.id, pending: recording.pending, errors: recording.errors.length });
+    return httpError(409, 'A gravação ainda está sendo preparada ou finalizada no LiveKit. A assembleia continua aberta; tente finalizar novamente em alguns instantes.');
+  }
+  if (!recording.examined) {
+    try {
+      if (await hasConnectedAssemblyParticipants(assembly)) {
+        return httpError(409, 'Ainda existem participantes na chamada, mas nenhuma gravação ativa foi confirmada. Reinicie a gravação antes de finalizar.');
+      }
+    } catch (error) {
+      console.error('[ASSEMBLY LIVEKIT PARTICIPANT CHECK]', String(error?.message || error));
+      return httpError(503, 'Não foi possível verificar a gravação e os participantes. A assembleia permanece aberta para proteger o vídeo.');
+    }
+  }
+
   const now = new Date().toISOString();
   const { error: updateError } = await supabase
     .from('scheduled_assemblies')
@@ -264,10 +282,6 @@ async function handleEnd(assembly, userEmail, userCEP) {
     ended_at: now,
   }, userEmail);
 
-  const recording = await stopAssemblyEgress(supabase, assembly.id).catch(error => {
-    console.error('[ASSEMBLY EGRESS FINALIZATION]', error);
-    return { requested: 0, errors: [String(error?.message || error)] };
-  });
 
   return successResponse({
     action: 'end',
@@ -275,7 +289,7 @@ async function handleEnd(assembly, userEmail, userCEP) {
     previous_status: assembly.status,
     new_status: ASSEMBLY_STATUS.ENDED,
     ended_at: now,
-    recording_finalization: recording.errors.length ? 'pendente' : 'solicitada',
+    recording_finalization: recording.requested ? 'processando_arquivo' : 'concluida_ou_nao_iniciada',
   });
 }
 
@@ -287,6 +301,22 @@ async function handleCancel(assembly, userEmail, userCEP, reason) {
     return httpError(409, 'Assembleia já foi cancelada.');
   }
 
+  let recording = { requested: 0, pending: 0, errors: [] };
+  if (assembly.status === ASSEMBLY_STATUS.IN_PROGRESS) {
+    recording = await stopAssemblyEgress(supabase, assembly.id).catch(error => ({
+      requested: 0, pending: 1, errors: [String(error?.message || error)]
+    }));
+    if (recording.errors.length || recording.pending) {
+      return httpError(409, 'A gravação ainda está sendo preparada ou finalizada. Tente cancelar novamente em alguns instantes.');
+    }
+    if (!recording.examined) {
+      try {
+        if (await hasConnectedAssemblyParticipants(assembly)) return httpError(409, 'Há participantes na chamada, mas a gravação não foi iniciada. Proteja o vídeo antes de cancelar.');
+      } catch (error) {
+        return httpError(503, 'Não foi possível verificar a sala de gravação; o cancelamento não foi concluído.');
+      }
+    }
+  }
   const now = new Date().toISOString();
   const { error: updateError } = await supabase
     .from('scheduled_assemblies')
@@ -308,10 +338,6 @@ async function handleCancel(assembly, userEmail, userCEP, reason) {
     reason: reason || null,
   }, userEmail);
 
-  const recording = await stopAssemblyEgress(supabase, assembly.id).catch(error => {
-    console.error('[ASSEMBLY EGRESS FINALIZATION]', error);
-    return { requested: 0, errors: [String(error?.message || error)] };
-  });
 
   return successResponse({
     action: 'cancel',
@@ -319,7 +345,7 @@ async function handleCancel(assembly, userEmail, userCEP, reason) {
     previous_status: assembly.status,
     new_status: ASSEMBLY_STATUS.CANCELED,
     canceled_at: now,
-    recording_finalization: recording.errors.length ? 'pendente' : 'solicitada',
+    recording_finalization: recording.requested ? 'processando_arquivo' : 'concluida_ou_nao_iniciada',
   });
 }
 

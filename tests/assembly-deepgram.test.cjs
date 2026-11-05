@@ -109,7 +109,7 @@ test('callback autenticado grava transcrição apenas via transação do banco',
       }) }) }) };
     },
     rpc: async (name, args) => {
-      if (name === 'condomit_auto_identify_deepgram_064') return { data: 1, error: null };
+      if (name === 'condomit_auto_identify_deepgram_065') return { data: 1, error: null };
       commits++;
       assert.equal(name, 'condomit_finish_deepgram_063');
       assert.equal(args.target_recording_id, 7);

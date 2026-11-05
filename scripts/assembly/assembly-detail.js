@@ -828,6 +828,15 @@
     state.userCep = userCep;
 
     try {
+      if (typeof window.supabaseFetch !== 'function') throw new Error('Não foi possível confirmar a autorização de acesso.');
+      var published = await window.supabaseFetch('/rpc/condomit_assembly_details_visible_065', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({target_assembly_id:Number(id)})
+      });
+      if (published !== true) {
+        showError('Detalhes aguardando publicação', 'Após o encerramento, os detalhes serão disponibilizados aos moradores quando a ata estiver revisada, aprovada e assinada pelo síndico.');
+        return;
+      }
       var assemblyData = await supabaseGet('/scheduled_assemblies?id=eq.' + encodeURIComponent(id) + '&select=*&limit=1');
       var assembly = Array.isArray(assemblyData) ? (assemblyData[0] || null) : assemblyData;
       if (!assembly) {

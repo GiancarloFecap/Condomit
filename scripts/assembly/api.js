@@ -390,6 +390,7 @@
         error
       );
 
+      if (action === 'end' || action === 'cancel') throw error;
       return supabaseRpc(
         'assembly_action',
         {

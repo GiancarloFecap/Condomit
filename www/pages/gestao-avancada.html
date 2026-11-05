@@ -10,7 +10,7 @@
 <link href="../manifest.webmanifest" rel="manifest"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet"/>
 <link href="../styles/theme.css?v=027" rel="stylesheet"/>
-<link href="../styles/gestao-avancada.css?v=071" rel="stylesheet"/>
+<link href="../styles/gestao-avancada.css?v=0756" rel="stylesheet"/>
 <link href="../styles/responsive-mobile.css?v=035" rel="stylesheet"/>
 <link href="../styles/ux-polish.css?v=0720" rel="stylesheet"/>
 <link href="../styles/sidebar-account-navigation.css?v=056" rel="stylesheet"/>
@@ -85,9 +85,11 @@
 <article class="panel-card"><h3>Indicadores administrativos</h3><div class="adv-ref-list" id="advRefAdmin"></div></article>
 </div></section>
 <section class="advanced-view" data-view-panel="documents">
-
-<div class="two-col-grid">
-<article class="panel-card management-only"><h3>Novo documento</h3><form class="advanced-form" id="documentForm">
+<div class="adv-module-actions">
+<button class="adv-module-button management-only" data-module-dialog="documentForm" type="button"><i aria-hidden="true" class="fas fa-file-circle-plus"></i>Novo documento</button>
+<button class="adv-module-button" data-module-dialog="documentsList" type="button"><i aria-hidden="true" class="fas fa-folder-open"></i>Documentos cadastrados</button>
+</div>
+<article class="panel-card management-only adv-dialog-source" data-dialog-source="documentForm"><h3>Novo documento</h3><form class="advanced-form" id="documentForm">
 <label>Título<input name="title" placeholder="Ex.: Regulamento interno" required=""/></label>
 <div class="form-row"><label>Categoria<select name="category"><option>Regulamento</option><option>Ata</option><option>Contrato</option><option>Nota fiscal</option><option>Comunicado</option><option>Geral</option></select></label><label>Versão<input min="1" name="version" type="number" value="1"/></label></div>
 <label>Descrição<input name="description" placeholder="Resumo do documento"/></label>
@@ -96,8 +98,7 @@
 <label>Visibilidade<select name="visibility"><option value="todos">Todos</option><option value="moradores">Moradores</option><option value="portaria">Portaria</option><option value="gestao">Somente gestão</option></select></label>
 <button class="primary-btn" type="submit"><i class="fas fa-floppy-disk"></i> Salvar documento</button>
 </form></article>
-<article class="panel-card"><div class="panel-heading"><div><h3>Documentos cadastrados</h3><p>Pesquisa, versão e validade</p></div><input class="mini-search" id="documentSearch" placeholder="Pesquisar..."/></div><div class="stack-list" id="documentsList"></div></article>
-</div>
+<article class="panel-card adv-dialog-source" data-dialog-source="documentsList"><div class="panel-heading"><h3>Documentos cadastrados</h3><input aria-label="Pesquisar documentos" class="mini-search" id="documentSearch" placeholder="Pesquisar..."/></div><div class="stack-list" id="documentsList"></div></article>
 </section>
 <section class="advanced-view" data-view-panel="financial">
 
@@ -121,11 +122,12 @@
 <div class="simple-modal" hidden="" id="assetQrModal"><div class="simple-modal-card asset-modal-card"><button class="modal-close" data-close-modal="assetQrModal">×</button><h3 id="assetQrTitle">QR do ativo</h3><div class="asset-modal-grid"><div><div class="qr-box" id="assetQrCode"></div><code id="assetQrValue"></code><p>O QR abre diretamente a ficha do equipamento e seu histórico de manutenção em um dispositivo autenticado.</p></div><div><h4>Histórico do equipamento</h4><div class="stack-list" id="assetHistory"><div class="empty-state">Carregando histórico...</div></div></div></div></div></div>
 </section>
 <section class="advanced-view" data-view-panel="tickets">
-
-<div class="two-col-grid">
-<article class="panel-card"><h3>Abrir chamado</h3><form class="advanced-form" id="ticketForm"><label>Título<input name="title" required=""/></label><label>Descrição<textarea name="description" required="" rows="4"></textarea></label><div class="form-row"><label>Categoria<input name="category" value="Geral"/></label><label>Prioridade<select name="priority"><option value="baixa">Baixa</option><option selected="" value="normal">Normal</option><option value="alta">Alta</option><option value="critica">Crítica</option></select></label></div><label>Prazo SLA<input name="sla_due_at" type="datetime-local"/></label><button class="primary-btn" type="submit">Abrir chamado</button></form></article>
-<article class="panel-card"><div class="panel-heading"><div><h3>Fila de chamados</h3><p>Atualização de status disponível para a gestão</p></div><select class="mini-select" id="ticketStatusFilter"><option value="">Todos</option><option value="aberto">Aberto</option><option value="em_analise">Em análise</option><option value="em_andamento">Em andamento</option><option value="aguardando_prestador">Aguardando prestador</option><option value="resolvido">Resolvido</option></select></div><div class="stack-list" id="ticketsList"></div></article>
+<div class="adv-module-actions">
+<button class="adv-module-button" data-module-dialog="ticketForm" type="button"><i aria-hidden="true" class="fas fa-ticket"></i>Novo chamado</button>
+<button class="adv-module-button" data-module-dialog="ticketsList" type="button"><i aria-hidden="true" class="fas fa-list-check"></i>Chamados cadastrados</button>
 </div>
+<article class="panel-card adv-dialog-source" data-dialog-source="ticketForm"><h3>Novo chamado</h3><form class="advanced-form" id="ticketForm"><label>Título<input name="title" required=""/></label><label>Descrição<textarea name="description" required="" rows="4"></textarea></label><div class="form-row"><label>Categoria<input name="category" value="Geral"/></label><label>Prioridade<select name="priority"><option value="baixa">Baixa</option><option selected="" value="normal">Normal</option><option value="alta">Alta</option><option value="critica">Crítica</option></select></label></div><label>Prazo SLA<input name="sla_due_at" type="datetime-local"/></label><button class="primary-btn" type="submit">Abrir chamado</button></form></article>
+<article class="panel-card adv-dialog-source" data-dialog-source="ticketsList"><div class="panel-heading"><div><h3>Chamados cadastrados</h3><p>Atualização de status disponível para a gestão</p></div><select class="mini-select" id="ticketStatusFilter"><option value="">Todos</option><option value="aberto">Aberto</option><option value="em_analise">Em análise</option><option value="em_andamento">Em andamento</option><option value="aguardando_prestador">Aguardando prestador</option><option value="resolvido">Resolvido</option></select></div><div class="stack-list" id="ticketsList"></div></article>
 </section>
 <section class="advanced-view" data-view-panel="mobility"><div class="adv-module-actions"><button class="adv-module-button" data-module-dialog="parkingForm" type="button"><i aria-hidden="true" class="fas fa-plus-circle"></i>Cadastrar vaga</button><button class="adv-module-button" data-module-dialog="chargerForm" type="button"><i aria-hidden="true" class="fas fa-plus-circle"></i>Novo carregador</button><button class="adv-module-button" data-module-dialog="chargerBookingForm" type="button"><i aria-hidden="true" class="fas fa-plus-circle"></i>Reservar carregador</button></div>
 
@@ -154,9 +156,9 @@
 <script src="../scripts/supabase-client.js?v=065"></script>
 <script src="../scripts/supabase-auth.js?v=061" type="module"></script>
 <script src="../scripts/condomit-alerts.js?v=027"></script>
-<script src="../scripts/gestao-avancada.js?v=071"></script>
+<script src="../scripts/gestao-avancada.js?v=0756"></script>
 <script src="../scripts/topbar-actions.js?v=065"></script>
 <script src="../scripts/advanced-global.js?v=065"></script>
-<script src="../scripts/gestao-avancada-071-ui.js?v=071"></script>
+<script src="../scripts/gestao-avancada-071-ui.js?v=0756"></script>
 </body>
 </html>

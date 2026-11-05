@@ -20,7 +20,7 @@ exports.handler = async () => {
       if (assemblyError) throw assemblyError;
       for (const assembly of assemblies || []) {
         if (['encerrada', 'cancelada'].includes(assembly.status)) {
-          try { await stopAssemblyEgress(admin, assembly.id, api); }
+          try { await stopAssemblyEgress(admin, assembly.id, api, { maxWaitMs: 1200 }); }
           catch (error) { console.warn('[ASSEMBLY RECORDING AUTO STOP]', { assembly: assembly.id, message: String(error?.message || error) }); }
         }
       }

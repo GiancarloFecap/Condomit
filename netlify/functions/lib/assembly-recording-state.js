@@ -1,5 +1,5 @@
 'use strict';
-const { EgressClient } = require('livekit-server-sdk');
+const { EgressClient, RoomServiceClient } = require('livekit-server-sdk');
 
 const BUCKET = 'condomit-assembly-recordings';
 const FINISHED = new Set([3, 'EGRESS_COMPLETE']);
@@ -50,30 +50,83 @@ async function checkFile(admin, assemblyId, filename) {
   return { exists: Boolean(object), stable: Boolean(object && size > 0), size };
 }
 
-async function stopAssemblyEgress(admin, assemblyId, api = client()) {
-  if (!api) return { requested: 0, errors: ['LiveKit não configurado'] };
-  const { data, error } = await admin.from('assembly_recordings')
-    .select('id,egress_id,status')
-    .eq('assembly_id', assemblyId).in('status', ['pendente', 'gravando'])
-    .not('egress_id', 'is', null).limit(20);
-  if (error) throw error;
-  let requested = 0;
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function stopAssemblyEgress(admin, assemblyId, api = client(), { maxWaitMs = 5000 } = {}) {
+  const queryActive = async () => {
+    const { data, error } = await admin.from('assembly_recordings')
+      .select('id,egress_id,status')
+      .eq('assembly_id', assemblyId).in('status', ['pendente', 'gravando'])
+      .limit(20);
+    if (error) throw error;
+    return data || [];
+  };
+  let records = await queryActive();
+  if (!records.length) return { requested: 0, pending: 0, errors: [], examined: 0 };
+  if (!api) return { requested: 0, pending: records.length, errors: ['LiveKit não configurado'], examined: records.length };
+
+  const requestedEgress = new Set();
   const errors = [];
-  for (const record of data || []) {
-    try {
-      const list = await api.listEgress({ egressId: record.egress_id });
-      const live = list.find(info => info.egressId === record.egress_id);
-      if (live && [0, 1, 'EGRESS_STARTING', 'EGRESS_ACTIVE'].includes(live.status)) {
-        await api.stopEgress(record.egress_id);
-        requested++;
+  let pending = 0;
+  for (const record of records) {
+    let egressId = record.egress_id;
+    let info = null;
+    const deadline = Date.now() + maxWaitMs;
+    while (Date.now() < deadline) {
+      if (!egressId) {
+        await sleep(450);
+        records = await queryActive();
+        egressId = records.find(row => row.id === record.id)?.egress_id;
+        if (!egressId) continue;
       }
-    } catch (error) {
-      const message = String(error?.message || error);
-      console.warn('[ASSEMBLY EGRESS STOP]', { recording: record.id, message });
-      errors.push(message);
+      try {
+        const list = await api.listEgress({ egressId });
+        info = list.find(item => item.egressId === egressId) || null;
+        if (info && [0, 'EGRESS_STARTING'].includes(info.status)) {
+          await sleep(450);
+          continue;
+        }
+      } catch (error) {
+        const message = String(error?.message || error);
+        console.warn('[ASSEMBLY EGRESS STOP]', { recording: record.id, message });
+        errors.push(message);
+      }
+      break;
+    }
+    if (info && [1, 'EGRESS_ACTIVE'].includes(info.status)) {
+      try {
+        await api.stopEgress(egressId);
+        requestedEgress.add(egressId);
+      } catch (error) {
+        const message = String(error?.message || error);
+        console.warn('[ASSEMBLY EGRESS STOP]', { recording: record.id, message });
+        errors.push(message);
+      }
+    } else if (!info || [0, 'EGRESS_STARTING'].includes(info.status)) {
+      pending++;
     }
   }
-  return { requested, errors };
+  return { requested: requestedEgress.size, pending, errors, examined: records.length };
+}
+
+async function hasConnectedAssemblyParticipants(assembly) {
+  const url = String(process.env.LIVEKIT_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:');
+  if (!url || !process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) {
+    throw new Error('Não é possível confirmar os participantes conectados sem as credenciais LiveKit.');
+  }
+  const norm = value => String(value || '').replace(/\D/g, '');
+  const roomName = String(assembly.livekit_room_name || `assembleia-${assembly.id}-${norm(assembly.cep)}`);
+  const api = new RoomServiceClient(url, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET);
+  let participants;
+  try {
+    participants = await api.listParticipants(roomName);
+  } catch (error) {
+    if (Number(error?.status || error?.code) === 404 || /room not found/i.test(String(error?.message || ''))) return false;
+    throw error;
+  }
+  return (participants || []).some(participant =>
+    new RegExp(`^user-[a-f0-9-]{36}-assembly-${assembly.id}$`, 'i').test(String(participant?.identity || ''))
+  );
 }
 
 function safeStatus(record, remoteState, file, diagnostic) {
@@ -134,7 +187,7 @@ async function reconcileRecording(admin, assemblyId, record, api = client()) {
   if (remotelyFailed && !file?.stable) {
     nextStatus = 'falhou';
     diagnostic = egressFailureDiagnostic(remoteState.info);
-  } else if (file?.stable && (remotelyFinished || ['concluido', 'falhou'].includes(record.status) || ['desconhecido', 'consulta_indisponivel'].includes(remoteState.value))) {
+  } else if (file?.stable && (remotelyFinished || remotelyFailed || ['concluido', 'falhou'].includes(record.status) || ['desconhecido', 'consulta_indisponivel'].includes(remoteState.value))) {
     nextStatus = 'concluido';
   } else if (remotelyFinished && !file?.stable) {
     const endedAt = Number(remoteState.info?.endedAt || 0);
@@ -190,4 +243,4 @@ async function reconcileAssembly(admin, assemblyId, { limit = 10 } = {}) {
   return records;
 }
 
-module.exports = { reconcileAssembly, reconcileRecording, checkFile, stopAssemblyEgress, client, egressFailureDiagnostic, egressOutputFilename };
+module.exports = { reconcileAssembly, reconcileRecording, checkFile, stopAssemblyEgress, hasConnectedAssemblyParticipants, client, egressFailureDiagnostic, egressOutputFilename };

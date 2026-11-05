@@ -1,5 +1,6 @@
 'use strict';
 const {createClient} = require('@supabase/supabase-js');
+const {groupRows} = require('../../scripts/assembly/minutes-speech');
 const response = (statusCode, value) => ({statusCode,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'POST, OPTIONS'},body:JSON.stringify(value)});
 const cep = value => String(value || '').replace(/\D/g,'');
 exports.handler = async (event) => {

@@ -201,35 +201,53 @@ function mergeConsecutiveUtterances(segments) {
   return merged;
 }
 
+function splitWordsBySpeaker(words, defaultSpeaker = null) {
+  if (!Array.isArray(words) || !words.length) return [];
+  const hasWordLabels = words.some(word => Number.isSafeInteger(word?.speaker) && word.speaker >= 0);
+  const groups = [];
+  let current = null;
+  for (const word of words) {
+    const text = cleanText(word?.punctuated_word || word?.word);
+    if (!text) continue;
+    const start = Math.max(0, Number(word.start) || 0);
+    const end = Math.max(start, Number(word.end) || start);
+    const speaker = Number.isSafeInteger(word.speaker) && word.speaker >= 0
+      ? word.speaker : hasWordLabels ? null : defaultSpeaker;
+    const confidence = Number.isFinite(Number(word.confidence))
+      ? Math.max(0, Math.min(1, Number(word.confidence))) : null;
+    const nextLength = (current?.transcript.length || 0) + text.length + 1;
+    if (!current || current.speaker !== speaker || nextLength > 3400 || end - current.start > 180) {
+      current = { start, end, speaker, transcript: text, confidence };
+      groups.push(current);
+    } else {
+      current.transcript += `${/^[.,;:!?]/.test(text) ? '' : ' '}${text}`;
+      current.end = end;
+      if (confidence !== null) current.confidence = current.confidence === null
+        ? confidence : Math.min(current.confidence, confidence);
+    }
+  }
+  return groups.flatMap(splitUtterance);
+}
+
 function parseSegments(payload) {
   const utterances = payload?.results?.utterances;
   if (Array.isArray(utterances) && utterances.length) {
-    return mergeConsecutiveUtterances(utterances.flatMap(splitUtterance));
+    return mergeConsecutiveUtterances(utterances.flatMap(utterance => {
+      const words = utterance?.words;
+      if (Array.isArray(words) && words.length) {
+        const fallback = Number.isSafeInteger(utterance.speaker) && utterance.speaker >= 0
+          ? utterance.speaker : null;
+        const segments = splitWordsBySpeaker(words, fallback);
+        if (segments.length) return segments;
+      }
+      return splitUtterance(utterance);
+    }));
   }
   const alt = payload?.results?.channels?.[0]?.alternatives?.[0];
   const words = Array.isArray(alt?.words) ? alt.words : [];
-  if (words.length) {
-    const utteranceGroups = [];
-    let current = null;
-    for (const word of words) {
-      const text = cleanText(word.punctuated_word || word.word);
-      if (!text) continue;
-      const start = Math.max(0, Number(word.start) || 0);
-      const end = Math.max(start, Number(word.end) || start);
-      const speaker = Number.isSafeInteger(word.speaker) ? word.speaker : null;
-      if (!current || current.speaker !== speaker || end - current.start > 15 || current.transcript.length + text.length > 700) {
-        current = { start, end, speaker, transcript: text, confidence: word.confidence };
-        utteranceGroups.push(current);
-      } else {
-        current.transcript += `${/^[.,;:!?]/.test(text) ? '' : ' '}${text}`;
-        current.end = end;
-        current.confidence = Math.min(Number(current.confidence) || 1, Number(word.confidence) || 1);
-      }
-    }
-    return mergeConsecutiveUtterances(utteranceGroups.flatMap(splitUtterance));
-  }
+  if (words.length) return mergeConsecutiveUtterances(splitWordsBySpeaker(words));
   if (cleanText(alt?.transcript)) return splitUtterance({ transcript: alt.transcript, start: 0, end: Number(payload?.metadata?.duration || 0) });
   return [];
 }
 
-module.exports = { MODEL, SOURCE, MAX_ATTEMPTS, adminClient, storagePath, secretHash, shouldProcess, callbackUrl, claim, markFailure, sendToDeepgram, dispatch, parseSegments, mergeConsecutiveUtterances };
+module.exports = { MODEL, SOURCE, MAX_ATTEMPTS, adminClient, storagePath, secretHash, shouldProcess, callbackUrl, claim, markFailure, sendToDeepgram, dispatch, parseSegments, mergeConsecutiveUtterances, splitWordsBySpeaker };

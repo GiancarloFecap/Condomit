@@ -18,13 +18,14 @@ exports.handler = async event => {
     const email = user.email.toLowerCase();
     const [{ data: assembly }, { data: profile }, { data: links }] = await Promise.all([
       admin.from('scheduled_assemblies').select('id,cep').eq('id', assemblyId).maybeSingle(),
-      admin.from('users').select('condominium').eq('email', email).maybeSingle(),
+      admin.from('users').select('user_type,condominium').eq('email', email).maybeSingle(),
       admin.from('user_condominiums').select('condominium_id').eq('user_email', email)
     ]);
     if (!assembly) return reply(404, { error: 'Assembleia não encontrada.' });
     let condo = profile?.condominium;
     if (typeof condo === 'string') { try { condo = JSON.parse(condo); } catch (_) { condo = {}; } }
     if (![...(links || []).map(item => item.condominium_id), condo?.cep, condo?.condominium_id].some(value => norm(value) === norm(assembly.cep))) return reply(403, { error: 'Você não pertence a este condomínio.' });
+    if (!['sindico','síndico','admin'].includes(String(profile?.user_type || '').toLowerCase())) return reply(403,{error:'Somente o síndico pode conferir e reconciliar gravações.'});
     const before = await admin.from('assembly_recordings').select('id,status').eq('assembly_id', assemblyId).limit(20);
     if (before.error) throw before.error;
     const recordings = await reconcileAssembly(admin, assemblyId, { limit: 20 });

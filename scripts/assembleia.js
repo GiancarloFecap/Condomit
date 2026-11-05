@@ -1790,12 +1790,21 @@ async function confirmFinalizeAssembly(id) {
 
     const execute = async () => {
         try {
-            const result = await window.supabaseFetch('/rpc/condomit_finalize_assembly', {
+            const sendFinalize = async (token) => fetch('/.netlify/functions/assembly-action', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ target_assembly_id: Number(id) })
+                cache: 'no-store',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ action: 'end', assembly_id: Number(id) })
             });
-            const finalized = Array.isArray(result) ? result[0] : result;
+            const token = await window.resolveSupabaseAccessToken?.();
+            if (!token) throw new Error('Sua sessão expirou. Entre novamente para finalizar.');
+            let response = await sendFinalize(token);
+            if (response.status === 401) {
+                const refreshed = await window.refreshSupabaseAccessToken?.();
+                if (refreshed) response = await sendFinalize(refreshed);
+            }
+            const finalized = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(finalized.error || 'Não foi possível finalizar a assembleia.');
             const assembly = scheduledAssemblies.find((item) => String(item.id) === String(id));
             if (assembly) {
                 assembly.status = 'encerrada';
@@ -1806,7 +1815,7 @@ async function confirmFinalizeAssembly(id) {
             }
             renderScheduledAssemblies();
             renderPastAssemblies();
-            showToast('Assembleia finalizada e movida para Assembleias Realizadas.', 'success');
+            showToast('Assembleia encerrada. O vídeo será disponibilizado após a conclusão do upload no servidor.', 'success');
         } catch (error) {
             console.error('Erro ao finalizar assembleia:', error);
             showToast(error?.message || 'Não foi possível finalizar a assembleia.', 'error');

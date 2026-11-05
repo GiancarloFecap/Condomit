@@ -845,3 +845,8 @@ body.advanced-dialog-open{overflow:hidden}
 @media(max-width:680px){.adv-ref-top,.adv-ref-bottom{grid-template-columns:1fr}.adv-ref-stat{padding:13px}.adv-ref-chart-bars{height:220px}.adv-ref-main .panel-card,.adv-ref-bottom .panel-card{padding:14px}}
 
 .advanced-sidebar-footer {border-top:none!important;}
+
+.adv-operation-dialog .panel-heading{flex-wrap:wrap}
+.adv-operation-dialog .panel-heading .mini-search{max-width:280px}
+@media(max-width:600px){.adv-operation-dialog .panel-heading .mini-search,.adv-operation-dialog .panel-heading .mini-select{max-width:none;width:100%}}
+.adv-module-button[hidden],.adv-operation-dialog .adv-dialog-source[hidden]{display:none!important}

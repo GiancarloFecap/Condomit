@@ -8,6 +8,16 @@ const cep = v => String(v || '').replace(/\D/g, '');
 const bucket = 'condomit-assembly-recordings';
 const ready = () => ['LIVEKIT_URL','LIVEKIT_API_KEY','LIVEKIT_API_SECRET','CONDOMIT_S3_ACCESS_KEY','CONDOMIT_S3_SECRET_KEY','CONDOMIT_S3_ENDPOINT'].every(key => !!env[key]);
 const db = () => createClient(env.SUPABASE_URL || env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SECRET_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+const egressStartedAt = info => {
+  const raw = info?.startedAt;
+  const value = Number(raw);
+  if (Number.isFinite(value) && value > 0) {
+    const milliseconds = value >= 1e17 ? value / 1e6 : value >= 1e14 ? value / 1e3 : value >= 1e11 ? value : value >= 1e9 ? value * 1e3 : 0;
+    if (milliseconds > Date.now() - 24 * 3600000 && milliseconds < Date.now() + 300000) return new Date(milliseconds).toISOString();
+  }
+  return new Date().toISOString();
+};
+
 
 exports.handler = async event => {
   if (event.httpMethod === 'OPTIONS') return reply(200, {});
@@ -34,6 +44,18 @@ exports.handler = async event => {
     const ids = [ ...(links || []).map(x => x.condominium_id), cachedCondo?.cep, cachedCondo?.condominium_id ];
     if (!ids.some(value => cep(value) === cep(assembly.cep))) return reply(403, {error:'Usuário não pertence ao condomínio desta assembleia.'});
     if (action === 'status') {
+      const role = String(profile?.user_type || '').toLowerCase();
+      if (['encerrada', 'finalizada', 'completed', 'concluida', 'concluída', 'cancelada', 'cancelled', 'canceled'].includes(String(assembly.status || '').toLowerCase())
+          && !['sindico', 'síndico', 'admin'].includes(role)) {
+        const [{ data: draft }, { data: signature }] = await Promise.all([
+          supabase.from('assembly_minutes_drafts').select('status,approved_at').eq('assembly_id',assemblyId).maybeSingle(),
+          supabase.from('assembly_minutes_signatures').select('signed_at').eq('assembly_id',assemblyId).maybeSingle()
+        ]);
+        if (draft?.status !== 'aprovada' || !draft.approved_at || !signature?.signed_at
+            || new Date(signature.signed_at).getTime() < new Date(draft.approved_at).getTime()) {
+          return reply(403, { error: 'Os detalhes serão publicados após revisão e assinatura da ata.' });
+        }
+      }
       const recordings = await reconcileAssembly(supabase, assemblyId, { limit: 5 });
       return reply(200, { status: recordings[0]?.status || 'ausente', latest: recordings[0] || null, recordings });
     }
@@ -62,7 +84,7 @@ exports.handler = async event => {
     try {
       const output = new EncodedFileOutput({ filepath:storagePath, output: {case:'s3', value:new S3Upload({accessKey:env.CONDOMIT_S3_ACCESS_KEY, secret:env.CONDOMIT_S3_SECRET_KEY,endpoint:env.CONDOMIT_S3_ENDPOINT,region:env.CONDOMIT_S3_REGION || 'us-east-1',bucket,forcePathStyle:true})} });
       const info = await livekit.startRoomCompositeEgress(roomName, output, {layout:'grid'});
-      const {error: updateError} = await supabase.from('assembly_recordings').update({egress_id:info.egressId,status:'gravando'}).eq('id',record.id);
+      const {error: updateError} = await supabase.from('assembly_recordings').update({egress_id:info.egressId,status:'gravando',started_at:egressStartedAt(info)}).eq('id',record.id);
       if (updateError) {
         await livekit.stopEgress(info.egressId).catch(()=>{});
         throw updateError;

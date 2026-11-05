@@ -26,7 +26,7 @@ exports.handler = async () => {
     .filter(Boolean);
 
   for (const id of endedIds) {
-    try { await stopAssemblyEgress(supabase, Number(id)); }
+    try { await stopAssemblyEgress(supabase, Number(id), undefined, { maxWaitMs: 1200 }); }
     catch (error) { console.error('[auto-end-assemblies] Finalização de gravação:', { assemblyId: id, message: String(error?.message || error) }); }
   }
   console.log('[auto-end-assemblies] Assembleias encerradas:', endedIds);
