@@ -210,8 +210,17 @@ body {
 }
 
 .call-tile.active-speaker {
-  border-color: rgba(59, 130, 246, 0.9);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.24), 0 22px 48px rgba(0, 0, 0, 0.45);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35), 0 22px 48px rgba(0, 0, 0, 0.45);
+}
+.call-tile.active-speaker::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 3px solid #3b82f6;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 5;
 }
 
 .tile-media {

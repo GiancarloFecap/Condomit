@@ -26,13 +26,13 @@ exports.handler = async (event) => {
     if (!memberships.includes(cep(assembly.cep))) return response(403,{error:'A assembleia não pertence ao condomínio do usuário.'});
     const {data: completedVideos, error: completedError} = await supabase.from('assembly_recordings')
       .select('id').eq('assembly_id',id).eq('status','concluido')
-      .eq('transcription_status','concluido').like('transcription_model','faster-whisper:%');
+      .eq('transcription_status','concluido').eq('transcription_model','deepgram:nova-3');
     if (completedError) throw completedError;
     const videoIds = (completedVideos || []).map(row => row.id);
     if (!videoIds.length) return response(200,{warning:'A transcrição automática do vídeo ainda não foi concluída. Aguarde o processo em segundo plano e revise o MP4 original.',suggestions:[]});
     const {data: transcripts, error: transcriptError} = await supabase.from('assembly_transcripts')
       .select('id,transcript,participant_name,spoken_at,confidence').eq('assembly_id',id)
-      .eq('transcript_source','recording_video_whisper').in('recording_id',videoIds)
+      .eq('transcript_source','recording_video_deepgram').in('recording_id',videoIds)
       .order('spoken_at',{ascending:true}).limit(180);
     if (transcriptError) throw transcriptError;
     const items = (transcripts || []).filter(item=>String(item.transcript||'').trim().length>8).map(item=>({id:item.id,name:String(item.participant_name||'Participante').slice(0,90),text:String(item.transcript).slice(0,450),confidence:item.confidence}));

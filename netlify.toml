@@ -119,4 +119,5 @@
 [functions."assembly-recording-sync"]
   schedule = "* * * * *"
 
-# A transcrição de vídeo é realizada pelo worker independente (worker-transcricao/).
+[functions."assembly-deepgram-dispatch"]
+  schedule = "* * * * *"

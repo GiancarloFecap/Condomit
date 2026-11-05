@@ -53,8 +53,7 @@
 
         try {
             await waitForAuthSession();
-            await loadAll();
-            await loadMinutesReview();
+            await Promise.all([loadAll(), loadMinutesReview()]);
             renderAll();
         } catch (error) {
             console.error('[ASSEMBLY SUMMARY]', error);
@@ -103,6 +102,12 @@
     async function loadAll({ verifyRecordings = false } = {}) {
         if (typeof window.supabaseFetch !== 'function') throw new Error('Supabase não inicializado.');
 
+        const recordingsPromise = fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).then(rows => {
+            state.recordingStatuses = rows;
+            state.recordings = rows.filter(row => row.status === 'concluido' && row.recording_url);
+            renderRecordings();
+            return rows;
+        });
         const [assemblyRows, attendance, chat, polls, agenda, hands, events, comments, transcripts, recordings, speechActivities, signatures, commentVotes] = await Promise.all([
             fetchRows(`/scheduled_assemblies?select=*&id=eq.${state.id}&limit=1`),
             fetchRows(`/assembly_attendance?select=*&assembly_id=eq.${state.id}&order=joined_at.asc`),
@@ -113,7 +118,7 @@
             fetchRows(`/assembly_event_logs?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_post_comments?select=*&assembly_id=eq.${state.id}&order=created_at.asc`).catch(() => []),
             fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => []),
-            fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
+            recordingsPromise.catch(() => []),
             fetchRows(`/assembly_speech_activity?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(() => []),
             fetchRows(`/assembly_minutes_signatures?select=assembly_id,signer_email,signer_name,signed_at,signature_code,signature_data&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
             fetchRows(`/assembly_post_comment_votes?select=comment_id,user_email,vote_type,created_at,updated_at&assembly_id=eq.${state.id}`).catch(() => [])
@@ -173,7 +178,7 @@
         const body = String(textarea?.value || '').trim();
         if (body.length < 30) { window.showToast?.('Revise e preencha o conteúdo da ata antes de salvar.', 'warning'); return; }
         if (approve && (state.recordingStatuses || []).some(row => row.status === 'concluido'
-            && (row.transcription_status !== 'concluido' || !String(row.transcription_model || '').startsWith('faster-whisper:')))) {
+            && (row.transcription_status !== 'concluido' || String(row.transcription_model || '') !== 'deepgram:nova-3'))) {
             window.showToast?.('Aguarde a transcrição do vídeo em segundo plano e confira os trechos antes de aprovar a ata.', 'warning');
             return;
         }
@@ -321,7 +326,7 @@
                 <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
                 <span><i class="fas fa-video"></i> ${state.recordings.length} ${state.recordings.length === 1 ? 'gravação' : 'gravações'}</span>
-                <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').length ? `${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').length} trechos do vídeo transcritos` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
+                <span><i class="fas fa-microphone-lines"></i> ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').length ? `${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').length} trechos do vídeo transcritos` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
             </div>
             <div class="summary-hero-actions">
                 ${currentUserRole() === 'sindico' ? '<button type="button" id="generateAssemblyTasks027" class="summary-secondary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button>' : ''}
@@ -424,10 +429,10 @@
                 <button type="button" class="summary-primary" id="minutesApprove074">Aprovar ata revisada</button>
               </div>
               <div id="assemblyMinutesAiSuggestions074" class="minutes-ai-suggestions074" hidden></div>
-              <details class="minutes-evidence074"><summary>Conferir trechos de transcrição do vídeo (${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').length})</summary>
+              <details class="minutes-evidence074"><summary>Conferir trechos de transcrição do vídeo (${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').length})</summary>
                 <p>Reconhecimento automático do áudio do MP4: os textos não são necessariamente literais e os falantes não são identificados com segurança. Confira o áudio original antes de aprovar a ata. Resultados de votação são registros independentes.</p>
-                ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').slice(0,120).map(item=>`<div class="minutes-audio-segment"><p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>${item.audio_storage_path ? `<audio controls preload="none" aria-label="Ouvir áudio do trecho ${esc(String(item.id))}" data-transcript-audio-path="${esc(item.audio_storage_path)}"></audio><small class="minutes-audio-status">Preparando áudio protegido...</small>` : item.recording_id && item.start_seconds !== null && item.end_seconds !== null ? `<audio controls preload="none" aria-label="Ouvir fala no vídeo gravado" data-recording-clip-id="${esc(String(item.recording_id))}" data-clip-start="${esc(String(item.start_seconds))}" data-clip-end="${esc(String(item.end_seconds))}"></audio><small class="minutes-audio-status">Trecho retirado do vídeo da assembleia.</small>` : '<small>Áudio individual não disponível para este trecho.</small>'}</div>`).join('')}
-                ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').length>120 ? `<p>Exibindo 120 de ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_whisper').length} trechos. Consulte o registro original para os demais.</p>` : ''}
+                ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').slice(0,120).map(item=>`<div class="minutes-audio-segment"><p><strong>Trecho #${esc(String(item.id))}</strong> · ${esc(item.participant_name || 'Participante')} · ${esc(formatDateTime(item.spoken_at))}: ${esc(item.transcript || '')}</p>${item.audio_storage_path ? `<audio controls preload="none" aria-label="Ouvir áudio do trecho ${esc(String(item.id))}" data-transcript-audio-path="${esc(item.audio_storage_path)}"></audio><small class="minutes-audio-status">Preparando áudio protegido...</small>` : item.recording_id && item.start_seconds !== null && item.end_seconds !== null ? `<audio controls preload="none" aria-label="Ouvir fala no vídeo gravado" data-recording-clip-id="${esc(String(item.recording_id))}" data-clip-start="${esc(String(item.start_seconds))}" data-clip-end="${esc(String(item.end_seconds))}"></audio><small class="minutes-audio-status">Trecho retirado do vídeo da assembleia.</small>` : '<small>Áudio individual não disponível para este trecho.</small>'}</div>`).join('')}
+                ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').length>120 ? `<p>Exibindo 120 de ${state.transcripts.filter(row => String(row.transcript_source || row.source || '') === 'recording_video_deepgram').length} trechos. Consulte o registro original para os demais.</p>` : ''}
               </details>
               <div class="minutes-external-signature074">
                 <strong>Assinatura eletrônica gov.br — serviço externo</strong>
@@ -533,14 +538,12 @@
             paragraphs.push(`Quanto ao item “${item.title}”, ficou registrado em ata o seguinte teor de discussão: ${sentenceFragment(item.notes)}.`);
         });
 
-        // Só a transcrição do áudio do MP4 participa da minuta automática.
-        // Resultados antigos do navegador/Gemini nunca são declarados como falas verificadas.
         const completedVideoIds = new Set((state.recordingStatuses || [])
             .filter(row => row.status === 'concluido' && row.transcription_status === 'concluido'
-                && String(row.transcription_model || '').startsWith('faster-whisper:'))
+                && String(row.transcription_model || '') === 'deepgram:nova-3')
             .map(row => String(row.id)));
         const transcriptSourceRows = state.transcripts.filter((row) =>
-            String(row.transcript_source || row.source || '').trim().toLowerCase() === 'recording_video_whisper'
+            String(row.transcript_source || row.source || '').trim().toLowerCase() === 'recording_video_deepgram'
             && completedVideoIds.has(String(row.recording_id)));
 
         const isInferredTranscript = (row) => String(row.participant_identity || '').startsWith('__condomit_inferred__:');
@@ -966,43 +969,45 @@
 
     let recordingRefreshInFlight = false;
     let recordingRefreshTimer = null;
+    let recordingRefreshStartedAt = 0;
     const recordingPlayersLoading = new Set();
 
     function recordingNeedsRefresh(row) {
-        return ['pendente', 'gravando'].includes(row.status) || row.status === 'concluido'
-            && (row.transcription_status !== 'concluido' || !String(row.transcription_model || '').startsWith('faster-whisper:'));
+        if (['pendente', 'gravando'].includes(row.status)) return true;
+        if (row.status !== 'concluido') return false;
+        if (['pendente', 'enfileirado', 'processando'].includes(row.transcription_status)) return true;
+        return row.transcription_status === 'falhou'
+            && (row.transcription_model !== 'deepgram:nova-3' || Number(row.transcription_attempts || 0) < 5);
     }
 
     function recordingTranscriptionLabel(row) {
         const status = String(row.transcription_status || 'pendente');
         const model = String(row.transcription_model || '');
         if (status === 'concluido') {
-            return model.startsWith('faster-whisper:')
-                ? 'Transcrição automática do vídeo concluída. Confira cada fala com o áudio original.'
-                : 'Há uma transcrição antiga. O novo processamento local será realizado em segundo plano.';
+            return model === 'deepgram:nova-3'
+                ? 'Transcrição Deepgram concluída. Revise as falas com o vídeo original antes de aprovar a ata.'
+                : 'Transcrição de versão anterior disponível. Para substituí-la pelo Deepgram, habilite o reprocessamento de gravações antigas no servidor.';
         }
-        if (status === 'processando') {
-            const total = Number(row.transcription_total_seconds || row.duration_seconds || 0);
-            const done = Number(row.transcription_cursor_seconds || 0);
-            const progress = total > 0 ? ` (${Math.min(99, Math.floor(100 * done / total))}%)` : '';
-            return `Transcrevendo o MP4 em segundo plano${progress}. Você pode fechar esta página.`;
-        }
-        if (status === 'enfileirado') return 'Vídeo disponível. Transcrição agendada no servidor; não é necessário manter esta página aberta.';
+        if (status === 'processando') return 'Preparando transcrição pelo Deepgram no servidor. Você pode fechar esta página.';
+        if (status === 'enfileirado') return 'Transcrição Deepgram em andamento no servidor. Você pode fechar esta página.';
         if (status === 'falhou') {
-            if (/Gemini|PERMISSION_DENIED|denied access|upload Gemini|HTTP 403/i.test(row.transcription_error || '')) {
-                return 'A falha antiga do Gemini será corrigida pelo processador local de vídeo, quando estiver ativo.';
-            }
-            return `Falha no processamento automático: ${String(row.transcription_error || 'verifique os logs do worker no servidor.').slice(0, 200)}`;
+            const attempts = Number(row.transcription_attempts || 0);
+            const reason = String(row.transcription_error || 'Consulte os registros da função de transcrição.').slice(0, 200);
+            return attempts >= 5 && model === 'deepgram:nova-3'
+                ? `Transcrição indisponível após cinco tentativas: ${reason}`
+                : `A transcrição apresentou uma falha e será tentada novamente pelo servidor: ${reason}`;
         }
-        return 'Gravação pronta. Transcrição automática será iniciada no servidor, sem depender do navegador.';
+        return 'Gravação pronta. A transcrição Deepgram será iniciada automaticamente no servidor.';
     }
 
     async function refreshRecordingStatus() {
         if (recordingRefreshInFlight || document.hidden) return;
-        if (!(state.recordingStatuses || []).some(recordingNeedsRefresh)) return;
+        if (!(state.recordingStatuses || []).some(recordingNeedsRefresh)
+            && ((state.recordingStatuses || []).length || Date.now() - recordingRefreshStartedAt > 300000)) return;
         recordingRefreshInFlight = true;
         try {
-            const incomplete = state.recordingStatuses.some(row => ['pendente', 'gravando', 'falhou'].includes(row.status));
+            const incomplete = !state.recordingStatuses.length
+                || state.recordingStatuses.some(row => ['pendente', 'gravando', 'falhou'].includes(row.status));
             let statuses = null;
             if (incomplete) {
                 const token = await window.resolveSupabaseAccessToken?.();
@@ -1019,16 +1024,32 @@
             }
             const rows = await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`);
             const previous = new Map(state.recordingStatuses.map(row => [String(row.id), row]));
+            const recordingChanged = rows.some(row => {
+                const earlier = previous.get(String(row.id));
+                return !earlier || earlier.status !== row.status
+                    || earlier.transcription_status !== row.transcription_status
+                    || earlier.transcription_model !== row.transcription_model;
+            });
             state.recordingStatuses = rows.map(row => ({ ...row, verification: statuses?.get(String(row.id)) || previous.get(String(row.id))?.verification || null }));
             state.recordings = rows.filter(row => row.status === 'concluido' && row.recording_url);
             const latestTranscripts = await fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`).catch(() => null);
-            if (latestTranscripts && (latestTranscripts.length !== state.transcripts.length || latestTranscripts.some((row, index) => row.id !== state.transcripts[index]?.id || row.transcript !== state.transcripts[index]?.transcript))) {
-                state.transcripts = latestTranscripts;
-                renderMinutes();
+            const transcriptsChanged = latestTranscripts && (latestTranscripts.length !== state.transcripts.length
+                || latestTranscripts.some((row, index) => row.id !== state.transcripts[index]?.id || row.transcript !== state.transcripts[index]?.transcript));
+            if (transcriptsChanged) state.transcripts = latestTranscripts;
+            if (recordingChanged || transcriptsChanged) {
+                const editor = document.getElementById('assemblyMinutesEditor074');
+                const previousEditorValue = editor && editor.value !== (state.minutesDraft?.body || state.generatedMinutes)
+                    ? editor.value : null;
+                if (state.assembly) renderMinutes();
+                if (previousEditorValue !== null) {
+                    const nextEditor = document.getElementById('assemblyMinutesEditor074');
+                    if (nextEditor) nextEditor.value = previousEditorValue;
+                }
             }
-            renderHero();
+            if (state.assembly) renderHero();
             renderRecordings();
-            if (!state.recordingStatuses.some(recordingNeedsRefresh)) {
+            if (!state.recordingStatuses.some(recordingNeedsRefresh)
+                && (state.recordingStatuses.length || Date.now() - recordingRefreshStartedAt > 300000)) {
                 clearInterval(recordingRefreshTimer);
                 recordingRefreshTimer = null;
             }
@@ -1042,9 +1063,10 @@
     function startRecordingRefresh() {
         clearInterval(recordingRefreshTimer);
         recordingRefreshTimer = null;
-        if (!(state.recordingStatuses || []).some(recordingNeedsRefresh)) return;
-        setTimeout(() => refreshRecordingStatus().catch(() => {}), 700);
-        recordingRefreshTimer = setInterval(() => refreshRecordingStatus().catch(() => {}), 4000);
+        recordingRefreshStartedAt = Date.now();
+        if ((state.recordingStatuses || []).length && !state.recordingStatuses.some(recordingNeedsRefresh)) return;
+        queueMicrotask(() => refreshRecordingStatus().catch(() => {}));
+        recordingRefreshTimer = setInterval(() => refreshRecordingStatus().catch(() => {}), 1600);
     }
 
     function renderRecordings() {

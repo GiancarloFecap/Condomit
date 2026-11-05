@@ -44,6 +44,9 @@ function participantProfilePhoto(participant, meta = null) {
 function renderAvatarContent(avatar, participant, displayName, meta = null) {
   if (!avatar) return;
   const photo = participantProfilePhoto(participant, meta);
+  if (avatar.dataset.photo === photo && avatar.dataset.name === displayName && avatar.childNodes.length) return;
+  avatar.dataset.photo = photo;
+  avatar.dataset.name = displayName;
   avatar.textContent = '';
   if (photo) {
     const img = document.createElement('img');
@@ -142,13 +145,18 @@ function createIcon(className, title) {
 function ensureVideoAttached(surface, track) {
   if (!surface) return;
   const existing = surface.querySelector('video');
-  if (existing) existing.remove();
+  if (existing && surface._assemblyScreenTrack === track) return;
+  if (existing) {
+    try { surface._assemblyScreenTrack?.detach?.(existing); } catch (_) {}
+    existing.remove();
+  }
   try {
     const element = track.attach();
     element.playsInline = true;
     element.autoplay = true;
     element.muted = true;
     surface.appendChild(element);
+    surface._assemblyScreenTrack = track;
   } catch (_) {}
 }
 
@@ -161,6 +169,7 @@ export function renderScreenShare(screenShareTrack, ownerName) {
   if (!screenShareTrack) {
     container.style.display = 'none';
     clearElement(surface);
+    surface._assemblyScreenTrack = null;
     return;
   }
 
@@ -212,12 +221,12 @@ function renderTile(participant, isLocal) {
   const camOn = participant.isCameraEnabled ?? true;
 
   const micIcon = document.createElement('div');
-  micIcon.className = 'tile-icon ' + (micOn ? 'on' : 'off');
+  micIcon.className = 'tile-icon mic ' + (micOn ? 'on' : 'off');
   micIcon.title = micOn ? 'Microfone ligado' : 'Microfone desligado';
   micIcon.innerHTML = `<i class="fas ${micOn ? 'fa-microphone' : 'fa-microphone-slash'}"></i>`;
 
   const camIcon = document.createElement('div');
-  camIcon.className = 'tile-icon ' + (camOn ? 'on' : 'off');
+  camIcon.className = 'tile-icon camera ' + (camOn ? 'on' : 'off');
   camIcon.title = camOn ? 'Câmera ligada' : 'Câmera desligada';
   camIcon.innerHTML = `<i class="fas ${camOn ? 'fa-video' : 'fa-video-slash'}"></i>`;
 
@@ -246,18 +255,100 @@ function renderTile(participant, isLocal) {
   return tile;
 }
 
+function syncMediaIcon(icon, enabled, type) {
+  if (!icon) return;
+  const on = !!enabled;
+  icon.classList.toggle('on', on);
+  icon.classList.toggle('off', !on);
+  icon.title = type === 'mic'
+    ? (on ? 'Microfone ligado' : 'Microfone desligado')
+    : (on ? 'Câmera ligada' : 'Câmera desligada');
+  const glyph = type === 'mic' ? (on ? 'fa-microphone' : 'fa-microphone-slash')
+    : (on ? 'fa-video' : 'fa-video-slash');
+  const i = icon.querySelector('i');
+  if (i && !i.classList.contains(glyph)) i.className = 'fas ' + glyph;
+}
+
+function updateTile(tile, participant, isLocal) {
+  const meta = parseMetadata(participant);
+  const identity = safeText(participant.identity || participant.sid || '');
+  const displayName = safeText(participant.name || meta?.user_name || meta?.user_email || identity);
+  const name = tile.querySelector('.tile-name');
+  const role = tile.querySelector('.tile-role');
+  if (name) name.textContent = displayName + (isLocal ? ' (você)' : '');
+  if (role) role.textContent = formatUserType(meta);
+  const icons = tile.querySelector('.tile-icons');
+  syncMediaIcon(icons?.querySelector('.tile-icon.mic'), participant.isMicrophoneEnabled ?? false, 'mic');
+  syncMediaIcon(icons?.querySelector('.tile-icon.camera'), participant.isCameraEnabled ?? false, 'camera');
+  const handActive = state.raisedHands.has(identity);
+  const existingHand = icons?.querySelector('.tile-icon.hand');
+  if (handActive && !existingHand && icons) {
+    const icon = document.createElement('div');
+    icon.className = 'tile-icon hand';
+    icon.title = 'Mão levantada';
+    icon.innerHTML = '<i class="fas fa-hand-paper"></i>';
+    icons.appendChild(icon);
+  } else if (!handActive && existingHand) existingHand.remove();
+  const avatar = tile.querySelector('.tile-avatar');
+  if (avatar) renderAvatarContent(avatar, participant, displayName, meta);
+  tile.classList.toggle('active-speaker', state.activeSpeakers.has(identity));
+}
+
+export function ensureTileAvatar(participant) {
+  const identity = safeText(participant?.identity || participant?.sid || '');
+  if (!identity) return;
+  const tile = Array.from(el('call-grid')?.children || []).find(node => node.dataset.identity === identity);
+  const media = tile?.querySelector('.tile-media');
+  if (!media || media.querySelector('video')) return;
+  let avatar = media.querySelector('.tile-avatar');
+  if (!avatar) {
+    avatar = document.createElement('div');
+    avatar.className = 'tile-avatar';
+    media.appendChild(avatar);
+  }
+  const meta = parseMetadata(participant);
+  const name = safeText(participant.name || meta?.user_name || meta?.user_email || identity);
+  renderAvatarContent(avatar, participant, name, meta);
+}
+
+export function updateParticipantMediaIndicators(room) {
+  if (!room) return;
+  const participants = [room.localParticipant, ...Array.from(room.remoteParticipants?.values() || [])].filter(Boolean);
+  participants.forEach((p) => {
+    const identity = safeText(p.identity || p.sid || '');
+    const tile = Array.from(el('call-grid')?.children || []).find(node => node.dataset.identity === identity);
+    if (tile) updateTile(tile, p, p === room.localParticipant);
+    const item = Array.from(el('participants-list')?.children || []).find(node => node.dataset.participantIdentity === identity);
+    if (item) {
+      syncMediaIcon(item.querySelector('.tile-icon.mic'), p.isMicrophoneEnabled ?? false, 'mic');
+      syncMediaIcon(item.querySelector('.tile-icon.camera'), p.isCameraEnabled ?? false, 'camera');
+    }
+  });
+}
+
 export function renderGrid(room) {
   const grid = el('call-grid');
   if (!grid || !room) return;
-
   const participants = [];
   if (room.localParticipant) participants.push({ p: room.localParticipant, local: true });
   room.remoteParticipants?.forEach(p => participants.push({ p, local: false }));
-
-  clearElement(grid);
+  const activeIds = new Set();
+  let previous = null;
   participants.forEach(({ p, local }) => {
-    const tile = renderTile(p, local);
-    if (tile) grid.appendChild(tile);
+    const identity = safeText(p.identity || p.sid || '');
+    if (!identity) return;
+    activeIds.add(identity);
+    let tile = Array.from(grid.children).find(node => node.dataset.identity === identity);
+    if (!tile) tile = renderTile(p, local);
+    if (!tile) return;
+    updateTile(tile, p, local);
+    if (!previous) {
+      if (grid.firstElementChild !== tile) grid.prepend(tile);
+    } else if (previous.nextElementSibling !== tile) previous.after(tile);
+    previous = tile;
+  });
+  Array.from(grid.children).forEach(tile => {
+    if (!activeIds.has(tile.dataset.identity)) tile.remove();
   });
 }
 
@@ -307,68 +398,61 @@ export function renderParticipantsList(room) {
   const list = el('participants-list');
   const badge = el('participants-count');
   if (!list || !room) return;
-
-  const entries = [];
-  if (room.localParticipant) entries.push(room.localParticipant);
-  room.remoteParticipants?.forEach(p => entries.push(p));
-
-  clearElement(list);
+  const entries = [room.localParticipant, ...Array.from(room.remoteParticipants?.values() || [])].filter(Boolean);
   if (badge) badge.textContent = String(entries.length);
-
+  const wanted = new Set();
+  let previous = null;
   entries.forEach((p) => {
+    const identity = safeText(p.identity || p.sid || '');
+    if (!identity) return;
+    wanted.add(identity);
     const meta = parseMetadata(p);
-    const displayName = safeText(p.name || meta?.user_name || meta?.user_email || p.identity);
-    const item = document.createElement('div');
-    item.className = 'panel-item';
-    item.dataset.participantIdentity = safeText(p.identity);
-
-    const avatar = document.createElement('div');
-    avatar.className = 'panel-item-avatar';
-    renderAvatarContent(avatar, p, displayName, meta);
-
-    const info = document.createElement('div');
-    info.className = 'panel-item-info';
-
-    const name = document.createElement('div');
-    name.className = 'panel-item-name';
-    name.textContent = displayName;
-
-    const sub = document.createElement('div');
-    sub.className = 'panel-item-sub';
-    sub.textContent = formatUserType(meta);
-
-    info.appendChild(name);
-    info.appendChild(sub);
-
-    const icons = document.createElement('div');
-    icons.className = 'panel-item-icons';
-
-    const micOn = p.isMicrophoneEnabled ?? true;
-    const camOn = p.isCameraEnabled ?? true;
-
-    const micIcon = document.createElement('div');
-    micIcon.className = 'tile-icon ' + (micOn ? 'on' : 'off');
-    micIcon.innerHTML = `<i class="fas ${micOn ? 'fa-microphone' : 'fa-microphone-slash'}"></i>`;
-
-    const camIcon = document.createElement('div');
-    camIcon.className = 'tile-icon ' + (camOn ? 'on' : 'off');
-    camIcon.innerHTML = `<i class="fas ${camOn ? 'fa-video' : 'fa-video-slash'}"></i>`;
-
-    icons.appendChild(micIcon);
-    icons.appendChild(camIcon);
-
-    if (state.raisedHands.get(p.identity)) {
-      const hand = document.createElement('div');
-      hand.className = 'tile-icon hand';
-      hand.innerHTML = `<i class="fas fa-hand-paper"></i>`;
-      icons.appendChild(hand);
+    const displayName = safeText(p.name || meta?.user_name || meta?.user_email || identity);
+    let item = Array.from(list.children).find(node => node.dataset.participantIdentity === identity);
+    if (!item) {
+      item = document.createElement('div');
+      item.className = 'panel-item';
+      item.dataset.participantIdentity = identity;
+      const avatar = document.createElement('div');
+      avatar.className = 'panel-item-avatar';
+      const info = document.createElement('div');
+      info.className = 'panel-item-info';
+      const name = document.createElement('div');
+      name.className = 'panel-item-name';
+      const role = document.createElement('div');
+      role.className = 'panel-item-sub';
+      info.append(name, role);
+      const icons = document.createElement('div');
+      icons.className = 'panel-item-icons';
+      for (const type of ['mic', 'camera']) {
+        const icon = document.createElement('div');
+        icon.className = 'tile-icon ' + type;
+        icon.appendChild(document.createElement('i'));
+        icons.appendChild(icon);
+      }
+      item.append(avatar, info, icons);
     }
-
-    item.appendChild(avatar);
-    item.appendChild(info);
-    item.appendChild(icons);
-
-    list.appendChild(item);
+    const avatar = item.querySelector('.panel-item-avatar');
+    renderAvatarContent(avatar, p, displayName, meta);
+    item.querySelector('.panel-item-name').textContent = displayName;
+    item.querySelector('.panel-item-sub').textContent = formatUserType(meta);
+    const icons = item.querySelector('.panel-item-icons');
+    syncMediaIcon(icons.querySelector('.tile-icon.mic'), p.isMicrophoneEnabled ?? false, 'mic');
+    syncMediaIcon(icons.querySelector('.tile-icon.camera'), p.isCameraEnabled ?? false, 'camera');
+    const hand = icons.querySelector('.tile-icon.hand');
+    if (state.raisedHands.has(identity) && !hand) {
+      const handIcon = document.createElement('div');
+      handIcon.className = 'tile-icon hand';
+      handIcon.innerHTML = '<i class="fas fa-hand-paper"></i>';
+      icons.appendChild(handIcon);
+    } else if (!state.raisedHands.has(identity) && hand) hand.remove();
+    if (!previous) {
+      if (list.firstElementChild !== item) list.prepend(item);
+    } else if (previous.nextElementSibling !== item) previous.after(item);
+    previous = item;
+  });
+  Array.from(list.children).forEach(item => {
+    if (!wanted.has(item.dataset.participantIdentity)) item.remove();
   });
 }
 

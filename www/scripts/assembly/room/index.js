@@ -1,9 +1,9 @@
 import { state } from './state.js?v=079';
-import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0753';
-import { setHeader, setPanelOpen, setConnectionConnecting, setConnectionConnected, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=079';
-import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, loadAgenda, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, startAgendaItem, formatCountdown, isPollOpen } from './data.js?v=0752';
+import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disconnectRoom, canSwitchMobileCamera, switchMobileCamera } from './livekit.js?v=0758';
+import { setHeader, setPanelOpen, setConnectionConnecting, setConnectionConnected, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=0758';
+import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, loadAgenda, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, startAgendaItem, formatCountdown, isPollOpen } from './data.js?v=0758';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=079';
-import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0724';
+import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0758';
 const RECORDING_CHECK_MS = 15000;
 let recordingCheckTimer = null;
 let recordingSyncInFlight = false;

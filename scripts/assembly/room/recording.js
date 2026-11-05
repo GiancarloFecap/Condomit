@@ -517,7 +517,7 @@ async function persistPendingRecording() {
        
        
       const label = document.getElementById('recording-status');
-      if (label) label.textContent = 'Gravação salva. O Gemini processará o vídeo no servidor após sua finalização.';
+      if (label) label.textContent = 'Gravação salva. O servidor processará o áudio do vídeo automaticamente.';
 
       recording.pendingUpload = null;
       return result;

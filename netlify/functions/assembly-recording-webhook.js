@@ -23,7 +23,11 @@ exports.handler = async event => {
     const finished = Number(info.status) === 3;
     const path = `storage://condomit-assembly-recordings/${row.assembly_id}/`;
     const fileName = String(row.recording_url || '').startsWith(path) ? String(row.recording_url).slice(path.length) : '';
-    const file = finished && !failed ? await checkFile(admin, row.assembly_id, fileName) : null;
+    let file = finished && !failed ? await checkFile(admin, row.assembly_id, fileName) : null;
+    for (let attempt = 0; finished && !failed && !file?.stable && attempt < 5; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 450));
+      file = await checkFile(admin, row.assembly_id, fileName);
+    }
     const nextStatus = failed ? 'falhou' : finished && file?.stable ? 'concluido' : row.status;
     if (nextStatus !== row.status) {
       const update = { status: nextStatus, ended_at: new Date().toISOString(), duration_seconds: Math.max(0, Math.round((Date.now() - new Date(row.started_at || Date.now()).getTime()) / 1000)) };

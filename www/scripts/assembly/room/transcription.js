@@ -74,15 +74,15 @@ export async function flushAssemblySpeechActivity() {
 export function startAssemblyTranscription() {
   setStatus(
     'active',
-    'Transcrição Gemini após a gravação',
-    'O vídeo da assembleia será transcrito pelo Gemini no servidor após a gravação ser concluída. O reconhecimento de voz não será executado neste navegador.'
+    'Transcrição do vídeo após a gravação',
+    'O áudio do vídeo será processado automaticamente por um servidor autorizado. Não é necessário manter esta página aberta.'
   );
   return true;
 }
 
 export async function stopAssemblyTranscription() {
   await flushAssemblySpeechActivity();
-  setStatus('paused', 'Gravação aguardando transcrição Gemini');
+  setStatus('paused', 'Vídeo aguardando transcrição automática');
 }
 
 export function syncAssemblyTranscriptionWithMicrophone() {

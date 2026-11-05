@@ -11,6 +11,8 @@ import {
 import {
   renderGrid,
   renderParticipantsList,
+  updateParticipantMediaIndicators,
+  ensureTileAvatar,
   renderScreenShare,
   setControlActive,
   showBanner,
@@ -18,7 +20,7 @@ import {
   setConnectionConnecting,
   setConnectionDisconnected,
   setConnectionReconnecting
-} from './ui.js?v=0724';
+} from './ui.js?v=0758';
 
 let intentionalDisconnect =
   false;
@@ -478,123 +480,48 @@ function renderScreenShareFixed(
   }
 }
 
-function clearCameraElement(
-  identity
-) {
-  const media =
-    getTileMedia(
-      identity
-    );
-
-  if (!media) {
-    return;
+function clearCameraElement(identity) {
+  const media = getTileMedia(identity);
+  if (!media) return;
+  const oldTrack = media._assemblyCameraTrack;
+  for (const element of media.querySelectorAll('video[data-assembly-camera="1"]')) {
+    try { oldTrack?.detach?.(element); } catch (_) {}
+    element.remove();
   }
-
-  media
-    .querySelectorAll(
-      'video[data-assembly-camera="1"]'
-    )
-    .forEach(
-      (element) =>
-        element.remove()
-    );
+  media._assemblyCameraTrack = null;
+  const room = state.room;
+  const participant = identity === room?.localParticipant?.identity
+    ? room.localParticipant : room?.remoteParticipants?.get(identity);
+  if (participant) ensureTileAvatar(participant);
 }
 
-function attachCameraTrack(
-  identity,
-  track
-) {
-  const media =
-    getTileMedia(
-      identity
-    );
-
-  if (
-    !media ||
-    !track
-  ) {
-    return;
+function attachCameraTrack(identity, track) {
+  const media = getTileMedia(identity);
+  if (!media || !track) return;
+  const existing = media.querySelector('video[data-assembly-camera="1"]');
+  if (existing && media._assemblyCameraTrack === track) return;
+  if (existing) {
+    try { media._assemblyCameraTrack?.detach?.(existing); } catch (_) {}
+    existing.remove();
   }
-
-   
-  while (
-    media.firstChild
-  ) {
-    media.removeChild(
-      media.firstChild
-    );
-  }
-
+  const oldAvatars = Array.from(media.querySelectorAll('.tile-avatar'));
   try {
-     
-    try {
-      track
-        .detach?.()
-        .forEach?.(
-          (element) =>
-            element.remove?.()
-        );
-    } catch (_) {}
-
-    const element =
-      track.attach();
-
-    element.playsInline =
-      true;
-
-    element.autoplay =
-      true;
-
-    element.dataset
-      .assemblyCamera =
-      '1';
-
-    element.style.width =
-      '100%';
-
-    element.style.height =
-      '100%';
-
-    element.style.objectFit =
-      'cover';
-
-    element.style
-      .objectPosition =
-      'center center';
-
-     
-    element.muted =
-      identity ===
-      state.room
-        ?.localParticipant
-        ?.identity;
-
-    media.appendChild(
-      element
-    );
-
-    const playPromise =
-      element.play?.();
-
-    if (
-      playPromise?.catch
-    ) {
-      playPromise.catch(
-        () => {
-          warnLiveKit(
-            'O navegador bloqueou a reprodução automática do vídeo.'
-          );
-        }
-      );
-    }
+    const element = track.attach();
+    element.playsInline = true;
+    element.autoplay = true;
+    element.dataset.assemblyCamera = '1';
+    element.style.width = '100%';
+    element.style.height = '100%';
+    element.style.objectFit = 'cover';
+    element.style.objectPosition = 'center center';
+    element.muted = identity === state.room?.localParticipant?.identity;
+    media.appendChild(element);
+    oldAvatars.forEach(avatar => avatar.remove());
+    media._assemblyCameraTrack = track;
+    const playPromise = element.play?.();
+    if (playPromise?.catch) playPromise.catch(() => {});
   } catch (error) {
-    warnLiveKit(
-      'Não foi possível anexar a câmera do participante.',
-      {
-        identity,
-        error
-      }
-    );
+    warnLiveKit('Não foi possível anexar a câmera do participante.', { identity, error });
   }
 }
 
@@ -835,56 +762,62 @@ function syncRemoteAudio(
 }
 
  
-function updateActiveSpeakerClasses(
-  speakers
-) {
-  state.activeSpeakers
-    .clear();
+const lastSpeakerActivity = new Map();
+let speakerMonitor = null;
 
-  (
-    speakers ||
-    []
-  ).forEach(
-    (participant) => {
-      if (
-        participant?.identity
-      ) {
-        state.activeSpeakers
-          .add(
-            participant.identity
-          );
-      }
+function updateActiveSpeakerClasses(speakers = []) {
+  const room = state.room;
+  if (!room || !state.connected) return;
+  const now = Date.now();
+  const heard = new Set((speakers || []).map(p => p?.identity).filter(Boolean));
+  for (const participant of getAllParticipants(room)) {
+    if ((participant?.isSpeaking || (Number(participant?.audioLevel) >= 0.13))
+        && participant?.isMicrophoneEnabled !== false) heard.add(participant.identity);
+  }
+  for (const participant of getAllParticipants(room)) {
+    const identity = participant?.identity;
+    if (!identity) continue;
+    if (participant.isMicrophoneEnabled === false) {
+      lastSpeakerActivity.delete(identity);
+      continue;
     }
-  );
-
+    if (heard.has(identity)) lastSpeakerActivity.set(identity, now);
+  }
+  const active = new Set();
+  for (const [identity, last] of lastSpeakerActivity) {
+    if (now - last < 450 && getAllParticipants(room).some(p => p.identity === identity && p.isMicrophoneEnabled !== false)) {
+      active.add(identity);
+    } else lastSpeakerActivity.delete(identity);
+  }
+  const changed = active.size !== state.activeSpeakers.size
+    || Array.from(active).some(identity => !state.activeSpeakers.has(identity));
+  if (!changed) return;
+  state.activeSpeakers.clear();
+  for (const identity of active) state.activeSpeakers.add(identity);
+  for (const tile of document.querySelectorAll('.call-tile')) {
+    tile.classList.toggle('active-speaker', active.has(tile.dataset.identity || ''));
+  }
   try {
     window.dispatchEvent(new CustomEvent('condomit:assembly-active-speakers', {
-      detail: { identities: Array.from(state.activeSpeakers) }
+      detail: { identities: Array.from(active) }
     }));
   } catch (_) {}
+}
 
-  document
-    .querySelectorAll(
-      '.call-tile'
-    )
-    .forEach(
-      (tile) => {
-        const identity =
-          tile.dataset
-            .identity ||
-          '';
+function startSpeakerMonitor(room) {
+  if (speakerMonitor) clearInterval(speakerMonitor);
+  lastSpeakerActivity.clear();
+  speakerMonitor = setInterval(() => {
+    if (state.room !== room || !state.connected) return;
+    updateActiveSpeakerClasses(room.activeSpeakers || []);
+  }, 220);
+}
 
-        tile.classList
-          .toggle(
-            'active-speaker',
-            state
-              .activeSpeakers
-              .has(
-                identity
-              )
-          );
-      }
-    );
+function stopSpeakerMonitor() {
+  if (speakerMonitor) clearInterval(speakerMonitor);
+  speakerMonitor = null;
+  lastSpeakerActivity.clear();
+  state.activeSpeakers.clear();
 }
 
 function findActiveMedia(
@@ -1024,16 +957,16 @@ function syncMediaFromRoom(
    
   state.cameraTracks
     .forEach(
-      (
-        track,
-        identity
-      ) => {
-        attachCameraTrack(
-          identity,
-          track
-        );
+      (track, identity) => {
+        attachCameraTrack(identity, track);
       }
     );
+
+  for (const participant of getAllParticipants(room)) {
+    if (participant?.identity && !state.cameraTracks.has(participant.identity)) {
+      clearCameraElement(participant.identity);
+    }
+  }
 
   renderScreenShareFixed(
     state.screenShareTrack,
@@ -1322,9 +1255,12 @@ function handlePublicationStateChanged(
     }
   );
 
-  syncMediaFromRoom(
-    room
-  );
+  if (publication?.source === Track.Source.Microphone || publication?.kind === Track.Kind.Audio) {
+    updateParticipantMediaIndicators(room);
+    updateActiveSpeakerClasses(room.activeSpeakers || []);
+    return;
+  }
+  syncMediaFromRoom(room);
 }
 
 export async function connectToRoom(
@@ -1426,6 +1362,7 @@ export async function connectToRoom(
           true;
 
         setConnectionConnected();
+        startSpeakerMonitor(room);
 
         showBanner(
           '',
@@ -1461,6 +1398,8 @@ export async function connectToRoom(
                 ?.identity
           }
         );
+
+        stopSpeakerMonitor();
 
         setConnectionDisconnected();
 
@@ -1862,6 +1801,7 @@ export async function connectToRoom(
       true;
 
     setConnectionConnected();
+    startSpeakerMonitor(room);
 
     showBanner(
       '',
@@ -1950,6 +1890,8 @@ export async function connectToRoom(
 
     setConnectionDisconnected();
 
+    stopSpeakerMonitor();
+
     showBanner(
       'Não foi possível conectar à assembleia.',
       'error'
@@ -2013,9 +1955,8 @@ export async function toggleMicrophone() {
 
     emitMicrophoneState(room);
 
-    renderParticipantsList(
-      room
-    );
+    updateParticipantMediaIndicators(room);
+    updateActiveSpeakerClasses(room.activeSpeakers || []);
   } catch (error) {
     console.error(
       '[LiveKit] Erro ao alterar microfone:',
@@ -2324,6 +2265,7 @@ export async function disconnectRoom() {
   if (!room) {
     state.connected =
       false;
+    stopSpeakerMonitor();
 
     setConnectionDisconnected();
 
@@ -2359,8 +2301,7 @@ export async function disconnectRoom() {
     state.cameraTracks
       .clear();
 
-    state.activeSpeakers
-      .clear();
+    stopSpeakerMonitor();
 
     state.screenShareTrack =
       null;
