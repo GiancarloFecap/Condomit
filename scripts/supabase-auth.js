@@ -111,3 +111,22 @@ try {
   syncSessionToStorage(data?.session || null);
 } catch (_) {}
 
+
+// Retomar a sessão ao voltar para a aba ou reconectar a internet.
+// Um erro de rede temporário não é logout e não deve limpar os dados locais.
+let lastCondomitAuthCheck = 0;
+async function condomitRestoreSessionAfterIdle() {
+  const now = Date.now();
+  if (now - lastCondomitAuthCheck < 45000) return;
+  lastCondomitAuthCheck = now;
+  try {
+    const { data, error } = await window.supabase.auth.getSession();
+    if (error) return;
+    if (data?.session?.access_token) syncSessionToStorage(data.session);
+  } catch (_) { /* rede temporariamente indisponível */ }
+}
+window.addEventListener('online', condomitRestoreSessionAfterIdle);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') condomitRestoreSessionAfterIdle();
+});
+window.addEventListener('focus', condomitRestoreSessionAfterIdle);

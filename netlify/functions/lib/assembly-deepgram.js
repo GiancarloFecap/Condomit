@@ -2,6 +2,8 @@
 
 const { createHash, randomBytes } = require('node:crypto');
 const { createClient } = require('@supabase/supabase-js');
+const { prepararKeyterms } = require('../../../keyterms/contexto');
+const { toDeepgramParams } = require('../../../keyterms/buildKeyterms');
 
 const BUCKET = 'condomit-assembly-recordings';
 const MODEL = 'deepgram:nova-3';
@@ -92,6 +94,20 @@ async function markFailure(admin, recordingId, message) {
   if (error) throw error;
 }
 
+function keytermUnsupported(status, body) {
+  if (![400, 403, 422].includes(Number(status))) return false;
+  const message = String(body || '').toLowerCase().slice(0, 5000);
+  return /keyterms?|keyterm_prompting/.test(message)
+    && /(?:not supported|unsupported|not compatible|incompatible|not enabled|not available|model.*language|selected.*model|language.*model)/.test(message)
+    && !/limit exceeded|too many tokens/.test(message);
+}
+
+function callbackErrorUnsupported(payload) {
+  const message = [payload?.err_code, payload?.error, payload?.message, payload?.description].map(x =>
+    typeof x === 'string' ? x : JSON.stringify(x || '')).join(' ');
+  return keytermUnsupported(400, message);
+}
+
 async function sendToDeepgram(admin, row, token, fetcher = fetch) {
   if (!process.env.DEEPGRAM_API_KEY) throw new Error('DEEPGRAM_API_KEY ausente nas variáveis de ambiente do servidor.');
   const path = storagePath(row);
@@ -100,34 +116,91 @@ async function sendToDeepgram(admin, row, token, fetcher = fetch) {
   const origin = new URL(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL).origin;
   const signedUrl = new URL(data.signedUrl, origin);
   if (signedUrl.protocol !== 'https:' || signedUrl.origin !== origin) throw new Error('URL assinada do vídeo inválida.');
-  const endpoint = new URL('https://api.deepgram.com/v1/listen');
-  endpoint.searchParams.set('model', 'nova-3');
-  endpoint.searchParams.set('language', 'pt-BR');
-  endpoint.searchParams.set('smart_format', 'true');
-  endpoint.searchParams.set('utterances', 'true');
-  endpoint.searchParams.set('diarize_model', 'latest');
-  endpoint.searchParams.set('callback', callbackUrl());
-  endpoint.searchParams.append('extra', `recording_id:${row.id}`);
-  endpoint.searchParams.append('extra', `callback_secret:${token}`);
-  const response = await fetcher(endpoint, {
-    method: 'POST', headers: { Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: signedUrl.toString() }), signal: AbortSignal.timeout(18000)
+  let forcedFallback = false;
+  try {
+    const existing = await admin.from('assembly_deepgram_jobs').select('fallback_to_nova2')
+      .eq('recording_id', row.id).maybeSingle();
+    if (existing?.error) throw existing.error;
+    forcedFallback = existing?.data?.fallback_to_nova2 === true;
+  } catch (error) {
+    // O registro da tentativa poderá não existir nos testes locais; no ambiente publicado a migração 069 é obrigatória.
+    if (process.env.NODE_ENV !== 'test') console.warn('[ASSEMBLY KEYTERMS] Consulta ao fallback:', String(error?.message || error).slice(0, 130));
+  }
+  const wantedModel = process.env.DEEPGRAM_MODEL === 'nova-2' || forcedFallback ? 'nova-2' : 'nova-3';
+  const { lista } = await prepararKeyterms(admin, row, wantedModel);
+  const buildEndpoint = model => {
+    const endpoint = new URL('https://api.deepgram.com/v1/listen');
+    endpoint.searchParams.set('model', model);
+    endpoint.searchParams.set('language', 'pt-BR');
+    endpoint.searchParams.set('punctuate', 'true');
+    endpoint.searchParams.set('smart_format', 'true');
+    endpoint.searchParams.set('utterances', 'true');
+    endpoint.searchParams.set('numerals', 'true');
+    endpoint.searchParams.set('profanity_filter', 'false');
+    endpoint.searchParams.set('diarize_model', 'latest');
+    endpoint.searchParams.set('redact_usage', 'true');
+    endpoint.searchParams.set('callback', callbackUrl());
+    endpoint.searchParams.append('extra', `recording_id:${row.id}`);
+    endpoint.searchParams.append('extra', `callback_secret:${token}`);
+    for (const [key, value] of toDeepgramParams(lista, model)) endpoint.searchParams.append(key, value);
+    return endpoint;
+  };
+  let modelUsed = wantedModel;
+  let fallbackReason = null;
+  const submit = model => fetcher(buildEndpoint(model), {
+    method: 'POST',
+    headers: { Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: signedUrl.toString() }),
+    signal: AbortSignal.timeout(18000)
   });
+  let response = await submit(modelUsed);
+  if (!response.ok && modelUsed === 'nova-3') {
+    const body = typeof response.text === 'function' ? await response.text() : '';
+    if (keytermUnsupported(response.status, body)) {
+      console.warn('[ASSEMBLY KEYTERMS] Nova-3 recusou keyterms para este modelo/idioma; alternando para Nova-2 keywords.');
+      fallbackReason = 'keyterm_incompativel';
+      modelUsed = 'nova-2';
+      response = await submit(modelUsed);
+    } else {
+      const retryable = response.status === 429 || response.status >= 500;
+      throw new Error(`Deepgram recusou a gravação (HTTP ${response.status}${retryable ? ', tentativa posterior' : ''}).`);
+    }
+  }
   if (!response.ok) {
     const retryable = response.status === 429 || response.status >= 500;
     throw new Error(`Deepgram recusou a gravação (HTTP ${response.status}${retryable ? ', tentativa posterior' : ''}).`);
   }
   const result = await response.json();
   if (!result?.request_id) throw new Error('Deepgram não confirmou o identificador da transcrição assíncrona.');
-  const { error: jobError } = await admin.from('assembly_deepgram_jobs').update({ request_id: String(result.request_id) })
-    .eq('recording_id', row.id).eq('callback_token_hash', secretHash(token));
+  const auditoria = {
+    modelo: modelUsed, idioma: 'pt-BR', solicitacao: String(result.request_id),
+    termosIncluidos: lista.termos, termosDescartados: lista.metadados.termosDescartados,
+    tokensEstimados: lista.metadados.tokensEstimados,
+    limiteConfigurado: lista.metadados.limiteConfigurado,
+    orcamentoTokens: lista.metadados.orcamentoTokens,
+    quantidadeIncluidos: lista.metadados.quantidadeIncluidos,
+    quantidadeDescartados: lista.metadados.quantidadeDescartados,
+    fallback: Boolean(fallbackReason || forcedFallback), motivoFallback: fallbackReason,
+    enviadoEm: new Date().toISOString()
+  };
+  const { error: jobError } = await admin.from('assembly_deepgram_jobs').update({
+    request_id: String(result.request_id),
+    keyterms_sent: lista.termos, keyterm_audit: auditoria, model_used: modelUsed,
+    fallback_to_nova2: modelUsed === 'nova-2' && Boolean(fallbackReason || forcedFallback)
+  }).eq('recording_id', row.id).eq('callback_token_hash', secretHash(token));
   if (jobError) throw jobError;
+  const { error: auditError } = await admin.from('assembly_recordings').update({deepgram_keyterm_audit: auditoria})
+    .eq('id', row.id).eq('status', 'concluido');
+  if (auditError) throw auditError;
+  console.info('[ASSEMBLY KEYTERMS]', { recording: row.id, modelo: modelUsed,
+    tokensEstimados: auditoria.tokensEstimados, limite: auditoria.orcamentoTokens,
+    incluidos: auditoria.quantidadeIncluidos, descartados: auditoria.quantidadeDescartados,
+    categoriasDescartadas: [...new Set(auditoria.termosDescartados.map(x => x.categoria))] });
   const { error: statusError } = await admin.from('assembly_recordings').update({ transcription_status: 'enfileirado' })
     .eq('id', row.id).eq('transcription_status', 'processando').eq('transcription_model', MODEL);
   if (statusError) throw statusError;
   return String(result.request_id);
 }
-
 async function dispatch(admin, row, fetcher = fetch) {
   if (!shouldProcess(row)) return false;
   const token = await claim(admin, row);
@@ -250,4 +323,4 @@ function parseSegments(payload) {
   return [];
 }
 
-module.exports = { MODEL, SOURCE, MAX_ATTEMPTS, adminClient, storagePath, secretHash, shouldProcess, callbackUrl, claim, markFailure, sendToDeepgram, dispatch, parseSegments, mergeConsecutiveUtterances, splitWordsBySpeaker };
+module.exports = { MODEL, SOURCE, MAX_ATTEMPTS, adminClient, storagePath, secretHash, shouldProcess, callbackUrl, claim, markFailure, sendToDeepgram, dispatch, parseSegments, mergeConsecutiveUtterances, splitWordsBySpeaker, keytermUnsupported, callbackErrorUnsupported };

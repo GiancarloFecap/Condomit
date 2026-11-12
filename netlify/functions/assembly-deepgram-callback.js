@@ -1,7 +1,7 @@
 'use strict';
 
 const { timingSafeEqual } = require('node:crypto');
-const { adminClient, MODEL, secretHash, markFailure, parseSegments } = require('./lib/assembly-deepgram');
+const { adminClient, MODEL, secretHash, markFailure, parseSegments, callbackErrorUnsupported } = require('./lib/assembly-deepgram');
 
 const reply = statusCode => ({ statusCode, headers: { 'Cache-Control': 'no-store' }, body: '' });
 
@@ -17,7 +17,7 @@ exports.handler = async event => {
     if (!Number.isSafeInteger(id) || id <= 0 || !/^[a-f\d]{64}$/.test(token)) return reply(403);
     const admin = adminClient();
     const { data: job, error: jobError } = await admin.from('assembly_deepgram_jobs')
-      .select('recording_id,callback_token_hash,request_id,completed_at').eq('recording_id', id).maybeSingle();
+      .select('recording_id,callback_token_hash,request_id,completed_at,model_used').eq('recording_id', id).maybeSingle();
     if (jobError) throw jobError;
     if (!job || !/^[a-f\d]{64}$/.test(job.callback_token_hash || '')) return reply(403);
     if (!timingSafeEqual(Buffer.from(secretHash(token), 'hex'), Buffer.from(job.callback_token_hash, 'hex'))) return reply(403);
@@ -25,6 +25,12 @@ exports.handler = async event => {
     const requestId = String(payload?.metadata?.request_id || '');
     if (job.request_id && requestId && job.request_id !== requestId) return reply(403);
     if (payload?.error || payload?.err_code || payload?.type === 'error') {
+      if (job.model_used === 'nova-3' && callbackErrorUnsupported(payload)) {
+        const { error: fallbackError } = await admin.from('assembly_deepgram_jobs').update({ fallback_to_nova2: true })
+          .eq('recording_id', id).eq('callback_token_hash', secretHash(token));
+        if (fallbackError) throw fallbackError;
+        console.warn('[ASSEMBLY KEYTERMS] Callback Nova-3 incompatível; nova tentativa com Nova-2.');
+      }
       await markFailure(admin, id, 'Deepgram não conseguiu transcrever este áudio. Será feita outra tentativa automática.');
       return reply(204);
     }

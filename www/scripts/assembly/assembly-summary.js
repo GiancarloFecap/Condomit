@@ -26,6 +26,8 @@
         generatedMinutes: "",
         detailsReleased: true,
         indirectDiscussion: null,
+        indirectTopics: null,
+        indirectObservacoes: [],
         indirectSummaryError: "",
         indirectSummaryRunning: false,
         commentProfiles: new Map(),
@@ -262,6 +264,7 @@
             state.transcripts = await fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`);
             state.speakerAssignments = await loadSpeakerAssignments();
             state.indirectDiscussion = null;
+            state.indirectTopics = null;
             renderMinutes();
             if (editedValue !== null) {
                 const editor = document.getElementById('assemblyMinutesEditor074');
@@ -277,11 +280,12 @@
     async function loadMinutesReview() {
         const [numbers, drafts, signedDocs] = await Promise.all([
             fetchRows(`/assembly_minutes_numbers?select=minutes_number&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
-            fetchRows(`/assembly_minutes_drafts?select=assembly_id,body,status,reviewed_by,approved_at,updated_at&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
+            fetchRows(`/assembly_minutes_drafts?select=assembly_id,body,status,reviewed_by,approved_at,updated_at,observacoes_revisao&assembly_id=eq.${state.id}&limit=1`).catch(() => []),
             fetchRows(`/assembly_signed_documents?select=id,filename,sha256,storage_path,external_validation_status,uploaded_at&assembly_id=eq.${state.id}&order=uploaded_at.desc`).catch(() => [])
         ]);
         state.minutesNumber = numbers[0]?.minutes_number || null;
         state.minutesDraft = drafts[0] || null;
+        state.indirectObservacoes = Array.isArray(state.minutesDraft?.observacoes_revisao) ? state.minutesDraft.observacoes_revisao : [];
         state.signedDocuments = signedDocs;
     }
 
@@ -315,6 +319,7 @@
             });
             state.minutesDraft = Array.isArray(response) ? response[0] : response;
             state.indirectDiscussion = null;
+            state.indirectTopics = null;
             if (!approve) state.signature = null;
             renderHero(); renderMinutes();
             window.showToast?.(approve ? 'Ata aprovada após revisão. Assinatura habilitada.' : 'Minuta salva para revisão.', 'success');
@@ -452,6 +457,7 @@
             state.minutesDraft = Array.isArray(draft) ? draft[0] : draft;
             state.signature = null;
             state.indirectDiscussion = null;
+            state.indirectTopics = null;
             renderHero();
             renderMinutes();
             window.showToast?.('Ata reaberta. Gere ou corrija as manifestações e assine novamente após a aprovação.', 'warning');
@@ -486,8 +492,10 @@
             });
             const json = await resp.json();
             if (!resp.ok) throw new Error(json.error || 'Não foi possível resumir a assembleia.');
-            if (!Array.isArray(json.paragraphs) || !json.paragraphs.length) throw new Error('Nenhuma síntese foi produzida.');
-            state.indirectDiscussion = json.paragraphs.map(value => cleanFormalText(value)).filter(Boolean);
+            if (!Array.isArray(json.topics) || !json.topics.some(item => item.paragraphs?.length)) throw new Error('Nenhuma síntese por pauta foi produzida.');
+            state.indirectTopics = json.topics.map(topic => ({id:topic.id,paragraphs:(topic.paragraphs || []).map(cleanFormalText).filter(Boolean)}));
+            state.indirectDiscussion = state.indirectTopics.flatMap(topic => topic.paragraphs);
+            state.indirectObservacoes = Array.isArray(json.observacoes_revisao) ? json.observacoes_revisao : [];
             if (!state.indirectDiscussion.length) throw new Error('Resumo vazio.');
             const editorBeforeRender = document.getElementById('assemblyMinutesEditor074');
             const latestUserText = editorBeforeRender?.value || initialValue;
@@ -511,7 +519,7 @@
             }
             state.indirectSummaryError = '';
             const nextStatus = document.getElementById('assemblyMinutesIndirectStatus0761');
-            if (nextStatus) nextStatus.textContent = `${json.warning || 'Síntese produzida em discurso indireto.'} ${savedAutomatically ? 'Minuta salva automaticamente. Confira e aprove somente após revisar.' : 'Confira e salve a minuta antes de aprovar.'}`;
+            if (nextStatus) nextStatus.textContent = `${json.warning || 'Síntese produzida em discurso indireto.'} ${savedAutomatically ? 'Minuta salva automaticamente. Confira e aprove somente após revisar.' : 'Confira e salve a minuta antes de aprovar.'} ${state.indirectObservacoes.length ? `${state.indirectObservacoes.length} sugestões de correção disponíveis para conferência abaixo.` : ''}`;
             if (!automatic) window.showToast?.('Manifestações incluídas na ata oficial em discurso indireto. Revise e salve a minuta.', 'success');
         } catch (err) {
             state.indirectSummaryError = err?.message || 'Erro ao elaborar a síntese.';
@@ -594,22 +602,16 @@
         }
 
         if (state.agenda.length) {
-            const agendaText = state.agenda.map((item, index) => {
-                const base = `${romanNumeral(index + 1)} – ${cleanFormalText(item.title || 'Item de pauta')}`;
-                return item.description ? `${base}: ${cleanFormalText(item.description)}` : base;
-            }).join('; ');
-            paragraphs.push(`Aberta a sessão, foi apresentada a Ordem do Dia, composta pelos seguintes assuntos: ${agendaText}. Na sequência, os itens foram submetidos à apreciação dos presentes, observando-se a ordem registrada no sistema.`);
+            paragraphs.push('Aberta a sessão, foram apreciados os assuntos constantes da ordem do dia, conforme os relatos e encaminhamentos a seguir.');
         } else if (a.agenda_summary) {
-            paragraphs.push(`Aberta a sessão, passou-se à apreciação da Ordem do Dia, registrada nos seguintes termos: ${sentenceFragment(a.agenda_summary)}.`);
+            paragraphs.push(`Aberta a sessão, foram abordados os assuntos da convocação: ${sentenceFragment(a.agenda_summary)}.`);
+        } else if (completedDeepgramTranscripts().length) {
+            paragraphs.push('Aberta a sessão, foram abordados os assuntos registrados na gravação. A presente ata os organiza por matéria discutida, para conferência e aprovação do síndico.');
         } else {
-            paragraphs.push('Aberta a sessão, iniciou-se a apreciação dos assuntos constantes da convocação, não havendo pauta detalhada adicional registrada no sistema.');
+            paragraphs.push('Aberta a sessão, não foram localizadas pautas ou discussões registradas nos documentos disponíveis.');
         }
 
-        paragraphs.push('MANIFESTAÇÕES DOS PARTICIPANTES');
-        paragraphs.push(...buildFormalDiscussionParagraphs());
-        paragraphs.push('DELIBERAÇÕES E VOTAÇÕES');
-        const pollParagraphs = state.polls.map(buildFormalPollParagraph).filter(Boolean);
-        paragraphs.push(...(pollParagraphs.length ? pollParagraphs : ['Não foram identificadas votações eletrônicas vinculadas a esta assembleia nos registros disponíveis.']));
+        paragraphs.push(...buildFormalTopicParagraphs());
 
         paragraphs.push(closingTime
             ? `Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, a assembleia foi encerrada às ${formatClockFormal(closingTime)}.`
@@ -617,8 +619,9 @@
         paragraphs.push('Para constar, lavrou-se a presente minuta com base nos registros eletrônicos de presença, pautas, transcrições e votações mantidos pelo Condomit. Sua divulgação aos moradores dependerá da revisão, aprovação e assinatura do síndico.');
 
         state.generatedMinutes = paragraphs.join('\n\n');
-        const displayText = state.indirectDiscussion && state.minutesDraft?.status !== 'aprovada'
+        const rawDisplayText = state.indirectTopics && state.minutesDraft?.status !== 'aprovada'
             ? state.generatedMinutes : (state.minutesDraft?.body || state.generatedMinutes);
+        const displayText = window.CondomitMinutesNarrative?.stripLegacyHeadings(rawDisplayText) || rawDisplayText;
         const approved = state.minutesDraft?.status === 'aprovada';
         const published = approved && Boolean(state.signature);
         const chairSignature = chair?.name || 'Síndico / Presidente da Assembleia';
@@ -630,7 +633,7 @@
                     <h3>ATA Nº ${esc(String(state.minutesNumber || "A DEFINIR"))}/${esc(year)}</h3>
                     <div class="formal-minutes-subtitle">${esc(title)} · ${esc(assemblyType)}</div>
                 </header>
-                <div class="formal-minutes-body">${displayText.split(/\n\s*\n/).filter(Boolean).map(paragraph => `<p${['MANIFESTAÇÕES DOS PARTICIPANTES','DELIBERAÇÕES E VOTAÇÕES'].includes(paragraph.trim()) ? ' class="formal-minutes-section-heading"' : ''}>${esc(paragraph)}</p>`).join('')}</div>
+                <div class="formal-minutes-body">${displayText.split(/\n\s*\n/).filter(Boolean).map(paragraph => `<p>${esc(paragraph)}</p>`).join('')}</div>
                 <footer class="formal-minutes-signatures">
                     ${state.signature && approved ? `
                     <div class="formal-signature formal-signature-electronic">
@@ -657,6 +660,10 @@
                 <button type="button" class="summary-primary" id="minutesApprove074">Aprovar ata revisada</button>` : ''}
               </div>
               <div id="assemblyMinutesIndirectStatus0761" class="minutes-ai-suggestions074" role="status">${esc(state.indirectSummaryError || (state.indirectDiscussion ? 'Síntese narrativa gerada. Revise as informações antes de aprovar.' : 'Use o resumo automático para redigir a discussão em discurso indireto, ou redija manualmente.'))}</div>
+              ${state.indirectObservacoes.length ? `<details class="minutes-evidence074"><summary>Conferir sugestões de correção da transcrição (${state.indirectObservacoes.length})</summary>
+                <p>São ajustes sugeridos somente para a redação da ATA. O texto original do Deepgram permanece preservado. Confira cada termo com a gravação antes de aprovar.</p>
+                <ul>${state.indirectObservacoes.slice(0,100).map(n => `<li>${esc(String(n.original||''))} → ${esc(String(n.sugerido||''))} (${esc(String(n.motivo||''))})</li>`).join('')}</ul>
+              </details>` : ''}
               <div id="assemblyMinutesAiSuggestions074" class="minutes-ai-suggestions074" hidden></div>
               <details class="minutes-evidence074"><summary>Conferir transcrição do vídeo (${groupedDeepgramTranscripts().length} manifestações)</summary>
                 <p>Trechos consecutivos da mesma voz foram reunidos em manifestações contínuas. Os registros originais e os pontos da gravação permanecem disponíveis para conferência. A identificação de usuários deve ser confirmada.</p>
@@ -772,6 +779,45 @@
             if (exact) return exact;
         }
         return participants.find((participant) => String(participant.role || '').toLowerCase().startsWith('sind')) || null;
+    }
+
+    function buildFormalTopicParagraphs() {
+        const engine = window.CondomitMinutesTopics;
+        if (!engine) return buildFormalDiscussionParagraphs().concat(state.polls.map(buildFormalPollParagraph));
+        const topics = engine.buildTopics({
+            rows:completedDeepgramTranscripts(), agenda:state.agenda, polls:state.polls
+        });
+        const results = [];
+        const associatedPolls = new Set();
+        for (const topic of topics) {
+            const inferred = !topic.registered;
+            const lead = inferred
+                ? `Na sequência, foi tratado o assunto referente a ${sentenceFragment(topic.title).toLocaleLowerCase('pt-BR')}.`
+                : `Em relação à pauta de ${sentenceFragment(topic.title)}, foram registrados os seguintes encaminhamentos e manifestações.`;
+            results.push(lead);
+            const generated = state.indirectTopics?.find(item => item.id === topic.id);
+            let interventions = generated?.paragraphs || [];
+            if (!interventions.length) {
+                interventions = topic.contributions.map(person => window.CondomitMinutesNarrative?.paragraphForGroup({
+                    text:person.text,participant_name:person.name || 'Participante não identificado',
+                    participant_email:person.participant_email,participant_role:person.role
+                })).filter(Boolean);
+            }
+            results.push(...interventions);
+            for (const poll of topic.polls) {
+                if (associatedPolls.has(String(poll.id))) continue;
+                associatedPolls.add(String(poll.id));
+                results.push(buildFormalPollParagraph(poll));
+            }
+            if (!interventions.length && !topic.polls.length && topic.registered) {
+                results.push('Não foram identificadas manifestações ou deliberações sobre este item nos registros disponíveis.');
+            }
+        }
+        if (!topics.length) return buildFormalDiscussionParagraphs();
+        for (const poll of state.polls) {
+            if (!associatedPolls.has(String(poll.id))) results.push(buildFormalPollParagraph(poll));
+        }
+        return results.filter(Boolean);
     }
 
     function buildFormalDiscussionParagraphs() {

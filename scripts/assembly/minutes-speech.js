@@ -76,6 +76,7 @@
                     recordingId, speakerIndex: index,
                     participant_name: reliableName || 'Participante não identificado',
                     participant_email: reliableName ? clean(row.participant_email) : null,
+                    participant_role: reliableName ? clean(row.participant_role) : '',
                     transcript: '', text: clean(row.transcript),
                     start_seconds: Number.isFinite(start) ? start : null,
                     end_seconds: Number.isFinite(end) ? end : null,
@@ -93,6 +94,7 @@
                 if (reliableName && current.participant_email === null) {
                     current.participant_name = reliableName;
                     current.participant_email = clean(row.participant_email);
+                    current.participant_role = clean(row.participant_role);
                 }
             }
         }

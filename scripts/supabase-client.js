@@ -1008,6 +1008,18 @@ async function refreshSupabaseAccessToken() {
 }
 
 async function resolveSupabaseAccessToken() {
+  // Módulos ES são carregados de forma assíncrona. Em páginas protegidas,
+  // aguardar a inicialização para não tratar uma sessão renovável como expirada.
+  if (!window.supabase?.auth) {
+    let expectedSession = false;
+    try { expectedSession = !!sessionStorage.getItem('condominiumUser')
+      || localStorage.getItem('condomitRememberMe') === '1'; } catch (_) {}
+    if (expectedSession) {
+      for (let count=0;count<35 && !window.supabase?.auth;count++) {
+        await new Promise(resolve=>setTimeout(resolve,100));
+      }
+    }
+  }
   try {
     const authClient =
       window.supabase?.auth;
@@ -1134,15 +1146,20 @@ async function supabaseFetch(
     delete headers.Authorization;
   }
 
-  const response =
-    await fetch(
-      `${SUPABASE_REST_URL}${path}`,
-      {
-        ...options,
-        method,
-        headers
-      }
-    );
+  let response = await fetch(`${SUPABASE_REST_URL}${path}`, {
+    ...options, method, headers
+  });
+  // Em abas retomadas após inatividade, o token enviado pode vencer entre
+  // sua leitura e a chamada. Renovar uma única vez usando o refresh token.
+  // Nunca efetuar logout automático por falha de rede ou acesso negado.
+  if (response.status === 401 && accessToken && window.supabase?.auth?.refreshSession) {
+    const refreshed = await refreshSupabaseAccessToken();
+    if (refreshed && refreshed !== accessToken) {
+      response = await fetch(`${SUPABASE_REST_URL}${path}`, {
+        ...options, method, headers: {...headers, Authorization:`Bearer ${refreshed}`}
+      });
+    }
+  }
 
   const text =
     await response.text();

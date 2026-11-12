@@ -20,10 +20,10 @@ const rows = [
 test('não omite manifestações, não mistura falantes e preserva proposta/orçamento', () => {
   const result = speech.fallbackParagraphs(rows);
   assert.equal(result.length, 2);
-  assert.match(result[0], /^Maria Oliveira /);
+  assert.match(result[0], /^O participante Maria Oliveira /);
   assert.match(result[0], /elevador social/);
   assert.match(result[0], /R\$ 8\.500,00/);
-  assert.match(result[1], /^Paulo Santos /);
+  assert.match(result[1], /^O participante Paulo Santos /);
   assert.match(result[1], /adiamento da obra|adiamento de a obra|adiar a obra/i);
   assert.doesNotMatch(result.join(' '), /Às \d\d:\d\d|Falante \d+ declarou/);
 });
@@ -45,7 +45,7 @@ test('painel mostra falas provisórias mesmo sem IA; versão assinada exige reab
 
 test('editor e documento oficial usam a mesma minuta e a navegação inclui o módulo', () => {
   const content = fs.readFileSync(require.resolve('../scripts/assembly/assembly-summary.js'),'utf8');
-  assert.match(content, /const displayText = state\.indirectDiscussion/);
+  assert.match(content, /const rawDisplayText = state\.indirectTopics/);
   assert.match(content, /assemblyMinutesEditor074/);
   const page = fs.readFileSync(require.resolve('../pages/assembleia-resumo.html'),'utf8');
   assert.ok(page.indexOf('minutes-speech.js') < page.indexOf('minutes-narrative.js'));
@@ -61,6 +61,7 @@ test('API usa regras locais quando não há GEMINI_API_KEY ou OPENAI_API_KEY', a
   const makeQuery = (table) => {
     const q={};
     for(const method of ['select','eq','in','order','range','limit','ilike']) q[method]=()=>q;
+    q.upsert=()=>Promise.resolve({data:null,error:null});
     q.maybeSingle=()=>Promise.resolve({data:table==='scheduled_assemblies'?{id:80,cep:'12345678',status:'encerrada'}:{email:'sindico@exemplo.com',user_type:'sindico',condominium:{cep:'12345678'}}});
     q.then=(onOk,onErr)=>Promise.resolve({data:({user_condominiums:[{condominium_id:'12345678'}],assembly_recordings:[{id:70}],assembly_transcripts:rows,assembly_agenda_items:[{title:'Elevadores'}]})[table]||[],error:null}).then(onOk,onErr);
     return q;

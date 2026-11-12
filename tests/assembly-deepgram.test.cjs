@@ -94,7 +94,7 @@ test('envia mídia assinada ao Deepgram com callback autenticado e pt-BR', async
   };
   assert.equal(await core.sendToDeepgram(admin, base, 'f'.repeat(64), fakeFetch), 'job-123');
   assert.ok(called);
-  assert.equal(updates.length, 2);
+  assert.equal(updates.length, 3);
   delete process.env.DEEPGRAM_API_KEY;
 });
 

@@ -114,6 +114,14 @@
                 return { user: null, redirected: false, explicitLogout: true };
             }
 
+            // A navegação de entrada só pode reabrir a conta automaticamente
+            // quando houve consentimento explícito em "Lembrar de mim".
+            if (options.redirect === true) {
+                let remembered = false;
+                try { remembered = localStorage.getItem('condomitRememberMe') === '1'; } catch (_) {}
+                if (!remembered) return {user:null,redirected:false,rememberRequired:true};
+            }
+
             const client = await waitForSupabase();
             if (!client) return { user: null, redirected: false };
 

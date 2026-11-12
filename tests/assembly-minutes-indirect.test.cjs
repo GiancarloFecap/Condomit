@@ -18,7 +18,7 @@ const sample = [{ id:1, recording_id:8, start_seconds:0, end_seconds:4,
 test('prompt exige síntese em terceira pessoa e proíbe transcrição literal', () => {
   const prompt = promptFor(sample,[{title:'Elevadores'}]);
   assert.match(prompt,/DISCURSO INDIRETO/);
-  assert.match(prompt,/Maria Oliveira:/);
+  assert.match(prompt,/O participante Maria Oliveira/);
   assert.match(prompt,/Não copie frases literalmente/);
   assert.match(prompt,/manutenção dos elevadores/);
 });
