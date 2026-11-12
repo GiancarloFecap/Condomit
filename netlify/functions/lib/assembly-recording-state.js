@@ -1,10 +1,11 @@
 'use strict';
 const { EgressClient, RoomServiceClient } = require('livekit-server-sdk');
+const { normalizeStatus, completed, failed, backupDetails, saveDiagnostic, triggerRecovery } = require('./assembly-egress-recovery');
 
 const BUCKET = 'condomit-assembly-recordings';
-const FINISHED = new Set([3, 'EGRESS_COMPLETE']);
-const FAILED = new Set([4, 5, 6, 'EGRESS_FAILED', 'EGRESS_ABORTED', 'EGRESS_LIMIT_REACHED']);
-const ACTIVE = new Set([0, 1, 2, 'EGRESS_STARTING', 'EGRESS_ACTIVE', 'EGRESS_ENDING']);
+const FINISHED = new Set(['EGRESS_COMPLETE']);
+const FAILED = new Set(['EGRESS_FAILED', 'EGRESS_ABORTED', 'EGRESS_LIMIT_REACHED']);
+const ACTIVE = new Set(['EGRESS_STARTING', 'EGRESS_ACTIVE', 'EGRESS_ENDING']);
 
 function client() {
   if (!process.env.LIVEKIT_URL || !process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) return null;
@@ -82,7 +83,7 @@ async function stopAssemblyEgress(admin, assemblyId, api = client(), { maxWaitMs
       try {
         const list = await api.listEgress({ egressId });
         info = list.find(item => item.egressId === egressId) || null;
-        if (info && [0, 'EGRESS_STARTING'].includes(info.status)) {
+        if (info && normalizeStatus(info.status) === 'EGRESS_STARTING') {
           await sleep(450);
           continue;
         }
@@ -93,7 +94,7 @@ async function stopAssemblyEgress(admin, assemblyId, api = client(), { maxWaitMs
       }
       break;
     }
-    if (info && [1, 'EGRESS_ACTIVE'].includes(info.status)) {
+    if (info && normalizeStatus(info.status) === 'EGRESS_ACTIVE') {
       try {
         await api.stopEgress(egressId);
         requestedEgress.add(egressId);
@@ -102,7 +103,7 @@ async function stopAssemblyEgress(admin, assemblyId, api = client(), { maxWaitMs
         console.warn('[ASSEMBLY EGRESS STOP]', { recording: record.id, message });
         errors.push(message);
       }
-    } else if (!info || [0, 'EGRESS_STARTING'].includes(info.status)) {
+    } else if (!info || normalizeStatus(info.status) === 'EGRESS_STARTING') {
       pending++;
     }
   }
@@ -153,7 +154,9 @@ async function reconcileRecording(admin, assemblyId, record, api = client()) {
       const info = instances.find(item => item.egressId === record.egress_id) || null;
       if (info) {
         remoteState.info = info;
-        remoteState.value = FINISHED.has(info.status) ? 'concluido' : FAILED.has(info.status) ? 'falhou' : ACTIVE.has(info.status) ? 'gravando' : 'desconhecido';
+        const status = normalizeStatus(info.status);
+        remoteState.value = FINISHED.has(status) ? 'concluido' : FAILED.has(status) ? 'falhou' : ACTIVE.has(status) ? 'gravando' : 'desconhecido';
+        await saveDiagnostic(admin, record.id, info);
       }
     } catch (error) {
       console.warn('[ASSEMBLY EGRESS CHECK]', { recording: record.id, message: String(error?.message || error) });
@@ -172,6 +175,7 @@ async function reconcileRecording(admin, assemblyId, record, api = client()) {
       console.warn('[ASSEMBLY EGRESS OUTPUT CHECK]', { recording: record.id, message: String(error?.message || error) });
     }
   }
+  const backup = backupDetails(remoteState.info);
   const remotelyFinished = remoteState.value === 'concluido';
   const remotelyFailed = remoteState.value === 'falhou';
   const shouldCheckFile = remotelyFinished || remotelyFailed || ['concluido', 'falhou'].includes(record.status) || (Boolean(record.egress_id) && ['desconhecido', 'consulta_indisponivel'].includes(remoteState.value));
@@ -184,16 +188,24 @@ async function reconcileRecording(admin, assemblyId, record, api = client()) {
   }
   let nextStatus = record.status;
   let diagnostic = '';
+  if (backup.used && !file?.stable && (remotelyFailed || remotelyFinished)) {
+    diagnostic = 'O LiveKit informou uma cópia de segurança. A recuperação do MP4 está sendo solicitada.';
+    const { data: recovery } = await admin.from('assembly_egress_diagnostics')
+      .select('recovery_status,recovery_attempts,last_recovery_at').eq('recording_id', record.id).maybeSingle();
+    const elapsed = Date.now() - new Date(recovery?.last_recovery_at || 0).getTime();
+    if (Number(recovery?.recovery_attempts || 0) < 5 && elapsed > 3 * 60_000 && recovery?.recovery_status !== 'concluido')
+      await triggerRecovery(record.id);
+  }
   if (remotelyFailed && !file?.stable) {
     nextStatus = 'falhou';
-    diagnostic = egressFailureDiagnostic(remoteState.info);
+    diagnostic = `${egressFailureDiagnostic(remoteState.info)}${backup.used ? ' Backup LiveKit detectado; tentando recuperar o MP4.' : ''}`;
   } else if (file?.stable && (remotelyFinished || remotelyFailed || ['concluido', 'falhou'].includes(record.status) || ['desconhecido', 'consulta_indisponivel'].includes(remoteState.value))) {
     nextStatus = 'concluido';
   } else if (remotelyFinished && !file?.stable) {
     const endedAt = Number(remoteState.info?.endedAt || 0);
     const endMs = endedAt > 1e15 ? endedAt / 1e6 : endedAt > 1e12 ? endedAt : endedAt > 1e9 ? endedAt * 1000 : 0;
     if (endMs && Date.now() - endMs > 10 * 60 * 1000) nextStatus = 'falhou';
-    diagnostic = 'O Egress terminou, mas o arquivo ainda não foi confirmado no Storage.';
+    diagnostic = backup.used ? 'O Egress terminou e a cópia de segurança está em recuperação.' : 'O Egress terminou, mas o arquivo ainda não foi confirmado no Storage. Verifique o destino de upload e a opção de backup do LiveKit.';
   } else if (record.status === 'concluido' && !file?.stable) {
     diagnostic = 'Arquivo da gravação não localizado ou não estabilizado no Storage.';
   } else if (record.status === 'falhou') {
@@ -201,8 +213,9 @@ async function reconcileRecording(admin, assemblyId, record, api = client()) {
   } else if (!record.egress_id && Date.now() - new Date(record.started_at || record.created_at || 0).getTime() > 120000) {
     nextStatus = 'falhou';
     diagnostic = 'O serviço não retornou um identificador de gravação após dois minutos.';
-  } else if (record.egress_id && remoteState.value === 'desconhecido' && Date.now() - new Date(record.started_at || 0).getTime() > 1200000) {
-    diagnostic = 'Não foi possível confirmar a gravação remota. Confira Egress e webhook.';
+  } else if (record.egress_id && remoteState.value === 'desconhecido' && Date.now() - new Date(record.started_at || 0).getTime() > 30 * 60_000) {
+    nextStatus = 'falhou';
+    diagnostic = 'O identificador do Egress não foi encontrado após 30 minutos, e o MP4 não está no Storage. Consulte o histórico LiveKit e eventuais backups.';
   }
   if (nextStatus !== record.status || (nextStatus === 'concluido' && Number(record.file_size_bytes || 0) !== Number(file?.size || 0)) || (filename && originalUrl !== record.recording_url)) {
     const patch = { status: nextStatus };

@@ -263,6 +263,24 @@ async function handleEnd(assembly, userEmail, userCEP) {
   }
 
   const now = new Date().toISOString();
+  if (recording.examined > 0) {
+    // O navegador e a sala ainda não podem ser declarados encerrados até o Egress
+    // ser confirmado no armazenamento ou reportar um erro terminal.
+    const { data: pending, error: pendingError } = await supabase.from('assembly_recordings')
+      .select('id,status').eq('assembly_id', assembly.id).in('status', ['pendente','gravando']).limit(1);
+    if (pendingError) return httpError(500, 'Não foi possível conferir o MP4.', pendingError.message);
+    if (pending?.length) {
+      const { error: queuedError } = await supabase.from('scheduled_assemblies')
+        .update({ recording_end_requested_at: now, recording_end_requested_by: userEmail, updated_at: now })
+        .eq('id', assembly.id).eq('status', ASSEMBLY_STATUS.IN_PROGRESS);
+      if (queuedError) return httpError(500, 'Não foi possível agendar a finalização segura.', queuedError.message);
+      return successResponse({
+        action: 'end', assembly_id: assembly.id, pending: true,
+        recording_finalization: 'aguardando_mp4',
+        message: 'O LiveKit está finalizando o MP4. O encerramento será concluído automaticamente após a confirmação do arquivo.'
+      });
+    }
+  }
   const { error: updateError } = await supabase
     .from('scheduled_assemblies')
     .update({

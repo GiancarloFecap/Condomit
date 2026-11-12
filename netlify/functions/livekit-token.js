@@ -4,6 +4,7 @@ const { createClient } = require('@supabase/supabase-js');
 const {
   AccessToken,
   TrackSource,
+  RoomServiceClient,
 } = require('livekit-server-sdk');
 
 const SUPABASE_URL = String(
@@ -633,6 +634,22 @@ exports.handler = async (event) => {
           500,
           'Erro ao configurar sala da assembleia.'
         );
+      }
+    }
+
+    // Pré-cria a sala com tolerância para reconexão após queda do síndico.
+    // O Egress é hospedado pelo LiveKit, nunca pelo navegador de quem organiza.
+    try {
+      const livekitRooms = new RoomServiceClient(
+        LIVEKIT_URL.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:'),
+        LIVEKIT_API_KEY, LIVEKIT_API_SECRET
+      );
+      await livekitRooms.createRoom({ name: roomName, emptyTimeout: 300, departureTimeout: 180 });
+    } catch (error) {
+      const message = String(error?.message || '');
+      if (!/already exists|already in use|already.*created|conflict/i.test(message) && Number(error?.status) !== 409) {
+        console.error('[ASSEMBLY ROOM CREATE]', { code: error?.code, message });
+        return httpError(503, 'Não foi possível preparar a sala para gravação e reconexão.');
       }
     }
 

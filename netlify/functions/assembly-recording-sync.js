@@ -1,6 +1,7 @@
 'use strict';
 const { createClient } = require('@supabase/supabase-js');
-const { reconcileRecording, client, stopAssemblyEgress } = require('./lib/assembly-recording-state');
+const { reconcileRecording, reconcileAssembly, client, stopAssemblyEgress } = require('./lib/assembly-recording-state');
+const { triggerRecovery, TABLE } = require('./lib/assembly-egress-recovery');
 
 exports.handler = async () => {
   try {
@@ -33,6 +34,39 @@ exports.handler = async () => {
       } catch (error) {
         console.warn('[ASSEMBLY RECORDING SYNC]', { recording: record.id, message: String(error?.message || error) });
       }
+    }
+    // Mesmo se o webhook falhar, tenta recuperar backups registrados nas execuções anteriores.
+    const { data: recoverable, error: recoveryQueryError } = await admin.from(TABLE)
+      .select('recording_id,recovery_status,recovery_attempts,last_recovery_at')
+      .eq('backup_storage_used', true)
+      .in('recovery_status', ['pendente', 'falhou', 'processando'])
+      .lt('recovery_attempts', 5).limit(8);
+    if (!recoveryQueryError) {
+      for (const item of recoverable || []) {
+        const sinceAttempt = Date.now() - new Date(item.last_recovery_at || 0).getTime();
+        if (sinceAttempt > (item.recovery_status === 'processando' ? 17 : 3) * 60_000)
+          await triggerRecovery(item.recording_id);
+      }
+    }
+    // Completa finalizações solicitadas mesmo que o síndico tenha fechado o navegador.
+    const { data: pendingEndings, error: endingsError } = await admin.from('scheduled_assemblies')
+      .select('id,status').eq('status', 'em_andamento')
+      .not('recording_end_requested_at', 'is', null).limit(20);
+    if (endingsError) console.warn('[ASSEMBLY ENDING]', { code: endingsError.code });
+    for (const assembly of pendingEndings || []) {
+      try {
+        await stopAssemblyEgress(admin, assembly.id, api, { maxWaitMs: 900 });
+        await reconcileAssembly(admin, assembly.id, { limit: 20 });
+        const { data: rows, error: statusError } = await admin.from('assembly_recordings')
+          .select('id,status').eq('assembly_id', assembly.id).limit(20);
+        if (statusError) throw statusError;
+        if (!rows?.length || rows.some(row => ['pendente', 'gravando'].includes(row.status))) continue;
+        const { error: endError } = await admin.from('scheduled_assemblies').update({
+          status: 'encerrada', ended_at: new Date().toISOString(), updated_at: new Date().toISOString()
+        }).eq('id', assembly.id).eq('status', 'em_andamento').not('recording_end_requested_at', 'is', null);
+        if (endError) throw endError;
+        console.info('[ASSEMBLY ENDING] Finalização concluída após resultado terminal do Egress', { assembly: assembly.id });
+      } catch (error) { console.warn('[ASSEMBLY ENDING]', { assembly: assembly.id, message: String(error?.message || error) }); }
     }
     console.info('[ASSEMBLY RECORDING SYNC]', { examined: data?.length || 0, updated });
     return { statusCode: 200, body: JSON.stringify({ ok: true, examined: data?.length || 0, updated }) };

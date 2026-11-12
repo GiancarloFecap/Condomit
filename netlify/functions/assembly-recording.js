@@ -2,6 +2,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { EgressClient, EncodedFileOutput, S3Upload } = require('livekit-server-sdk');
 const { reconcileAssembly } = require('./lib/assembly-recording-state');
+const { normalizeStatus, saveDiagnostic } = require('./lib/assembly-egress-recovery');
 const env = process.env;
 const reply = (statusCode, data) => ({ statusCode, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) });
 const cep = v => String(v || '').replace(/\D/g, '');
@@ -36,7 +37,7 @@ exports.handler = async event => {
     const [{data: assembly}, {data: links}, {data: profile}] = await Promise.all([
       supabase.from('scheduled_assemblies').select('id,cep,status,livekit_room_name').eq('id',assemblyId).maybeSingle(),
       supabase.from('user_condominiums').select('condominium_id').eq('user_email',email),
-      supabase.from('users').select('email,condominium').eq('email',email).maybeSingle()
+      supabase.from('users').select('email,user_type,condominium').eq('email',email).maybeSingle()
     ]);
     if (!assembly) return reply(404, {error:'Assembleia não encontrada.'});
     let cachedCondo = profile?.condominium;
@@ -84,12 +85,14 @@ exports.handler = async event => {
     try {
       const output = new EncodedFileOutput({ filepath:storagePath, output: {case:'s3', value:new S3Upload({accessKey:env.CONDOMIT_S3_ACCESS_KEY, secret:env.CONDOMIT_S3_SECRET_KEY,endpoint:env.CONDOMIT_S3_ENDPOINT,region:env.CONDOMIT_S3_REGION || 'us-east-1',bucket,forcePathStyle:true})} });
       const info = await livekit.startRoomCompositeEgress(roomName, output, {layout:'grid'});
-      const {error: updateError} = await supabase.from('assembly_recordings').update({egress_id:info.egressId,status:'gravando',started_at:egressStartedAt(info)}).eq('id',record.id);
+      const initialStatus = normalizeStatus(info.status) === 'EGRESS_ACTIVE' ? 'gravando' : 'pendente';
+      const {error: updateError} = await supabase.from('assembly_recordings').update({egress_id:info.egressId,status:initialStatus,started_at:egressStartedAt(info)}).eq('id',record.id);
       if (updateError) {
         await livekit.stopEgress(info.egressId).catch(()=>{});
         throw updateError;
       }
-      return reply(200, {status:'gravando',active:true,recording_id:record.id});
+      await saveDiagnostic(supabase, record.id, info);
+      return reply(200, {status:initialStatus,active:true,recording_id:record.id});
     } catch (error) {
       await supabase.from('assembly_recordings').update({status:'falhou'}).eq('id',record.id);
       throw error;

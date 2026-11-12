@@ -1336,8 +1336,9 @@
             const waiting = statuses.some(status => ['pendente', 'gravando'].includes(status));
             const failed = statuses.includes('falhou');
             const unavailable = state.recordingStatuses?.some(row => row.status === 'concluido');
+            const diagnosis = (state.recordingStatuses || []).find(row => row.status === 'falhou' && row.verification?.diagnostic)?.verification?.diagnostic;
             const message = waiting ? 'O vídeo MP4 está sendo finalizado pelo LiveKit. Esta tela se atualiza automaticamente, independentemente da transcrição.' : failed
-                ? 'O LiveKit não concluiu esta gravação. Confira o Egress e o armazenamento S3.' : unavailable
+                ? (diagnosis || 'O LiveKit não concluiu esta gravação. Confira o Egress e o armazenamento S3; se houver backup, ele poderá ser recuperado.') : unavailable
                 ? 'Vídeo registrado no banco, mas ainda sem endereço de reprodução.' : 'Nenhuma gravação disponível até o momento.';
             if (!container.querySelector(':scope > .summary-empty')) {
                 container.innerHTML = `<div class="summary-empty">${message}</div><button class="summary-secondary" type="button" id="refreshAssemblyRecordings079"><i class="fas fa-rotate-right"></i> Verificar gravações novamente</button>`;

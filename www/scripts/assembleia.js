@@ -1805,6 +1805,10 @@ async function confirmFinalizeAssembly(id) {
             }
             const finalized = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(finalized.error || 'Não foi possível finalizar a assembleia.');
+            if (finalized.pending) {
+                showToast('Finalização solicitada. A assembleia continuará em processamento até o MP4 estar salvo no servidor.', 'info');
+                return;
+            }
             const assembly = scheduledAssemblies.find((item) => String(item.id) === String(id));
             if (assembly) {
                 assembly.status = 'encerrada';
