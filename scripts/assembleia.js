@@ -1567,8 +1567,11 @@ async function loadScheduledAssemblies() {
             !isPastStatus(assembly) && String(assembly.date || '').localeCompare(todayIso) >= 0
         );
 
+        const activeIds = new Set(scheduledAssemblies.map(row => String(row.id)));
+        for (const id of [...pendingAssemblyFinalizations]) if (!activeIds.has(id)) pendingAssemblyFinalizations.delete(id);
         renderScheduledAssemblies();
         renderPastAssemblies();
+        startAssemblyUploadProgress();
     } catch (error) {
         console.error('Erro ao carregar assembleias:', error);
         if ($('scheduled-list')) {
@@ -1599,6 +1602,58 @@ function getScheduledAssemblyStartDate(assembly) {
 function canPrepareScheduledAssembly(assembly) {
     const start = getScheduledAssemblyStartDate(assembly);
     return !start || Date.now() >= start.getTime();
+}
+
+const pendingAssemblyFinalizations = new Set();
+const busyAssemblyFinalizations = new Set();
+let assemblyUploadProgressTimer = null;
+let assemblyUploadProgressInFlight = false;
+
+async function refreshAssemblyUploadProgress() {
+    if (assemblyUploadProgressInFlight || document.hidden || !pendingAssemblyFinalizations.size) return;
+    assemblyUploadProgressInFlight = true;
+    try {
+        const token = await window.resolveSupabaseAccessToken?.();
+        if (!token) return;
+        for (const id of [...pendingAssemblyFinalizations]) {
+            const card = document.querySelector(`.assembly-item[data-assembly-id="${id}"]`);
+            if (!card) continue;
+            const response = await fetch('/.netlify/functions/assembly-recording', {
+                method: 'POST', cache: 'no-store',
+                headers: {'Content-Type': 'application/json', Authorization: `Bearer ${token}`},
+                body: JSON.stringify({action: 'status', assembly_id: Number(id)})
+            });
+            if (!response.ok) continue;
+            const data = await response.json();
+            const recording = data.latest || {status: 'pendente'};
+            window.CondomitUploadProgress?.render(card.querySelector('.assembly-finalization-progress'), {
+                status: recording.status, verification: recording
+            });
+            if (recording.diagnostic && recording.status === 'falhou') {
+                const label = card.querySelector('.assembly-upload-label');
+                if (label) label.textContent = recording.diagnostic;
+            }
+            if (data.assembly_status === 'encerrada') {
+                pendingAssemblyFinalizations.delete(id);
+                await loadScheduledAssemblies();
+                break;
+            }
+        }
+        if (!pendingAssemblyFinalizations.size && assemblyUploadProgressTimer) {
+            clearInterval(assemblyUploadProgressTimer);
+            assemblyUploadProgressTimer = null;
+        }
+    } catch (error) {
+        console.warn('[ASSEMBLY UPLOAD PROGRESS]', String(error?.message || error));
+    } finally { assemblyUploadProgressInFlight = false; }
+}
+
+function startAssemblyUploadProgress() {
+    if (!pendingAssemblyFinalizations.size) return;
+    if (!assemblyUploadProgressTimer) {
+        assemblyUploadProgressTimer = setInterval(() => refreshAssemblyUploadProgress().catch(() => {}), 4500);
+    }
+    refreshAssemblyUploadProgress().catch(() => {});
 }
 
 function renderScheduledAssemblies() {
@@ -1638,11 +1693,14 @@ function renderScheduledAssemblies() {
             `
             : '';
 
+        const finalizationPending = Boolean(assembly.recording_end_requested_at) || pendingAssemblyFinalizations.has(String(assembly.id));
+        if (finalizationPending) pendingAssemblyFinalizations.add(String(assembly.id));
         const finalizeButton = isSindico
             ? `
-                <button class="btn assembly-finalize-btn" onclick="confirmFinalizeAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')" title="Finalizar assembleia">
-                    <i class="fas fa-flag-checkered"></i> Finalizar assembleia
+                <button class="btn assembly-finalize-btn" onclick="confirmFinalizeAssembly('${escapeHtml(String(assembly.id)).replace(/'/g, '&#39;')}')" title="${finalizationPending ? 'Aguardando MP4' : 'Finalizar assembleia'}" ${finalizationPending ? 'disabled aria-disabled="true"' : ''}>
+                    <i class="fas fa-flag-checkered"></i> ${finalizationPending ? 'Aguardando gravação' : 'Finalizar assembleia'}
                 </button>
+                ${finalizationPending ? `<div class="assembly-finalization-progress" data-progress-assembly="${escapeHtml(String(assembly.id))}" role="status"></div>` : ''}
             `
             : '';
 
@@ -1669,6 +1727,11 @@ function renderScheduledAssemblies() {
             </div>
         `);
     });
+    for (const id of pendingAssemblyFinalizations) {
+        const panel = Array.from(listContainer.querySelectorAll('[data-progress-assembly]')).find(node => node.dataset.progressAssembly === id);
+        if (panel) window.CondomitUploadProgress?.render(panel, {status: 'pendente'});
+    }
+    if (pendingAssemblyFinalizations.size) startAssemblyUploadProgress();
 }
 
 function renderPastAssemblies() {
@@ -1787,8 +1850,15 @@ async function scheduleAssembly(event) {
 
 async function confirmFinalizeAssembly(id) {
     if (!id || !assemblyState.currentUser || assemblyState.currentUser.type !== 'sindico') return;
+    const key = String(id);
+    if (pendingAssemblyFinalizations.has(key) || busyAssemblyFinalizations.has(key)) {
+        showToast('A finalização já está em processamento. Aguarde a confirmação do MP4.', 'info');
+        return;
+    }
 
     const execute = async () => {
+        if (busyAssemblyFinalizations.has(key) || pendingAssemblyFinalizations.has(key)) return;
+        busyAssemblyFinalizations.add(key);
         try {
             const sendFinalize = async (token) => fetch('/.netlify/functions/assembly-action', {
                 method: 'POST',
@@ -1806,7 +1876,12 @@ async function confirmFinalizeAssembly(id) {
             const finalized = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(finalized.error || 'Não foi possível finalizar a assembleia.');
             if (finalized.pending) {
-                showToast('Finalização solicitada. A assembleia continuará em processamento até o MP4 estar salvo no servidor.', 'info');
+                pendingAssemblyFinalizations.add(key);
+                const assembly = scheduledAssemblies.find(item => String(item.id) === key);
+                if (assembly) assembly.recording_end_requested_at = assembly.recording_end_requested_at || new Date().toISOString();
+                renderScheduledAssemblies();
+                startAssemblyUploadProgress();
+                showToast(finalized.message || 'Finalização solicitada. A gravação será conferida antes de encerrar a assembleia.', 'info');
                 return;
             }
             const assembly = scheduledAssemblies.find((item) => String(item.id) === String(id));
@@ -1823,13 +1898,15 @@ async function confirmFinalizeAssembly(id) {
         } catch (error) {
             console.error('Erro ao finalizar assembleia:', error);
             showToast(error?.message || 'Não foi possível finalizar a assembleia.', 'error');
+        } finally {
+            busyAssemblyFinalizations.delete(key);
         }
     };
 
     if (typeof window.showModal === 'function') {
         window.showModal({
             title: 'Finalizar assembleia',
-            message: 'A assembleia será encerrada imediatamente e passará para Assembleias Realizadas. Deseja continuar?',
+            message: 'A finalização será solicitada uma única vez. A assembleia só será encerrada após a confirmação do vídeo MP4 no servidor. Deseja continuar?',
             type: 'warning',
             confirmText: 'Finalizar assembleia',
             cancelText: 'Cancelar',

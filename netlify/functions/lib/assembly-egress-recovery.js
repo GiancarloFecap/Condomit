@@ -86,7 +86,8 @@ async function triggerRecovery(recordingId, fetcher = fetch) {
 }
 
 function urlForFile(adminUrl, bucket, path) {
-  return `${adminUrl}/storage/v1/upload/resumable`;
+  const direct = adminUrl.replace(/^https:\/\/([a-z0-9-]+)\.supabase\.co(?=\/|$)/i, 'https://$1.storage.supabase.co');
+  return `${direct}/storage/v1/upload/resumable`;
 }
 
 async function backupVideoUrl(row, fetcher = fetch) {
@@ -102,7 +103,7 @@ async function backupVideoUrl(row, fetcher = fetch) {
 }
 
 // TUS transfere blocos, em vez de manter um vídeo inteiro em memória na Netlify.
-async function restoreBackup(admin, recording, diag, fetcher = fetch) {
+async function restoreBackup(admin, recording, diag, fetcher = fetch, onProgress = null) {
   const filename = String(recording.recording_url || '').split('/').pop();
   if (!/^[\w-]+\.mp4$/i.test(filename)) throw new Error('Nome do vídeo inválido.');
   const path = `${recording.assembly_id}/${filename}`;
@@ -126,8 +127,10 @@ async function restoreBackup(admin, recording, diag, fetcher = fetch) {
   if (!init.ok) throw new Error(`Falha no início do upload TUS (HTTP ${init.status}).`);
   const loc = init.headers.get('location');
   if (!loc) throw new Error('O Storage não retornou o destino TUS.');
-  const upload = new URL(loc, supabaseUrl());
-  if (!upload.toString().startsWith(`${supabaseUrl()}/`)) throw new Error('Destino TUS inesperado.');
+  const upload = new URL(loc, urlForFile(supabaseUrl()));
+  const allowed = new URL(urlForFile(supabaseUrl()));
+  if (upload.protocol !== 'https:' || upload.hostname !== allowed.hostname || !upload.pathname.startsWith('/storage/v1/upload/resumable/')) throw new Error('Destino TUS inesperado.');
+  if (typeof onProgress === 'function') await onProgress(0, size);
   const reader = source.body.getReader();
   const chunkSize = 5 * 1024 * 1024;
   let buffered = Buffer.alloc(0), offset = 0, complete = false;
@@ -144,6 +147,7 @@ async function restoreBackup(admin, recording, diag, fetcher = fetch) {
     }
     const next = Number(response.headers.get('Upload-Offset'));
     offset = Number.isSafeInteger(next) && next >= offset ? next : offset + bytes.length;
+    if (typeof onProgress === 'function') await onProgress(offset, size);
   }
   while (!complete) {
     const { value, done } = await reader.read();

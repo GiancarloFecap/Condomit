@@ -17,8 +17,8 @@ exports.handler = async () => {
   // Antes da RPC, solicita STOP dos Egress elegíveis que ficaram sem participantes.
   // O banco impede o encerramento enquanto os arquivos ainda estiverem pendentes.
   const { data: active, error: candidatesError } = await supabase.from('scheduled_assemblies')
-    .select('id,cep,livekit_room_name,date,start_time,status,last_presence_check_at')
-    .eq('status', 'em_andamento').order('created_at', { ascending: true }).limit(50);
+    .select('id,cep,livekit_room_name,date,start_time,status,last_presence_check_at,recording_end_requested_at')
+    .eq('status', 'em_andamento').is('recording_end_requested_at', null).order('created_at', { ascending: true }).limit(50);
   if (candidatesError) return { statusCode: 500, body: JSON.stringify({ error: candidatesError.message }) };
   const now = Date.now();
   for (const item of active || []) {
@@ -27,12 +27,13 @@ exports.handler = async () => {
     if (item.last_presence_check_at && now - new Date(item.last_presence_check_at).getTime() < 30 * 60_000) continue;
     try {
       if (await hasConnectedAssemblyParticipants(item)) continue;
-      await stopAssemblyEgress(supabase, item.id, undefined, { maxWaitMs: 1200 });
-      const { error: updateError } = await supabase.from('scheduled_assemblies').update({
+      // Marca primeiro a intenção no banco; só depois o worker poderá parar o Egress.
+      const { data: claim, error: updateError } = await supabase.from('scheduled_assemblies').update({
         recording_end_requested_at: new Date().toISOString(),
         recording_end_requested_by: 'encerramento_automatico'
-      }).eq('id', item.id).eq('status','em_andamento').is('recording_end_requested_at', null);
+      }).eq('id', item.id).eq('status','em_andamento').is('recording_end_requested_at', null).select('id').maybeSingle();
       if (updateError) throw updateError;
+      if (claim) await stopAssemblyEgress(supabase, item.id, undefined, { maxWaitMs: 1200 });
     } catch (error) {
       console.warn('[auto-end-assemblies] Egress protegido: finalização adiada', { assemblyId: item.id, message: String(error?.message || error) });
     }

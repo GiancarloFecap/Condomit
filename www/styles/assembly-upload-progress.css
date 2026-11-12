@@ -1,0 +1,14 @@
+/* Estado do upload de gravações; não apresenta percentuais fictícios. */
+.assembly-upload-progress { display:grid; gap:7px; padding:12px 14px; margin:10px 0; background:var(--card-bg,#fff); border:1px solid var(--border-color,#dbe2f0); border-radius:12px; color:var(--text-primary,#1e293b); min-width:0; }
+.assembly-upload-label { font-size:.86rem; font-weight:700; line-height:1.35; }
+.assembly-upload-track { position:relative; height:10px; border-radius:999px; background:#dbe4f5; overflow:hidden; width:100%; }
+.assembly-upload-fill { display:block; height:100%; border-radius:inherit; background:#315ee8; transition:width .25s ease; }
+.assembly-upload-indeterminate .assembly-upload-fill { position:absolute; top:0; left:-32%; width:32%; background:linear-gradient(90deg,#9cc6ff,#315ee8); animation:condomit-upload-wait 1.5s ease-in-out infinite; }
+.assembly-upload-detail { font-size:.78rem; line-height:1.4; color:var(--text-secondary,#64748b); }
+.assembly-upload-progress-error { border-color:#fca5a5; }
+.assembly-upload-progress-error .assembly-upload-fill { width:100%; background:#ef4444; }
+.assembly-upload-progress-done { border-color:#86efac; }
+.assembly-upload-progress-done .assembly-upload-fill { background:#16a34a; }
+.assembly-finalize-btn:disabled { opacity:.65; cursor:not-allowed; }
+@keyframes condomit-upload-wait { from{left:-32%} to{left:100%} }
+@media(prefers-reduced-motion:reduce) { .assembly-upload-indeterminate .assembly-upload-fill { animation-duration:3s; } }

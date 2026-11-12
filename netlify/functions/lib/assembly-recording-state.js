@@ -1,6 +1,7 @@
 'use strict';
 const { EgressClient, RoomServiceClient } = require('livekit-server-sdk');
 const { normalizeStatus, completed, failed, backupDetails, saveDiagnostic, triggerRecovery } = require('./assembly-egress-recovery');
+const { describeUpload } = require('./assembly-upload-progress');
 
 const BUCKET = 'condomit-assembly-recordings';
 const FINISHED = new Set(['EGRESS_COMPLETE']);
@@ -23,6 +24,7 @@ function egressFailureDiagnostic(info) {
   const reason = String(info?.error || '').toLowerCase();
   const code = Number(info?.errorCode || 0);
   const details = code ? ` (código LiveKit ${code})` : '';
+  if (/(?:uploadpart|entitytoolarge|statuscode:\s*413|\b413\b)/.test(reason)) return 'O Storage rejeitou uma parte do MP4 (HTTP 413). Configure o endpoint S3 direto do Supabase, verifique limites e teste novamente; a gravação não foi confirmada.';
   if (/s3|storage|bucket|upload|access.denied|signature|credential|forbidden/.test(reason)) return `Falha no envio do vídeo ao S3${details}. Verifique a região, o endpoint e as permissões de gravação do bucket.`;
   if (/start signal not received|stop called before pipeline/.test(reason)) return `A gravação foi encerrada antes de o LiveKit iniciar o vídeo${details}. Evite encerrar a sala antes de a gravação estar ativa.`;
   if (/page load|template/.test(reason)) return `O layout de gravação do LiveKit não conseguiu carregar${details}. Verifique a disponibilidade do modelo de composição.`;
@@ -130,7 +132,7 @@ async function hasConnectedAssemblyParticipants(assembly) {
   );
 }
 
-function safeStatus(record, remoteState, file, diagnostic) {
+function safeStatus(record, remoteState, file, diagnostic, recovery = null) {
   return {
     recording_id: record.id,
     status: record.status,
@@ -139,7 +141,8 @@ function safeStatus(record, remoteState, file, diagnostic) {
     remote_status: remoteState,
     storage_verified: Boolean(file?.stable),
     file_size_bytes: Number(file?.size || record.file_size_bytes || 0),
-    diagnostic
+    diagnostic,
+    upload_progress: describeUpload(record, remoteState, Boolean(file?.stable), recovery)
   };
 }
 
@@ -229,7 +232,14 @@ async function reconcileRecording(admin, assemblyId, record, api = client()) {
     if (error) throw error;
     if (data) record = data;
   }
-  return safeStatus(record, remoteState.value, file, diagnostic);
+  let recovery = null;
+  if (record.id && (record.status !== 'concluido' || !file?.stable)) {
+    const result = await admin.from('assembly_egress_diagnostics')
+      .select('recovery_status,recovery_uploaded_bytes,recovery_total_bytes')
+      .eq('recording_id', record.id).maybeSingle();
+    if (!result.error) recovery = result.data;
+  }
+  return safeStatus(record, remoteState.value, file, diagnostic, recovery);
 }
 
 async function reconcileAssembly(admin, assemblyId, { limit = 10 } = {}) {

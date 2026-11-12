@@ -553,7 +553,7 @@
                 <span><i class="far fa-clock"></i> ${esc(String(a.start_time || '--:--').slice(0, 5))}${a.end_time ? ` – ${esc(String(a.end_time).slice(0, 5))}` : ''}</span>
                 <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
-                <span><i class="fas fa-video"></i> ${state.recordings.length} ${state.recordings.length === 1 ? 'gravação' : 'gravações'}</span>
+                <span><i class="fas fa-video"></i> ${state.recordings.length} ${state.recordings.length === 1 ? 'gravação concluída' : 'gravações concluídas'}${(state.recordingStatuses || []).filter(row => row.status !== 'concluido').length ? ` · ${(state.recordingStatuses || []).filter(row => row.status !== 'concluido').length} pendente(s) ou com falha` : ''}</span>
                 <span><i class="fas fa-microphone-lines"></i> ${groupedDeepgramTranscripts().length ? `${groupedDeepgramTranscripts().length} manifestações registradas` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
             </div>
             <div class="summary-hero-actions">
@@ -1326,6 +1326,41 @@
         recordingRefreshTimer = setInterval(() => refreshRecordingStatus().catch(() => {}), 1600);
     }
 
+    function renderRecordingUploadStatuses(container) {
+        const unfinished = (state.recordingStatuses || []).filter(row => row.status !== 'concluido');
+        let panel = container.querySelector(':scope > .assembly-upload-statuses');
+        if (!unfinished.length) { panel?.remove(); return; }
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.className = 'assembly-upload-statuses';
+            container.prepend(panel);
+        }
+        const live = new Set(unfinished.map(row => String(row.id)));
+        panel.querySelectorAll('[data-upload-recording-id]').forEach(node => {
+            if (!live.has(node.dataset.uploadRecordingId)) node.remove();
+        });
+        unfinished.forEach((row, index) => {
+            const id = String(row.id);
+            let item = Array.from(panel.querySelectorAll('[data-upload-recording-id]')).find(node => node.dataset.uploadRecordingId === id);
+            if (!item) {
+                item = document.createElement('div');
+                item.dataset.uploadRecordingId = id;
+                const heading = document.createElement('strong');
+                heading.className = 'assembly-upload-status-heading';
+                const progress = document.createElement('div');
+                progress.className = 'assembly-upload-progress';
+                item.append(heading, progress);
+                panel.append(item);
+            }
+            item.querySelector('.assembly-upload-status-heading').textContent = `Gravação ${index + 1}`;
+            window.CondomitUploadProgress?.render(item.querySelector('.assembly-upload-progress'), row);
+            if (row.status === 'falhou' && row.verification?.diagnostic) {
+                const label = item.querySelector('.assembly-upload-label');
+                if (label) label.textContent = row.verification.diagnostic;
+            }
+        });
+    }
+
     function renderRecordings() {
         const container = document.getElementById('assemblyRecordings');
         if (!container) return;
@@ -1344,9 +1379,11 @@
                 container.innerHTML = `<div class="summary-empty">${message}</div><button class="summary-secondary" type="button" id="refreshAssemblyRecordings079"><i class="fas fa-rotate-right"></i> Verificar gravações novamente</button>`;
                 container.querySelector('#refreshAssemblyRecordings079')?.addEventListener('click', () => refreshRecordingStatus().catch(() => {}));
             } else container.querySelector(':scope > .summary-empty').textContent = message;
+            renderRecordingUploadStatuses(container);
             return;
         }
         placeholders.forEach(element => element.remove());
+        renderRecordingUploadStatuses(container);
         const wanted = new Set(rows.map(row => String(row.id)));
         container.querySelectorAll(':scope > .recording-card[data-recording-id]').forEach(card => {
             if (!wanted.has(card.dataset.recordingId)) card.remove();

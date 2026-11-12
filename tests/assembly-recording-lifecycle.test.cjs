@@ -78,8 +78,9 @@ test('finalização forçada usa endpoint que para Egress; RPC antiga protegida 
   assert.doesNotMatch(frontend,/\/rpc\/condomit_finalize_assembly/);
   const from=server.indexOf('async function handleEnd(');
   const stop=server.indexOf('await stopAssemblyEgress(',from);
-  const update=server.indexOf(".from('scheduled_assemblies')",from);
-  assert.ok(from>=0 && stop>from && update>stop);
+  const claim=server.indexOf('recording_end_requested_at: now',from);
+  const update=server.indexOf('status: ASSEMBLY_STATUS.ENDED',from);
+  assert.ok(from>=0 && claim>from && stop>claim && update>stop);
   assert.match(sql,/r\.status IN \('pendente', 'gravando'\)/);
 });
 

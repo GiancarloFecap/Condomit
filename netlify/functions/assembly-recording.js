@@ -7,6 +7,7 @@ const env = process.env;
 const reply = (statusCode, data) => ({ statusCode, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) });
 const cep = v => String(v || '').replace(/\D/g, '');
 const bucket = 'condomit-assembly-recordings';
+const { normalizeS3Endpoint } = require('./lib/assembly-s3-endpoint');
 const ready = () => ['LIVEKIT_URL','LIVEKIT_API_KEY','LIVEKIT_API_SECRET','CONDOMIT_S3_ACCESS_KEY','CONDOMIT_S3_SECRET_KEY','CONDOMIT_S3_ENDPOINT'].every(key => !!env[key]);
 const db = () => createClient(env.SUPABASE_URL || env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SECRET_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 const egressStartedAt = info => {
@@ -58,7 +59,7 @@ exports.handler = async event => {
         }
       }
       const recordings = await reconcileAssembly(supabase, assemblyId, { limit: 5 });
-      return reply(200, { status: recordings[0]?.status || 'ausente', latest: recordings[0] || null, recordings });
+      return reply(200, { status: recordings[0]?.status || 'ausente', latest: recordings[0] || null, recordings, assembly_status: assembly.status });
     }
     if (action !== 'start') return reply(400, {error:'Ação inválida.'});
     if (assembly.status !== 'em_andamento') return reply(409, {error:'A assembleia não está em andamento.'});
@@ -83,7 +84,7 @@ exports.handler = async event => {
       throw insertedError;
     }
     try {
-      const output = new EncodedFileOutput({ filepath:storagePath, output: {case:'s3', value:new S3Upload({accessKey:env.CONDOMIT_S3_ACCESS_KEY, secret:env.CONDOMIT_S3_SECRET_KEY,endpoint:env.CONDOMIT_S3_ENDPOINT,region:env.CONDOMIT_S3_REGION || 'us-east-1',bucket,forcePathStyle:true})} });
+      const output = new EncodedFileOutput({ filepath:storagePath, output: {case:'s3', value:new S3Upload({accessKey:env.CONDOMIT_S3_ACCESS_KEY, secret:env.CONDOMIT_S3_SECRET_KEY,endpoint:normalizeS3Endpoint(env.CONDOMIT_S3_ENDPOINT),region:env.CONDOMIT_S3_REGION || 'us-east-1',bucket,forcePathStyle:true})} });
       const info = await livekit.startRoomCompositeEgress(roomName, output, {layout:'grid'});
       const initialStatus = normalizeStatus(info.status) === 'EGRESS_ACTIVE' ? 'gravando' : 'pendente';
       const {error: updateError} = await supabase.from('assembly_recordings').update({egress_id:info.egressId,status:initialStatus,started_at:egressStartedAt(info)}).eq('id',record.id);

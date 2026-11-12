@@ -19,11 +19,17 @@ exports.handler = async event => {
   if (attempts >= 5) return { statusCode: 200 };
   if (diag.recovery_status === 'processando' && Date.now() - new Date(diag.last_recovery_at || 0).getTime() < 16 * 60_000) return { statusCode: 200 };
   const { data: lock, error: lockError } = await admin.from(TABLE).update({
-    recovery_status: 'processando', recovery_attempts: attempts + 1, last_recovery_at: new Date().toISOString()
+    recovery_status: 'processando', recovery_attempts: attempts + 1, last_recovery_at: new Date().toISOString(),
+    recovery_uploaded_bytes: 0, recovery_total_bytes: 0
   }).eq('recording_id', id).eq('recovery_attempts', attempts).neq('recovery_status', 'concluido').select('recording_id').maybeSingle();
   if (lockError || !lock) return { statusCode: 200 };
   try {
-    const output = await restoreBackup(admin, row, diag);
+    const output = await restoreBackup(admin, row, diag, fetch, async (uploaded, total) => {
+      const { error: progressError } = await admin.from(TABLE).update({
+        recovery_uploaded_bytes: uploaded, recovery_total_bytes: total
+      }).eq('recording_id', id);
+      if (progressError) console.warn('[EGRESS BACKUP] Progresso não registrado', { recording_id: id, code: progressError.code });
+    });
     const { data: existingFile } = await admin.storage.from('condomit-assembly-recordings').list(String(row.assembly_id), { search: row.recording_url.split('/').pop(), limit: 100 });
     const metadataSize = Number((existingFile || []).find(item => item.name === row.recording_url.split('/').pop())?.metadata?.size || output.bytes || 0);
     const { error: updateError } = await admin.from('assembly_recordings').update({ status: 'concluido', file_size_bytes: metadataSize, ended_at: row.ended_at || new Date().toISOString() })

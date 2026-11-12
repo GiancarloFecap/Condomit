@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const { stopAssemblyEgress, hasConnectedAssemblyParticipants } = require('./lib/assembly-recording-state');
+const { verifyAssemblyRecordings, finalizationStatusMessage } = require('./lib/assembly-finalization-guard');
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -147,7 +148,7 @@ async function fetchAssembly(assemblyId) {
     .select(`
       id, public_id, cep, title, description, date, start_time, end_time,
       status, created_by, assembly_type, expected_duration_minutes,
-      livekit_room_name, started_at, ended_at
+      livekit_room_name, started_at, ended_at, is_recording, recording_end_requested_at
     `)
     .eq('id', assemblyId)
     .single();
@@ -232,83 +233,84 @@ async function handleStart(assembly, userEmail, userCEP) {
 
 async function handleEnd(assembly, userEmail, userCEP) {
   if (assembly.status === ASSEMBLY_STATUS.ENDED) {
-    return httpError(409, 'Assembleia já foi encerrada.');
+    return successResponse({ action: 'end', assembly_id: assembly.id, already_ended: true });
   }
-  if (assembly.status === ASSEMBLY_STATUS.CANCELED) {
-    return httpError(409, 'Assembleia foi cancelada, não pode ser encerrada.');
-  }
-  if (assembly.status === ASSEMBLY_STATUS.SCHEDULED) {
-    return httpError(409, 'Assembleia ainda não foi iniciada. Inicie-a antes de encerrar.');
-  }
+  if (assembly.status === ASSEMBLY_STATUS.CANCELED) return httpError(409, 'Assembleia cancelada.');
   if (assembly.status !== ASSEMBLY_STATUS.IN_PROGRESS) {
-    return httpError(409, `Status atual (${assembly.status}) não permite encerrar a assembleia.`);
+    return httpError(409, 'A assembleia precisa estar em andamento para solicitar a finalização.');
   }
 
-  const recording = await stopAssemblyEgress(supabase, assembly.id).catch(error => ({
-    requested: 0, pending: 1, errors: [String(error?.message || error)]
-  }));
-  if (recording.errors.length || recording.pending) {
-    console.warn('[ASSEMBLY EGRESS FINALIZATION PENDING]', { assemblyId: assembly.id, pending: recording.pending, errors: recording.errors.length });
-    return httpError(409, 'A gravação ainda está sendo preparada ou finalizada no LiveKit. A assembleia continua aberta; tente finalizar novamente em alguns instantes.');
+  let state;
+  try {
+    state = await verifyAssemblyRecordings(supabase, assembly);
+  } catch (error) {
+    console.warn('[ASSEMBLY END STORAGE CHECK]', { assemblyId: assembly.id, message: String(error?.message || error) });
+    return httpError(503, 'Não foi possível confirmar as gravações. A assembleia permanece aberta.');
   }
-  if (!recording.examined) {
+
+  // A marca é persistida no banco: impede nova tentativa mesmo após reload ou de outro dispositivo.
+  if (assembly.recording_end_requested_at) {
+    return successResponse({
+      action: 'end', assembly_id: assembly.id, pending: true, blocked: state.reason === 'falhou',
+      recording_finalization: state.reason, message: finalizationStatusMessage(state.reason)
+    });
+  }
+
+  if (state.reason === 'falhou') return httpError(409, finalizationStatusMessage(state.reason));
+  if (state.reason === 'arquivo_nao_confirmado') return httpError(409, finalizationStatusMessage(state.reason));
+
+  if (state.reason === 'sem_gravacao' || state.reason === 'ausente') {
     try {
+      // !recording.examined é propositalmente substituído pela verificação de registros persistidos.
       if (await hasConnectedAssemblyParticipants(assembly)) {
         return httpError(409, 'Ainda existem participantes na chamada, mas nenhuma gravação ativa foi confirmada. Reinicie a gravação antes de finalizar.');
       }
     } catch (error) {
       console.error('[ASSEMBLY LIVEKIT PARTICIPANT CHECK]', String(error?.message || error));
-      return httpError(503, 'Não foi possível verificar a gravação e os participantes. A assembleia permanece aberta para proteger o vídeo.');
+      return httpError(503, 'Não foi possível verificar a sala. A assembleia permanece aberta.');
     }
+    if (state.reason === 'ausente') return httpError(409, finalizationStatusMessage(state.reason));
   }
 
   const now = new Date().toISOString();
-  if (recording.examined > 0) {
-    // O navegador e a sala ainda não podem ser declarados encerrados até o Egress
-    // ser confirmado no armazenamento ou reportar um erro terminal.
-    const { data: pending, error: pendingError } = await supabase.from('assembly_recordings')
-      .select('id,status').eq('assembly_id', assembly.id).in('status', ['pendente','gravando']).limit(1);
-    if (pendingError) return httpError(500, 'Não foi possível conferir o MP4.', pendingError.message);
-    if (pending?.length) {
-      const { error: queuedError } = await supabase.from('scheduled_assemblies')
-        .update({ recording_end_requested_at: now, recording_end_requested_by: userEmail, updated_at: now })
-        .eq('id', assembly.id).eq('status', ASSEMBLY_STATUS.IN_PROGRESS);
-      if (queuedError) return httpError(500, 'Não foi possível agendar a finalização segura.', queuedError.message);
-      return successResponse({
-        action: 'end', assembly_id: assembly.id, pending: true,
-        recording_finalization: 'aguardando_mp4',
-        message: 'O LiveKit está finalizando o MP4. O encerramento será concluído automaticamente após a confirmação do arquivo.'
+  if (state.reason === 'processando') {
+    // Atualização condicional atômica: apenas a primeira solicitação pode obter a marca.
+    const { data: claimed, error: claimError } = await supabase.from('scheduled_assemblies')
+      .update({ recording_end_requested_at: now, recording_end_requested_by: userEmail, updated_at: now })
+      .eq('id', assembly.id).eq('status', ASSEMBLY_STATUS.IN_PROGRESS)
+      .is('recording_end_requested_at', null).select('id').maybeSingle();
+    if (claimError) return httpError(500, 'Não foi possível proteger a finalização.', claimError.message);
+    if (!claimed) {
+      return successResponse({ action: 'end', assembly_id: assembly.id, pending: true,
+        recording_finalization: 'aguardando_mp4', message: 'A finalização já está em processamento.' });
+    }
+    const recording = await stopAssemblyEgress(supabase, assembly.id).catch(error => ({
+      requested: 0, pending: 1, errors: [String(error?.message || error)]
+    }));
+    if (recording.errors?.length || recording.pending) {
+      console.warn('[ASSEMBLY EGRESS FINALIZATION RETRY]', {
+        assemblyId: assembly.id, pending: recording.pending, errors: recording.errors?.length || 0
       });
     }
-  }
-  const { error: updateError } = await supabase
-    .from('scheduled_assemblies')
-    .update({
-      status: ASSEMBLY_STATUS.ENDED,
-      ended_at: now,
-      updated_at: now,
-    })
-    .eq('id', assembly.id);
-
-  if (updateError) {
-    return httpError(500, 'Erro ao encerrar assembleia.', updateError.message);
+    // A tarefa agendada continuará a tentativa sem depender do navegador do síndico.
+    return successResponse({ action: 'end', assembly_id: assembly.id, pending: true,
+      recording_finalization: 'aguardando_mp4',
+      message: 'Finalização solicitada uma única vez. Aguarde a confirmação e armazenamento do MP4.' });
   }
 
+  // Mesmo quando o vídeo já está pronto, o banco valida a existência física do arquivo.
+  const { data: ended, error: updateError } = await supabase.from('scheduled_assemblies')
+    .update({ status: ASSEMBLY_STATUS.ENDED, ended_at: now, updated_at: now })
+    .eq('id', assembly.id).eq('status', ASSEMBLY_STATUS.IN_PROGRESS)
+    .is('recording_end_requested_at', null).select('id').maybeSingle();
+  if (updateError) return httpError(409, 'O MP4 precisa estar confirmado no Storage antes de encerrar a assembleia.', updateError.message);
+  if (!ended) return successResponse({ action: 'end', assembly_id: assembly.id, pending: true, message: 'A finalização já está em processamento.' });
   await logEvent(assembly.id, userCEP, 'assembly_ended', {
-    previous_status: assembly.status,
-    new_status: ASSEMBLY_STATUS.ENDED,
-    ended_at: now,
+    previous_status: assembly.status, new_status: ASSEMBLY_STATUS.ENDED, ended_at: now,
   }, userEmail);
-
-
-  return successResponse({
-    action: 'end',
-    assembly_id: assembly.id,
-    previous_status: assembly.status,
-    new_status: ASSEMBLY_STATUS.ENDED,
-    ended_at: now,
-    recording_finalization: recording.requested ? 'processando_arquivo' : 'concluida_ou_nao_iniciada',
-  });
+  return successResponse({ action: 'end', assembly_id: assembly.id,
+    new_status: ASSEMBLY_STATUS.ENDED, ended_at: now,
+    recording_finalization: state.reason === 'sem_gravacao' ? 'nao_gravada' : 'mp4_confirmado' });
 }
 
 async function handleCancel(assembly, userEmail, userCEP, reason) {

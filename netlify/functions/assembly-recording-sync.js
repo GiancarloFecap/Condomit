@@ -2,6 +2,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { reconcileRecording, reconcileAssembly, client, stopAssemblyEgress } = require('./lib/assembly-recording-state');
 const { triggerRecovery, TABLE } = require('./lib/assembly-egress-recovery');
+const { verifyAssemblyRecordings } = require('./lib/assembly-finalization-guard');
 
 exports.handler = async () => {
   try {
@@ -50,22 +51,25 @@ exports.handler = async () => {
     }
     // Completa finalizações solicitadas mesmo que o síndico tenha fechado o navegador.
     const { data: pendingEndings, error: endingsError } = await admin.from('scheduled_assemblies')
-      .select('id,status').eq('status', 'em_andamento')
+      .select('id,status,is_recording,recording_end_requested_at').eq('status', 'em_andamento')
       .not('recording_end_requested_at', 'is', null).limit(20);
     if (endingsError) console.warn('[ASSEMBLY ENDING]', { code: endingsError.code });
     for (const assembly of pendingEndings || []) {
       try {
         await stopAssemblyEgress(admin, assembly.id, api, { maxWaitMs: 900 });
         await reconcileAssembly(admin, assembly.id, { limit: 20 });
-        const { data: rows, error: statusError } = await admin.from('assembly_recordings')
-          .select('id,status').eq('assembly_id', assembly.id).limit(20);
-        if (statusError) throw statusError;
-        if (!rows?.length || rows.some(row => ['pendente', 'gravando'].includes(row.status))) continue;
-        const { error: endError } = await admin.from('scheduled_assemblies').update({
+        const status = await verifyAssemblyRecordings(admin, assembly);
+        if (!status.ready) {
+          console.warn('[ASSEMBLY ENDING] Gravação não validada: encerramento bloqueado', {
+            assembly: assembly.id, reason: status.reason
+          });
+          continue;
+        }
+        const { data: ended, error: endError } = await admin.from('scheduled_assemblies').update({
           status: 'encerrada', ended_at: new Date().toISOString(), updated_at: new Date().toISOString()
-        }).eq('id', assembly.id).eq('status', 'em_andamento').not('recording_end_requested_at', 'is', null);
+        }).eq('id', assembly.id).eq('status', 'em_andamento').not('recording_end_requested_at', 'is', null).select('id');
         if (endError) throw endError;
-        console.info('[ASSEMBLY ENDING] Finalização concluída após resultado terminal do Egress', { assembly: assembly.id });
+        if (ended?.length) console.info('[ASSEMBLY ENDING] MP4 confirmado e assembleia encerrada', { assembly: assembly.id });
       } catch (error) { console.warn('[ASSEMBLY ENDING]', { assembly: assembly.id, message: String(error?.message || error) }); }
     }
     console.info('[ASSEMBLY RECORDING SYNC]', { examined: data?.length || 0, updated });
