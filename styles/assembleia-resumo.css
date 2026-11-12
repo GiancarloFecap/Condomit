@@ -425,3 +425,16 @@ html[data-theme="dark"] .signature-modal-card .modal-actions{border-color:#33415
     font-weight: 400;
     opacity: .8;
 }
+
+.formal-minutes-body .formal-minutes-section-heading {
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  margin-top: 1.25rem;
+}
+.minutes-incomplete-alert0763 {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color, #d2d6dc);
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
