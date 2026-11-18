@@ -3,7 +3,7 @@ import { connectToRoom, toggleCamera, toggleMicrophone, toggleScreenShare, disco
 import { setHeader, setPanelOpen, setConnectionConnecting, setConnectionConnected, showBanner, updateHandIndicators, renderParticipantsList, renderChatMessage } from './ui.js?v=0758';
 import { loadAssembly, loadChatHistory, subscribeChat, sendChat, refreshLists, refreshDocuments, subscribeAgenda, subscribeDocuments, subscribePolls, subscribeHands, toggleHand, loadAgenda, createAgendaItem, createDocument, uploadAssemblyDocument, createPollWithDuration, startAgendaItem, formatCountdown, isPollOpen } from './data.js?v=0758';
 import { presenceJoin, presenceHeartbeat, presenceLeave } from './presence.js?v=079';
-import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0758';
+import { startAssemblyTranscription, stopAssemblyTranscription, syncAssemblyTranscriptionWithMicrophone } from './transcription.js?v=0769';
 const RECORDING_CHECK_MS = 15000;
 let recordingCheckTimer = null;
 let recordingSyncInFlight = false;

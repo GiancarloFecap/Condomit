@@ -46,8 +46,11 @@ exports.handler = async event => {
     if (commitError) throw commitError;
     if (result === 'ignored') return reply(204);
     if (result === 'ok' || result === 'duplicate') {
-      const { error: nameError } = await admin.rpc('condomit_auto_identify_deepgram_065', { target_recording_id: id });
-      if (nameError) console.warn('[ASSEMBLY DEEPGRAM SPEAKERS] Identificação pendente:', String(nameError.message || nameError).slice(0, 180));
+      const { error: nameError } = await admin.rpc('condomit_auto_identify_deepgram_072', { target_recording_id: id });
+      if (nameError) {
+        const old = await admin.rpc('condomit_auto_identify_deepgram_065', {target_recording_id:id});
+        if (old.error) console.warn('[ASSEMBLY DEEPGRAM SPEAKERS] Identificação pendente:', String(old.error.message || old.error).slice(0, 180));
+      }
     }
     return reply(204);
   } catch (error) {

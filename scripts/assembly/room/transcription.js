@@ -8,6 +8,7 @@ import { state } from './state.js?v=079';
 
 let speechStartedAt = 0;
 let speechSavePromise = Promise.resolve();
+let speechCheckpointTimer = null;
 
 function statusElement() {
   return document.getElementById('call-transcription-status');
@@ -72,6 +73,17 @@ export async function flushAssemblySpeechActivity() {
 }
 
 export function startAssemblyTranscription() {
+  if (!speechCheckpointTimer) {
+    speechCheckpointTimer = setInterval(() => {
+      if (!speechStartedAt) return;
+      const now = Date.now();
+      const start = speechStartedAt;
+      if (now - start >= 1000) {
+        speechStartedAt = now;
+        queueSpeechActivity(start, now);
+      }
+    }, 7000);
+  }
   setStatus(
     'active',
     'Transcrição do vídeo após a gravação',
@@ -81,6 +93,8 @@ export function startAssemblyTranscription() {
 }
 
 export async function stopAssemblyTranscription() {
+  if (speechCheckpointTimer) clearInterval(speechCheckpointTimer);
+  speechCheckpointTimer = null;
   await flushAssemblySpeechActivity();
   setStatus('paused', 'Vídeo aguardando transcrição automática');
 }

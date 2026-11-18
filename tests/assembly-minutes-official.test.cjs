@@ -52,7 +52,7 @@ test('editor e documento oficial usam a mesma minuta e a navegação inclui o m�
   assert.ok(page.indexOf('minutes-narrative.js') < page.indexOf('assembly-summary.js'));
 });
 
-test('API usa regras locais quando não há GEMINI_API_KEY ou OPENAI_API_KEY', async () => {
+test('API usa regras locais somente quando explicitamente solicitado', async () => {
   const saved = { GEMINI_API_KEY:process.env.GEMINI_API_KEY, OPENAI_API_KEY:process.env.OPENAI_API_KEY,
     SUPABASE_URL:process.env.SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY:process.env.SUPABASE_SERVICE_ROLE_KEY };
   process.env.GEMINI_API_KEY='';process.env.OPENAI_API_KEY='';
@@ -66,7 +66,7 @@ test('API usa regras locais quando não há GEMINI_API_KEY ou OPENAI_API_KEY', a
     q.then=(onOk,onErr)=>Promise.resolve({data:({user_condominiums:[{condominium_id:'12345678'}],assembly_recordings:[{id:70}],assembly_transcripts:rows,assembly_agenda_items:[{title:'Elevadores'}]})[table]||[],error:null}).then(onOk,onErr);
     return q;
   };
-  const supabase={auth:{getUser:async()=>({data:{user:{email:'sindico@exemplo.com'}}})},from:table=>makeQuery(table)};
+  const supabase={rpc:async()=>({data:0,error:null}),auth:{getUser:async()=>({data:{user:{email:'sindico@exemplo.com'}}})},from:table=>makeQuery(table)};
   const original=Module._load;
   Module._load=function(name,...args){if(name==='@supabase/supabase-js')return{createClient:()=>supabase};return original.call(this,name,...args);};
   const filename=require.resolve('../netlify/functions/assembly-minutes-indirect.js');
@@ -74,7 +74,7 @@ test('API usa regras locais quando não há GEMINI_API_KEY ou OPENAI_API_KEY', a
   let handler;
   try {({handler}=require(filename));} finally {Module._load=original;}
   try {
-    const result=await handler({httpMethod:'POST',headers:{authorization:'Bearer local-token'},body:JSON.stringify({assembly_id:80})});
+    const result=await handler({httpMethod:'POST',headers:{authorization:'Bearer local-token'},body:JSON.stringify({assembly_id:80,provider:'rules'})});
     assert.equal(result.statusCode,200,result.body);
     const response=JSON.parse(result.body);
     assert.equal(response.method,'regras_locais_discurso_indireto');
