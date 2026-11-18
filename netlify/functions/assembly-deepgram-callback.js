@@ -51,6 +51,21 @@ exports.handler = async event => {
         const old = await admin.rpc('condomit_auto_identify_deepgram_065', {target_recording_id:id});
         if (old.error) console.warn('[ASSEMBLY DEEPGRAM SPEAKERS] Identificação pendente:', String(old.error.message || old.error).slice(0, 180));
       }
+      // Enfileira a ATA assim que a transcrição completa for registrada; o cron
+      // também detecta tarefas faltantes, inclusive se este callback não chegar.
+      try {
+        const {data:video,error:videoError}=await admin.from('assembly_recordings')
+          .select('assembly_id').eq('id',id).maybeSingle();
+        if(videoError) throw videoError;
+        if(video?.assembly_id) {
+          const {error:queueError}=await admin.from('assembly_auto_minutes_jobs')
+            .upsert({assembly_id:video.assembly_id,status:'pendente'},
+              {onConflict:'assembly_id',ignoreDuplicates:true});
+          if(queueError) throw queueError;
+        }
+      } catch(queueError) {
+        console.warn('[AUTO ATA] Fila pendente de verificação pelo servidor:',String(queueError.message||'').slice(0,150));
+      }
     }
     return reply(204);
   } catch (error) {

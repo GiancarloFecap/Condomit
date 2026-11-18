@@ -31,6 +31,7 @@
         indirectSummaryError: "",
         indirectSummaryRunning: false,
         indirectSummaryMethod: null,
+        autoMinutesJob: null,
         speakerRevisionPending: false,
         commentProfiles: new Map(),
         commentVotes: [],
@@ -74,11 +75,7 @@
             await loadAll();
             await loadMinutesReview();
             renderAll();
-            const needsSummary = draftCanBeAutomaticallyReplaced(state.minutesDraft)
-                && !window.CondomitMinutesNarrative?.hasNarrative(state.minutesDraft?.body || '');
-            if (currentUserRole() === 'sindico' && needsSummary && groupedDeepgramTranscripts().length) {
-                generateIndirectSummary({automatic:true}).catch(() => {});
-            }
+            if (currentUserRole() === 'sindico') startAutoMinutesRefresh();
         } catch (error) {
             console.error('[ASSEMBLY SUMMARY]', error);
             renderFatal(error?.message || 'Não foi possível carregar a ata da assembleia.');
@@ -307,12 +304,63 @@
             }
             window.showToast?.(changed.changes
                 ? 'Autoria atualizada e salva na minuta. Confira a redação antes de aprovar.'
-                : 'A autoria foi atualizada. Gere novamente a ATA com Claude para incorporar a correção no texto oficial.',
+                : 'A autoria foi atualizada. A autoria foi atualizada na transcrição. Confira a ATA automática ou aplique uma nova revisão, caso a minuta já esteja salva.',
                 changed.changes ? 'success' : 'warning');
         } catch (error) {
             window.showToast?.(error?.message || 'Não foi possível identificar esta voz.', 'error');
             select.disabled = false;
         }
+    }
+
+    function autoMinutesStatusMessage() {
+        const job=state.autoMinutesJob;
+        if (!job) return 'Aguardando gravação e transcrição Deepgram. A IA gerará a ATA automaticamente, sem deixar a página aberta.';
+        if (job.status === 'pendente') return 'Transcrição pronta. A ATA foi enfileirada para geração automática pelo Claude.';
+        if (job.status === 'processando') return 'Claude está redigindo a ATA automaticamente com todas as falas do Deepgram e os nomes identificados.';
+        if (job.status === 'falhou') return `${Number(job.attempts||0)>=5?'As tentativas automáticas se esgotaram. Confira as configurações e os logs da Netlify.':'A geração automática será repetida pelo servidor.'} Motivo: ${String(job.last_error || 'falha temporária').slice(0,190)}`;
+        if (job.status === 'bloqueado') return 'A ATA já foi revisada ou assinada. A geração automática não sobrescreverá a versão oficial.';
+        if (!job.saved_to_draft && state.minutesDraft?.body !== job.generated_body) return 'Claude concluiu a ATA, mas havia uma minuta anterior. O texto existente foi preservado; você pode aplicar a nova redação após conferir.';
+        return 'ATA gerada e salva automaticamente pelo Claude a partir da transcrição integral. Revise, aprove e assine.';
+    }
+
+    let autoMinutesRefreshTimer = null;
+    async function refreshAutoMinutes() {
+        if (currentUserRole() !== 'sindico' || !state.id || !state.detailsReleased) return;
+        const rows=await fetchRows(`/assembly_auto_minutes_jobs?select=status,attempts,last_error,generated_body,saved_to_draft,source_count&assembly_id=eq.${state.id}&limit=1`).catch(() => []);
+        const job=rows[0] || null;
+        const changed=JSON.stringify(job) !== JSON.stringify(state.autoMinutesJob);
+        state.autoMinutesJob=job;
+        if (!changed) return;
+        const edit=document.getElementById('assemblyMinutesEditor074');
+        const before=edit?.value||'';
+        const original=state.minutesDraft?.body || state.generatedMinutes || '';
+        const unsaved=before.trim() && before.trim()!==original.trim();
+        if(job?.status==='concluido' && job.saved_to_draft && !unsaved) await loadMinutesReview();
+        renderMinutes();
+        if (unsaved) { const next=document.getElementById('assemblyMinutesEditor074'); if(next) next.value=before; }
+        if (['concluido','bloqueado'].includes(job?.status)) { clearInterval(autoMinutesRefreshTimer);autoMinutesRefreshTimer=null; }
+    }
+    function startAutoMinutesRefresh() {
+        clearInterval(autoMinutesRefreshTimer);
+        autoMinutesRefreshTimer=null;
+        refreshAutoMinutes().catch(() => {});
+        if(state.minutesDraft?.status==='aprovada') return;
+        autoMinutesRefreshTimer=setInterval(() => refreshAutoMinutes().catch(() => {}),12000);
+    }
+    async function applyAutomaticMinutesDraft() {
+        const job=state.autoMinutesJob;
+        if(job?.status!=='concluido' || !job.generated_body || state.minutesDraft?.status==='aprovada') return;
+        const confirmed=await window.showConfirm?.({title:'Aplicar redação automática',
+            message:'Existe uma minuta anterior. Deseja substituí-la pelo texto que o Claude já produziu a partir do Deepgram? Confira antes de aprovar.',
+            confirmText:'Aplicar texto',cancelText:'Cancelar'});
+        if(confirmed!==true) return;
+        const draft=await window.supabaseFetch('/rpc/condomit_review_assembly_minutes_054',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({target_assembly_id:state.id,reviewed_text:job.generated_body,approve_document:false})});
+        state.minutesDraft=Array.isArray(draft)?draft[0]:draft;
+        if (state.autoMinutesJob) state.autoMinutesJob.saved_to_draft=true;
+        renderMinutes();
+        window.showToast?.('ATA automática aplicada à minuta. Revise e assine após aprovação.','success');
     }
 
     async function loadMinutesReview() {
@@ -707,7 +755,7 @@
                     <div class="formal-signature"><span class="signature-line"></span><strong>${esc(chairSignature)}</strong><small>Assinatura do Síndico / Presidência da Assembleia</small></div>`}
                 </footer>
                 <div class="formal-minutes-note"><i class="fas fa-shield-halved"></i> ${published ? 'Ata revisada, aprovada e assinada pelo síndico.' : approved ? 'Ata aprovada, aguardando assinatura do síndico para publicação aos moradores.' : 'MINUTA NÃO APROVADA: resumo narrativo e registros precisam de conferência humana.'}</div>
-                ${currentUserRole() === 'sindico' && groupedDeepgramTranscripts().length && !window.CondomitMinutesNarrative?.hasNarrative(displayText) ? `<p class="minutes-incomplete-alert0763" role="alert">${approved ? 'A ata aprovada' : 'Esta minuta'} ainda não contém a síntese das falas identificadas no vídeo. ${approved ? 'Reabra a revisão' : 'Use Gerar resumo em discurso indireto'} para corrigir o texto antes da aprovação e assinatura.</p>` : ''}
+                ${currentUserRole() === 'sindico' && groupedDeepgramTranscripts().length && !window.CondomitMinutesNarrative?.hasNarrative(displayText) ? `<p class="minutes-incomplete-alert0763" role="alert">${approved ? 'A ata aprovada' : 'Esta minuta'} ainda não contém a síntese das falas identificadas no vídeo. ${approved ? 'Reabra a revisão' : 'Aguarde a geração automática pelo Claude'} para corrigir o texto antes da aprovação e assinatura.</p>` : ''}
             </article>
             ${currentUserRole() === 'sindico' ? `<section class="minutes-review-editor074">
               <h3><i class="fas fa-clipboard-check"></i> Revisão formal da ata</h3>
@@ -720,7 +768,7 @@
                     <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Melhor redação — 3B (aprox. 2,5 GB)</option>
                   </select>
                 </label><button type="button" class="summary-primary" id="minutesLocalAi0768"><i class="fas fa-wand-magic-sparkles"></i> Redigir ATA com IA local (sem API)</button>` : ''}
-                ${!approved ? `<button type="button" class="summary-primary" id="minutesClaude0769"><i class="fas fa-cloud"></i> Gerar ATA com Claude (nuvem)</button>` : ''}
+
                 ${!approved ? `<button type="button" class="summary-secondary" id="minutesIndirect0761">Gerar versão provisória por regras</button>` : ''}
                 ${!approved ? `<button type="button" class="summary-secondary" id="minutesRegenerate07510"><i class="fas fa-rotate"></i> Atualizar minuta resumida</button>` : ''}
                 ${approved ? `<button type="button" class="summary-secondary" id="minutesReopen0763"><i class="fas fa-file-pen"></i> Reabrir para corrigir manifestações</button>` : ''}
@@ -731,7 +779,9 @@
               <p class="minutes-local-ai-hint0768">Teste sem chave de IA: a redação usa um modelo no próprio navegador (WebGPU, download inicial de aproximadamente 1,6 GB). Se o navegador não for compatível, utilize a síntese provisória por regras e revise manualmente. O texto original da transcrição não é alterado.</p>
               ${state.speakerRevisionPending ? '<p role="alert" class="minutes-incomplete-alert0763">Uma voz foi identificada, mas a autoria ainda não pôde ser vinculada com segurança à minuta salva. Regenere a ATA antes de aprovar.</p>' : ''}
               ${!approved && missingAttributedSpeakers(displayText).length ? `<p role="alert" class="minutes-incomplete-alert0763">Atenção: a minuta ainda não atribui as manifestações a: ${esc(missingAttributedSpeakers(displayText).slice(0,5).join(', '))}. Gere novamente ou corrija antes de aprovar.</p>` : ''}
-              <div id="assemblyMinutesIndirectStatus0761" class="minutes-ai-suggestions074" role="status">${esc(state.indirectSummaryError || (state.indirectDiscussion ? 'Síntese narrativa gerada. Revise as informações antes de aprovar.' : 'Gere a ATA com Claude a partir de todas as falas reconhecidas, ou use IA local. Confira e assine somente após revisão.'))}</div>
+              <div class="minutes-ai-suggestions074" role="status">${esc(autoMinutesStatusMessage())}</div>
+              ${!approved && state.autoMinutesJob?.status === 'concluido' && !state.autoMinutesJob?.saved_to_draft && state.autoMinutesJob?.generated_body && state.minutesDraft?.body !== state.autoMinutesJob?.generated_body ? `<button type="button" class="summary-secondary" id="minutesApplyAuto0771">Aplicar ATA automática à minuta existente (revisar antes)</button>` : ''}
+              <div id="assemblyMinutesIndirectStatus0761" class="minutes-ai-suggestions074" role="status">${esc(state.indirectSummaryError || (state.indirectDiscussion ? 'Síntese narrativa gerada. Revise as informações antes de aprovar.' : 'A ATA será gerada automaticamente pelo Claude após a conclusão do Deepgram. Confira e assine somente após revisão.'))}</div>
               ${state.indirectObservacoes.length ? `<details class="minutes-evidence074"><summary>Conferir sugestões de correção da transcrição (${state.indirectObservacoes.length})</summary>
                 <p>São ajustes sugeridos somente para a redação da ATA. O texto original do Deepgram permanece preservado. Confira cada termo com a gravação antes de aprovar.</p>
                 <ul>${state.indirectObservacoes.slice(0,100).map(n => `<li>${esc(String(n.original||''))} → ${esc(String(n.sugerido||''))} (${esc(String(n.motivo||''))})</li>`).join('')}</ul>
@@ -772,7 +822,8 @@
         const evidence = container.querySelector('.minutes-evidence074');
         evidence?.addEventListener('toggle', () => { if (evidence.open) prepareTranscriptAudio(evidence); });
         evidence?.querySelectorAll('select[data-speaker-recording]')?.forEach(select => select.addEventListener('change', () => updateSpeakerMapping(select)));
-        container.querySelector('#minutesClaude0769')?.addEventListener('click', () => generateIndirectSummary({automatic:false,useLocalAI:false}));
+
+        container.querySelector('#minutesApplyAuto0771')?.addEventListener('click', () => applyAutomaticMinutesDraft().catch(error => window.showToast?.(error.message,'error')));
         container.querySelector('#minutesIndirect0761')?.addEventListener('click', () => generateIndirectSummary({automatic:false,useLocalAI:false,useRules:true}));
         container.querySelector('#minutesLocalAi0768')?.addEventListener('click', () => generateIndirectSummary({automatic:false,useLocalAI:true}));
         container.querySelector('#minutesReopen0763')?.addEventListener('click', reopenMinutesForReview);
@@ -1385,13 +1436,7 @@
                     const nextEditor = document.getElementById('assemblyMinutesEditor074');
                     if (nextEditor) nextEditor.value = previousEditorValue;
                 }
-                if (transcriptsChanged && currentUserRole() === 'sindico'
-                    && state.minutesDraft?.status !== 'aprovada'
-                    && draftCanBeAutomaticallyReplaced(state.minutesDraft)
-                    && !window.CondomitMinutesNarrative?.hasNarrative(state.minutesDraft?.body || '')
-                    && !state.indirectSummaryRunning && groupedDeepgramTranscripts().length) {
-                    generateIndirectSummary({automatic:true}).catch(() => {});
-                }
+
             }
             if (state.assembly) renderHero();
             renderRecordings();

@@ -121,3 +121,7 @@
 
 [functions."assembly-deepgram-dispatch"]
   schedule = "* * * * *"
+
+# Geração da ATA automaticamente após a transcrição Deepgram, sem navegador aberto.
+[functions."assembly-minutes-auto-dispatch"]
+  schedule = "* * * * *"

@@ -62,6 +62,7 @@ test('servidor reutiliza evidências e reidentifica antes de gerar a ata',()=>{
 test('somente a chave no servidor; frontend não armazena credenciais Claude',()=>{
  const front=fs.readFileSync(path.join(__dirname,'../scripts/assembly/assembly-summary.js'),'utf8');
  assert.doesNotMatch(front,/ANTHROPIC_API_KEY/);
- assert.match(front,/minutesClaude0769/);
+ assert.doesNotMatch(front,/id="minutesClaude0769"/);
+ assert.match(front,/startAutoMinutesRefresh/);
  assert.match(front,/local_only:useLocalAI/);
 });

@@ -19,7 +19,9 @@ function promptFor(rows, agenda, polls = [], prebuiltTopics = null) {
     id:topic.id, titulo:topic.title,
     falas:topic.contributions.map(item => ({
       autor:speakerPrefix(item),
-      transcricao:removeHesitations(item.text),
+      transcricao:String(item.text || ''),
+      identificador_voz:item.voice || null,
+      inicio_segundos:Number.isFinite(Number(item.start_seconds)) ? Number(item.start_seconds) : null,
       origem:item.source_ids
     })),
     votacoes:topic.polls.map(poll=>({titulo:clean(poll.title),descricao:clean(poll.description)}))
@@ -128,7 +130,7 @@ function validateAuthorship(topics, original) {
 
 async function summarizeClaude(topics, fetcher = fetch) {
   const input = batchTopics(topics);
-  const maxChunks = Math.min(40, Math.max(1, Number(process.env.CLAUDE_MINUTES_MAX_CHUNKS || 12)));
+  const maxChunks = Math.min(40, Math.max(1, Number(process.env.CLAUDE_MINUTES_MAX_CHUNKS || 36)));
   if (!input.length || input.length > maxChunks) throw new Error('Assembleia longa demais para este processamento. Aumente CLAUDE_MINUTES_MAX_CHUNKS ou divida a geração sem descartar falas.');
   const completed = new Map(topics.map(t => [t.id,{id:t.id,title:t.title,paragraphs:[]}]));
   for (let at=0;at<input.length;at+=3) {

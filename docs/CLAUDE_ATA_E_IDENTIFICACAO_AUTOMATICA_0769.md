@@ -56,3 +56,7 @@ Esta atualização mantém o Deepgram como motor de transcrição literal do MP4
 ## Testes
 
 Execute `node --test tests/*.test.cjs` e `npm run check:project`. Os testes da API utilizam respostas simuladas: não fazem chamadas reais nem comprovam qualidade de modelo com material confidencial. Faça um teste de ponta a ponta no ambiente publicado.
+
+## Correção de compatibilidade v0.77.0
+
+A geração pela Claude API nas versões anteriores incluía `temperature: 0.15`, rejeitado pelos modelos Sonnet 5 e 5.5 (HTTP 400). A v0.77.0 remove o parâmetro e separa os avisos de modelo inválido, parâmetros incompatíveis, chave e créditos. Para instalar, publique o pacote v0.77.0; mantenha `ANTHROPIC_API_KEY` e prefira `CLAUDE_MINUTES_MODEL=claude-sonnet-5-5`. Não há migração SQL nova. Consulte Netlify Functions logs se outro HTTP 400 ocorrer.
