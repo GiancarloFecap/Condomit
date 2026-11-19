@@ -53,6 +53,11 @@ async function runAuto(admin,assemblyId,generate=generateAutoMinutes) {
     const {data:meeting,error:meetingError}=await admin.from('scheduled_assemblies')
       .select('cep,status').eq('id',assemblyId).maybeSingle();
     if(meetingError||!meeting||meeting.status!=='encerrada') throw new Error('Assembleia não está encerrada no momento de salvar.');
+    // Revalida assinatura após a chamada externa: ela pode ter sido adicionada enquanto o Claude redigia.
+    const signatureBeforeSave=await admin.from('assembly_minutes_signatures').select('assembly_id')
+      .eq('assembly_id',assemblyId).maybeSingle();
+    if(signatureBeforeSave.error) throw signatureBeforeSave.error;
+    if(signatureBeforeSave.data) throw new Error('A ATA foi assinada durante a geração e não poderá ser substituída.');
     // Não substitui revisões humanas; gera a minuta e guarda uma cópia auditável no job.
     const already=await admin.from('assembly_minutes_drafts').select('body,status,saved_by').eq('assembly_id',assemblyId).maybeSingle();
     if(already.error) throw already.error;

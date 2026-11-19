@@ -318,13 +318,13 @@
             : job?.status==='pendente' ? 'Na fila para iniciar a redação automática.'
             : 'Aguardando a conclusão da transcrição e identificação das vozes.';
         return `<section class="minutes-generation-progress0772" role="status" aria-live="polite">
-          <h3><i class="fas fa-brain"></i> Preparando ATA com Claude</h3>
-          <p>${esc(autoMinutesStatusMessage())}</p>
+          <h3>A ata está sendo feita, por favor aguarde</h3>
+          ${job?.status==='falhou' ? `<p>${esc(autoMinutesStatusMessage())}</p>` : ''}
           <div class="minutes-generation-track0772" role="progressbar" aria-label="Progresso da geração da ATA"
              aria-valuemin="0" aria-valuemax="100" ${percent===null?'':`aria-valuenow="${percent}"`}>
              <span class="${percent===null?'minutes-generation-indeterminate0772':''}" style="${percent===null?'':`width:${percent}%`}"></span>
           </div>
-          <small>${esc(line)} O tempo restante depende da API e não pode ser estimado com precisão.</small>
+          <small>${esc(line)}</small>
         </section>`;
     }
 
@@ -401,7 +401,7 @@
         const body = String(textarea?.value || '').trim();
         if (body.length < 30) { window.showToast?.('Revise e preencha o conteúdo da ata antes de salvar.', 'warning'); return; }
         if (approve && groupedDeepgramTranscripts().length && !window.CondomitMinutesNarrative?.hasNarrative(body)) {
-            window.showToast?.('A ata não contém as manifestações transcritas. Gere o resumo em discurso indireto, confira as falas e salve antes de aprovar.', 'warning'); return;
+            window.showToast?.('A ata precisa registrar as manifestações da assembleia. Confira os trechos antes da aprovação.', 'warning'); return;
         }
         if (approve && /síntese narrativa das manifestações está pendente|não foi possível consolidar as manifestações/i.test(body)) {
             window.showToast?.('Preencha o resumo em discurso indireto antes de aprovar a ata.', 'warning'); return;
@@ -409,9 +409,21 @@
         if (approve) {
             const missing = missingAttributedSpeakers(body);
             if (missing.length) {
-                window.showToast?.(`A ATA ainda não contém o relato atribuído a: ${missing.slice(0,5).join(', ')}. Regenere com IA local ou revise o texto antes de aprovar.`, 'warning');
+                window.showToast?.(`A ATA ainda não contém o relato atribuído a: ${missing.slice(0,5).join(', ')}. Gere uma nova ATA ou revise o texto antes de aprovar.`, 'warning');
                 return;
             }
+        }
+        if (approve && window.CondomitMinutesIntegrity) {
+            const omitted = window.CondomitMinutesIntegrity.missingFacts(completedDeepgramTranscripts(), body);
+            if (omitted.length) {
+                updateMinutesIntegrityBanner(body);
+                window.showToast?.(`A ATA deixou de fora ${window.CondomitMinutesIntegrity.describeMissing(omitted)}. Restaure as informações antes de aprovar.`, 'warning');
+                return;
+            }
+        }
+        if (approve && state.autoMinutesJob && ['pendente','processando','falhou'].includes(state.autoMinutesJob.status)) {
+            window.showToast?.('Aguarde a nova ATA ser gerada e conferida antes de aprovar.', 'warning');
+            return;
         }
         if (approve && state.speakerRevisionPending) {
             window.showToast?.('A identificação de falantes mudou. Regenere a ATA antes de aprovar, para evitar nome incorreto.', 'warning');
@@ -662,6 +674,48 @@
         }
     }
 
+    function updateMinutesIntegrityBanner(value) {
+        const banner=document.getElementById('minutesIntegrity0774');
+        if(!banner || !window.CondomitMinutesIntegrity) return [];
+        const text=String(value ?? document.getElementById('assemblyMinutesEditor074')?.value ?? '');
+        const missing=window.CondomitMinutesIntegrity.missingFacts(completedDeepgramTranscripts(),text);
+        banner.hidden=!missing.length;
+        if(missing.length) banner.textContent=`Atenção: a transcrição contém informações que não aparecem na ATA: ${window.CondomitMinutesIntegrity.describeMissing(missing)}. Confira com o vídeo e restitua os dados antes de aprovar.`;
+        else banner.textContent='';
+        return missing;
+    }
+
+    async function regenerateMinutes0774() {
+        if (currentUserRole() !== 'sindico' || state.minutesDraft?.status==='aprovada') return;
+        const editor=document.getElementById('assemblyMinutesEditor074');
+        const current=String(editor?.value || '').trim();
+        const saved=String(state.minutesDraft?.body || state.renderedMinutesBody || '').trim();
+        const unsaved=current && current!==saved;
+        const ok=await window.showConfirm?.({title:'Gerar nova ATA com Claude',
+            message:`O Claude fará nova redação utilizando a transcrição integral do Deepgram e os participantes identificados. Essa operação consome créditos da Anthropic.${unsaved?' Salve as edições atuais se desejar preservá-las.':''} Deseja gerar novamente?`,
+            confirmText:'Gerar nova ATA',cancelText:'Cancelar'});
+        if (ok!==true) return;
+        const button=document.getElementById('minutesRegenerate0774');
+        if(button) button.disabled=true;
+        try {
+            const token=await window.resolveSupabaseAccessToken?.();
+            if(!token) throw new Error('Sessão expirada. Faça login novamente.');
+            const response=await fetch('/.netlify/functions/assembly-minutes-regenerate',{
+                method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+                body:JSON.stringify({assembly_id:state.id}),cache:'no-store'
+            });
+            const data=await response.json().catch(()=>({}));
+            if(!response.ok) throw new Error(data.error||'Não foi possível agendar uma nova ATA.');
+            state.autoMinutesJob={status:'pendente',attempts:0,progress_completed:0,progress_total:0};
+            state.speakerRevisionPending=false;
+            renderHero();renderMinutes();startAutoMinutesRefresh();
+            window.showToast?.('Nova ATA solicitada. A geração ocorrerá automaticamente no servidor.','success');
+        } catch(error) {
+            window.showToast?.(error?.message||'Falha ao solicitar nova ATA.','error');
+            if(button?.isConnected) button.disabled=false;
+        }
+    }
+
     function renderAll() {
         renderHero();
         renderMinutes();
@@ -689,13 +743,19 @@
                 <span><i class="fas fa-microphone-lines"></i> ${groupedDeepgramTranscripts().length ? `${groupedDeepgramTranscripts().length} manifestações registradas` : `${uniqueSpeechParticipants().length} participante${uniqueSpeechParticipants().length === 1 ? '' : 's'} com fala detectada`}</span>
             </div>
             <div class="summary-hero-actions">
-                ${currentUserRole() === 'sindico' ? '<button type="button" id="generateAssemblyTasks027" class="summary-secondary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button>' : ''}
                 ${currentUserRole() === 'sindico' && state.minutesDraft?.status === 'aprovada' ? `<button type="button" id="signAssemblyMinutes049" class="summary-primary"><i class="fas fa-signature"></i> ${state.signature ? 'Corrigir assinatura' : 'Assinar ata'}</button>` : ''}
                 ${state.signature && state.minutesDraft?.status === 'aprovada' ? `<span class="summary-signed-chip"><i class="fas fa-circle-check"></i> Ata assinada por ${esc(state.signature.signer_name || state.signature.signer_email || 'Síndico')}</span>` : ''}
                 ${state.minutesDraft?.status === 'aprovada' || state.autoMinutesJob?.status === 'concluido' ? `<button type="button" id="printAssemblyMinutes049" class="summary-secondary"><i class="fas fa-print"></i> Imprimir ata</button>
                 <button type="button" id="saveAssemblyMinutesPdf082" class="summary-secondary"><i class="fas fa-file-pdf"></i> Salvar em PDF</button>` : ''}
+                ${currentUserRole() === 'sindico' && (state.minutesDraft?.status === 'aprovada' || state.autoMinutesJob?.status==='concluido') ? state.minutesDraft?.status==='aprovada'
+                    ? '<button type="button" id="minutesReopenHero0774" class="summary-secondary"><i class="fas fa-file-pen"></i> Reabrir para correção</button>'
+                    : '<button type="button" id="minutesApproveHero0774" class="summary-primary">Aprovar ata</button>' : ''}
+                ${currentUserRole() === 'sindico' && state.minutesDraft?.status!=='aprovada' && completedDeepgramTranscripts().length
+                    ? `<button type="button" id="minutesRegenerate0774" class="summary-secondary" ${['pendente','processando'].includes(state.autoMinutesJob?.status)?'disabled':''}><i class="fas fa-rotate-right"></i> Gerar nova ata</button>` : ''}
             </div>`;
-        hero.querySelector('#generateAssemblyTasks027')?.addEventListener('click', generateAssemblyDecisionTasks);
+        hero.querySelector('#minutesApproveHero0774')?.addEventListener('click', () => saveMinutesReview(true));
+        hero.querySelector('#minutesReopenHero0774')?.addEventListener('click', reopenMinutesForReview);
+        hero.querySelector('#minutesRegenerate0774')?.addEventListener('click', regenerateMinutes0774);
         hero.querySelector('#signAssemblyMinutes049')?.addEventListener('click', signAssemblyMinutes);
         hero.querySelector('#printAssemblyMinutes049')?.addEventListener('click', printAssemblyMinutes);
         hero.querySelector('#saveAssemblyMinutesPdf082')?.addEventListener('click', saveAssemblyMinutesPdf);
@@ -758,7 +818,8 @@
                 <footer class="formal-minutes-signatures">
                     ${state.signature && approved ? `
                     <div class="formal-signature formal-signature-electronic">
-                        ${isSafeSignatureData(state.signature.signature_data) ? `<img class="assembly-signature-image" src="${esc(state.signature.signature_data)}" alt="Assinatura de ${esc(state.signature.signer_name || chairSignature)}">` : `<i class="fas fa-circle-check signature-verified-icon"></i>`}
+                        <span class="formal-signature-artwork">${isSafeSignatureData(state.signature.signature_data) ? `<img class="assembly-signature-image" src="${esc(state.signature.signature_data)}" alt="Assinatura de ${esc(state.signature.signer_name || chairSignature)}">` : `<i class="fas fa-circle-check signature-verified-icon"></i>`}</span>
+                        <span class="signature-line" aria-hidden="true"></span>
                         <strong>${esc(state.signature.signer_name || chairSignature)}</strong>
                         <small>Assinatura interna Condomit (não certificada pelo gov.br) em ${esc(formatDateTime(state.signature.signed_at))}</small>
                         <small class="signature-code">Código de verificação: ${esc(String(state.signature.signature_code || '').slice(0, 18))}</small>
@@ -768,22 +829,21 @@
                 <div class="formal-minutes-note"><i class="fas fa-shield-halved"></i> ${published ? 'Ata revisada, aprovada e assinada pelo síndico.' : approved ? 'Ata aprovada, aguardando assinatura do síndico para publicação aos moradores.' : 'MINUTA NÃO APROVADA: resumo narrativo e registros precisam de conferência humana.'}</div>
                 ${currentUserRole() === 'sindico' && groupedDeepgramTranscripts().length && !window.CondomitMinutesNarrative?.hasNarrative(displayText) ? `<p class="minutes-incomplete-alert0763" role="alert">${approved ? 'A ata aprovada' : 'Esta minuta'} ainda não contém a síntese das falas identificadas no vídeo. ${approved ? 'Reabra a revisão' : 'Aguarde a geração automática pelo Claude'} para corrigir o texto antes da aprovação e assinatura.</p>` : ''}
             </article>
-            ${currentUserRole() === 'sindico' ? `<section class="minutes-review-editor074">
-              <h3><i class="fas fa-clipboard-check"></i> Revisão formal da ata</h3>
+            ${currentUserRole() === 'sindico' && !approved ? `<section class="minutes-review-editor074">
+              <h3>Revisão formal da ata</h3>
               <p>A gravação e a transcrição são documentos de apoio. Confirme data, presença, discussões, deliberações, quóruns e responsáveis. A transcrição automática é gerada em segundo plano diretamente do vídeo. Ela pode conter erros e deve ser conferida com o áudio original.</p>
               <textarea id="assemblyMinutesEditor074" rows="14" spellcheck="true" aria-label="Redigir ata para revisão">${esc(displayText)}</textarea>
               <div class="minutes-review-actions074">
                 ${approved ? `<button type="button" class="summary-secondary" id="minutesReopen0763"><i class="fas fa-file-pen"></i> Reabrir para corrigir manifestações</button>` : ''}
                 <button type="button" class="summary-secondary" id="minutesAiHelp074"><i class="fas fa-wand-magic-sparkles"></i> Selecionar trechos da transcrição</button>
-                ${!approved ? `<button type="button" class="summary-secondary" id="minutesSave074">Salvar minuta</button>
-                <button type="button" class="summary-primary" id="minutesApprove074">Aprovar ata revisada</button>` : ''}
+                ${!approved ? `<button type="button" class="summary-secondary" id="minutesSave074">Salvar minuta</button>` : ''}
               </div>
 
               ${state.speakerRevisionPending ? '<p role="alert" class="minutes-incomplete-alert0763">Uma voz foi identificada, mas a autoria ainda não pôde ser vinculada com segurança à minuta salva. Regenere a ATA antes de aprovar.</p>' : ''}
               ${!approved && missingAttributedSpeakers(displayText).length ? `<p role="alert" class="minutes-incomplete-alert0763">Atenção: a minuta ainda não atribui as manifestações a: ${esc(missingAttributedSpeakers(displayText).slice(0,5).join(', '))}. Gere novamente ou corrija antes de aprovar.</p>` : ''}
-              <div class="minutes-ai-suggestions074" role="status">${esc(autoMinutesStatusMessage())}</div>
+
               ${!approved && state.autoMinutesJob?.status === 'concluido' && !state.autoMinutesJob?.saved_to_draft && state.autoMinutesJob?.generated_body && state.minutesDraft?.body !== state.autoMinutesJob?.generated_body ? `<button type="button" class="summary-secondary" id="minutesApplyAuto0771">Aplicar ATA automática à minuta existente (revisar antes)</button>` : ''}
-              <div id="assemblyMinutesIndirectStatus0761" class="minutes-ai-suggestions074" role="status">${esc(state.indirectSummaryError || (state.indirectDiscussion ? 'Síntese narrativa gerada. Revise as informações antes de aprovar.' : 'A ATA será gerada automaticamente pelo Claude após a conclusão do Deepgram. Confira e assine somente após revisão.'))}</div>
+              <div class="minutes-ai-suggestions074 minutes-content-integrity0774" id="minutesIntegrity0774" role="alert" hidden></div>
               ${state.indirectObservacoes.length ? `<details class="minutes-evidence074"><summary>Conferir sugestões de correção da transcrição (${state.indirectObservacoes.length})</summary>
                 <p>São ajustes sugeridos somente para a redação da ATA. O texto original do Deepgram permanece preservado. Confira cada termo com a gravação antes de aprovar.</p>
                 <ul>${state.indirectObservacoes.slice(0,100).map(n => `<li>${esc(String(n.original||''))} → ${esc(String(n.sugerido||''))} (${esc(String(n.motivo||''))})</li>`).join('')}</ul>
@@ -829,6 +889,8 @@
         container.querySelector('#minutesReopen0763')?.addEventListener('click', reopenMinutesForReview);
         container.querySelector('#minutesSave074')?.addEventListener('click', () => saveMinutesReview(false));
         container.querySelector('#minutesApprove074')?.addEventListener('click', () => saveMinutesReview(true));
+        container.querySelector('#assemblyMinutesEditor074')?.addEventListener('input', event => updateMinutesIntegrityBanner(event.target.value));
+        updateMinutesIntegrityBanner();
         container.querySelector('#minutesAiHelp074')?.addEventListener('click', requestMinutesAiSuggestions);
         container.querySelector('#assemblyAttachGovPdf074')?.addEventListener('click', uploadSignedGovPdf);
         container.querySelectorAll('[data-signed-path074]').forEach(button => button.addEventListener('click', () => openSignedDocument(button.dataset.signedPath074))); 
@@ -1359,7 +1421,7 @@
         const model = String(row.transcription_model || '');
         if (status === 'concluido') {
             return model === 'deepgram:nova-3'
-                ? 'Transcrição Deepgram concluída. Revise as falas com o vídeo original antes de aprovar a ata.'
+                ? ''
                 : 'Transcrição de versão anterior disponível. Para substituí-la pelo Deepgram, habilite o reprocessamento de gravações antigas no servidor.';
         }
         if (status === 'processando') return 'Preparando transcrição pelo Deepgram no servidor. Você pode fechar esta página.';
@@ -1526,10 +1588,11 @@
             const details = card.querySelector('.recording-details');
             if (details) details.textContent = `${row.started_at ? new Date(row.started_at).toLocaleString('pt-BR') : 'Horário não informado'} • ${formatDuration(row.duration_seconds)} • ${formatBytes(row.file_size_bytes)}`;
             const status = card.querySelector('.recording-transcription-status');
-            if (status) status.textContent = recordingTranscriptionLabel(row);
+            if (status) {status.textContent = recordingTranscriptionLabel(row);status.hidden = row.transcription_status === 'concluido';}
             let transcript = card.querySelector('.recording-transcription-progress0768');
             if (!transcript) { transcript=document.createElement('div'); transcript.className='recording-transcription-progress0768'; status?.after(transcript); }
-            window.CondomitTranscriptionProgress?.render(transcript,row);
+            if (row.transcription_status === 'concluido') transcript.replaceChildren();
+            else window.CondomitTranscriptionProgress?.render(transcript,row);
             const holder = card.querySelector('.recording-player-loading');
             if (holder && !recordingPlayersLoading.has(id)) {
                 recordingPlayersLoading.add(id);

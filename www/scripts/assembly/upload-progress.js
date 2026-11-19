@@ -17,7 +17,7 @@
         if (status === 'concluido') return {stage: 'concluido', label: 'Vídeo salvo e confirmado no servidor.', percent: 100};
         if (status === 'falhou') return {stage: 'falhou', label: 'Falha no envio do MP4. A gravação não foi confirmada.', percent: null};
         if (status === 'gravando') return {stage: 'gravando', label: 'Gravação ativa. O envio será confirmado após a finalização.', percent: null};
-        if (status === 'pendente') return {stage: 'preparando', label: 'Preparando gravação no LiveKit...', percent: null};
+        if (status === 'pendente') return {stage: 'preparando', label: 'Preparando a gravação...', percent: null};
         return {stage: 'aguardando', label: 'Aguardando informações do vídeo...', percent: null};
     }
     function formatBytes(value) {
@@ -55,7 +55,7 @@
             bar.classList.toggle('assembly-upload-indeterminate', data.stage !== 'falhou');
             detail.textContent = data.stage === 'falhou'
                 ? 'Envio interrompido. Consulte o diagnóstico; não é seguro finalizar a assembleia.'
-                : 'O LiveKit não informa a porcentagem nem o tempo restante deste upload. Atualização automática.';
+                : '';
         } else {
             bar.classList.remove('assembly-upload-indeterminate');
             bar.setAttribute('aria-valuenow', String(data.percent));

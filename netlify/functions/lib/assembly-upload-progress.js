@@ -16,6 +16,6 @@ function describeUpload(record, remoteStatus = 'desconhecido', storageVerified =
   if (remote === 'EGRESS_ENDING') return {stage:'enviando', label:'Finalizando MP4 e enviando para o Storage...', percent:null};
   if (remote === 'EGRESS_COMPLETE' || status === 'concluido') return {stage:'verificando', label:'Egress concluído. Verificando arquivo no Storage...', percent:null};
   if (remote === 'EGRESS_ACTIVE' || status === 'gravando') return {stage:'gravando', label:'Gravação em andamento no LiveKit...', percent:null};
-  return {stage:'preparando', label:'Preparando gravação no LiveKit...', percent:null};
+  return {stage:'preparando', label:'Preparando a gravação...', percent:null};
 }
 module.exports = {describeUpload};

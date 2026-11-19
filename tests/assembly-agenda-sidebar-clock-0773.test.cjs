@@ -44,7 +44,7 @@ test('pauta não cadastrada é identificada com base na transcrição e aparece 
  const topics=[{id:'outros-assuntos',title:'Outros assuntos discutidos',registered:false,contributions:[],polls:[]}];
  const narrative=[{id:'outros-assuntos',title:'Outros assuntos discutidos',inferred_title:'Instalação de câmeras na portaria',paragraphs:['O morador João sugeriu instalar câmeras na entrada do condomínio, explicando os riscos de segurança existentes.']}];
  const result=auto.composeDraft({meeting:{date:'2026-11-19',title:'Teste'},topics,narrative,attendees:[]});
- assert.match(result,/A pauta do dia, identificada a partir das manifestações transcritas pelo Deepgram, compreendeu: Instalação de câmeras na portaria\./);
+ assert.match(result,/A pauta do dia compreendeu: Instalação de câmeras na portaria\./);
  assert.doesNotMatch(result,/Outros assuntos discutidos/);
  assert.match(result,/O morador João sugeriu/);
 });

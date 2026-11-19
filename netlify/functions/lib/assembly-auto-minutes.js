@@ -178,8 +178,8 @@ function agendaParagraph(topics,narrative) {
   const prefix=registered===topics.length
     ? 'A pauta do dia compreendeu os seguintes assuntos previamente cadastrados'
     : registered>0
-      ? 'A pauta do dia compreendeu os assuntos cadastrados e aqueles identificados nas manifestações transcritas'
-      : 'A pauta do dia, identificada a partir das manifestações transcritas pelo Deepgram, compreendeu';
+      ? 'A pauta do dia compreendeu'
+      : 'A pauta do dia compreendeu';
   return `${prefix}: ${titles.join('; ')}.`;
 }
 function composeDraft({meeting,attendees=[],topics=[],narrative=[],options=[],votes=[],condominium=null}) {
@@ -220,7 +220,7 @@ async function prepareAssembly(admin,assemblyId) {
     || !String(row.transcription_model||'').startsWith('deepgram:'))) throw new Error('Ainda há vídeos sem conclusão ou transcrição Deepgram.');
   const ids=recordings.map(row=>row.id);
   for(const recordingId of ids) {
-    const fresh=await admin.rpc('condomit_auto_identify_deepgram_074',{target_recording_id:recordingId});
+    const fresh=await admin.rpc('condomit_auto_identify_deepgram_075',{target_recording_id:recordingId});
     if(fresh.error) throw new Error(`Não foi possível atualizar as identidades antes da ATA: ${fresh.error.message}`);
   }
   const rows=await allRows(admin,'assembly_transcripts',

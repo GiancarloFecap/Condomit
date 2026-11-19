@@ -178,7 +178,12 @@ html[data-theme="dark"] .formal-minutes-note { color: #4b5563; }
 .summary-secondary:hover{border-color:#3360F2;color:#3360F2;background:#f7f9ff}
 .summary-signed-chip{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:.83rem;font-weight:800}
 .formal-minutes-signatures{grid-template-columns:minmax(260px,520px);justify-content:center}
-.formal-signature-electronic{padding:18px 20px;border:1px solid #a7f3d0;border-radius:12px;background:#f0fdf4}
+.formal-signature-electronic{padding:0;border:0;border-radius:0;background:transparent;color:#111827}
+.formal-signature-artwork{height:88px;width:100%;display:flex;align-items:flex-end;justify-content:center;margin-bottom:-7px;position:relative;z-index:1}
+.formal-signature-artwork .assembly-signature-image{width:auto;max-width:340px;max-height:88px;margin:0;object-fit:contain;object-position:center bottom}
+.formal-signature-electronic .signature-line{width:100%;margin-bottom:4px}
+.minutes-content-integrity0774:not([hidden]){background:#fff7ed;border-left:3px solid #d97706;color:#78350f;padding:12px;border-radius:6px}
+.summary-hero-actions button:disabled{opacity:.55;cursor:not-allowed}
 .signature-verified-icon{font-size:1.35rem;color:#16a34a}
 .formal-signature-electronic strong{font-size:.95rem}
 .signature-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace!important;color:#64748b!important}
