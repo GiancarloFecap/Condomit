@@ -144,8 +144,9 @@ function formalOpening({meeting,attendees=[],condominium=null}) {
   const chair=participants.find(person=>person.email&&person.email===clean(meeting.created_by).toLowerCase())
     ||participants.find(person=>person.role==='Síndico');
   const president=chair?`, sob a presidência de ${chair.name}`:'';
-  const attendance=participants.length
-    ? `, com a presença dos participantes ${participants.map(x=>`${x.name} (${x.role})`).join(', ')}`:'';
+  const otherParticipants=participants.filter(person=>!chair || !((chair.email && person.email===chair.email) || person.name.toLocaleLowerCase('pt-BR')===chair.name.toLocaleLowerCase('pt-BR')));
+  const attendance=otherParticipants.length
+    ? `, com a presença ${otherParticipants.length===1?'do participante':'dos participantes'} ${otherParticipants.map(x=>x.name).join(', ')}`:'';
   const kind=/extraordin/i.test(String(meeting.assembly_type||''))?'Assembleia Geral Extraordinária':'Assembleia Geral Ordinária';
   const title=clean(meeting.title)||'Assembleia';
   return `${dateText}${clock}, nas dependências do ${name}${location}, realizou-se a ${kind} intitulada “${title}”${president}${attendance}, conforme registro eletrônico de frequência mantido pelo Condomit.`;
@@ -157,8 +158,34 @@ function describePoll(poll,options=[],votes=[]) {
   const result=counts.map(opt=>`${opt.text}: ${opt.count} voto${opt.count===1?'':'s'}`).join('; ');
   return `Quanto à votação sobre ${String(poll.title||'a matéria').trim()}, foram registrados ${total} voto${total===1?'':'s'}${result?`, distribuídos da seguinte forma: ${result}`:''}.`;
 }
+function normalizeAgendaTitle(value) {
+  const title=String(value||'').replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').replace(/^[\s:;,.-]+|[\s:;,.-]+$/g,'').trim().slice(0,130);
+  return title && !/[<>]/.test(title) ? title : '';
+}
+function agendaParagraph(topics,narrative) {
+  const generated=new Map(narrative.map(item=>[item.id,item]));
+  const registered=topics.filter(t=>t.registered).length;
+  const seen=new Set();
+  const titles=[];
+  for(const topic of topics) {
+    const generatedTitle=generated.get(topic.id)?.inferred_title;
+    const title=normalizeAgendaTitle(topic.registered?topic.title:(generatedTitle||topic.title));
+    if(!title || seen.has(title.toLocaleLowerCase('pt-BR'))) continue;
+    seen.add(title.toLocaleLowerCase('pt-BR'));
+    titles.push(title);
+  }
+  if(!titles.length) return '';
+  const prefix=registered===topics.length
+    ? 'A pauta do dia compreendeu os seguintes assuntos previamente cadastrados'
+    : registered>0
+      ? 'A pauta do dia compreendeu os assuntos cadastrados e aqueles identificados nas manifestações transcritas'
+      : 'A pauta do dia, identificada a partir das manifestações transcritas pelo Deepgram, compreendeu';
+  return `${prefix}: ${titles.join('; ')}.`;
+}
 function composeDraft({meeting,attendees=[],topics=[],narrative=[],options=[],votes=[],condominium=null}) {
   const paragraphs=[formalOpening({meeting,attendees,condominium})];
+  const agendaText=agendaParagraph(topics,narrative);
+  if(agendaText) paragraphs.push(agendaText);
   const generated=new Map(narrative.map(item=>[item.id,item]));
   for(const topic of topics) {
     const entry=generated.get(topic.id);
@@ -230,4 +257,4 @@ async function generateAutoMinutes(admin,assemblyId,onProgress=async()=>{}) {
   return {body,source_hash:source.source_hash,source_count:source.rows.length,
     unidentified_speakers:source.rows.filter(row=>!recognizedName(row)).length};
 }
-module.exports={TABLE,adminClient,workerToken,isWorkerToken,chunksOfText,speaker,buildRawClaudeTopics,verifyRawCoverage,sourceHash,formalOpening,composeDraft,prepareAssembly,generateAutoMinutes};
+module.exports={TABLE,adminClient,workerToken,isWorkerToken,chunksOfText,speaker,buildRawClaudeTopics,verifyRawCoverage,sourceHash,formalOpening,normalizeAgendaTitle,agendaParagraph,composeDraft,prepareAssembly,generateAutoMinutes};

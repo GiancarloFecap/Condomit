@@ -1648,6 +1648,10 @@ async function saveCondominiumEdit056() {
             setCurrentUser(user);
         }
         document.querySelectorAll('.sidebar-logo').forEach((img) => { img.src = updated?.logo_url || '../assets/logo-lado.png'; });
+        if (updated?.condominium_name) {
+            window.setSidebarCondominiumName?.(updated.condominium_name, updated.cep);
+            window.dispatchEvent(new CustomEvent('condomit:condominium-updated', { detail: { cep: updated.cep, condominium_name: updated.condominium_name } }));
+        }
         renderCondominiumInfoModal(updated || {});
         window.showToast?.('Informações do condomínio atualizadas.', 'success');
     } catch (error) { window.showToast?.(error?.message || 'Não foi possível atualizar o condomínio.', 'error'); }

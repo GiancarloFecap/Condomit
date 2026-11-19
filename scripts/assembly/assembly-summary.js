@@ -676,12 +676,13 @@
         const hero = document.getElementById('assemblySummaryHero');
         if (!hero) return;
         const uniqueParticipants = new Set(state.attendance.map((row) => String(row.user_email || row.participant_name || row.id))).size;
+        const meetingMeta=window.CondomitAssemblyMeetingTime?.meetingMeta(a) || {date:formatDate(a.date),range:String(a.start_time||'--:--').slice(0,5)};
         hero.innerHTML = `
             <div><span class="summary-chip"><i class="fas fa-file-signature"></i> Assembleia realizada</span></div>
             <h2>${esc(a.title || 'Assembleia')}</h2>
             <div class="summary-hero-meta">
-                <span><i class="far fa-calendar"></i> ${formatDate(a.date)}</span>
-                <span><i class="far fa-clock"></i> ${esc(String(a.start_time || '--:--').slice(0, 5))}${a.end_time ? ` – ${esc(String(a.end_time).slice(0, 5))}` : ''}</span>
+                <span><i class="far fa-calendar"></i> ${esc(meetingMeta.date)}</span>
+                <span><i class="far fa-clock"></i> ${esc(meetingMeta.range)}</span>
                 <span><i class="fas fa-users"></i> ${uniqueParticipants} participante${uniqueParticipants === 1 ? '' : 's'}</span>
                 <span><i class="fas fa-check-circle"></i> ${esc(statusLabel(a.status))}</span>
                 <span><i class="fas fa-video"></i> ${state.recordings.length} ${state.recordings.length === 1 ? 'gravação concluída' : 'gravações concluídas'}${(state.recordingStatuses || []).filter(row => row.status !== 'concluido').length ? ` · ${(state.recordingStatuses || []).filter(row => row.status !== 'concluido').length} pendente(s) ou com falha` : ''}</span>

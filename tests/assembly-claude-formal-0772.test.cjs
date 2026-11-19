@@ -20,7 +20,8 @@ test('abertura da ATA usa data por extenso, hora, condomínio, endereço e prese
  assert.match(opening,/nas dependências do Condomit, situado em Ambiente administrativo, 100 – Administração – São Paulo\/SP – CEP 99999-999/);
  assert.match(opening,/Assembleia Geral Ordinária intitulada “Teste 2”/);
  assert.match(opening,/sob a presidência de Administrador Condomit/);
- assert.match(opening,/Giancarlo Munarin \(Morador\), Administrador Condomit \(Síndico\)/);
+ assert.match(opening,/sob a presidência de Administrador Condomit, com a presença do participante Giancarlo Munarin/);
+ assert.doesNotMatch(opening,/\(Morador\)|\(Síndico\)|participantes Administrador Condomit/);
  assert.match(opening,/registro eletrônico de frequência mantido pelo Condomit/);
 });
 

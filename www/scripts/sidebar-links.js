@@ -1052,6 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
         renderSidebar(sidebarRuntime.currentUser, sidebarRuntime.currentUserType, sidebarRuntime.currentPage, lang);
         refreshSidebarCondominiumLogo(sidebarRuntime.currentUser);
+        refreshSidebarCondominiumName(sidebarRuntime.currentUser);
         bindSupportButtons();
         translateDocument(lang);
     };
@@ -1071,6 +1072,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sidebarRuntime.currentUserType = getSidebarUserType(sidebarRuntime.currentUser);
             renderSidebar(sidebarRuntime.currentUser, sidebarRuntime.currentUserType, sidebarRuntime.currentPage, getAppLanguage());
             refreshSidebarCondominiumLogo(sidebarRuntime.currentUser);
+        refreshSidebarCondominiumName(sidebarRuntime.currentUser);
         } catch (error) {
             console.warn('[Sidebar] Não foi possível revalidar o plano agora:', error?.message || error);
         }
@@ -1308,6 +1310,50 @@ function getSidebarCondominiumCep(user) {
         ''
     ).trim();
 }
+
+async function refreshSidebarCondominiumName(user) {
+    const cep=getSidebarCondominiumCep(user);
+    if(!cep || typeof window.supabaseFetch!=='function') return;
+    try {
+        const rows=await window.supabaseFetch(`/condominiums?select=cep,condominium_name&cep=eq.${encodeURIComponent(cep)}&limit=1`);
+        const info=Array.isArray(rows)?rows[0]:null;
+        const actualName=String(info?.condominium_name||'').trim();
+        if(!actualName || getSidebarCondominiumCep(getSidebarCurrentUser())!==cep) return;
+        const current=getSidebarCurrentUser();
+        if(!current) return;
+        if(current.condominium?.name!==actualName || current.condominium?.condominium_name!==actualName) {
+            const updated={...current,condominium:{...(current.condominium||{}),name:actualName,condominium_name:actualName}};
+            sessionStorage.setItem('condominiumUser',JSON.stringify(updated));
+            sidebarRuntime.currentUser=updated;
+        }
+        const element=document.getElementById('sidebarApartment');
+        if(element) element.innerHTML=formatSidebarCondoName(actualName,getAppLanguage());
+        const management=document.getElementById('sidebarCondo');
+        if(management) management.textContent=actualName;
+    } catch(error) {
+        console.warn('[Sidebar] Não foi possível confirmar o nome atual do condomínio:',error?.message||error);
+    }
+}
+function setSidebarCondominiumName(name,cep) {
+    const current=getSidebarCurrentUser();
+    const currentCep=getSidebarCondominiumCep(current);
+    if(!current || (cep && currentCep && currentCep!==String(cep).trim())) return;
+    const cleanName=String(name||'').trim();
+    if(!cleanName) return;
+    const updated={...current,condominium:{...(current.condominium||{}),cep:String(cep||currentCep||''),name:cleanName,condominium_name:cleanName}};
+    try{sessionStorage.setItem('condominiumUser',JSON.stringify(updated));}catch(_){}
+    sidebarRuntime.currentUser=updated;
+    const node=document.getElementById('sidebarApartment');
+    if(node) node.innerHTML=formatSidebarCondoName(cleanName,getAppLanguage());
+    const management=document.getElementById('sidebarCondo');
+    if(management) management.textContent=cleanName;
+}
+window.setSidebarCondominiumName=setSidebarCondominiumName;
+window.refreshSidebarCondominiumName=refreshSidebarCondominiumName;
+window.addEventListener('condomit:condominium-updated',event=>{
+    const name=event?.detail?.condominium_name;
+    if(name) setSidebarCondominiumName(name,event?.detail?.cep);
+});
 
 async function refreshSidebarCondominiumLogo(user) {
     const logoElements = Array.from(document.querySelectorAll('.sidebar-logo'));
@@ -1632,10 +1678,6 @@ function getSidebarCondoName(user, lang = getAppLanguage()) {
 }
 
 function formatSidebarCondoName(name, lang = getAppLanguage()) {
-    if (window.communityHub && typeof window.communityHub.formatCondoName === 'function') {
-        return window.communityHub.formatCondoName(name);
-    }
-
     const words = String(name || '').split(' ').filter(Boolean);
     if (words.length > 2) {
         return `${escapeSidebarHtml(words.slice(0, 2).join(' '))}<br>${escapeSidebarHtml(words.slice(2).join(' '))}`;
