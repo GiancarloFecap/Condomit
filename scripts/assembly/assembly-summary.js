@@ -24,6 +24,7 @@
         minutesNumber: null,
         minutesDraft: null,
         generatedMinutes: "",
+        renderedMinutesBody: "",
         detailsReleased: true,
         indirectDiscussion: null,
         indirectTopics: null,
@@ -272,8 +273,6 @@
         const oldName = previous && window.CondomitMinutesSpeech?.recognizedName(previous);
         const newSpeaker = speakerOptions().find(item => item.email === email);
         const nextName = newSpeaker?.name || '';
-        const oldEditor = document.getElementById('assemblyMinutesEditor074');
-        const oldText = oldEditor?.value || state.minutesDraft?.body || state.generatedMinutes;
         if (state.minutesDraft?.status === 'aprovada' && !await reopenMinutesForReview()) {
             select.value = previous?.participant_email || '';
             return;
@@ -286,30 +285,47 @@
             });
             state.transcripts = await fetchRows(`/assembly_transcripts?select=*&assembly_id=eq.${state.id}&order=spoken_at.asc`);
             state.speakerAssignments = await loadSpeakerAssignments();
-            const changed = window.CondomitSpeakerDraft?.replaceAttributedName(oldText,{oldName,newName:nextName,uniqueUnknownVoice:priorGroups.filter(item => !window.CondomitMinutesSpeech?.recognizedName(item)).length === 1,newRole:newSpeaker?.role || previous?.participant_role}) || {body:oldText,changes:0};
-            state.indirectDiscussion = null;
-            state.indirectTopics = null;
-            state.speakerRevisionPending = changed.changes === 0;
-            if (changed.changes && state.minutesDraft?.status !== 'aprovada') {
-                const draft = await window.supabaseFetch('/rpc/condomit_review_assembly_minutes_054', {
-                    method:'POST',headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({target_assembly_id:state.id,reviewed_text:changed.body,approve_document:false})
-                });
-                state.minutesDraft = Array.isArray(draft) ? draft[0] : draft;
-            }
+            const token=await window.resolveSupabaseAccessToken?.();
+            if(!token) throw new Error('Sessão expirada. Faça login para atualizar a ATA.');
+            const response=await fetch('/.netlify/functions/assembly-minutes-speaker-refresh',{
+                method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+                body:JSON.stringify({assembly_id:state.id,recording_id:recordingId}),cache:'no-store'
+            });
+            const result=await response.json().catch(()=>({}));
+            if(!response.ok) throw new Error(result.error||'Identificação salva, mas a regeneração da ATA não foi agendada.');
+            state.indirectDiscussion=null;
+            state.indirectTopics=null;
+            state.speakerRevisionPending=false;
+            state.autoMinutesJob={status:'pendente',attempts:0,progress_completed:0,progress_total:0};
             renderMinutes();
-            if (changed.changes === 0 && oldEditor) {
-                const editor = document.getElementById('assemblyMinutesEditor074');
-                if (editor) editor.value = oldText;
-            }
-            window.showToast?.(changed.changes
-                ? 'Autoria atualizada e salva na minuta. Confira a redação antes de aprovar.'
-                : 'A autoria foi atualizada. A autoria foi atualizada na transcrição. Confira a ATA automática ou aplique uma nova revisão, caso a minuta já esteja salva.',
-                changed.changes ? 'success' : 'warning');
+            startAutoMinutesRefresh();
+            window.showToast?.('Identificação corrigida. O Claude gerará novamente a ATA com o nome atualizado.','success');
         } catch (error) {
             window.showToast?.(error?.message || 'Não foi possível identificar esta voz.', 'error');
             select.disabled = false;
         }
+    }
+
+    function autoMinutesProgressMarkup() {
+        const job=state.autoMinutesJob;
+        const completed=Math.max(0,Number(job?.progress_completed)||0);
+        const total=Math.max(0,Number(job?.progress_total)||0);
+        const processing=job?.status==='processando';
+        const percent=processing && total>0 ? Math.min(99,Math.floor(completed/total*100)) : null;
+        const line=processing && total>0
+            ? `${Math.min(completed,total)} de ${total} blocos redigidos pelo Claude (${percent}%).`
+            : job?.status==='falhou' ? 'Falha detectada; o servidor tentará novamente, conforme o limite de tentativas.'
+            : job?.status==='pendente' ? 'Na fila para iniciar a redação automática.'
+            : 'Aguardando a conclusão da transcrição e identificação das vozes.';
+        return `<section class="minutes-generation-progress0772" role="status" aria-live="polite">
+          <h3><i class="fas fa-brain"></i> Preparando ATA com Claude</h3>
+          <p>${esc(autoMinutesStatusMessage())}</p>
+          <div class="minutes-generation-track0772" role="progressbar" aria-label="Progresso da geração da ATA"
+             aria-valuemin="0" aria-valuemax="100" ${percent===null?'':`aria-valuenow="${percent}"`}>
+             <span class="${percent===null?'minutes-generation-indeterminate0772':''}" style="${percent===null?'':`width:${percent}%`}"></span>
+          </div>
+          <small>${esc(line)} O tempo restante depende da API e não pode ser estimado com precisão.</small>
+        </section>`;
     }
 
     function autoMinutesStatusMessage() {
@@ -326,16 +342,21 @@
     let autoMinutesRefreshTimer = null;
     async function refreshAutoMinutes() {
         if (currentUserRole() !== 'sindico' || !state.id || !state.detailsReleased) return;
-        const rows=await fetchRows(`/assembly_auto_minutes_jobs?select=status,attempts,last_error,generated_body,saved_to_draft,source_count&assembly_id=eq.${state.id}&limit=1`).catch(() => []);
+        const rows=await fetchRows(`/assembly_auto_minutes_jobs?select=status,attempts,last_error,generated_body,saved_to_draft,source_count,progress_completed,progress_total,progress_stage,finished_at&assembly_id=eq.${state.id}&limit=1`).catch(() => []);
         const job=rows[0] || null;
         const changed=JSON.stringify(job) !== JSON.stringify(state.autoMinutesJob);
         state.autoMinutesJob=job;
         if (!changed) return;
         const edit=document.getElementById('assemblyMinutesEditor074');
         const before=edit?.value||'';
-        const original=state.minutesDraft?.body || state.generatedMinutes || '';
+        const original=state.renderedMinutesBody || state.minutesDraft?.body || state.generatedMinutes || '';
         const unsaved=before.trim() && before.trim()!==original.trim();
         if(job?.status==='concluido' && job.saved_to_draft && !unsaved) await loadMinutesReview();
+        if (job && ['pendente','processando','concluido'].includes(job.status)) {
+            const recent=await fetchRows(`/assembly_recordings?select=*&assembly_id=eq.${state.id}&order=started_at.asc`).catch(()=>null);
+            if(recent) state.recordingStatuses=recent;
+        }
+        renderHero();
         renderMinutes();
         if (unsaved) { const next=document.getElementById('assemblyMinutesEditor074'); if(next) next.value=before; }
         if (['concluido','bloqueado'].includes(job?.status)) { clearInterval(autoMinutesRefreshTimer);autoMinutesRefreshTimer=null; }
@@ -670,8 +691,8 @@
                 ${currentUserRole() === 'sindico' ? '<button type="button" id="generateAssemblyTasks027" class="summary-secondary"><i class="fas fa-list-check"></i> Gerar tarefas das decisões</button>' : ''}
                 ${currentUserRole() === 'sindico' && state.minutesDraft?.status === 'aprovada' ? `<button type="button" id="signAssemblyMinutes049" class="summary-primary"><i class="fas fa-signature"></i> ${state.signature ? 'Corrigir assinatura' : 'Assinar ata'}</button>` : ''}
                 ${state.signature && state.minutesDraft?.status === 'aprovada' ? `<span class="summary-signed-chip"><i class="fas fa-circle-check"></i> Ata assinada por ${esc(state.signature.signer_name || state.signature.signer_email || 'Síndico')}</span>` : ''}
-                <button type="button" id="printAssemblyMinutes049" class="summary-secondary"><i class="fas fa-print"></i> Imprimir ata</button>
-                <button type="button" id="saveAssemblyMinutesPdf082" class="summary-secondary"><i class="fas fa-file-pdf"></i> Salvar em PDF</button>
+                ${state.minutesDraft?.status === 'aprovada' || state.autoMinutesJob?.status === 'concluido' ? `<button type="button" id="printAssemblyMinutes049" class="summary-secondary"><i class="fas fa-print"></i> Imprimir ata</button>
+                <button type="button" id="saveAssemblyMinutesPdf082" class="summary-secondary"><i class="fas fa-file-pdf"></i> Salvar em PDF</button>` : ''}
             </div>`;
         hero.querySelector('#generateAssemblyTasks027')?.addEventListener('click', generateAssemblyDecisionTasks);
         hero.querySelector('#signAssemblyMinutes049')?.addEventListener('click', signAssemblyMinutes);
@@ -700,39 +721,28 @@
         const closingTime = resolveClosingTime();
         const title = String(a.title || 'Assembleia').trim();
 
-        const paragraphs = [];
-        const opening = `${formalDateWords(a.date)}, às ${formatClockFormal(startTime)}, nas dependências do ${condoName}${address ? `, situado em ${address}` : ''}, realizou-se a ${assemblyType} intitulada “${title}”${chair ? `, sob a presidência de ${chair.name}` : ''}${participants.length ? `, com a presença dos participantes ${participants.map((item) => `${item.name} (${roleLabel(item.role)})`).join(', ')}, conforme registro eletrônico de frequência mantido pelo Condomit.` : ', não havendo participantes identificados nos registros eletrônicos de frequência disponíveis.'}`;
-        paragraphs.push(opening);
-
-        if (a.description || a.rules) {
-            const institutional = [];
-            if (a.description) institutional.push(`A convocação teve por finalidade ${sentenceFragment(a.description)}`);
-            if (a.rules) institutional.push(`Foram observadas as seguintes orientações registradas para a reunião: ${sentenceFragment(a.rules)}`);
-            paragraphs.push(`${institutional.join('. ')}.`);
-        }
-
-        if (state.agenda.length) {
-            paragraphs.push('Aberta a sessão, foram apreciados os assuntos constantes da ordem do dia, conforme os relatos e encaminhamentos a seguir.');
-        } else if (a.agenda_summary) {
-            paragraphs.push(`Aberta a sessão, foram abordados os assuntos da convocação: ${sentenceFragment(a.agenda_summary)}.`);
-        } else if (completedDeepgramTranscripts().length) {
-            paragraphs.push('Aberta a sessão, foram abordados os assuntos registrados na gravação. A presente ata os organiza por matéria discutida, para conferência e aprovação do síndico.');
-        } else {
-            paragraphs.push('Aberta a sessão, não foram localizadas pautas ou discussões registradas nos documentos disponíveis.');
-        }
-
-        paragraphs.push(...buildFormalTopicParagraphs());
-
-        paragraphs.push(closingTime
-            ? `Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, a assembleia foi encerrada às ${formatClockFormal(closingTime)}.`
-            : 'Concluídas as discussões e deliberações registradas, e nada mais havendo a consignar nos dados eletrônicos disponíveis, deu-se por encerrada a assembleia, sem horário final específico informado no cadastro.');
-        paragraphs.push('Para constar, lavrou-se a presente minuta com base nos registros eletrônicos de presença, pautas, transcrições e votações mantidos pelo Condomit. Sua divulgação aos moradores dependerá da revisão, aprovação e assinatura do síndico.');
-
-        state.generatedMinutes = paragraphs.join('\n\n');
-        const rawDisplayText = state.indirectTopics && state.minutesDraft?.status !== 'aprovada'
-            ? state.generatedMinutes : (state.minutesDraft?.body || state.generatedMinutes);
-        const displayText = window.CondomitMinutesNarrative?.stripLegacyHeadings(rawDisplayText) || rawDisplayText;
         const approved = state.minutesDraft?.status === 'aprovada';
+        const job=state.autoMinutesJob;
+        const ready=approved || (job?.status==='concluido' && Boolean(String(job.generated_body||'').trim()));
+        if(!ready) {
+            state.renderedMinutesBody='';
+            container.innerHTML=autoMinutesProgressMarkup();
+            const awaiting=(state.recordingStatuses||[]).filter(row=>row.status==='concluido' && row.transcription_status!=='concluido');
+            if(awaiting.length && window.CondomitTranscriptionProgress) {
+                const progress=document.createElement('section');
+                progress.className='assembly-transcript-summary0768';
+                awaiting.forEach(row=>{const node=document.createElement('div');window.CondomitTranscriptionProgress.render(node,row);progress.append(node);});
+                container.prepend(progress);
+            }
+            return;
+        }
+        const manuallyEdited=state.minutesDraft?.saved_by && state.minutesDraft.saved_by!=='sistema:claude'
+            && Date.parse(state.minutesDraft.updated_at||0)>Date.parse(job?.finished_at||0);
+        const rawDisplayText=approved || manuallyEdited
+            ? String(state.minutesDraft?.body||'') : String(job?.generated_body||'');
+        const displayText=window.CondomitMinutesNarrative?.stripLegacyHeadings(rawDisplayText) || rawDisplayText;
+        state.generatedMinutes=displayText;
+        state.renderedMinutesBody=displayText;
         const published = approved && Boolean(state.signature);
         const chairSignature = chair?.name || 'Síndico / Presidente da Assembleia';
         container.innerHTML = `
@@ -762,21 +772,12 @@
               <p>A gravação e a transcrição são documentos de apoio. Confirme data, presença, discussões, deliberações, quóruns e responsáveis. A transcrição automática é gerada em segundo plano diretamente do vídeo. Ela pode conter erros e deve ser conferida com o áudio original.</p>
               <textarea id="assemblyMinutesEditor074" rows="14" spellcheck="true" aria-label="Redigir ata para revisão">${esc(displayText)}</textarea>
               <div class="minutes-review-actions074">
-                ${!approved ? `<label class="minutes-ai-model-label0768">Qualidade da IA local:
-                  <select id="minutesAiModel0768" aria-label="Escolher modelo de IA local">
-                    <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Padrão — 1,5B (aprox. 1,6 GB)</option>
-                    <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Melhor redação — 3B (aprox. 2,5 GB)</option>
-                  </select>
-                </label><button type="button" class="summary-primary" id="minutesLocalAi0768"><i class="fas fa-wand-magic-sparkles"></i> Redigir ATA com IA local (sem API)</button>` : ''}
-
-                ${!approved ? `<button type="button" class="summary-secondary" id="minutesIndirect0761">Gerar versão provisória por regras</button>` : ''}
-                ${!approved ? `<button type="button" class="summary-secondary" id="minutesRegenerate07510"><i class="fas fa-rotate"></i> Atualizar minuta resumida</button>` : ''}
                 ${approved ? `<button type="button" class="summary-secondary" id="minutesReopen0763"><i class="fas fa-file-pen"></i> Reabrir para corrigir manifestações</button>` : ''}
                 <button type="button" class="summary-secondary" id="minutesAiHelp074"><i class="fas fa-wand-magic-sparkles"></i> Selecionar trechos da transcrição</button>
                 ${!approved ? `<button type="button" class="summary-secondary" id="minutesSave074">Salvar minuta</button>
                 <button type="button" class="summary-primary" id="minutesApprove074">Aprovar ata revisada</button>` : ''}
               </div>
-              <p class="minutes-local-ai-hint0768">Teste sem chave de IA: a redação usa um modelo no próprio navegador (WebGPU, download inicial de aproximadamente 1,6 GB). Se o navegador não for compatível, utilize a síntese provisória por regras e revise manualmente. O texto original da transcrição não é alterado.</p>
+
               ${state.speakerRevisionPending ? '<p role="alert" class="minutes-incomplete-alert0763">Uma voz foi identificada, mas a autoria ainda não pôde ser vinculada com segurança à minuta salva. Regenere a ATA antes de aprovar.</p>' : ''}
               ${!approved && missingAttributedSpeakers(displayText).length ? `<p role="alert" class="minutes-incomplete-alert0763">Atenção: a minuta ainda não atribui as manifestações a: ${esc(missingAttributedSpeakers(displayText).slice(0,5).join(', '))}. Gere novamente ou corrija antes de aprovar.</p>` : ''}
               <div class="minutes-ai-suggestions074" role="status">${esc(autoMinutesStatusMessage())}</div>
@@ -807,7 +808,7 @@
             </section>` : ''}`;
         const oldProgress = container.querySelector('.assembly-transcript-summary0768');
         oldProgress?.remove();
-        const eligibleVideos = (state.recordingStatuses || []).filter(row => row.status === 'concluido');
+        const eligibleVideos = (state.recordingStatuses || []).filter(row => row.status === 'concluido' && row.transcription_status !== 'concluido');
         if (eligibleVideos.length && window.CondomitTranscriptionProgress) {
             const progressPanel = document.createElement('section');
             progressPanel.className = 'assembly-transcript-summary0768';
@@ -824,23 +825,7 @@
         evidence?.querySelectorAll('select[data-speaker-recording]')?.forEach(select => select.addEventListener('change', () => updateSpeakerMapping(select)));
 
         container.querySelector('#minutesApplyAuto0771')?.addEventListener('click', () => applyAutomaticMinutesDraft().catch(error => window.showToast?.(error.message,'error')));
-        container.querySelector('#minutesIndirect0761')?.addEventListener('click', () => generateIndirectSummary({automatic:false,useLocalAI:false,useRules:true}));
-        container.querySelector('#minutesLocalAi0768')?.addEventListener('click', () => generateIndirectSummary({automatic:false,useLocalAI:true}));
         container.querySelector('#minutesReopen0763')?.addEventListener('click', reopenMinutesForReview);
-        container.querySelector('#minutesRegenerate07510')?.addEventListener('click', async () => {
-            const editor = document.getElementById('assemblyMinutesEditor074');
-            if (!editor) return;
-            if (editor.value.trim() && editor.value.trim() !== state.generatedMinutes.trim()) {
-                const ok = await window.showConfirm?.({
-                    title: 'Atualizar redação da minuta',
-                    message: 'Substituir o texto atual pela minuta com o resumo em discurso indireto? Alterações manuais não salvas serão perdidas.',
-                    confirmText: 'Atualizar texto', cancelText: 'Cancelar'
-                });
-                if (!ok) return;
-            }
-            editor.value = state.generatedMinutes;
-            window.showToast?.('Texto atualizado no editor. Confira as falas e clique em Salvar minuta.', 'success');
-        });
         container.querySelector('#minutesSave074')?.addEventListener('click', () => saveMinutesReview(false));
         container.querySelector('#minutesApprove074')?.addEventListener('click', () => saveMinutesReview(true));
         container.querySelector('#minutesAiHelp074')?.addEventListener('click', requestMinutesAiSuggestions);

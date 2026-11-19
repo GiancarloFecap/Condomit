@@ -61,7 +61,7 @@ test('montagem da minuta associa votação real ao tópico e exige revisão',()=
  assert.ok(texts.indexOf('O morador João')<texts.indexOf('foram registrados 3 votos'));
  assert.match(texts,/Sim: 2 votos/);
  assert.match(texts,/Não: 1 voto/);
- assert.match(texts,/conferência, aprovação e assinatura do síndico/);
+ assert.match(texts,/revisão, aprovação e assinatura do síndico/);
 });
 
 test('despacho automático só para todas as gravações finalizadas e transcritas',async()=>{

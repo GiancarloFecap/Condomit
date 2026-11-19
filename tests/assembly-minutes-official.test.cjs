@@ -45,7 +45,7 @@ test('painel mostra falas provisórias mesmo sem IA; versão assinada exige reab
 
 test('editor e documento oficial usam a mesma minuta e a navegação inclui o módulo', () => {
   const content = fs.readFileSync(require.resolve('../scripts/assembly/assembly-summary.js'),'utf8');
-  assert.match(content, /const rawDisplayText = state\.indirectTopics/);
+  assert.match(content, /const rawDisplayText=approved \|\| manuallyEdited/);
   assert.match(content, /assemblyMinutesEditor074/);
   const page = fs.readFileSync(require.resolve('../pages/assembleia-resumo.html'),'utf8');
   assert.ok(page.indexOf('minutes-speech.js') < page.indexOf('minutes-narrative.js'));

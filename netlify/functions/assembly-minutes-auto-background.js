@@ -15,7 +15,7 @@ async function claim(admin,assemblyId) {
   const attempts=Number(row.attempts||0)+1;
   const {data:updated,error:claimError}=await admin.from(TABLE).update({
     status:'processando',attempts,locked_until:new Date(now+17*60*1000).toISOString(),
-    next_retry_at:null,last_error:null,updated_at:new Date(now).toISOString()
+    next_retry_at:null,last_error:null,progress_completed:0,progress_total:0,progress_stage:'preparando',updated_at:new Date(now).toISOString()
   }).eq('assembly_id',assemblyId).eq('status',row.status).eq('attempts',row.attempts)
     .select('assembly_id,status,attempts').maybeSingle();
   if(claimError) throw claimError;
@@ -36,27 +36,47 @@ async function runAuto(admin,assemblyId,generate=generateAutoMinutes) {
         .eq('assembly_id',assemblyId).eq('status','processando').eq('attempts',owned.attempts);
       return {blocked:true};
     }
-    const output=await generate(admin,assemblyId);
+    const onProgress=async({completed,total})=>{
+      const {error}=await admin.from(TABLE).update({progress_stage:'redigindo',
+        progress_completed:completed,progress_total:total,updated_at:new Date().toISOString()})
+        .eq('assembly_id',assemblyId).eq('status','processando').eq('attempts',owned.attempts);
+      if(error) throw error;
+    };
+    const output=await generate(admin,assemblyId,onProgress);
+    const {data:lock,error:lockError}=await admin.from(TABLE).select('status,attempts')
+      .eq('assembly_id',assemblyId).maybeSingle();
+    if(lockError) throw lockError;
+    if(lock?.status!=='processando'||Number(lock.attempts)!==Number(owned.attempts))
+      return {skipped:true,reason:'A identificação mudou durante a redação; uma nova ATA será gerada.'};
+    await admin.from(TABLE).update({progress_stage:'salvando',updated_at:new Date().toISOString()})
+      .eq('assembly_id',assemblyId).eq('status','processando').eq('attempts',owned.attempts);
     const {data:meeting,error:meetingError}=await admin.from('scheduled_assemblies')
       .select('cep,status').eq('id',assemblyId).maybeSingle();
     if(meetingError||!meeting||meeting.status!=='encerrada') throw new Error('Assembleia não está encerrada no momento de salvar.');
     // Não substitui revisões humanas; gera a minuta e guarda uma cópia auditável no job.
-    const already=await admin.from('assembly_minutes_drafts').select('body,status').eq('assembly_id',assemblyId).maybeSingle();
+    const already=await admin.from('assembly_minutes_drafts').select('body,status,saved_by').eq('assembly_id',assemblyId).maybeSingle();
     if(already.error) throw already.error;
     let saved=false;
-    if(!already.data) {
-      const {error:insertError}=await admin.from('assembly_minutes_drafts').upsert({
-        assembly_id:assemblyId,cep:meeting.cep,body:output.body,status:'rascunho',saved_by:'sistema:claude',
-        observacoes_revisao:output.unidentified_speakers?[{motivo:'Existem trechos sem associação nominal segura; confirme antes de aprovar.',quantidade:output.unidentified_speakers}]:[]
-      },{onConflict:'assembly_id',ignoreDuplicates:true});
-      if(insertError) throw insertError;
-      const checked=await admin.from('assembly_minutes_drafts').select('saved_by').eq('assembly_id',assemblyId).maybeSingle();
+    if(!already.data || (already.data.status==='rascunho' && already.data.saved_by==='sistema:claude')) {
+      const draft={assembly_id:assemblyId,cep:meeting.cep,body:output.body,status:'rascunho',
+        saved_by:'sistema:claude',observacoes_revisao:output.unidentified_speakers
+          ? [{motivo:'Existem falas sem identificação segura; confira os participantes antes de aprovar.',quantidade:output.unidentified_speakers}]:[]};
+      if(!already.data) {
+        const {error}=await admin.from('assembly_minutes_drafts').upsert(draft,{onConflict:'assembly_id',ignoreDuplicates:true});
+        if(error) throw error;
+      } else {
+        const {error}=await admin.from('assembly_minutes_drafts').update({body:draft.body,
+          observacoes_revisao:draft.observacoes_revisao,updated_at:new Date().toISOString()})
+          .eq('assembly_id',assemblyId).eq('status','rascunho').eq('saved_by','sistema:claude');
+        if(error) throw error;
+      }
+      const checked=await admin.from('assembly_minutes_drafts').select('saved_by,body').eq('assembly_id',assemblyId).maybeSingle();
       if(checked.error) throw checked.error;
-      saved=checked.data?.saved_by==='sistema:claude';
+      saved=checked.data?.saved_by==='sistema:claude' && checked.data?.body===output.body;
     }
     const {error:doneError}=await admin.from(TABLE).update({status:'concluido',generated_body:output.body,
       source_hash:output.source_hash,source_count:output.source_count,saved_to_draft:saved,
-      finished_at:new Date().toISOString(),locked_until:null,last_error:null,updated_at:new Date().toISOString()})
+      finished_at:new Date().toISOString(),locked_until:null,last_error:null,progress_stage:'concluido',updated_at:new Date().toISOString()})
       .eq('assembly_id',assemblyId).eq('status','processando').eq('attempts',owned.attempts);
     if(doneError) throw doneError;
     return {generated:true,saved};
@@ -64,7 +84,7 @@ async function runAuto(admin,assemblyId,generate=generateAutoMinutes) {
     const message=String(error?.message||error).slice(0,500);
     const delay=Math.min(60,3*Math.pow(2,Math.max(0,owned.attempts-1)));
     const {error:failedError}=await admin.from(TABLE).update({status:'falhou',last_error:message,
-      locked_until:null,next_retry_at:new Date(Date.now()+delay*60*1000).toISOString(),updated_at:new Date().toISOString()})
+      locked_until:null,progress_stage:'falhou',next_retry_at:new Date(Date.now()+delay*60*1000).toISOString(),updated_at:new Date().toISOString()})
       .eq('assembly_id',assemblyId).eq('status','processando').eq('attempts',owned.attempts);
     if(failedError) console.error('[AUTO ATA STATUS]',String(failedError.message||'').slice(0,120));
     throw error;

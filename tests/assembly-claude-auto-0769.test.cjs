@@ -54,8 +54,8 @@ test('servidor reutiliza evidências e reidentifica antes de gerar a ata',()=>{
  const server=fs.readFileSync(path.join(__dirname,'../netlify/functions/assembly-minutes-indirect.js'),'utf8');
  const callback=fs.readFileSync(path.join(__dirname,'../netlify/functions/assembly-deepgram-callback.js'),'utf8');
  const client=fs.readFileSync(path.join(__dirname,'../scripts/assembly/room/transcription.js'),'utf8');
- assert.match(server,/condomit_auto_identify_deepgram_072/);
- assert.match(callback,/condomit_auto_identify_deepgram_072/);
+ assert.match(server,/condomit_auto_identify_deepgram_074/);
+ assert.match(callback,/condomit_auto_identify_deepgram_074/);
  assert.match(client,/setInterval/);
  assert.match(client,/7000/);
 });

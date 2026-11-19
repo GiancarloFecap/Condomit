@@ -128,10 +128,11 @@ function validateAuthorship(topics, original) {
   return topics;
 }
 
-async function summarizeClaude(topics, fetcher = fetch) {
+async function summarizeClaude(topics, fetcher = fetch, onProgress = async () => {}) {
   const input = batchTopics(topics);
   const maxChunks = Math.min(40, Math.max(1, Number(process.env.CLAUDE_MINUTES_MAX_CHUNKS || 36)));
   if (!input.length || input.length > maxChunks) throw new Error('Assembleia longa demais para este processamento. Aumente CLAUDE_MINUTES_MAX_CHUNKS ou divida a geração sem descartar falas.');
+  await onProgress({completed:0,total:input.length});
   const completed = new Map(topics.map(t => [t.id,{id:t.id,title:t.title,paragraphs:[]}]));
   for (let at=0;at<input.length;at+=3) {
     const group = await Promise.all(input.slice(at,at+3).map(async chunk => {
@@ -144,6 +145,7 @@ async function summarizeClaude(topics, fetcher = fetch) {
       validateAuthorship(result,chunk);
       for (const item of result) completed.get(item.id).paragraphs.push(...item.paragraphs);
     }
+    await onProgress({completed:Math.min(input.length,at+group.length),total:input.length});
   }
   return validateAuthorship([...completed.values()],topics);
 }
@@ -197,7 +199,7 @@ async function handler(event) {
     if (videosError) throw videosError;
     const ids = (videos || []).map(row => row.id);
     for (const recordingId of ids) {
-      const fresh = await admin.rpc('condomit_auto_identify_deepgram_072', {target_recording_id:recordingId});
+      const fresh = await admin.rpc('condomit_auto_identify_deepgram_074', {target_recording_id:recordingId});
       if (fresh.error) {
         const old = await admin.rpc('condomit_auto_identify_deepgram_065', {target_recording_id:recordingId});
         if (old.error) console.warn('[MINUTES SPEAKER LINK] Não foi possível atualizar identificação:',String(old.error.message||'').slice(0,110));

@@ -438,3 +438,14 @@ html[data-theme="dark"] .signature-modal-card .modal-actions{border-color:#33415
   border-radius: 0.5rem;
   font-weight: 600;
 }
+
+/* Progresso real, contado pelos blocos da geração automática. */
+.minutes-generation-progress0772{max-width:760px;margin:24px auto;padding:25px;border:1px solid var(--border-color,#cfdae6);border-radius:14px;background:var(--bg-card,#fff);color:inherit}
+.minutes-generation-progress0772 h3{margin:0 0 12px;font-size:1.18rem}
+.minutes-generation-progress0772 p{line-height:1.6;margin-bottom:18px}
+.minutes-generation-progress0772 small{display:block;margin-top:9px;opacity:.78;line-height:1.55}
+.minutes-generation-track0772{height:12px;background:#d9e2ed;border-radius:999px;overflow:hidden;position:relative}
+.minutes-generation-track0772>span{display:block;height:100%;background:#2875d7;border-radius:999px;transition:width .35s ease}
+.minutes-generation-indeterminate0772{position:absolute;left:0;width:32%;animation:minutes-progress0772 1.7s ease-in-out infinite}
+@keyframes minutes-progress0772{0%{transform:translateX(-110%)}100%{transform:translateX(340%)}}
+@media(prefers-reduced-motion:reduce){.minutes-generation-indeterminate0772{animation:none;left:0;width:40%}}
